@@ -7,7 +7,7 @@ import { compileCanonicalProjectToSb3 } from './core/compiler'
 import { decompileSb3 } from './core/decompiler'
 import sampleProject from './core/ir/examples/06-platformer-core.json'
 import type { CanonicalProject } from './core/ir/types'
-import { normalizeAiDraft } from './core/normalizer'
+import { normalizeAiResponse } from './core/normalizer'
 import { createAnalysisPrompt, type TutorMode } from './core/prompt'
 import {
   validateCanonicalProject,
@@ -53,7 +53,7 @@ app.innerHTML = `
         <article class="card wide">
           <div class="card-head"><h2>2. Canonical IR JSON</h2><button id="load-sample" class="button secondary">載入範例</button></div>
           <textarea id="json-editor" class="mono editor" spellcheck="false"></textarea>
-          <div class="button-row"><button id="repair" class="button secondary">修復 AI JSON</button><button id="validate" class="button secondary">Validate</button><button id="compile" class="button primary">Compile & Download .sb3</button></div>
+          <div class="button-row"><button id="repair" class="button secondary">擷取／修復 AI 回覆</button><button id="validate" class="button secondary">Validate</button><button id="compile" class="button primary">Compile & Download .sb3</button></div>
           <div id="generate-status" class="status-box"></div>
         </article>
       </section>
@@ -138,14 +138,12 @@ const inspectSemantics = (project: CanonicalProject): readonly CanonicalSemantic
 }
 
 const parseEditor = (): CanonicalProject => {
-  const parsed: unknown = JSON.parse(editor.value)
-  const validation = validateCanonicalProject(parsed)
+  const normalized = normalizeAiResponse(editor.value)
+  const validation = validateCanonicalProject(normalized.data)
+  if (normalized.repairs.length > 0 && validation.valid) {
+    throw new Error(`偵測到 ${normalized.repairs.length} 項可自動修復的 AI 回覆格式。請先按「擷取／修復 AI 回覆」。`)
+  }
   if (!validation.valid) {
-    const normalized = normalizeAiDraft(parsed)
-    const repairedValidation = validateCanonicalProject(normalized.data)
-    if (normalized.repairs.length > 0 && repairedValidation.valid) {
-      throw new Error(`偵測到 ${normalized.repairs.length} 項可自動修復的 AI 簡化格式。請先按「修復 AI JSON」。`)
-    }
     throw new Error(formatValidationErrors(validation.errors))
   }
   return validation.data
@@ -162,8 +160,7 @@ byId<HTMLButtonElement>('load-sample').addEventListener('click', () => {
 })
 byId<HTMLButtonElement>('repair').addEventListener('click', () => {
   try {
-    const parsed: unknown = JSON.parse(editor.value)
-    const normalized = normalizeAiDraft(parsed)
+    const normalized = normalizeAiResponse(editor.value)
     if (normalized.repairs.length === 0) {
       setStatus(generateStatus, '沒有偵測到可安全自動修復的格式。')
       return

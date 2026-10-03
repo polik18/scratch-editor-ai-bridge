@@ -16,10 +16,100 @@ export interface AiDraftNormalizationResult {
   readonly warnings: readonly AiDraftWarning[]
 }
 
+export interface AiResponseParseResult {
+  readonly data: unknown
+  readonly extracted: boolean
+  readonly candidateCount: number
+}
+
+const MAX_AI_RESPONSE_LENGTH = 2_000_000
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const pointerPart = (value: string): string => value.replaceAll('~', '~0').replaceAll('/', '~1')
+
+const isScalar = (value: unknown): value is string | number | boolean =>
+  typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+
+const responseSegments = (source: string): string[] => {
+  const segments: string[] = []
+  const fence = /```[^\r\n]*\r?\n([\s\S]*?)```/g
+  let offset = 0
+  for (const match of source.matchAll(fence)) {
+    const index = match.index
+    if (index > offset) segments.push(source.slice(offset, index))
+    segments.push(match[1])
+    offset = index + match[0].length
+  }
+  if (offset < source.length) segments.push(source.slice(offset))
+  return segments.length > 0 ? segments : [source]
+}
+
+const canonicalCandidates = (segment: string): unknown[] => {
+  const candidates: unknown[] = []
+  const starts: number[] = []
+  let quote = false
+  let escaped = false
+
+  for (let index = 0; index < segment.length; index += 1) {
+    const character = segment[index]
+    if (quote) {
+      if (escaped) escaped = false
+      else if (character === '\\') escaped = true
+      else if (character === '"') quote = false
+      continue
+    }
+    if (character === '"') {
+      quote = true
+      continue
+    }
+    if (character === '{') starts.push(index)
+    if (character !== '}' || starts.length === 0) continue
+
+    const start = starts.pop()
+    if (start === undefined) continue
+    const candidateText = segment.slice(start, index + 1)
+    if (!candidateText.includes('"format"') || !candidateText.includes('scratch-ai-bridge/canonical-ir')) continue
+    try {
+      const candidate: unknown = JSON.parse(candidateText)
+      if (isRecord(candidate) && candidate.format === 'scratch-ai-bridge/canonical-ir' && candidate.version === 1) {
+        candidates.push(candidate)
+      }
+    } catch {
+      // A surrounding Python/Markdown object is not necessarily JSON; keep scanning nested objects.
+    }
+  }
+  return candidates
+}
+
+/**
+ * Parse either exact JSON or a Canonical IR object embedded in an AI notebook/Markdown response.
+ * @param source Text copied from an AI response.
+ * @returns The parsed value and extraction metadata.
+ */
+export const parseAiResponse = (source: string): AiResponseParseResult => {
+  if (source.length > MAX_AI_RESPONSE_LENGTH) {
+    throw new Error(`AI 回覆超過 ${MAX_AI_RESPONSE_LENGTH.toLocaleString()} 字元上限`)
+  }
+  try {
+    return { data: JSON.parse(source), extracted: false, candidateCount: 1 }
+  } catch (parseError) {
+    const unique = new Map<string, unknown>()
+    for (const segment of responseSegments(source)) {
+      for (const candidate of canonicalCandidates(segment)) {
+        unique.set(JSON.stringify(candidate), candidate)
+      }
+    }
+    const candidates = Array.from(unique.values())
+    const selected = candidates.sort((left, right) => JSON.stringify(right).length - JSON.stringify(left).length)[0]
+    if (selected !== undefined) {
+      return { data: selected, extracted: true, candidateCount: candidates.length }
+    }
+    const detail = parseError instanceof Error ? `：${parseError.message}` : ''
+    throw new SyntaxError(`找不到完整的 Scratch AI Bridge Canonical IR JSON${detail}`)
+  }
+}
 
 /**
  * Normalize common LLM shorthand into Canonical IR structure without changing
@@ -42,6 +132,17 @@ export const normalizeAiDraft = (input: unknown): AiDraftNormalizationResult => 
   const normalizeBlock = (value: unknown, path: string): unknown => {
     if (!isRecord(value)) return value
     const block: Record<string, unknown> = { ...value }
+    if (isRecord(block.fields)) {
+      block.fields = Object.fromEntries(
+        Object.entries(block.fields).map(([name, field]) => {
+          if (!isRecord(field)) return [name, field]
+          const scalar = isScalar(field.value) ? field.value : isScalar(field.name) ? field.name : undefined
+          if (scalar === undefined) return [name, field]
+          repair(`${path}/fields/${pointerPart(name)}`, 'field-scalar', `將 ${name} field wrapper 轉為純量`)
+          return [name, scalar]
+        }),
+      )
+    }
     if (isRecord(block.inputs)) {
       block.inputs = Object.fromEntries(
         Object.entries(block.inputs).map(([name, input]) => [
@@ -125,6 +226,15 @@ export const normalizeAiDraft = (input: unknown): AiDraftNormalizationResult => 
     repair(`${path}/${pointerPart(key)}`, 'target-default', `補上必要欄位 ${key}`)
   }
 
+  const normalizeCostume = (value: unknown, path: string): unknown => {
+    if (!isRecord(value) || value.dataFormat !== undefined) return value
+    if (value.data !== undefined && !(typeof value.data === 'string' && value.data.trimStart().startsWith('<svg'))) {
+      return value
+    }
+    repair(`${path}/dataFormat`, 'costume-data-format', '為無格式的內嵌／預設造型補上 svg dataFormat')
+    return { ...value, dataFormat: 'svg' }
+  }
+
   const normalizeTarget = (value: unknown, path: string, kind: 'stage' | 'sprite'): unknown => {
     if (!isRecord(value)) return value
     const target: Record<string, unknown> = { ...value }
@@ -143,6 +253,11 @@ export const normalizeAiDraft = (input: unknown): AiDraftNormalizationResult => 
     }
     if (Array.isArray(target.scripts)) {
       target.scripts = target.scripts.map((script, index) => normalizeScript(script, `${path}/scripts/${index}`))
+    }
+    if (Array.isArray(target.costumes)) {
+      target.costumes = target.costumes.map((costume, index) =>
+        normalizeCostume(costume, `${path}/costumes/${index}`),
+      )
     }
     return target
   }
@@ -166,4 +281,26 @@ export const normalizeAiDraft = (input: unknown): AiDraftNormalizationResult => 
   }
 
   return { data: project, repairs, warnings }
+}
+
+/**
+ * Extract and normalize a complete response copied directly from an AI chat/notebook.
+ * @param source Text copied from an AI response.
+ * @returns Normalized data with repair and warning records.
+ */
+export const normalizeAiResponse = (source: string): AiDraftNormalizationResult => {
+  const parsed = parseAiResponse(source)
+  const normalized = normalizeAiDraft(parsed.data)
+  if (!parsed.extracted) return normalized
+  return {
+    ...normalized,
+    repairs: [
+      {
+        path: '/',
+        code: 'extract-json',
+        message: `從混合 AI 回覆的 ${parsed.candidateCount} 個 Canonical IR 候選中擷取最完整 JSON`,
+      },
+      ...normalized.repairs,
+    ],
+  }
 }

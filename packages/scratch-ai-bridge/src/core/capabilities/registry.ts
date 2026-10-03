@@ -245,7 +245,8 @@ const describeBlock = (opcode: CanonicalOpcode): string => {
 }
 
 export const createAuthoringInstruction = (): string => `你要輸出 Scratch AI Bridge Canonical IR JSON。
-只輸出 JSON，不要 Markdown code fence。
+不要執行 Python、不要使用程式碼工具、不要顯示思考或驗證過程。
+只輸出一個最終 JSON 根物件；不要 Markdown code fence、說明文字或多個候選版本。
 根物件必須包含 format="scratch-ai-bridge/canonical-ir"、version=1、name、stage、sprites、broadcasts。
 stage 必須包含 kind="stage"、name、variables、lists、costumes、sounds、scripts、procedures。
 每個 sprite 必須包含 kind="sprite"、name、variables、lists、costumes、sounds、scripts、procedures、x、y、direction、size、visible、draggable、rotationStyle。
@@ -258,6 +259,8 @@ stage 必須包含 kind="stage"、name、variables、lists、costumes、sounds�
 - reporter：{"type":"block","block":{"opcode":"..."}}
 - 子堆疊：{"type":"stack","blocks":[...]}
 broadcasts 必須使用 [{"name":"start"}]，不能使用字串陣列。
+fields 的值必須直接是 string、number 或 boolean，例如 {"KEY_OPTION":"right arrow"}、{"VARIABLE":"score"}；不可使用 {"value":"..."} 或 {"name":"..."} wrapper。
+每個 costume 至少要有 name 與 dataFormat（svg/png/jpg/jpeg/bmp）；若沒有造型資料，請輸出 costumes:[]。
 空的 lists、costumes、sounds、scripts、procedures 也必須輸出 []。
 布林條件必須使用 shape=boolean 的 reporter，不可直接把數值變數當條件。
 可用積木與必要參數：

@@ -194,6 +194,22 @@ Status: implemented (26-opcode capability slice).
 This is not the full Scratch core opcode set. Rotation, glide, mouse input, color collision, clones, sounds, additional looks blocks,
 list operations, and procedures remain for later capability slices.
 
+### Phase 9C — Mixed AI response extraction
+
+Status: implemented.
+
+- accepts exact JSON or a complete AI notebook/chat response containing Python, text output, Markdown fences, and several JSON drafts
+- scans balanced JSON objects and selects the largest valid Canonical IR candidate rather than blindly using the first draft
+- limits copied AI responses to 2,000,000 characters and reports a clear error when no complete Canonical IR exists
+- converts `{value: ...}` / `{name: ...}` field wrappers to scalar fields
+- supplies `svg` only for name-only or visibly inline-SVG costumes whose missing format is unambiguous
+- the prompt now explicitly forbids Python/tool execution and documents scalar fields plus costume `dataFormat`
+- browser regression covers both the mixed Notebook response and Gemini's earlier 106-repair shorthand response
+
+### Phase 9D — Copyable AI repair feedback
+
+Status: planned, not implemented. See [`ai-repair-feedback-plan.md`](ai-repair-feedback-plan.md).
+
 ## Phase 10–15
 
 Status: not yet claimed complete in the formal monorepo source.
@@ -207,10 +223,10 @@ Verified with the exact Node version from `.nvmrc`:
 - clean `npm ci`
 - required official Scratch workspace builds
 - ESLint + Prettier: pass
-- Vitest: 14 files / 41 tests pass
+- Vitest: 14 files / 43 tests pass
 - TypeScript + production Vite build: pass
-- strict-CSP headless Chromium at a nested project path: Gemini shorthand repair, semantic warning, platformer validation,
-  generate, download, re-upload and analyze pass
+- strict-CSP headless Chromium at a nested project path: Gemini Notebook extraction, shorthand repair, semantic warning,
+  platformer validation, generate, download, re-upload and analyze pass
 - browser smoke test: no console/page errors and no failed HTTP requests; the same test is a Pages CI gate
 - production source-map dependency reachability review: see `docs/security-audit.md`
 

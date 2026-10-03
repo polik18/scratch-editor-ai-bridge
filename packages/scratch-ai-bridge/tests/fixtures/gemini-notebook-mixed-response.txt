@@ -1,0 +1,120 @@
+```python
+import json
+
+ir = {
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Draft Baseline",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [],
+    "lists": [],
+    "costumes": [],
+    "sounds": [],
+    "scripts": [],
+    "procedures": []
+  },
+  "sprites": [],
+  "broadcasts": []
+}
+
+print("JSON valid draft baseline")
+```
+
+```text
+JSON valid draft baseline
+```
+
+The complete result follows.
+
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Mario Mixed Response",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [{ "name": "vy", "value": 0 }],
+    "lists": [],
+    "costumes": [{ "name": "backdrop1" }],
+    "sounds": [],
+    "scripts": [],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Mario",
+      "variables": [],
+      "lists": [],
+      "costumes": [{ "name": "mario_idle" }],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "inputs": {},
+              "fields": { "KEY_OPTION": { "value": "right arrow" } }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "inputs": { "VALUE": { "type": "literal", "value": 0 } },
+              "fields": { "VARIABLE": { "value": "vy" } }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "sensing_touchingobject",
+                    "inputs": {
+                      "TOUCHINGOBJECTMENU": { "type": "literal", "value": "Ground" }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "looks_switchcostumeto",
+                      "inputs": { "COSTUME": { "type": "literal", "value": "mario_idle" } }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": [],
+      "x": -180,
+      "y": -80,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "left-right"
+    },
+    {
+      "kind": "sprite",
+      "name": "Ground",
+      "variables": [],
+      "lists": [],
+      "costumes": [{ "name": "ground_costume" }],
+      "sounds": [],
+      "scripts": [],
+      "procedures": [],
+      "x": 0,
+      "y": -140,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "don't rotate"
+    }
+  ],
+  "broadcasts": []
+}

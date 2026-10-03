@@ -13,6 +13,9 @@ describe('Canonical block capability registry', () => {
 
     const instruction = createAuthoringInstruction()
     for (const opcode of CANONICAL_OPCODES) expect(instruction).toContain(opcode)
+    expect(instruction).toContain('不要執行 Python')
+    expect(instruction).toContain('{"KEY_OPTION":"right arrow"}')
+    expect(instruction).toContain('每個 costume 至少要有 name 與 dataFormat')
   })
 
   it('describes the platform-game authoring slice', () => {

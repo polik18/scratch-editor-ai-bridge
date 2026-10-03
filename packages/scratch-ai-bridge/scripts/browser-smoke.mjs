@@ -7,6 +7,9 @@ import { chromium } from 'playwright'
 const sitePrefix = '/scratch-editor-ai-bridge/'
 const distRoot = resolve(fileURLToPath(new URL('../dist/', import.meta.url)))
 const geminiDraftPath = fileURLToPath(new URL('../tests/fixtures/gemini-platformer-shorthand.json', import.meta.url))
+const geminiMixedResponsePath = fileURLToPath(
+  new URL('../tests/fixtures/gemini-notebook-mixed-response.txt', import.meta.url),
+)
 const contentTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
   ['.html', 'text/html; charset=utf-8'],
@@ -67,6 +70,21 @@ try {
 
   await page.goto(`http://127.0.0.1:${address.port}${sitePrefix}`, { waitUntil: 'networkidle' })
 
+  await page.locator('#json-editor').fill(await readFile(geminiMixedResponsePath, 'utf8'))
+  await page.locator('#repair').click()
+  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
+  const mixedResponseRepaired = (await page.locator('#generate-status').textContent())?.trim()
+  if ((await page.locator('#generate-status').getAttribute('data-kind')) === 'error') {
+    throw new Error(`Mixed AI response repair failed: ${mixedResponseRepaired}`)
+  }
+  await page.locator('#validate').click()
+  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
+  if ((await page.locator('#generate-status').getAttribute('data-kind')) === 'error') {
+    throw new Error(
+      `Extracted AI response validation failed: ${await page.locator('#generate-status').textContent()}`,
+    )
+  }
+
   await page.locator('#json-editor').fill(await readFile(geminiDraftPath, 'utf8'))
   await page.locator('#repair').click()
   await page.locator('#generate-status[data-kind="neutral"], #generate-status[data-kind="error"]').waitFor()
@@ -121,6 +139,7 @@ try {
   if (failures.length > 0) throw new Error(failures.join('\n'))
 
   const result = {
+    mixedResponseRepaired,
     repaired,
     validated,
     platformValidated,

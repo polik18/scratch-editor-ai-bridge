@@ -37,8 +37,9 @@ Analyze:
 → AI prompt
 ```
 
-AI 回傳若使用常見簡寫（例如 script 直接寫成陣列、純量 input、字串 broadcast，或省略角色預設欄位），可先按
-「修復 AI JSON」。修復器只補結構明確的內容，不會猜測遊戲規則；Validate 會再檢查未宣告的變數／清單／廣播、
+可直接貼上包含 Python、執行輸出、Markdown code fence 或說明文字的整份 AI 回覆，再按「擷取／修復 AI 回覆」。
+工具會選出最完整的 Canonical IR，並修復常見簡寫（例如裸 script 陣列、純量 input、字串 broadcast、field wrapper，
+或省略角色與 costume 必要欄位）。修復器不會猜測遊戲規則；Validate 會再檢查未宣告的變數／清單／廣播、
 缺少必要 input、錯置的事件帽，以及非布林條件等語意問題。
 
 目前 strict authoring registry 支援 26 個積木，包括鍵盤事件、X/Y 移動、角色碰撞、比較／布林 reporter、造型切換、
@@ -47,6 +48,7 @@ AI 指令的 opcode、必要 input、field、積木形狀與 stage/sprite 限制
 
 See `docs/status.md` and `docs/vm-write-path.md` for exact phase status and design decisions.
 The full L1/L2/L3 completeness definition and staged implementation plan is in `docs/completeness-roadmap.md`.
+The planned one-click AI error feedback loop is specified in `docs/ai-repair-feedback-plan.md`.
 
 ## Commands
 
