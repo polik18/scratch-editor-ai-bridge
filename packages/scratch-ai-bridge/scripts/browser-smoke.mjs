@@ -80,6 +80,43 @@ try {
 
   await page.goto(`http://127.0.0.1:${address.port}${sitePrefix}`, { waitUntil: 'networkidle' })
 
+  if (
+    (await page.locator('#analyze-panel').evaluate((element) => globalThis.getComputedStyle(element).display)) !==
+    'none'
+  ) {
+    throw new Error('Inactive analysis mode is visible')
+  }
+  if ((await page.locator('#generate-panel').getAttribute('aria-labelledby')) !== 'generate-tab') {
+    throw new Error('Generate mode is not associated with its tab')
+  }
+  if (await page.locator('#validate').isVisible()) throw new Error('Technical controls are visible in student mode')
+  if (await page.locator('#question').isVisible()) throw new Error('Inactive analysis controls are visible')
+  const unlabeledTextareas = await page
+    .locator('textarea')
+    .evaluateAll((elements) =>
+      elements
+        .filter(
+          (element) =>
+            element.labels?.length === 0 &&
+            !element.getAttribute('aria-label') &&
+            !element.getAttribute('aria-labelledby'),
+        )
+        .map((element) => element.id),
+    )
+  if (unlabeledTextareas.length > 0) throw new Error(`Unlabeled textareas: ${unlabeledTextareas.join(', ')}`)
+  await page.locator('#project-request').fill('做一個可以收集金幣的平台遊戲')
+  await page.locator('#copy-instruction').click()
+  const studentInstruction = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  if (
+    typeof studentInstruction !== 'string' ||
+    !studentInstruction.includes('作品需求：\n做一個可以收集金幣的平台遊戲') ||
+    !studentInstruction.includes('event_whenkeypressed')
+  ) {
+    throw new Error('Student project request was not included in the copied AI instruction')
+  }
+
+  await page.locator('#advanced-tools summary').click()
+
   await page.locator('#json-editor').fill(await readFile(geminiMixedResponsePath, 'utf8'))
   await page.locator('#repair').click()
   await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
@@ -114,6 +151,7 @@ try {
     throw new Error('Paste-ready AI repair prompt is incomplete')
   }
 
+  await page.locator('#repair-tools .technical-details summary').click()
   await page.locator('#copy-repair-report').click()
   const copiedReport = JSON.parse(await page.evaluate(() => globalThis.__scratchAiBridgeClipboard))
   if (copiedReport.summary.autoRepaired !== 106 || copiedReport.summary.warnings !== 3) {
@@ -156,7 +194,7 @@ try {
   }
 
   const downloadPromise = page.waitForEvent('download').catch((error) => error)
-  await page.locator('#compile').click()
+  await page.locator('#student-build').click()
   await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
 
   const generated = (await page.locator('#generate-status').textContent())?.trim()
@@ -172,6 +210,16 @@ try {
   if (!downloadPath) throw new Error('Chromium did not expose the generated SB3 path')
 
   await page.locator('button[data-tab="analyze"]').click()
+  if (
+    (await page.locator('#generate-panel').evaluate((element) => globalThis.getComputedStyle(element).display)) !==
+    'none'
+  ) {
+    throw new Error('Inactive generate mode is visible')
+  }
+  await page.locator('#sb3-file').focus()
+  if ((await page.evaluate(() => globalThis.document.activeElement?.id)) !== 'sb3-file') {
+    throw new Error('Scratch file picker is not keyboard focusable')
+  }
   await page.locator('#sb3-file').setInputFiles(downloadPath)
   await page.locator('#file-status').filter({ hasText: '完成：' }).waitFor()
 

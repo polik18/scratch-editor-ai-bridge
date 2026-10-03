@@ -269,3 +269,11 @@ ${CANONICAL_OPCODES.map(describeBlock).join('\n')}
 碰撞 TOUCHINGOBJECTMENU 可用角色名稱、_edge_ 或 _mouse_。
 不要自行加入 Scratch block id、parent、next 或 shadow id；這些由 compiler 產生。
 若需求超出上述 capability，只產生可執行的簡化示範，不得杜撰 opcode。`
+
+export const createStudentProjectInstruction = (request: string): string => `請依照下面的作品需求製作 Scratch 專案。
+保留需求中的角色、玩法與目標；若目前能力無法完整做到，請產生可執行的簡化版本。
+
+作品需求：
+${request.trim()}
+
+${createAuthoringInstruction()}`

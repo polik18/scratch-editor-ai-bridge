@@ -220,6 +220,22 @@ Status: A + B first release implemented; C + D remain staged. See [`ai-repair-fe
 Capability-derived minimal examples and the complete simulated "AI-corrected reply → compile" regression remain Phase C/D work;
 the first release does not claim that the repair loop can infer ambiguous game intent.
 
+### Phase 9E — Chinese student workflow
+
+Status: first student-facing slice implemented.
+
+- replaces the developer-first landing page with a four-step Chinese flow: describe, send to AI, paste reply, download
+- combines the student's original project idea with the full capability-generated AI contract
+- adds supported idea examples and leaves the AI response editor empty instead of showing raw JSON on first load
+- provides one `檢查並製作 Scratch` action that extracts, repairs, validates, compiles, and downloads when safe
+- stops on ambiguous game rules and offers a plain-language `複製修正訊息給 AI` action without exposing JSON paths by default
+- moves Canonical IR, Repair Report, separate validation, and direct compile controls into teacher/advanced disclosure panels
+- fixes the CSS bug that displayed inactive tab panels, and adds tab semantics, labels, keyboard focus, 44px controls,
+  higher-contrast small text, and a keyboard-accessible file picker
+- simplifies Analyze labels and hides raw Analysis/Canonical IR behind technical details
+
+Student usability sessions and per-issue child-friendly explanations remain the next UX validation slice.
+
 ## Phase 10–15
 
 Status: not yet claimed complete in the formal monorepo source.
@@ -233,10 +249,11 @@ Verified with the exact Node version from `.nvmrc`:
 - clean `npm ci`
 - required official Scratch workspace builds
 - ESLint + Prettier: pass
-- Vitest: 15 files / 46 tests pass
+- Vitest: 15 files / 47 tests pass
 - TypeScript + production Vite build: pass
-- strict-CSP headless Chromium at a nested project path: Gemini Notebook extraction, shorthand repair, Repair Report copy/undo,
-  semantic warning, platformer validation, generate, download, re-upload and analyze pass
+- strict-CSP headless Chromium at a nested project path: student request composition, inactive-panel isolation, labeled inputs,
+  keyboard file access, Gemini Notebook extraction, shorthand repair, Repair Report copy/undo, one-click student build,
+  download, re-upload and analyze pass
 - browser smoke test: no console/page errors and no failed HTTP requests; the same test is a Pages CI gate
 - production source-map dependency reachability review: see `docs/security-audit.md`
 

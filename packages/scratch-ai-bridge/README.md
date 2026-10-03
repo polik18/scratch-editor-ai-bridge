@@ -37,14 +37,15 @@ Analyze:
 → AI prompt
 ```
 
-可直接貼上包含 Python、執行輸出、Markdown code fence 或說明文字的整份 AI 回覆，再按「擷取／修復 AI 回覆」。
+學生版流程先讓使用者用中文描述作品，再產生一份可貼到 Gemini 或其他 AI 的完整訊息。取得 AI 回覆後可整段貼回網站，
+按一次「檢查並製作 Scratch」便會自動擷取、修復、驗證、編譯及下載；不必理解 JSON、Validate 或 Compile。
 工具會選出最完整的 Canonical IR，並修復常見簡寫（例如裸 script 陣列、純量 input、字串 broadcast、field wrapper，
 或省略角色與 costume 必要欄位）。修復器不會猜測遊戲規則；Validate 會再檢查未宣告的變數／清單／廣播、
 缺少必要 input、錯置的事件帽，以及非布林條件等語意問題。
 
-若仍有格式或語意問題，頁面會產生完整的 Repair Report。按「複製給 AI 修正」即可取得包含目前專案、完整診斷與
+若仍有格式或語意問題，頁面會用中文說明下一步。按「複製修正訊息給 AI」即可取得包含原始作品需求、目前專案、完整診斷與
 Canonical IR 規則的提示詞，直接貼回 Gemini；也可只複製／下載報告。剪貼簿權限被拒絕時會顯示可手動全選的內容，
-自動修復後則可一鍵復原修復前的原始回覆。
+自動修復後則可一鍵復原修復前的原始回覆。JSON、Repair Report 與分離式檢查／編譯操作均保留在教師／進階工具。
 
 目前 strict authoring registry 支援 26 個積木，包括鍵盤事件、X/Y 移動、角色碰撞、比較／布林 reporter、造型切換、
 控制流程、變數與廣播。網站內建的 `Platformer Core Controls` 範例示範左右移動、跳躍速度、重力及平台碰撞；

@@ -3,6 +3,7 @@ import {
   CANONICAL_BLOCK_CAPABILITIES,
   CANONICAL_OPCODES,
   createAuthoringInstruction,
+  createStudentProjectInstruction,
 } from '../../src/core/capabilities'
 import schema from '../../src/core/ir/schema.json'
 
@@ -34,5 +35,14 @@ describe('Canonical block capability registry', () => {
       opcode: 'looks_costume',
       field: 'COSTUME',
     })
+  })
+
+  it('combines a student idea with the complete authoring contract', () => {
+    const instruction = createStudentProjectInstruction('  做一個可以收集金幣的平台遊戲  ')
+
+    expect(instruction).toContain('作品需求：\n做一個可以收集金幣的平台遊戲')
+    expect(instruction).toContain('只輸出一個最終 JSON 根物件')
+    expect(instruction).toContain('event_whenkeypressed')
+    expect(instruction).not.toContain('  做一個')
   })
 })
