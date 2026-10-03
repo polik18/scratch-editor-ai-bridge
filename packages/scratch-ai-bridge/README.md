@@ -37,6 +37,10 @@ Analyze:
 → AI prompt
 ```
 
+AI 回傳若使用常見簡寫（例如 script 直接寫成陣列、純量 input、字串 broadcast，或省略角色預設欄位），可先按
+「修復 AI JSON」。修復器只補結構明確的內容，不會猜測遊戲規則；Validate 會再檢查未宣告的變數／清單／廣播、
+缺少必要 input、錯置的事件帽，以及非布林條件等語意問題。
+
 See `docs/status.md` and `docs/vm-write-path.md` for exact phase status and design decisions.
 The full L1/L2/L3 completeness definition and staged implementation plan is in `docs/completeness-roadmap.md`.
 

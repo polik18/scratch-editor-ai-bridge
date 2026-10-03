@@ -136,6 +136,10 @@ SB3 ZIP
 
 ### Phase 7：Analysis 與 AI authoring 完整化
 
+Status: in progress. The first AI-output hardening slice is implemented: full prompt contract, path-specific structural repair,
+semantic symbol/block checks, and a real Gemini regression fixture. Generic graph analysis, capability-derived prompts, migrations,
+and preservation-edit mode remain open.
+
 工作：
 
 - Analysis IR 改為 generic graph 分析：detached script、dangling link、procedure dependency、broadcast dependency、list/variable read-write、monitor dependency、extension usage、asset missing。

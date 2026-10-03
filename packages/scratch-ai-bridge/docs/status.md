@@ -163,6 +163,23 @@ AI JSON
 → download .sb3
 ```
 
+### Phase 9A — AI draft repair and semantic validation
+
+Status: implemented (first hardening slice).
+
+- the copyable AI instruction now states the complete target, script, input, and broadcast shapes instead of only listing opcodes
+- common model shorthand is repaired non-destructively: missing target defaults, script arrays, scalar inputs, stack arrays,
+  variable/list/broadcast shorthand, reporter blocks, and string broadcast declarations
+- every automatic change has a path-specific repair record; ambiguous game logic is never silently rewritten
+- semantic validation now checks symbol references, required inputs, stack types, event-hat placement, broadcast input types,
+  and warns about numeric/list values used as Boolean conditions
+- the user's Gemini platformer response is checked in as a regression fixture and runs through repair, validation, VM compile,
+  download, re-upload, and analysis in the browser smoke test
+
+This slice makes the reported Gemini response usable, but it does not claim that the current 12-opcode vocabulary can express
+a real platform game. Keyboard input, XY movement, collision sensing, Boolean comparisons, gravity, and costume switching remain
+part of the capability-registry/opcode expansion work.
+
 ## Phase 10–15
 
 Status: not yet claimed complete in the formal monorepo source.
@@ -176,9 +193,10 @@ Verified with the exact Node version from `.nvmrc`:
 - clean `npm ci`
 - required official Scratch workspace builds
 - ESLint + Prettier: pass
-- Vitest: 11 files / 28 tests pass
+- Vitest: 13 files / 33 tests pass
 - TypeScript + production Vite build: pass
-- strict-CSP headless Chromium at a nested project path: generate, download, re-upload and analyze pass
+- strict-CSP headless Chromium at a nested project path: Gemini shorthand repair, semantic warning, generate, download,
+  re-upload and analyze pass
 - browser smoke test: no console/page errors and no failed HTTP requests; the same test is a Pages CI gate
 - production source-map dependency reachability review: see `docs/security-audit.md`
 

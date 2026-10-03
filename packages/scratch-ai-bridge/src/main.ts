@@ -6,8 +6,14 @@ import { compileCanonicalProjectToSb3 } from './core/compiler'
 import { decompileSb3 } from './core/decompiler'
 import sampleProject from './core/ir/examples/02-green-flag-move-say.json'
 import type { CanonicalProject } from './core/ir/types'
+import { normalizeAiDraft } from './core/normalizer'
 import { createAnalysisPrompt, type TutorMode } from './core/prompt'
-import { validateCanonicalProject } from './core/validator'
+import {
+  validateCanonicalProject,
+  validateCanonicalSemantics,
+  type CanonicalIRValidationIssue,
+  type CanonicalSemanticIssue,
+} from './core/validator'
 import './style.css'
 
 globalThis.Buffer = Buffer
@@ -21,9 +27,22 @@ window.addEventListener('pagehide', () => bootstrapVm.quit(), { once: true })
 
 const AI_INSTRUCTION = `你要輸出 Scratch AI Bridge Canonical IR JSON。
 只輸出 JSON，不要 Markdown code fence。
-格式必須包含 format="scratch-ai-bridge/canonical-ir"、version=1、name、stage、sprites、broadcasts。
+根物件必須包含 format="scratch-ai-bridge/canonical-ir"、version=1、name、stage、sprites、broadcasts。
 第一版可用 opcode：event_whenflagclicked、motion_movesteps、looks_say、control_wait、control_repeat、control_forever、control_if、control_if_else、data_setvariableto、data_changevariableby、event_broadcast、event_whenbroadcastreceived。
-不要自行加入 Scratch block id、parent、next 或 shadow id；這些由 compiler 產生。`
+stage 必須包含 kind="stage"、name、variables、lists、costumes、sounds、scripts、procedures。
+每個 sprite 必須包含 kind="sprite"、name、variables、lists、costumes、sounds、scripts、procedures、x、y、direction、size、visible、draggable、rotationStyle。
+每個 script 必須是 {"blocks":[...]}，不能直接使用積木陣列。
+每個 input 都必須是下列物件之一：
+- 常數：{"type":"literal","value":10}
+- 變數：{"type":"variable","name":"score"}
+- 清單：{"type":"list","name":"items"}
+- 廣播：{"type":"broadcast","name":"start"}
+- reporter：{"type":"block","block":{"opcode":"..."}}
+- 子堆疊：{"type":"stack","blocks":[...]}
+broadcasts 必須使用 [{"name":"start"}]，不能使用字串陣列。
+空的 lists、costumes、sounds、scripts、procedures 也必須輸出 []。
+不要自行加入 Scratch block id、parent、next 或 shadow id；這些由 compiler 產生。
+目前沒有鍵盤、X/Y 座標、碰撞、比較運算與造型切換積木，因此無法製作真正的平台遊戲；遇到超出能力的需求，只產生可執行的簡化示範，不得杜撰 opcode。`
 
 app.innerHTML = `
   <div class="app-shell">
@@ -50,7 +69,7 @@ app.innerHTML = `
         <article class="card wide">
           <div class="card-head"><h2>2. Canonical IR JSON</h2><button id="load-sample" class="button secondary">載入範例</button></div>
           <textarea id="json-editor" class="mono editor" spellcheck="false"></textarea>
-          <div class="button-row"><button id="validate" class="button secondary">Validate</button><button id="compile" class="button primary">Compile & Download .sb3</button></div>
+          <div class="button-row"><button id="repair" class="button secondary">修復 AI JSON</button><button id="validate" class="button secondary">Validate</button><button id="compile" class="button primary">Compile & Download .sb3</button></div>
           <div id="generate-status" class="status-box"></div>
         </article>
       </section>
@@ -113,11 +132,37 @@ const downloadJson = (value: unknown, filename: string) => {
   download(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }), filename)
 }
 
+const formatValidationErrors = (errors: readonly CanonicalIRValidationIssue[]): string => {
+  const visible = errors.slice(0, 12).map((error) => `${error.instancePath || '/'} ${error.message}`)
+  const remaining = errors.length - visible.length
+  return [...visible, ...(remaining > 0 ? [`…另有 ${remaining} 項格式錯誤`] : [])].join('\n')
+}
+
+const formatSemanticIssues = (issues: readonly CanonicalSemanticIssue[]): string => {
+  const visible = issues.slice(0, 12).map((issue) => `${issue.path} [${issue.code}] ${issue.message}`)
+  const remaining = issues.length - visible.length
+  return [...visible, ...(remaining > 0 ? [`…另有 ${remaining} 項語意問題`] : [])].join('\n')
+}
+
+const inspectSemantics = (project: CanonicalProject): readonly CanonicalSemanticIssue[] => {
+  const issues = validateCanonicalSemantics(project)
+  const errors = issues.filter((issue) => issue.severity === 'error')
+  if (errors.length > 0) {
+    throw new Error(`JSON 格式合法，但有 ${errors.length} 項無法編譯的語意錯誤：\n${formatSemanticIssues(errors)}`)
+  }
+  return issues
+}
+
 const parseEditor = (): CanonicalProject => {
   const parsed: unknown = JSON.parse(editor.value)
   const validation = validateCanonicalProject(parsed)
   if (!validation.valid) {
-    throw new Error(validation.errors.map((error) => `${error.instancePath || '/'} ${error.message}`).join('\n'))
+    const normalized = normalizeAiDraft(parsed)
+    const repairedValidation = validateCanonicalProject(normalized.data)
+    if (normalized.repairs.length > 0 && repairedValidation.valid) {
+      throw new Error(`偵測到 ${normalized.repairs.length} 項可自動修復的 AI 簡化格式。請先按「修復 AI JSON」。`)
+    }
+    throw new Error(formatValidationErrors(validation.errors))
   }
   return validation.data
 }
@@ -131,10 +176,57 @@ byId<HTMLButtonElement>('load-sample').addEventListener('click', () => {
   editor.value = JSON.stringify(sampleProject, null, 2)
   setStatus(generateStatus, '已恢復內建範例。')
 })
+byId<HTMLButtonElement>('repair').addEventListener('click', () => {
+  try {
+    const parsed: unknown = JSON.parse(editor.value)
+    const normalized = normalizeAiDraft(parsed)
+    if (normalized.repairs.length === 0) {
+      setStatus(generateStatus, '沒有偵測到可安全自動修復的格式。')
+      return
+    }
+    editor.value = JSON.stringify(normalized.data, null, 2)
+    const validation = validateCanonicalProject(normalized.data)
+    if (!validation.valid) {
+      setStatus(
+        generateStatus,
+        `已完成 ${normalized.repairs.length} 項結構修復，但仍有問題：\n${formatValidationErrors(validation.errors)}`,
+        'error',
+      )
+      return
+    }
+    const semanticIssues = validateCanonicalSemantics(validation.data)
+    const semanticErrors = semanticIssues.filter((issue) => issue.severity === 'error')
+    const semanticWarnings = semanticIssues.filter((issue) => issue.severity === 'warning')
+    if (semanticErrors.length > 0) {
+      setStatus(
+        generateStatus,
+        `已完成 ${normalized.repairs.length} 項結構修復，但仍有 ${semanticErrors.length} 項語意錯誤：\n${formatSemanticIssues(semanticErrors)}`,
+        'error',
+      )
+      return
+    }
+    const warningText = formatSemanticIssues(semanticWarnings)
+    setStatus(
+      generateStatus,
+      `已完成 ${normalized.repairs.length} 項結構修復。${warningText ? `\n仍需人工確認 ${semanticWarnings.length} 項語意警告：\n${warningText}` : ''}`,
+      semanticWarnings.length > 0 ? 'neutral' : 'ok',
+    )
+  } catch (error) {
+    setStatus(generateStatus, error instanceof Error ? error.message : String(error), 'error')
+  }
+})
 byId<HTMLButtonElement>('validate').addEventListener('click', () => {
   try {
     const project = parseEditor()
-    setStatus(generateStatus, `Canonical IR 合法：${project.sprites.length} 個角色。`, 'ok')
+    const issues = inspectSemantics(project)
+    if (issues.length > 0) {
+      setStatus(
+        generateStatus,
+        `Canonical IR 格式與參照合法，但有 ${issues.length} 項語意警告：\n${formatSemanticIssues(issues)}`,
+      )
+      return
+    }
+    setStatus(generateStatus, `Canonical IR 格式與語意合法：${project.sprites.length} 個角色。`, 'ok')
   } catch (error) {
     setStatus(generateStatus, error instanceof Error ? error.message : String(error), 'error')
   }
@@ -142,10 +234,15 @@ byId<HTMLButtonElement>('validate').addEventListener('click', () => {
 const compileProject = async () => {
   try {
     const project = parseEditor()
+    const semanticIssues = inspectSemantics(project)
     setStatus(generateStatus, '正在透過 Scratch VM 編譯…')
     const sb3 = await compileCanonicalProjectToSb3(project)
     download(sb3, `${project.name.replace(/[^\w\-\u4e00-\u9fff]+/g, '-') || 'scratch-project'}.sb3`)
-    setStatus(generateStatus, '完成：.sb3 已由 Scratch VM 產生。', 'ok')
+    setStatus(
+      generateStatus,
+      `完成：.sb3 已由 Scratch VM 產生。${semanticIssues.length > 0 ? `（保留 ${semanticIssues.length} 項語意警告）` : ''}`,
+      'ok',
+    )
   } catch (error) {
     setStatus(generateStatus, error instanceof Error ? error.message : String(error), 'error')
   }

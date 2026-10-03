@@ -6,6 +6,7 @@ import { chromium } from 'playwright'
 
 const sitePrefix = '/scratch-editor-ai-bridge/'
 const distRoot = resolve(fileURLToPath(new URL('../dist/', import.meta.url)))
+const geminiDraftPath = fileURLToPath(new URL('../tests/fixtures/gemini-platformer-shorthand.json', import.meta.url))
 const contentTypes = new Map([
   ['.css', 'text/css; charset=utf-8'],
   ['.html', 'text/html; charset=utf-8'],
@@ -66,6 +67,21 @@ try {
 
   await page.goto(`http://127.0.0.1:${address.port}${sitePrefix}`, { waitUntil: 'networkidle' })
 
+  await page.locator('#json-editor').fill(await readFile(geminiDraftPath, 'utf8'))
+  await page.locator('#repair').click()
+  await page.locator('#generate-status[data-kind="neutral"], #generate-status[data-kind="error"]').waitFor()
+  const repaired = (await page.locator('#generate-status').textContent())?.trim()
+  if ((await page.locator('#generate-status').getAttribute('data-kind')) === 'error') {
+    throw new Error(`AI draft repair failed: ${repaired}`)
+  }
+
+  await page.locator('#validate').click()
+  await page.locator('#generate-status[data-kind="neutral"], #generate-status[data-kind="error"]').waitFor()
+  const validated = (await page.locator('#generate-status').textContent())?.trim()
+  if ((await page.locator('#generate-status').getAttribute('data-kind')) === 'error') {
+    throw new Error(`Repaired draft validation failed: ${validated}`)
+  }
+
   const downloadPromise = page.waitForEvent('download').catch((error) => error)
   await page.locator('#compile').click()
   await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
@@ -89,6 +105,8 @@ try {
   if (failures.length > 0) throw new Error(failures.join('\n'))
 
   const result = {
+    repaired,
+    validated,
     generated,
     analyzed: (await page.locator('#file-status').textContent())?.trim(),
     url: page.url(),

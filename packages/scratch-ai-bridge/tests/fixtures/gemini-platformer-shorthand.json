@@ -1,0 +1,195 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Super Mario Platformer",
+  "stage": {
+    "name": "Stage",
+    "variables": [
+      { "name": "score", "value": 0 },
+      { "name": "coins", "value": 0 },
+      { "name": "lives", "value": 3 }
+    ],
+    "scripts": []
+  },
+  "sprites": [
+    {
+      "name": "Mario",
+      "scripts": [
+        [
+          { "opcode": "event_whenflagclicked" },
+          {
+            "opcode": "data_setvariableto",
+            "fields": { "VARIABLE": "score" },
+            "inputs": { "VALUE": 0 }
+          },
+          {
+            "opcode": "data_setvariableto",
+            "fields": { "VARIABLE": "coins" },
+            "inputs": { "VALUE": 0 }
+          },
+          {
+            "opcode": "data_setvariableto",
+            "fields": { "VARIABLE": "lives" },
+            "inputs": { "VALUE": 3 }
+          },
+          {
+            "opcode": "looks_say",
+            "inputs": { "MESSAGE": "Let's Go! Super Mario!" }
+          },
+          {
+            "opcode": "event_broadcast",
+            "inputs": { "BROADCAST_INPUT": "start_game" }
+          },
+          {
+            "opcode": "control_forever",
+            "inputs": {
+              "SUBSTACK": [
+                { "opcode": "motion_movesteps", "inputs": { "STEPS": 10 } },
+                {
+                  "opcode": "data_changevariableby",
+                  "fields": { "VARIABLE": "score" },
+                  "inputs": { "VALUE": 5 }
+                },
+                {
+                  "opcode": "control_if",
+                  "inputs": {
+                    "CONDITION": { "variable": "lives" },
+                    "SUBSTACK": [
+                      {
+                        "opcode": "event_broadcast",
+                        "inputs": { "BROADCAST_INPUT": "mario_jump" }
+                      },
+                      { "opcode": "control_wait", "inputs": { "DURATION": 1 } }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ],
+        [
+          {
+            "opcode": "event_whenbroadcastreceived",
+            "fields": { "BROADCAST_OPTION": "mario_jump" }
+          },
+          { "opcode": "looks_say", "inputs": { "MESSAGE": "Yahoo! Jump!" } },
+          {
+            "opcode": "control_repeat",
+            "inputs": {
+              "TIMES": 5,
+              "SUBSTACK": [
+                { "opcode": "motion_movesteps", "inputs": { "STEPS": 15 } },
+                {
+                  "opcode": "data_changevariableby",
+                  "fields": { "VARIABLE": "score" },
+                  "inputs": { "VALUE": 10 }
+                }
+              ]
+            }
+          },
+          { "opcode": "control_wait", "inputs": { "DURATION": 0.2 } },
+          { "opcode": "looks_say", "inputs": { "MESSAGE": "Safe landing!" } }
+        ]
+      ]
+    },
+    {
+      "name": "Goomba",
+      "scripts": [
+        [
+          {
+            "opcode": "event_whenbroadcastreceived",
+            "fields": { "BROADCAST_OPTION": "start_game" }
+          },
+          { "opcode": "looks_say", "inputs": { "MESSAGE": "Goomba Walking..." } },
+          {
+            "opcode": "control_forever",
+            "inputs": {
+              "SUBSTACK": [
+                { "opcode": "motion_movesteps", "inputs": { "STEPS": -5 } },
+                { "opcode": "control_wait", "inputs": { "DURATION": 0.5 } },
+                {
+                  "opcode": "control_if_else",
+                  "inputs": {
+                    "CONDITION": { "variable": "coins" },
+                    "SUBSTACK": [
+                      {
+                        "opcode": "event_broadcast",
+                        "inputs": { "BROADCAST_INPUT": "collect_coin" }
+                      }
+                    ],
+                    "SUBSTACK2": [
+                      {
+                        "opcode": "event_broadcast",
+                        "inputs": { "BROADCAST_INPUT": "hit_enemy" }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      ]
+    },
+    {
+      "name": "Coin",
+      "scripts": [
+        [
+          {
+            "opcode": "event_whenbroadcastreceived",
+            "fields": { "BROADCAST_OPTION": "collect_coin" }
+          },
+          {
+            "opcode": "data_changevariableby",
+            "fields": { "VARIABLE": "coins" },
+            "inputs": { "VALUE": 1 }
+          },
+          {
+            "opcode": "data_changevariableby",
+            "fields": { "VARIABLE": "score" },
+            "inputs": { "VALUE": 50 }
+          },
+          { "opcode": "looks_say", "inputs": { "MESSAGE": "Coin Get! +50" } },
+          { "opcode": "control_wait", "inputs": { "DURATION": 0.5 } }
+        ]
+      ]
+    },
+    {
+      "name": "GameController",
+      "scripts": [
+        [
+          {
+            "opcode": "event_whenbroadcastreceived",
+            "fields": { "BROADCAST_OPTION": "hit_enemy" }
+          },
+          {
+            "opcode": "data_changevariableby",
+            "fields": { "VARIABLE": "lives" },
+            "inputs": { "VALUE": -1 }
+          },
+          { "opcode": "looks_say", "inputs": { "MESSAGE": "Ouch! Lost a life!" } },
+          {
+            "opcode": "control_if",
+            "inputs": {
+              "CONDITION": { "variable": "lives" },
+              "SUBSTACK": [
+                {
+                  "opcode": "event_broadcast",
+                  "inputs": { "BROADCAST_INPUT": "game_over" }
+                }
+              ]
+            }
+          }
+        ],
+        [
+          {
+            "opcode": "event_whenbroadcastreceived",
+            "fields": { "BROADCAST_OPTION": "game_over" }
+          },
+          { "opcode": "looks_say", "inputs": { "MESSAGE": "Game Over! Try Again!" } }
+        ]
+      ]
+    }
+  ],
+  "broadcasts": ["start_game", "mario_jump", "collect_coin", "hit_enemy", "game_over"]
+}
