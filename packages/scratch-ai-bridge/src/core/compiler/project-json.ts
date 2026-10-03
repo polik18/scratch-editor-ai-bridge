@@ -1,6 +1,7 @@
 import type { DataFormat } from '@scratch/scratch-storage'
 import JSZip from 'jszip'
 import { createOfflineScratchStorage } from '../../scratch/storage'
+import { getInputCapability } from '../capabilities'
 import type {
   CanonicalBlock,
   CanonicalCostume,
@@ -87,7 +88,8 @@ interface ScratchBlockJson {
 }
 
 type ScratchPrimitive = [number, CanonicalScalar] | [11 | 12 | 13, string, string]
-type ScratchInput = [1, ScratchPrimitive] | [2, string | null] | [3, string, ScratchPrimitive]
+type ScratchInputValue = ScratchPrimitive | string
+type ScratchInput = [1, ScratchInputValue] | [2, ScratchInputValue | null] | [3, ScratchInputValue, ScratchInputValue]
 
 const STAGE_PLACEHOLDER_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"><rect width="480" height="360" fill="#fff"/></svg>'
@@ -278,30 +280,75 @@ const compileTarget = (
       shadow: false,
       topLevel: false,
     }
-    blocks[id].inputs = compileInputs(block.inputs, id)
+    blocks[id].inputs = compileInputs(block.inputs, id, block.opcode)
     return id
   }
 
-  const compileInput = (input: CanonicalInput, inputName: string, parentId: string): ScratchInput => {
+  const compileMenuShadow = (
+    parentOpcode: string,
+    inputName: string,
+    value: CanonicalScalar,
+    parentId: string,
+  ): string | undefined => {
+    const shadow = getInputCapability(parentOpcode, inputName)?.shadow
+    if (!shadow) return undefined
+    const id = nextBlockId()
+    blocks[id] = {
+      opcode: shadow.opcode,
+      next: null,
+      parent: parentId,
+      inputs: {},
+      fields: { [shadow.field]: [String(value)] },
+      shadow: true,
+      topLevel: false,
+    }
+    return id
+  }
+
+  const compileInput = (
+    input: CanonicalInput,
+    inputName: string,
+    parentId: string,
+    parentOpcode: string,
+  ): ScratchInput => {
+    const menuShadow =
+      input.type === 'literal' ? compileMenuShadow(parentOpcode, inputName, input.value, parentId) : undefined
     switch (input.type) {
       case 'literal':
+        if (menuShadow) return [1, menuShadow]
         return [1, literalPrimitive(input.value, inputName)]
-      case 'variable':
-        return [1, [12, input.name, resolveVariable(input.name)]]
-      case 'list':
-        return [1, [13, input.name, resolveList(input.name)]]
-      case 'broadcast':
-        return [1, [11, input.name, resolveBroadcast(input.name)]]
-      case 'block':
-        return [2, compileReporter(input.block, parentId)]
+      case 'variable': {
+        const reporter: ScratchPrimitive = [12, input.name, resolveVariable(input.name)]
+        const shadow = compileMenuShadow(parentOpcode, inputName, '', parentId)
+        return shadow ? [3, reporter, shadow] : [1, reporter]
+      }
+      case 'list': {
+        const reporter: ScratchPrimitive = [13, input.name, resolveList(input.name)]
+        const shadow = compileMenuShadow(parentOpcode, inputName, '', parentId)
+        return shadow ? [3, reporter, shadow] : [1, reporter]
+      }
+      case 'broadcast': {
+        const reporter: ScratchPrimitive = [11, input.name, resolveBroadcast(input.name)]
+        const shadow = compileMenuShadow(parentOpcode, inputName, input.name, parentId)
+        return shadow ? [3, reporter, shadow] : [1, reporter]
+      }
+      case 'block': {
+        const reporter = compileReporter(input.block, parentId)
+        const shadow = compileMenuShadow(parentOpcode, inputName, '', parentId)
+        return shadow ? [3, reporter, shadow] : [2, reporter]
+      }
       case 'stack':
         return [2, compileStack(input.blocks, parentId, false)]
     }
   }
 
-  const compileInputs = (inputs: CanonicalBlock['inputs'], parentId: string): Record<string, ScratchInput> =>
+  const compileInputs = (
+    inputs: CanonicalBlock['inputs'],
+    parentId: string,
+    parentOpcode: string,
+  ): Record<string, ScratchInput> =>
     Object.fromEntries(
-      Object.entries(inputs ?? {}).map(([name, input]) => [name, compileInput(input, name, parentId)]),
+      Object.entries(inputs ?? {}).map(([name, input]) => [name, compileInput(input, name, parentId, parentOpcode)]),
     )
 
   const compileFields = (fields: CanonicalBlock['fields']): Record<string, [string] | [string, string]> => {
@@ -343,7 +390,7 @@ const compileTarget = (
     })
 
     canonicalBlocks.forEach((block, index) => {
-      blocks[ids[index]].inputs = compileInputs(block.inputs, ids[index])
+      blocks[ids[index]].inputs = compileInputs(block.inputs, ids[index], block.opcode)
     })
 
     return ids[0]

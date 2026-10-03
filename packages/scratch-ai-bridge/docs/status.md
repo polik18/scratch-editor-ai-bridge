@@ -42,7 +42,7 @@ Status: implemented.
 - versioned Canonical IR types/schema
 - strict validator
 - five fixtures
-- Phase 1 opcode vocabulary
+- 26-opcode strict authoring vocabulary
 
 ## Phase 2 — Scratch VM Adapter
 
@@ -84,7 +84,7 @@ Canonical IR
 
 ## Phase 4 — IR → Scratch Compiler
 
-Status: implemented for Canonical IR v1 block set.
+Status: implemented for the current 26-opcode Canonical IR v1 authoring set.
 
 Files:
 
@@ -115,8 +115,8 @@ Verified smoke fixtures:
 - `03-repeat-score.json`
 - `04-broadcast-flow.json`
 
-All three passed IR → Scratch project JSON → IR structural signature comparison. All five built-in examples also pass
-generated SB3 validation through official `scratch-parser`.
+All three passed IR → Scratch project JSON → IR structural signature comparison. All six built-in examples also pass
+generated SB3 validation through official `scratch-parser` and the Scratch VM save path.
 
 ## Phase 7 — Analysis IR
 
@@ -176,9 +176,23 @@ Status: implemented (first hardening slice).
 - the user's Gemini platformer response is checked in as a regression fixture and runs through repair, validation, VM compile,
   download, re-upload, and analysis in the browser smoke test
 
-This slice makes the reported Gemini response usable, but it does not claim that the current 12-opcode vocabulary can express
-a real platform game. Keyboard input, XY movement, collision sensing, Boolean comparisons, gravity, and costume switching remain
-part of the capability-registry/opcode expansion work.
+This slice makes the reported Gemini response structurally usable. Its original game logic still remains only a simplified demo:
+automatic repair does not invent missing platform physics or reinterpret ambiguous conditions.
+
+### Phase 9B — Platform-game authoring core
+
+Status: implemented (26-opcode capability slice).
+
+- a typed capability registry now describes category, block shape, stage/sprite availability, required inputs/fields, and menu shadows
+- AI authoring instructions are generated from the registry, preventing the prompt and validator vocabulary from drifting apart
+- keyboard hats, XY movement, collision sensing, `<`, `=`, `>`, `and`, `or`, `not`, and costume switching are supported
+- compiler and decompiler generate and restore official `sensing_touchingobjectmenu` and `looks_costume` shadow blocks
+- semantic validation derives required inputs/fields and Boolean reporter rules from the registry; the compiler rejects semantic errors
+- the built-in platformer example includes visible SVG assets, left/right controls, jump velocity, gravity, and platform collision
+- browser smoke covers both the original Gemini shorthand repair and platformer validation/compile/download/re-import
+
+This is not the full Scratch core opcode set. Rotation, glide, mouse input, color collision, clones, sounds, additional looks blocks,
+list operations, and procedures remain for later capability slices.
 
 ## Phase 10–15
 
@@ -193,10 +207,10 @@ Verified with the exact Node version from `.nvmrc`:
 - clean `npm ci`
 - required official Scratch workspace builds
 - ESLint + Prettier: pass
-- Vitest: 13 files / 33 tests pass
+- Vitest: 14 files / 41 tests pass
 - TypeScript + production Vite build: pass
-- strict-CSP headless Chromium at a nested project path: Gemini shorthand repair, semantic warning, generate, download,
-  re-upload and analyze pass
+- strict-CSP headless Chromium at a nested project path: Gemini shorthand repair, semantic warning, platformer validation,
+  generate, download, re-upload and analyze pass
 - browser smoke test: no console/page errors and no failed HTTP requests; the same test is a Pages CI gate
 - production source-map dependency reachability review: see `docs/security-audit.md`
 

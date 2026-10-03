@@ -143,17 +143,31 @@
         "opcode": {
           "enum": [
             "event_whenflagclicked",
+            "event_whenkeypressed",
+            "event_whenbroadcastreceived",
+            "event_broadcast",
             "motion_movesteps",
+            "motion_gotoxy",
+            "motion_changexby",
+            "motion_setx",
+            "motion_changeyby",
+            "motion_sety",
             "looks_say",
+            "looks_switchcostumeto",
             "control_wait",
             "control_repeat",
             "control_forever",
             "control_if",
             "control_if_else",
+            "sensing_touchingobject",
+            "operator_lt",
+            "operator_equals",
+            "operator_gt",
+            "operator_and",
+            "operator_or",
+            "operator_not",
             "data_setvariableto",
-            "data_changevariableby",
-            "event_broadcast",
-            "event_whenbroadcastreceived"
+            "data_changevariableby"
           ]
         },
         "inputs": {

@@ -82,6 +82,14 @@ try {
     throw new Error(`Repaired draft validation failed: ${validated}`)
   }
 
+  await page.locator('#load-sample').click()
+  await page.locator('#validate').click()
+  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
+  const platformValidated = (await page.locator('#generate-status').textContent())?.trim()
+  if ((await page.locator('#generate-status').getAttribute('data-kind')) === 'error') {
+    throw new Error(`Platformer sample validation failed: ${platformValidated}`)
+  }
+
   const downloadPromise = page.waitForEvent('download').catch((error) => error)
   await page.locator('#compile').click()
   await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
@@ -102,11 +110,20 @@ try {
   await page.locator('#sb3-file').setInputFiles(downloadPath)
   await page.locator('#file-status').filter({ hasText: '完成：' }).waitFor()
 
+  const canonicalOutput = (await page.locator('#canonical-output').textContent()) ?? ''
+  if (!canonicalOutput.includes('event_whenkeypressed') || !canonicalOutput.includes('TOUCHINGOBJECTMENU')) {
+    throw new Error('Re-imported platformer is missing keyboard or collision blocks')
+  }
+  if (canonicalOutput.includes('sensing_touchingobjectmenu') || canonicalOutput.includes('looks_costume')) {
+    throw new Error('Scratch menu shadows leaked into AI-facing Canonical IR')
+  }
+
   if (failures.length > 0) throw new Error(failures.join('\n'))
 
   const result = {
     repaired,
     validated,
+    platformValidated,
     generated,
     analyzed: (await page.locator('#file-status').textContent())?.trim(),
     url: page.url(),

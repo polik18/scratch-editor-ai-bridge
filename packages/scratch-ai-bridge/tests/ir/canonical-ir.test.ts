@@ -17,7 +17,7 @@ describe('Canonical IR schema', () => {
       .filter((name) => name.endsWith('.json'))
       .sort()
 
-    expect(fixtureNames).toHaveLength(5)
+    expect(fixtureNames).toHaveLength(6)
 
     for (const fixtureName of fixtureNames) {
       expect(validateCanonicalProject(loadExample(fixtureName)), fixtureName).toMatchObject({

@@ -1,22 +1,11 @@
+import type { CanonicalOpcode } from '../capabilities'
+
 export const CANONICAL_IR_FORMAT = 'scratch-ai-bridge/canonical-ir' as const
 export const CANONICAL_IR_VERSION = 1 as const
 
-export const CANONICAL_OPCODES = [
-  'event_whenflagclicked',
-  'motion_movesteps',
-  'looks_say',
-  'control_wait',
-  'control_repeat',
-  'control_forever',
-  'control_if',
-  'control_if_else',
-  'data_setvariableto',
-  'data_changevariableby',
-  'event_broadcast',
-  'event_whenbroadcastreceived',
-] as const
+export { CANONICAL_OPCODES } from '../capabilities'
+export type { CanonicalOpcode } from '../capabilities'
 
-export type CanonicalOpcode = (typeof CANONICAL_OPCODES)[number]
 export type CanonicalScalar = string | number | boolean
 
 export interface LiteralInput {

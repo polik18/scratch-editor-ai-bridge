@@ -1,3 +1,4 @@
+import { getInputCapability } from '../capabilities'
 import type { ScratchProjectJson } from '../compiler/project-json'
 import {
   CANONICAL_IR_FORMAT,
@@ -131,11 +132,20 @@ const decodeScripts = (rawBlocks: Record<string, RawScratchBlock | unknown[]> = 
       if (typeof active === 'string') {
         if (name.startsWith('SUBSTACK')) {
           inputs[name] = { type: 'stack', blocks: decodeChain(active, nextStack) }
+        } else if (inputType === 1) {
+          const shadow = blocks[active]
+          const expectedShadow = getInputCapability(raw.opcode, name)?.shadow
+          if (expectedShadow && isBlock(shadow) && shadow.opcode === expectedShadow.opcode) {
+            inputs[name] = {
+              type: 'literal',
+              value: fieldValue(shadow.fields?.[expectedShadow.field]),
+            }
+          } else {
+            inputs[name] = { type: 'block', block: decodeBlock(active, nextStack) }
+          }
         } else {
           inputs[name] = { type: 'block', block: decodeBlock(active, nextStack) }
         }
-      } else if (inputType === 3 && typeof encodedInput[1] === 'string') {
-        inputs[name] = { type: 'block', block: decodeBlock(encodedInput[1], nextStack) }
       } else {
         inputs[name] = primitiveToInput(active)
       }

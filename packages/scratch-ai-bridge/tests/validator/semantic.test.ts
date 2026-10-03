@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import example from '../../src/core/ir/examples/03-repeat-score.json'
+import platformer from '../../src/core/ir/examples/06-platformer-core.json'
 import type { CanonicalProject } from '../../src/core/ir/types'
 import { normalizeAiDraft } from '../../src/core/normalizer/ai-draft'
 import { validateCanonicalProject } from '../../src/core/validator/canonical-ir'
@@ -12,6 +13,10 @@ const geminiFixture = fileURLToPath(new URL('../fixtures/gemini-platformer-short
 describe('Canonical IR semantic validator', () => {
   it('accepts the checked-in repeat example without semantic issues', () => {
     expect(validateCanonicalSemantics(example as CanonicalProject)).toEqual([])
+  })
+
+  it('accepts keyboard, collision, and Boolean reporters in the platformer example', () => {
+    expect(validateCanonicalSemantics(platformer as CanonicalProject)).toEqual([])
   })
 
   it('reports ambiguous numeric conditions in the repaired Gemini draft', () => {
@@ -43,6 +48,46 @@ describe('Canonical IR semantic validator', () => {
     const issues = validateCanonicalSemantics(project)
     expect(new Set(issues.map((issue) => issue.code))).toEqual(
       new Set(['hat-not-first', 'hat-not-top-level', 'missing-input', 'unknown-variable', 'unknown-broadcast']),
+    )
+  })
+
+  it('enforces registry target, field, input, and collision contracts', () => {
+    const project = structuredClone(platformer) as CanonicalProject
+    project.stage.scripts.push({
+      blocks: [
+        {
+          opcode: 'motion_gotoxy',
+          fields: { EXTRA: 'unexpected' },
+          inputs: {
+            X: { type: 'literal', value: 0 },
+            Y: { type: 'literal', value: 0 },
+            EXTRA: { type: 'literal', value: 0 },
+          },
+        },
+      ],
+    })
+    project.sprites[0].scripts.push({
+      blocks: [
+        { opcode: 'event_whenkeypressed', fields: { KEY_OPTION: 'escape' } },
+        {
+          opcode: 'control_if',
+          inputs: {
+            CONDITION: {
+              type: 'block',
+              block: {
+                opcode: 'sensing_touchingobject',
+                inputs: { TOUCHINGOBJECTMENU: { type: 'literal', value: 'Ghost' } },
+              },
+            },
+            SUBSTACK: { type: 'stack', blocks: [] },
+          },
+        },
+      ],
+    })
+
+    const codes = new Set(validateCanonicalSemantics(project).map((issue) => issue.code))
+    expect(codes).toEqual(
+      new Set(['invalid-field-value', 'target-not-supported', 'unknown-field', 'unknown-input', 'unknown-sprite']),
     )
   })
 })

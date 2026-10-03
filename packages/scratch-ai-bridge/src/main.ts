@@ -2,9 +2,10 @@ import { Buffer } from 'node:buffer'
 import { initializeScratchVM } from './bootstrap/vm-bootstrap'
 import { analyzeCanonicalProject, type AnalysisIR } from './core/analyzer'
 import { importLosslessSb3 } from './core/archive'
+import { createAuthoringInstruction } from './core/capabilities'
 import { compileCanonicalProjectToSb3 } from './core/compiler'
 import { decompileSb3 } from './core/decompiler'
-import sampleProject from './core/ir/examples/02-green-flag-move-say.json'
+import sampleProject from './core/ir/examples/06-platformer-core.json'
 import type { CanonicalProject } from './core/ir/types'
 import { normalizeAiDraft } from './core/normalizer'
 import { createAnalysisPrompt, type TutorMode } from './core/prompt'
@@ -25,24 +26,7 @@ if (!app) throw new Error('Scratch AI Bridge app root was not found')
 const bootstrapVm = initializeScratchVM()
 window.addEventListener('pagehide', () => bootstrapVm.quit(), { once: true })
 
-const AI_INSTRUCTION = `你要輸出 Scratch AI Bridge Canonical IR JSON。
-只輸出 JSON，不要 Markdown code fence。
-根物件必須包含 format="scratch-ai-bridge/canonical-ir"、version=1、name、stage、sprites、broadcasts。
-第一版可用 opcode：event_whenflagclicked、motion_movesteps、looks_say、control_wait、control_repeat、control_forever、control_if、control_if_else、data_setvariableto、data_changevariableby、event_broadcast、event_whenbroadcastreceived。
-stage 必須包含 kind="stage"、name、variables、lists、costumes、sounds、scripts、procedures。
-每個 sprite 必須包含 kind="sprite"、name、variables、lists、costumes、sounds、scripts、procedures、x、y、direction、size、visible、draggable、rotationStyle。
-每個 script 必須是 {"blocks":[...]}，不能直接使用積木陣列。
-每個 input 都必須是下列物件之一：
-- 常數：{"type":"literal","value":10}
-- 變數：{"type":"variable","name":"score"}
-- 清單：{"type":"list","name":"items"}
-- 廣播：{"type":"broadcast","name":"start"}
-- reporter：{"type":"block","block":{"opcode":"..."}}
-- 子堆疊：{"type":"stack","blocks":[...]}
-broadcasts 必須使用 [{"name":"start"}]，不能使用字串陣列。
-空的 lists、costumes、sounds、scripts、procedures 也必須輸出 []。
-不要自行加入 Scratch block id、parent、next 或 shadow id；這些由 compiler 產生。
-目前沒有鍵盤、X/Y 座標、碰撞、比較運算與造型切換積木，因此無法製作真正的平台遊戲；遇到超出能力的需求，只產生可執行的簡化示範，不得杜撰 opcode。`
+const AI_INSTRUCTION = createAuthoringInstruction()
 
 app.innerHTML = `
   <div class="app-shell">

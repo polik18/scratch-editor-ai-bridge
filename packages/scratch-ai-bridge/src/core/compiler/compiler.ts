@@ -1,6 +1,6 @@
 import { loadSb3, saveSb3, type ScratchVMHandle } from '../../scratch'
 import type { CanonicalProject } from '../ir/types'
-import { validateCanonicalProject } from '../validator'
+import { validateCanonicalProject, validateCanonicalSemantics } from '../validator'
 import { buildScratchProjectArchive } from './project-json'
 
 export interface CompileResult {
@@ -13,6 +13,12 @@ export const compileCanonicalProject = async (project: CanonicalProject): Promis
   if (!validation.valid) {
     const detail = validation.errors.map((error) => `${error.instancePath || '/'}: ${error.message}`).join('\n')
     throw new Error(`Canonical IR validation failed:\n${detail}`)
+  }
+
+  const semanticErrors = validateCanonicalSemantics(validation.data).filter((issue) => issue.severity === 'error')
+  if (semanticErrors.length > 0) {
+    const detail = semanticErrors.map((issue) => `${issue.path} [${issue.code}]: ${issue.message}`).join('\n')
+    throw new Error(`Canonical IR semantic validation failed:\n${detail}`)
   }
 
   const archive = await buildScratchProjectArchive(validation.data)

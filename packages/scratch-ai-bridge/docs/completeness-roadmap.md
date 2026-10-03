@@ -113,6 +113,10 @@ SB3 ZIP
 
 ### Phase 5：核心 opcode capability registry
 
+Status: in progress. An initial 26-opcode strict-authoring registry now drives the AI instruction, required input/field checks,
+target restrictions, Boolean shapes, and Scratch menu-shadow compilation. Keyboard movement, XY motion, collision sensing,
+comparisons/Boolean operators, and costume switching are covered; the remaining official core opcodes and generic graph work are open.
+
 工作：
 
 - 從官方 VM/Scratch Blocks opcode metadata 建立版本化 registry：opcode、category、輸入名稱/型別、field、shadow、stack input、reporter/statement/hat、可否在 stage 使用。
@@ -136,9 +140,9 @@ SB3 ZIP
 
 ### Phase 7：Analysis 與 AI authoring 完整化
 
-Status: in progress. The first AI-output hardening slice is implemented: full prompt contract, path-specific structural repair,
-semantic symbol/block checks, and a real Gemini regression fixture. Generic graph analysis, capability-derived prompts, migrations,
-and preservation-edit mode remain open.
+Status: in progress. AI-output hardening now includes a full prompt contract, path-specific structural repair, semantic symbol/block
+checks, a real Gemini regression fixture, and capability-derived strict-authoring prompts. Generic graph analysis, migrations, and
+preservation-edit mode remain open.
 
 工作：
 
