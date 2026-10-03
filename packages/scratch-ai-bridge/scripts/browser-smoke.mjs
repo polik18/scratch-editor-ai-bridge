@@ -59,6 +59,16 @@ const failures = []
 try {
   browser = await chromium.launch({ headless: true })
   const page = await browser.newPage({ acceptDownloads: true })
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value) => {
+          globalThis.__scratchAiBridgeClipboard = value
+        },
+      },
+    })
+  })
 
   page.on('pageerror', (error) => failures.push(`page error: ${error.message}`))
   page.on('console', (message) => {
@@ -92,6 +102,43 @@ try {
   if ((await page.locator('#generate-status').getAttribute('data-kind')) === 'error') {
     throw new Error(`AI draft repair failed: ${repaired}`)
   }
+
+  await page.locator('#copy-repair-prompt').click()
+  const repairPrompt = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  if (
+    typeof repairPrompt !== 'string' ||
+    !repairPrompt.includes('只回傳一個完整 JSON 根物件') ||
+    !repairPrompt.includes('scratch-ai-bridge/repair-report') ||
+    !repairPrompt.includes('Current Canonical IR:')
+  ) {
+    throw new Error('Paste-ready AI repair prompt is incomplete')
+  }
+
+  await page.locator('#copy-repair-report').click()
+  const copiedReport = JSON.parse(await page.evaluate(() => globalThis.__scratchAiBridgeClipboard))
+  if (copiedReport.summary.autoRepaired !== 106 || copiedReport.summary.warnings !== 3) {
+    throw new Error(`Unexpected Repair Report summary: ${JSON.stringify(copiedReport.summary)}`)
+  }
+
+  await page.evaluate(() => {
+    Object.defineProperty(navigator.clipboard, 'writeText', {
+      configurable: true,
+      value: async () => {
+        throw new Error('permission denied')
+      },
+    })
+  })
+  await page.locator('#copy-repair-report').click()
+  await page.locator('#clipboard-fallback:not([hidden])').waitFor()
+  const fallbackReport = JSON.parse(await page.locator('#clipboard-fallback-text').inputValue())
+  if (fallbackReport.format !== 'scratch-ai-bridge/repair-report') {
+    throw new Error('Clipboard fallback does not contain the complete Repair Report')
+  }
+
+  await page.locator('#undo-repair').click()
+  const restoredDraft = JSON.parse(await page.locator('#json-editor').inputValue())
+  if (restoredDraft.stage.kind !== undefined) throw new Error('Undo did not restore the original AI response')
+  await page.locator('#repair').click()
 
   await page.locator('#validate').click()
   await page.locator('#generate-status[data-kind="neutral"], #generate-status[data-kind="error"]').waitFor()

@@ -194,6 +194,39 @@ h1 {
   color: #9d3434;
   background: #fff0f0;
 }
+.repair-tools {
+  margin-top: 12px;
+  padding: 13px;
+  border: 1px solid #d9e2ef;
+  border-radius: 12px;
+  background: #f8faff;
+}
+.repair-report-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+.repair-report-head span {
+  color: #66748b;
+  font-size: 12px;
+}
+.repair-tools .button-row {
+  margin-top: 9px;
+}
+.clipboard-fallback {
+  margin-top: 12px;
+}
+.clipboard-fallback label {
+  display: block;
+  margin-bottom: 7px;
+  color: #9d3434;
+  font-size: 12px;
+  font-weight: 700;
+}
+.clipboard-fallback .mono.compact {
+  min-height: 150px;
+}
 .dropzone {
   display: grid;
   gap: 7px;

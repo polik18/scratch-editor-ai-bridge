@@ -9,6 +9,7 @@ import sampleProject from './core/ir/examples/06-platformer-core.json'
 import type { CanonicalProject } from './core/ir/types'
 import { normalizeAiResponse } from './core/normalizer'
 import { createAnalysisPrompt, type TutorMode } from './core/prompt'
+import { createRepairPrompt, createRepairReport, type RepairReport } from './core/repair'
 import {
   validateCanonicalProject,
   validateCanonicalSemantics,
@@ -54,7 +55,20 @@ app.innerHTML = `
           <div class="card-head"><h2>2. Canonical IR JSON</h2><button id="load-sample" class="button secondary">載入範例</button></div>
           <textarea id="json-editor" class="mono editor" spellcheck="false"></textarea>
           <div class="button-row"><button id="repair" class="button secondary">擷取／修復 AI 回覆</button><button id="validate" class="button secondary">Validate</button><button id="compile" class="button primary">Compile & Download .sb3</button></div>
-          <div id="generate-status" class="status-box"></div>
+          <div id="generate-status" class="status-box" role="status" aria-live="polite"></div>
+          <section id="repair-tools" class="repair-tools" aria-label="AI 修復回饋" hidden>
+            <div class="repair-report-head"><strong>AI 修復報告</strong><span id="repair-summary"></span></div>
+            <div class="button-row">
+              <button id="copy-repair-prompt" class="button primary">複製給 AI 修正</button>
+              <button id="copy-repair-report" class="button secondary">複製錯誤報告</button>
+              <button id="download-repair-report" class="button secondary">下載報告.json</button>
+              <button id="undo-repair" class="button secondary">復原修復前內容</button>
+            </div>
+            <div id="clipboard-fallback" class="clipboard-fallback" hidden>
+              <label for="clipboard-fallback-text">瀏覽器拒絕剪貼簿存取，請從這裡全選複製：</label>
+              <textarea id="clipboard-fallback-text" class="mono compact" readonly></textarea>
+            </div>
+          </section>
         </article>
       </section>
 
@@ -103,6 +117,97 @@ const setStatus = (element: HTMLElement, text: string, kind: 'ok' | 'error' | 'n
   element.dataset.kind = kind
 }
 
+interface RepairContext {
+  readonly report: RepairReport
+  readonly currentProject: unknown
+}
+
+const repairTools = byId<HTMLElement>('repair-tools')
+const repairSummary = byId<HTMLSpanElement>('repair-summary')
+const copyRepairPrompt = byId<HTMLButtonElement>('copy-repair-prompt')
+const copyRepairReport = byId<HTMLButtonElement>('copy-repair-report')
+const downloadRepairReport = byId<HTMLButtonElement>('download-repair-report')
+const undoRepair = byId<HTMLButtonElement>('undo-repair')
+const clipboardFallback = byId<HTMLElement>('clipboard-fallback')
+const clipboardFallbackText = byId<HTMLTextAreaElement>('clipboard-fallback-text')
+let latestRepairContext: RepairContext | null = null
+let repairUndoSnapshot: string | null = null
+
+const renderRepairTools = (): void => {
+  const report = latestRepairContext?.report
+  const hasIssues = (report?.issues.length ?? 0) > 0
+  const actionable = (report?.summary.errors ?? 0) + (report?.summary.warnings ?? 0)
+  repairTools.hidden = !hasIssues && repairUndoSnapshot === null
+  copyRepairPrompt.disabled = actionable === 0
+  copyRepairReport.disabled = !hasIssues
+  downloadRepairReport.disabled = !hasIssues
+  undoRepair.disabled = repairUndoSnapshot === null
+  const phaseSummary = report
+    ? Object.entries(
+        report.issues.reduce<Partial<Record<(typeof report.issues)[number]['phase'], number>>>((counts, issue) => {
+          counts[issue.phase] = (counts[issue.phase] ?? 0) + 1
+          return counts
+        }, {}),
+      )
+        .map(([phase, count]) => `${phase} ${count}`)
+        .join('、')
+    : ''
+  repairSummary.textContent = report
+    ? `自動修復 ${report.summary.autoRepaired} · 必須修正 ${report.summary.errors} · 需要確認 ${report.summary.warnings}${phaseSummary ? ` · ${phaseSummary}` : ''}`
+    : '沒有目前診斷'
+}
+
+const publishRepairContext = (report: RepairReport, currentProject: unknown): void => {
+  latestRepairContext = { report, currentProject }
+  clipboardFallback.hidden = true
+  renderRepairTools()
+}
+
+const clearRepairContext = (): void => {
+  latestRepairContext = null
+  clipboardFallback.hidden = true
+  renderRepairTools()
+}
+
+const diagnoseEditor = (compileError?: unknown): RepairContext => {
+  try {
+    const normalized = normalizeAiResponse(editor.value)
+    const validation = validateCanonicalProject(normalized.data)
+    if (!validation.valid) {
+      return {
+        report: createRepairReport({
+          data: normalized.data,
+          repairs: normalized.repairs,
+          normalizationWarnings: normalized.warnings,
+          schemaIssues: validation.errors,
+        }),
+        currentProject: normalized.data,
+      }
+    }
+    const semanticIssues = validateCanonicalSemantics(validation.data)
+    return {
+      report: createRepairReport({
+        data: validation.data,
+        repairs: normalized.repairs,
+        normalizationWarnings: normalized.warnings,
+        semanticIssues,
+        ...(compileError === undefined ? {} : { compileError }),
+      }),
+      currentProject: validation.data,
+    }
+  } catch (parseError) {
+    return {
+      report: createRepairReport({ parseError }),
+      currentProject: editor.value,
+    }
+  }
+}
+
+const publishEditorDiagnostics = (compileError?: unknown): void => {
+  const context = diagnoseEditor(compileError)
+  publishRepairContext(context.report, context.currentProject)
+}
+
 const download = (blob: Blob, filename: string) => {
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
@@ -114,6 +219,20 @@ const download = (blob: Blob, filename: string) => {
 
 const downloadJson = (value: unknown, filename: string) => {
   download(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }), filename)
+}
+
+const copyTextWithFallback = async (text: string, successMessage: string): Promise<void> => {
+  try {
+    await navigator.clipboard.writeText(text)
+    clipboardFallback.hidden = true
+    setStatus(generateStatus, successMessage, 'ok')
+  } catch {
+    clipboardFallbackText.value = text
+    clipboardFallback.hidden = false
+    clipboardFallbackText.focus()
+    clipboardFallbackText.select()
+    setStatus(generateStatus, '瀏覽器拒絕剪貼簿存取；已在下方提供可全選複製的完整內容。', 'error')
+  }
 }
 
 const formatValidationErrors = (errors: readonly CanonicalIRValidationIssue[]): string => {
@@ -156,18 +275,32 @@ byId<HTMLButtonElement>('copy-instruction').addEventListener('click', () => {
 })
 byId<HTMLButtonElement>('load-sample').addEventListener('click', () => {
   editor.value = JSON.stringify(sampleProject, null, 2)
+  repairUndoSnapshot = null
+  clearRepairContext()
   setStatus(generateStatus, '已恢復內建範例。')
 })
 byId<HTMLButtonElement>('repair').addEventListener('click', () => {
+  const source = editor.value
   try {
-    const normalized = normalizeAiResponse(editor.value)
+    const normalized = normalizeAiResponse(source)
     if (normalized.repairs.length === 0) {
+      publishEditorDiagnostics()
       setStatus(generateStatus, '沒有偵測到可安全自動修復的格式。')
       return
     }
     editor.value = JSON.stringify(normalized.data, null, 2)
+    repairUndoSnapshot = source
     const validation = validateCanonicalProject(normalized.data)
     if (!validation.valid) {
+      publishRepairContext(
+        createRepairReport({
+          data: normalized.data,
+          repairs: normalized.repairs,
+          normalizationWarnings: normalized.warnings,
+          schemaIssues: validation.errors,
+        }),
+        normalized.data,
+      )
       setStatus(
         generateStatus,
         `已完成 ${normalized.repairs.length} 項結構修復，但仍有問題：\n${formatValidationErrors(validation.errors)}`,
@@ -178,6 +311,15 @@ byId<HTMLButtonElement>('repair').addEventListener('click', () => {
     const semanticIssues = validateCanonicalSemantics(validation.data)
     const semanticErrors = semanticIssues.filter((issue) => issue.severity === 'error')
     const semanticWarnings = semanticIssues.filter((issue) => issue.severity === 'warning')
+    publishRepairContext(
+      createRepairReport({
+        data: validation.data,
+        repairs: normalized.repairs,
+        normalizationWarnings: normalized.warnings,
+        semanticIssues,
+      }),
+      validation.data,
+    )
     if (semanticErrors.length > 0) {
       setStatus(
         generateStatus,
@@ -193,6 +335,7 @@ byId<HTMLButtonElement>('repair').addEventListener('click', () => {
       semanticWarnings.length > 0 ? 'neutral' : 'ok',
     )
   } catch (error) {
+    publishRepairContext(createRepairReport({ parseError: error }), source)
     setStatus(generateStatus, error instanceof Error ? error.message : String(error), 'error')
   }
 })
@@ -200,6 +343,7 @@ byId<HTMLButtonElement>('validate').addEventListener('click', () => {
   try {
     const project = parseEditor()
     const issues = inspectSemantics(project)
+    publishRepairContext(createRepairReport({ data: project, semanticIssues: issues }), project)
     if (issues.length > 0) {
       setStatus(
         generateStatus,
@@ -209,28 +353,70 @@ byId<HTMLButtonElement>('validate').addEventListener('click', () => {
     }
     setStatus(generateStatus, `Canonical IR 格式與語意合法：${project.sprites.length} 個角色。`, 'ok')
   } catch (error) {
+    publishEditorDiagnostics()
     setStatus(generateStatus, error instanceof Error ? error.message : String(error), 'error')
   }
 })
 const compileProject = async () => {
+  let project: CanonicalProject
+  let semanticIssues: readonly CanonicalSemanticIssue[]
   try {
-    const project = parseEditor()
-    const semanticIssues = inspectSemantics(project)
+    project = parseEditor()
+    semanticIssues = inspectSemantics(project)
+  } catch (error) {
+    publishEditorDiagnostics()
+    setStatus(generateStatus, error instanceof Error ? error.message : String(error), 'error')
+    return
+  }
+  try {
     setStatus(generateStatus, '正在透過 Scratch VM 編譯…')
     const sb3 = await compileCanonicalProjectToSb3(project)
     download(sb3, `${project.name.replace(/[^\w\-\u4e00-\u9fff]+/g, '-') || 'scratch-project'}.sb3`)
+    publishRepairContext(createRepairReport({ data: project, semanticIssues }), project)
     setStatus(
       generateStatus,
       `完成：.sb3 已由 Scratch VM 產生。${semanticIssues.length > 0 ? `（保留 ${semanticIssues.length} 項語意警告）` : ''}`,
       'ok',
     )
   } catch (error) {
+    publishEditorDiagnostics(error)
     setStatus(generateStatus, error instanceof Error ? error.message : String(error), 'error')
   }
 }
 
 byId<HTMLButtonElement>('compile').addEventListener('click', () => {
   void compileProject()
+})
+
+copyRepairPrompt.addEventListener('click', () => {
+  if (!latestRepairContext) return
+  const prompt = createRepairPrompt(latestRepairContext.report, latestRepairContext.currentProject, AI_INSTRUCTION)
+  void copyTextWithFallback(prompt, '已複製完整 AI 修正提示；可直接貼回 Gemini。')
+})
+
+copyRepairReport.addEventListener('click', () => {
+  if (!latestRepairContext) return
+  void copyTextWithFallback(JSON.stringify(latestRepairContext.report, null, 2), '已複製完整 Repair Report JSON。')
+})
+
+downloadRepairReport.addEventListener('click', () => {
+  if (!latestRepairContext) return
+  const filename = `${latestRepairContext.report.projectName.replace(/[^\w\-\u4e00-\u9fff]+/g, '-') || 'scratch-project'}-repair-report.json`
+  downloadJson(latestRepairContext.report, filename)
+  setStatus(generateStatus, '已下載完整 Repair Report JSON。', 'ok')
+})
+
+undoRepair.addEventListener('click', () => {
+  if (repairUndoSnapshot === null) return
+  editor.value = repairUndoSnapshot
+  repairUndoSnapshot = null
+  clearRepairContext()
+  setStatus(generateStatus, '已復原修復前的 AI 原始回覆。')
+})
+
+editor.addEventListener('input', () => {
+  repairUndoSnapshot = null
+  clearRepairContext()
 })
 
 for (const tab of document.querySelectorAll<HTMLButtonElement>('.tab')) {

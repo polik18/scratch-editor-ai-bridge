@@ -208,7 +208,17 @@ Status: implemented.
 
 ### Phase 9D — Copyable AI repair feedback
 
-Status: planned, not implemented. See [`ai-repair-feedback-plan.md`](ai-repair-feedback-plan.md).
+Status: A + B first release implemented; C + D remain staged. See [`ai-repair-feedback-plan.md`](ai-repair-feedback-plan.md).
+
+- parser, normalizer, AJV schema, semantic validator, and Scratch VM compile failures map into Repair Report v1
+- reports use stable status/code/path fields, retain the full untruncated issue set, and omit stack traces and local paths
+- the UI groups summary counts and can copy a complete AI correction prompt, copy raw report JSON, or download the report
+- denied Clipboard API access opens a selectable textarea fallback instead of failing silently
+- one repair-time undo snapshot preserves the exact original AI response
+- browser smoke clicks both copy actions, parses the copied report, verifies the 106-repair/3-review Gemini regression, and tests undo
+
+Capability-derived minimal examples and the complete simulated "AI-corrected reply → compile" regression remain Phase C/D work;
+the first release does not claim that the repair loop can infer ambiguous game intent.
 
 ## Phase 10–15
 
@@ -223,10 +233,10 @@ Verified with the exact Node version from `.nvmrc`:
 - clean `npm ci`
 - required official Scratch workspace builds
 - ESLint + Prettier: pass
-- Vitest: 14 files / 43 tests pass
+- Vitest: 15 files / 46 tests pass
 - TypeScript + production Vite build: pass
-- strict-CSP headless Chromium at a nested project path: Gemini Notebook extraction, shorthand repair, semantic warning,
-  platformer validation, generate, download, re-upload and analyze pass
+- strict-CSP headless Chromium at a nested project path: Gemini Notebook extraction, shorthand repair, Repair Report copy/undo,
+  semantic warning, platformer validation, generate, download, re-upload and analyze pass
 - browser smoke test: no console/page errors and no failed HTTP requests; the same test is a Pages CI gate
 - production source-map dependency reachability review: see `docs/security-audit.md`
 
