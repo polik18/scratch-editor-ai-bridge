@@ -17,6 +17,9 @@ describe('Canonical block capability registry', () => {
     expect(instruction).toContain('不要執行 Python')
     expect(instruction).toContain('{"KEY_OPTION":"right arrow"}')
     expect(instruction).toContain('每個 costume 至少要有 name 與 dataFormat')
+    expect(instruction).toContain('platform-hero')
+    expect(instruction).toContain('platform-day')
+    expect(instruction).toContain('Bridge 會安全加入圖像')
   })
 
   it('describes the platform-game authoring slice', () => {

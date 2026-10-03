@@ -236,6 +236,21 @@ Status: first student-facing slice implemented.
 
 Student usability sessions and per-issue child-friendly explanations remain the next UX validation slice.
 
+### Phase 9F — Visible automatic artwork
+
+Status: first built-in visual slice implemented.
+
+- replaces the white-stage and transparent `1×1` sprite fallbacks with visible, deterministic SVG artwork
+- supplies six backdrop themes and nine sprite-role presets without asking an AI model for Base64 or raw asset hashes
+- maps common Chinese and English target names such as player, enemy, coin, platform, goal, cat, ball, and spaceship
+- gives unknown roles a colored, XML-escaped character card instead of an invisible sprite
+- embeds generated artwork into the `.sb3`, so downloaded projects do not depend on a runtime CDN
+- updates the AI contract to require a backdrop and a costume for every visible sprite while retaining v1 compatibility
+- tells students how many missing backgrounds and costumes were filled automatically
+- regression coverage inspects the actual downloaded ZIP asset and verifies distinct artwork for the reported Gemini platformer
+
+An expanded curated Scratch asset pack, visual chooser, and runnable pre-download stage preview remain later visual phases.
+
 ## Phase 10–15
 
 Status: not yet claimed complete in the formal monorepo source.
@@ -249,11 +264,11 @@ Verified with the exact Node version from `.nvmrc`:
 - clean `npm ci`
 - required official Scratch workspace builds
 - ESLint + Prettier: pass
-- Vitest: 15 files / 47 tests pass
+- Vitest: 16 files / 52 tests pass
 - TypeScript + production Vite build: pass
 - strict-CSP headless Chromium at a nested project path: student request composition, inactive-panel isolation, labeled inputs,
   keyboard file access, Gemini Notebook extraction, shorthand repair, Repair Report copy/undo, one-click student build,
-  download, re-upload and analyze pass
+  automatic-backdrop archive inspection, download, re-upload and analyze pass
 - browser smoke test: no console/page errors and no failed HTTP requests; the same test is a Pages CI gate
 - production source-map dependency reachability review: see `docs/security-audit.md`
 

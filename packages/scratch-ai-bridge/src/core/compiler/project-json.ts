@@ -12,6 +12,7 @@ import type {
   CanonicalSound,
   CanonicalTargetBase,
 } from '../ir/types'
+import { resolveAutomaticVisual } from '../visuals/presets'
 
 export interface ScratchProjectJson {
   targets: ScratchTargetJson[]
@@ -91,10 +92,6 @@ type ScratchPrimitive = [number, CanonicalScalar] | [11 | 12 | 13, string, strin
 type ScratchInputValue = ScratchPrimitive | string
 type ScratchInput = [1, ScratchInputValue] | [2, ScratchInputValue | null] | [3, ScratchInputValue, ScratchInputValue]
 
-const STAGE_PLACEHOLDER_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"><rect width="480" height="360" fill="#fff"/></svg>'
-const SPRITE_PLACEHOLDER_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1" viewBox="0 0 1 1"></svg>'
-
 const silentWav = (): Uint8Array => {
   const result = new Uint8Array(46)
   const view = new DataView(result.buffer)
@@ -157,13 +154,22 @@ const createAssetRegistry = () => {
 
 type AssetRegistry = ReturnType<typeof createAssetRegistry>
 
-const compileCostume = (costume: CanonicalCostume, isStage: boolean, registry: AssetRegistry): ScratchCostumeJson => {
+const compileCostume = (
+  costume: CanonicalCostume,
+  isStage: boolean,
+  projectName: string,
+  targetName: string,
+  registry: AssetRegistry,
+): ScratchCostumeJson => {
   const costumeData = costume.data
   const hasData = typeof costumeData === 'string' && costumeData.length > 0
+  const automaticVisual = hasData
+    ? undefined
+    : resolveAutomaticVisual({ isStage, projectName, targetName, costumeName: costume.name })
   const dataFormat = hasData ? costume.dataFormat : 'svg'
   const data = hasData
     ? decodeAssetData(costumeData, dataFormat)
-    : new TextEncoder().encode(isStage ? STAGE_PLACEHOLDER_SVG : SPRITE_PLACEHOLDER_SVG)
+    : new TextEncoder().encode(automaticVisual?.data ?? '')
   const assetId = registry.add('costume', dataFormat, data)
 
   return {
@@ -172,8 +178,8 @@ const compileCostume = (costume: CanonicalCostume, isStage: boolean, registry: A
     bitmapResolution: dataFormat === 'svg' ? 1 : (costume.bitmapResolution ?? 2),
     md5ext: `${assetId}.${dataFormat}`,
     dataFormat,
-    rotationCenterX: costume.rotationCenterX ?? (isStage ? 240 : 0.5),
-    rotationCenterY: costume.rotationCenterY ?? (isStage ? 180 : 0.5),
+    rotationCenterX: costume.rotationCenterX ?? automaticVisual?.rotationCenterX ?? (isStage ? 240 : 0.5),
+    rotationCenterY: costume.rotationCenterY ?? automaticVisual?.rotationCenterY ?? (isStage ? 180 : 0.5),
   }
 }
 
@@ -247,6 +253,7 @@ const compileTarget = (
   target: CanonicalTargetBase,
   isStage: boolean,
   targetIndex: number,
+  projectName: string,
   symbols: SymbolTable,
   registry: AssetRegistry,
 ): ScratchTargetJson => {
@@ -427,7 +434,7 @@ const compileTarget = (
     blocks,
     comments: {},
     currentCostume: 0,
-    costumes: sourceCostumes.map((costume) => compileCostume(costume, isStage, registry)),
+    costumes: sourceCostumes.map((costume) => compileCostume(costume, isStage, projectName, target.name, registry)),
     sounds: target.sounds.map((sound) => compileSound(sound, registry)),
     volume: 100,
     layerOrder: targetIndex,
@@ -459,8 +466,10 @@ const compileTarget = (
 const buildScratchProjectBundle = (project: CanonicalProject): ScratchProjectBundle => {
   const symbols = createSymbolTable(project)
   const registry = createAssetRegistry()
-  const stage = compileTarget(project.stage, true, 0, symbols, registry)
-  const sprites = project.sprites.map((sprite, index) => compileTarget(sprite, false, index + 1, symbols, registry))
+  const stage = compileTarget(project.stage, true, 0, project.name, symbols, registry)
+  const sprites = project.sprites.map((sprite, index) =>
+    compileTarget(sprite, false, index + 1, project.name, symbols, registry),
+  )
 
   // A sprite may introduce a broadcast that was not declared at the top level. Refresh the
   // stage broadcast dictionary after all targets have been compiled.

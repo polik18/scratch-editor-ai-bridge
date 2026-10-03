@@ -16,6 +16,7 @@ import {
   type CanonicalIRValidationIssue,
   type CanonicalSemanticIssue,
 } from './core/validator'
+import { summarizeAutomaticVisuals, type AutomaticVisualSummary } from './core/visuals/presets'
 import './style.css'
 
 globalThis.Buffer = Buffer
@@ -487,6 +488,13 @@ const compileAndDownload = async (project: CanonicalProject): Promise<void> => {
   download(sb3, `${project.name.replace(/[^\w\-\u4e00-\u9fff]+/g, '-') || 'scratch-project'}.sb3`)
 }
 
+const describeAutomaticVisuals = (summary: AutomaticVisualSummary): string => {
+  const additions: string[] = []
+  if (summary.backdropCostumes > 0) additions.push(`${summary.backdropCostumes} 個背景`)
+  if (summary.spriteCostumes > 0) additions.push(`${summary.spriteCostumes} 個角色造型`)
+  return additions.length > 0 ? `已自動補上 ${additions.join('、')}。` : ''
+}
+
 const compileProject = async () => {
   let project: CanonicalProject
   let semanticIssues: readonly CanonicalSemanticIssue[]
@@ -499,12 +507,13 @@ const compileProject = async () => {
     return
   }
   try {
+    const automaticVisuals = summarizeAutomaticVisuals(project)
     setStatus(generateStatus, '正在透過 Scratch VM 編譯…')
     await compileAndDownload(project)
     publishRepairContext(createRepairReport({ data: project, semanticIssues }), project)
     setStatus(
       generateStatus,
-      `完成：.sb3 已由 Scratch VM 產生。${semanticIssues.length > 0 ? `（保留 ${semanticIssues.length} 項語意警告）` : ''}`,
+      `完成：.sb3 已由 Scratch VM 產生。${describeAutomaticVisuals(automaticVisuals)}${semanticIssues.length > 0 ? `（保留 ${semanticIssues.length} 項語意警告）` : ''}`,
       'ok',
     )
   } catch (error) {
@@ -572,6 +581,7 @@ const buildStudentProject = async (): Promise<void> => {
   }
 
   try {
+    const automaticVisuals = summarizeAutomaticVisuals(validation.data)
     setStatus(generateStatus, '正在製作 Scratch 專案，請稍候…')
     setProgress(4)
     await compileAndDownload(validation.data)
@@ -580,7 +590,7 @@ const buildStudentProject = async (): Promise<void> => {
     setStatus(generateStatus, '完成！Scratch 專案已開始下載。', 'ok')
     setStudentResult(
       `已完成「${validation.data.name}」`,
-      `作品包含 ${validation.data.sprites.length} 個角色。請開啟下載的 .sb3 檔案繼續創作。`,
+      `作品包含 ${validation.data.sprites.length} 個角色。${describeAutomaticVisuals(automaticVisuals)}請開啟下載的 .sb3 檔案繼續創作。`,
       'success',
     )
   } catch (compileError) {

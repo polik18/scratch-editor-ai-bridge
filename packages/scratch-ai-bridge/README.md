@@ -51,6 +51,10 @@ Canonical IR 規則的提示詞，直接貼回 Gemini；也可只複製／下載
 控制流程、變數與廣播。網站內建的 `Platformer Core Controls` 範例示範左右移動、跳躍速度、重力及平台碰撞；
 AI 指令的 opcode、必要 input、field、積木形狀與 stage/sprite 限制均由同一份 capability registry 產生。
 
+缺少圖像資料的作品不再使用純白舞台與透明 `1×1` 角色。編譯器會依作品主題及角色名稱，自動嵌入安全的 SVG 背景，
+並為玩家、敵人、金幣、平台、終點、貓、球、飛船或一般角色選擇可見造型。AI 也可直接使用提示詞列出的內建造型名稱；
+所有自動圖像都會包進下載的 `.sb3`，不需要 Scratch CDN 或開啟作品時的網路連線。
+
 See `docs/status.md` and `docs/vm-write-path.md` for exact phase status and design decisions.
 The full L1/L2/L3 completeness definition and staged implementation plan is in `docs/completeness-roadmap.md`.
 The staged one-click AI error feedback loop and remaining precision work are tracked in `docs/ai-repair-feedback-plan.md`.

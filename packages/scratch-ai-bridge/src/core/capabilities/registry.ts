@@ -1,3 +1,5 @@
+import { BUILT_IN_BACKDROP_VISUALS, BUILT_IN_SPRITE_VISUALS } from '../visuals/presets'
+
 export type CanonicalBlockCategory = 'motion' | 'looks' | 'events' | 'control' | 'sensing' | 'operators' | 'data'
 export type CanonicalBlockShape = 'hat' | 'command' | 'reporter' | 'boolean'
 export type CanonicalInputKind = 'any' | 'number' | 'string' | 'boolean' | 'stack' | 'broadcast' | 'menu'
@@ -260,7 +262,11 @@ stage 必須包含 kind="stage"、name、variables、lists、costumes、sounds�
 - 子堆疊：{"type":"stack","blocks":[...]}
 broadcasts 必須使用 [{"name":"start"}]，不能使用字串陣列。
 fields 的值必須直接是 string、number 或 boolean，例如 {"KEY_OPTION":"right arrow"}、{"VARIABLE":"score"}；不可使用 {"value":"..."} 或 {"name":"..."} wrapper。
-每個 costume 至少要有 name 與 dataFormat（svg/png/jpg/jpeg/bmp）；若沒有造型資料，請輸出 costumes:[]。
+每個 costume 至少要有 name 與 dataFormat（svg/png/jpg/jpeg/bmp）。
+舞台至少要有一個背景 costume；可用內建背景名稱：${BUILT_IN_BACKDROP_VISUALS.join('、')}。
+每個 visible=true 的 sprite 至少要有一個 costume；可用內建造型名稱：${BUILT_IN_SPRITE_VISUALS.join('、')}。
+使用上述內建名稱時不要輸出 data，Bridge 會安全加入圖像；若不確定造型，角色使用 generic-character，背景使用 platform-day。
+不要使用 Mario、Goomba 等受版權保護角色的原始圖像；應使用通用平台英雄與敵人造型。
 空的 lists、costumes、sounds、scripts、procedures 也必須輸出 []。
 布林條件必須使用 shape=boolean 的 reporter，不可直接把數值變數當條件。
 可用積木與必要參數：

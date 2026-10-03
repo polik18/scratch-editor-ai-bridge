@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { extname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import JSZip from 'jszip'
 import { chromium } from 'playwright'
 
 const sitePrefix = '/scratch-editor-ai-bridge/'
@@ -208,6 +209,17 @@ try {
 
   const downloadPath = await download.path()
   if (!downloadPath) throw new Error('Chromium did not expose the generated SB3 path')
+  const downloadedArchive = await JSZip.loadAsync(await readFile(downloadPath))
+  const downloadedProject = JSON.parse(await downloadedArchive.file('project.json').async('string'))
+  const stageCostume = downloadedProject.targets.find((target) => target.isStage)?.costumes[0]
+  const stageArtwork = stageCostume ? await downloadedArchive.file(stageCostume.md5ext)?.async('string') : undefined
+  if (!stageArtwork?.includes('data-sab-preset="platform-day"')) {
+    throw new Error('Generated project did not embed the automatic visible backdrop')
+  }
+  const studentVisualResult = (await page.locator('#student-result-message').textContent())?.trim()
+  if (!studentVisualResult?.includes('已自動補上 1 個背景')) {
+    throw new Error(`Student result did not explain the automatic artwork: ${studentVisualResult}`)
+  }
 
   await page.locator('button[data-tab="analyze"]').click()
   if (
@@ -239,6 +251,7 @@ try {
     validated,
     platformValidated,
     generated,
+    studentVisualResult,
     analyzed: (await page.locator('#file-status').textContent())?.trim(),
     url: page.url(),
   }
