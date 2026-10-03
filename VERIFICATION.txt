@@ -1,0 +1,19 @@
+Scratch AI Bridge restored integration verification
+
+Integrity:
+- Base Phase 2 files: 3446
+- Current files: 3468
+- Missing files from Phase 2 baseline: 0
+
+Source smoke tests:
+- 02-green-flag-move-say.json PASS
+- 03-repeat-score.json PASS
+- 04-broadcast-flow.json PASS
+
+TypeScript:
+- tsc --noEmit PASS using temporary Ajv ambient declaration because npm deps are not installed in this execution environment.
+
+Important:
+- This archive retains the complete scratch-editor monorepo.
+- ready-to-use/ is additive and does not replace source workspaces.
+- Formal source phase status is documented in packages/scratch-ai-bridge/docs/status.md.

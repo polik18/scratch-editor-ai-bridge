@@ -1,0 +1,123 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Custom Block Demo",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [],
+    "lists": [],
+    "costumes": [],
+    "sounds": [],
+    "scripts": [],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Sprite1",
+      "x": 0,
+      "y": 0,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "all around",
+      "variables": [],
+      "lists": [],
+      "costumes": [],
+      "sounds": [],
+      "procedures": [
+        {
+          "name": "Move Player",
+          "proccode": "Move Player %n %b",
+          "warp": true,
+          "parameters": [
+            {
+              "name": "speed",
+              "type": "string_number",
+              "default": 10
+            },
+            {
+              "name": "boost",
+              "type": "boolean",
+              "default": false
+            }
+          ],
+          "body": [
+            {
+              "opcode": "motion_movesteps",
+              "inputs": {
+                "STEPS": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "argument_reporter_string_number",
+                    "fields": {
+                      "VALUE": "speed"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "argument_reporter_boolean",
+                    "fields": {
+                      "VALUE": "boost"
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "looks_say",
+                      "inputs": {
+                        "MESSAGE": {
+                          "type": "literal",
+                          "value": "Boost!"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "scripts": [
+        {
+          "position": {
+            "x": 60,
+            "y": 60
+          },
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "procedures_call",
+              "procedure": "Move Player %n %b",
+              "inputs": {
+                "arg0": {
+                  "type": "literal",
+                  "value": 20
+                },
+                "arg1": {
+                  "type": "literal",
+                  "value": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "broadcasts": []
+}

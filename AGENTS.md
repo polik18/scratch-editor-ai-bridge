@@ -68,6 +68,7 @@ rejected by the pre-commit hook.
 
 ```text
 packages/
+├── scratch-ai-bridge/      TypeScript + Vite browser-only AI ↔ Scratch bridge
 ├── scratch-gui/            React-based editor UI
 ├── scratch-vm/             Virtual machine that runs Scratch projects
 ├── scratch-render/         WebGL renderer for the stage
@@ -81,6 +82,7 @@ scripts/                    Monorepo-level utility scripts
 
 | Package | Language | Bundler | Tests |
 | - | - | - | - |
+| `scratch-ai-bridge` | TypeScript | Vite | Vitest |
 | `scratch-gui` | JavaScript / JSX (some TypeScript) | webpack | Jest |
 | `scratch-vm` | JavaScript | webpack | Tap |
 | `scratch-render` | JavaScript | webpack | Tap |

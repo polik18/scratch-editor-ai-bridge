@@ -1,0 +1,16 @@
+export {
+  createVM,
+  getBlocks,
+  getProjectJson,
+  getTargets,
+  loadProjectJson,
+  loadSb3,
+  saveSb3,
+  type Sb3Input,
+  type ScratchBlock,
+  type ScratchProjectJson,
+  type ScratchBlockField,
+  type ScratchBlockInput,
+  type ScratchTarget,
+  type ScratchVMHandle,
+} from './vm'

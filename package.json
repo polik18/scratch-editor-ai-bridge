@@ -22,10 +22,12 @@
     "packages/scratch-render",
     "packages/scratch-vm",
     "packages/scratch-gui",
-    "packages/scratch-media-lib-scripts"
+    "packages/scratch-media-lib-scripts",
+    "packages/scratch-ai-bridge"
   ],
   "scripts": {
     "build": "cross-env NODE_ENV=production npm run --workspaces build",
+    "build:ai-bridge-deps": "npm run build --workspace=@scratch/task-herder && npm run build --workspace=@scratch/scratch-storage && npm run build --workspace=@scratch/scratch-svg-renderer && npm run build --workspace=@scratch/scratch-render && npm run build --workspace=@scratch/scratch-vm",
     "clean": "npm run --workspaces clean",
     "prepare": "husky install",
     "refresh-gh-workflow": "ts-node scripts/update-gha-workflows.ts",

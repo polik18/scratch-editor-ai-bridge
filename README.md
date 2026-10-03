@@ -10,6 +10,7 @@ packages. Use this if you'd like to learn about how the Scratch editor works or 
 
 The `packages` directory in this repository contains:
 
+- `scratch-ai-bridge` provides the browser-only AI ↔ Scratch bridge application.
 - `scratch-gui` provides the buttons, menus, and other elements that you interact with when creating and editing a
   project. It's also the "glue" that brings most of the other modules together at runtime.
 - `scratch-media-lib-scripts` builds (or rebuilds) media libraries for the editor.
@@ -30,7 +31,7 @@ Each package has its own `README.md` file with more information about that packa
 ### What's going on?
 
 We're migrating the Scratch editor packages into this monorepo. This will allow us to manage all the packages that
-make up the Scratch editor in one place, making  it easier to manage dependencies and make changes that affect
+make up the Scratch editor in one place, making it easier to manage dependencies and make changes that affect
 multiple packages.
 
 ### Why are there only a few packages in this repo?

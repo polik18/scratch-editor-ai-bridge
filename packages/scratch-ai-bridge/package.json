@@ -1,0 +1,40 @@
+{
+  "name": "@scratch/scratch-ai-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pure front-end bridge between AI-authored JSON and Scratch projects.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && vite build",
+    "clean": "rimraf dist coverage",
+    "dev": "vite",
+    "generate:validator": "node scripts/generate-validator.mjs",
+    "lint": "eslint . && prettier --check .",
+    "prebuild": "npm run generate:validator",
+    "predev": "npm run generate:validator",
+    "pretest": "npm run generate:validator",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:browser": "node scripts/browser-smoke.mjs"
+  },
+  "dependencies": {
+    "@scratch/scratch-storage": "15.2.0",
+    "@scratch/scratch-vm": "15.2.0",
+    "buffer": "6.0.3",
+    "events": "3.3.0",
+    "jszip": "3.10.2"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0",
+    "eslint": "9.39.5",
+    "eslint-config-scratch": "14.1.83",
+    "playwright": "1.63.0",
+    "prettier": "3.9.9",
+    "rimraf": "6.1.2",
+    "scratch-parser": "6.0.1",
+    "typescript": "5.9.3",
+    "vite": "npm:rolldown-vite@7.3.1",
+    "vitest": "4.1.11"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Broadcast Flow",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [],
+    "lists": [],
+    "costumes": [],
+    "sounds": [],
+    "scripts": [
+      {
+        "blocks": [
+          {
+            "opcode": "event_whenflagclicked"
+          },
+          {
+            "opcode": "event_broadcast",
+            "inputs": {
+              "BROADCAST_INPUT": {
+                "type": "broadcast",
+                "name": "game_over"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "opcode": "event_whenbroadcastreceived",
+            "fields": {
+              "BROADCAST_OPTION": "game_over"
+            }
+          },
+          {
+            "opcode": "looks_say",
+            "inputs": {
+              "MESSAGE": {
+                "type": "literal",
+                "value": "Game over"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "procedures": []
+  },
+  "sprites": [],
+  "broadcasts": [
+    {
+      "name": "game_over"
+    }
+  ]
+}

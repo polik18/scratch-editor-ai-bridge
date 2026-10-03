@@ -1,0 +1,17 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Minimal Project",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [],
+    "lists": [],
+    "costumes": [],
+    "sounds": [],
+    "scripts": [],
+    "procedures": []
+  },
+  "sprites": [],
+  "broadcasts": []
+}

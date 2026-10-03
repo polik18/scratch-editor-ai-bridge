@@ -1,0 +1,74 @@
+name: Deploy Scratch AI Bridge to GitHub Pages
+
+on:
+  pull_request:
+    paths:
+      - "packages/scratch-ai-bridge/**"
+      - "packages/task-herder/**"
+      - "packages/scratch-vm/**"
+      - "packages/scratch-storage/**"
+      - "packages/scratch-svg-renderer/**"
+      - "packages/scratch-render/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-scratch-ai-bridge.yml"
+  push:
+    branches: [develop, main]
+    paths:
+      - "packages/scratch-ai-bridge/**"
+      - "packages/task-herder/**"
+      - "packages/scratch-vm/**"
+      - "packages/scratch-storage/**"
+      - "packages/scratch-svg-renderer/**"
+      - "packages/scratch-render/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/deploy-scratch-ai-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: scratch-ai-bridge-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+      - run: npm ci
+      - run: npm run build:ai-bridge-deps
+      - run: npm test --workspace=@scratch/scratch-ai-bridge
+      - run: npm run lint --workspace=@scratch/scratch-ai-bridge
+      - run: npm run build --workspace=@scratch/scratch-ai-bridge
+      - run: test -f packages/scratch-ai-bridge/dist/index.html
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser --workspace=@scratch/scratch-ai-bridge
+      - if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: packages/scratch-ai-bridge/dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

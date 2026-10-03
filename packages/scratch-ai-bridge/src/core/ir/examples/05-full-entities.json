@@ -1,0 +1,145 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Entity Coverage",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [
+      {
+        "name": "globalScore",
+        "value": 0,
+        "cloud": false
+      }
+    ],
+    "lists": [
+      {
+        "name": "highScores",
+        "value": [10, 8, 6]
+      }
+    ],
+    "costumes": [
+      {
+        "name": "backdrop1",
+        "dataFormat": "svg",
+        "rotationCenterX": 240,
+        "rotationCenterY": 180
+      }
+    ],
+    "sounds": [
+      {
+        "name": "pop",
+        "dataFormat": "wav",
+        "rate": 44100,
+        "sampleCount": 1024
+      }
+    ],
+    "scripts": [
+      {
+        "blocks": [
+          {
+            "opcode": "event_whenflagclicked"
+          },
+          {
+            "opcode": "event_broadcast",
+            "inputs": {
+              "BROADCAST_INPUT": {
+                "type": "broadcast",
+                "name": "start"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "procedures": [
+      {
+        "name": "announce",
+        "parameters": [
+          {
+            "name": "message",
+            "kind": "string-number",
+            "default": "Hello"
+          }
+        ],
+        "warp": false,
+        "body": [
+          {
+            "opcode": "looks_say",
+            "inputs": {
+              "MESSAGE": {
+                "type": "literal",
+                "value": "Hello"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Player",
+      "x": 12,
+      "y": -24,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "left-right",
+      "variables": [
+        {
+          "name": "speed",
+          "value": 5
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "player",
+          "dataFormat": "png",
+          "bitmapResolution": 2
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenbroadcastreceived",
+              "fields": {
+                "BROADCAST_OPTION": "start"
+              }
+            },
+            {
+              "opcode": "control_forever",
+              "inputs": {
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_movesteps",
+                      "inputs": {
+                        "STEPS": {
+                          "type": "variable",
+                          "name": "speed"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    }
+  ],
+  "broadcasts": [
+    {
+      "name": "start"
+    }
+  ]
+}

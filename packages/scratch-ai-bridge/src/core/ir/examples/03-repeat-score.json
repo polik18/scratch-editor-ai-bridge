@@ -1,0 +1,77 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Repeat Score",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [
+      {
+        "name": "score",
+        "value": 0
+      }
+    ],
+    "lists": [],
+    "costumes": [],
+    "sounds": [],
+    "scripts": [
+      {
+        "blocks": [
+          {
+            "opcode": "event_whenflagclicked"
+          },
+          {
+            "opcode": "data_setvariableto",
+            "fields": {
+              "VARIABLE": "score"
+            },
+            "inputs": {
+              "VALUE": {
+                "type": "literal",
+                "value": 0
+              }
+            }
+          },
+          {
+            "opcode": "control_repeat",
+            "inputs": {
+              "TIMES": {
+                "type": "literal",
+                "value": 10
+              },
+              "SUBSTACK": {
+                "type": "stack",
+                "blocks": [
+                  {
+                    "opcode": "data_changevariableby",
+                    "fields": {
+                      "VARIABLE": "score"
+                    },
+                    "inputs": {
+                      "VALUE": {
+                        "type": "literal",
+                        "value": 1
+                      }
+                    }
+                  },
+                  {
+                    "opcode": "control_wait",
+                    "inputs": {
+                      "DURATION": {
+                        "type": "literal",
+                        "value": 0.1
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "procedures": []
+  },
+  "sprites": [],
+  "broadcasts": []
+}

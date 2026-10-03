@@ -1,0 +1,10 @@
+這份 ZIP 是完整工程版，不是先前的 8 檔 standalone 替代品。
+
+請先看：
+1. RESTORE-AUDIT.md            — 確認原 Phase 2 工程沒有遺失任何檔案
+2. packages/scratch-ai-bridge/ — 正式 TypeScript 實作
+3. packages/scratch-gui/       — 原完整 Scratch GUI，保留
+4. packages/scratch-vm/        — 原完整 Scratch VM，保留
+5. ready-to-use/               — 額外附加的直接開啟實驗版，不取代上面工程
+
+目前正式 source 已整合 Phase 3–9；Phase 10–15 不冒充已完成，狀態見 packages/scratch-ai-bridge/docs/status.md。
