@@ -182,5 +182,12 @@ Verified with the exact Node version from `.nvmrc`:
 - browser smoke test: no console/page errors and no failed HTTP requests; the same test is a Pages CI gate
 - production source-map dependency reachability review: see `docs/security-audit.md`
 
+## Public deployment
+
+- repository: [polik18/scratch-editor-ai-bridge](https://github.com/polik18/scratch-editor-ai-bridge)
+- GitHub Pages: [Scratch AI Bridge public beta](https://polik18.github.io/scratch-editor-ai-bridge/)
+- deployment source: GitHub Actions on `main`
+- external browser verification: HTTP 200, Scratch VM initialized, no console, page, or request failures
+
 The current release level is GitHub Pages public beta, not full lossless Scratch compatibility. See
 `docs/deployment.md` for remaining risks and `docs/completeness-roadmap.md` for the L1/L2/L3 completion plan.

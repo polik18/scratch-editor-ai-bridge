@@ -2,6 +2,8 @@
 
 Scratch AI Bridge is a browser-only bridge between AI-authored structured JSON and Scratch projects. This package lives **inside the complete Scratch Editor monorepo** and uses the official `@scratch/scratch-vm` workspace.
 
+Public beta: [https://polik18.github.io/scratch-editor-ai-bridge/](https://polik18.github.io/scratch-editor-ai-bridge/)
+
 ## Important repository layout
 
 Nothing in the surrounding Scratch Editor was removed. The normal workspaces remain available, including `scratch-gui`, `scratch-vm`, `scratch-paint`, `scratch-render`, and `scratch-storage`.
@@ -57,6 +59,6 @@ the official Scratch workspaces resolve several packages through their generated
 
 ## GitHub Pages
 
-The Pages workflow validates pull requests and deploys pushes to `main` or `develop`. In the repository settings,
-select **GitHub Actions** as the Pages source once. See `docs/deployment.md` for the release checklist and current
-limitations.
+The Pages workflow validates pull requests and deploys pushes to `main` or `develop`. The public repository is
+[`polik18/scratch-editor-ai-bridge`](https://github.com/polik18/scratch-editor-ai-bridge), with GitHub Actions selected
+as its Pages source. See `docs/deployment.md` for the release checklist and current limitations.
