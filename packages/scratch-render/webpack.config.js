@@ -26,7 +26,8 @@ const webConfig = baseConfig.clone()
         output: {
             library: {
                 name: 'ScratchRender'
-            }
+            },
+            publicPath: 'auto'
         }
     });
 

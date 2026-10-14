@@ -1,14 +1,14 @@
 import type { DataFormat } from '@scratch/scratch-storage'
 import JSZip from 'jszip'
 import { createOfflineScratchStorage } from '../../scratch/storage'
-import { getInputCapability } from '../capabilities'
+import { encodeCanonicalScriptsToBlockGraph, type EncodedScratchBlockGraph } from '../graph'
 import type {
-  CanonicalBlock,
   CanonicalCostume,
-  CanonicalInput,
+  CanonicalComment,
+  CanonicalJsonValue,
+  CanonicalMonitor,
   CanonicalProject,
   CanonicalScalar,
-  CanonicalScript,
   CanonicalSound,
   CanonicalTargetBase,
 } from '../ir/types'
@@ -16,13 +16,9 @@ import { resolveAutomaticVisual } from '../visuals/presets'
 
 export interface ScratchProjectJson {
   targets: ScratchTargetJson[]
-  monitors: unknown[]
+  monitors: CanonicalMonitor[]
   extensions: string[]
-  meta: {
-    semver: string
-    vm: string
-    agent: string
-  }
+  meta: Record<string, CanonicalJsonValue>
 }
 
 interface ScratchTargetJson {
@@ -31,8 +27,8 @@ interface ScratchTargetJson {
   variables: Record<string, [string, CanonicalScalar] | [string, CanonicalScalar, true]>
   lists: Record<string, [string, CanonicalScalar[]]>
   broadcasts: Record<string, string>
-  blocks: Record<string, ScratchBlockJson>
-  comments: Record<string, never>
+  blocks: EncodedScratchBlockGraph
+  comments: Record<string, ScratchCommentJson>
   currentCostume: number
   costumes: ScratchCostumeJson[]
   sounds: ScratchSoundJson[]
@@ -71,26 +67,15 @@ interface ScratchSoundJson {
   md5ext: string
 }
 
+interface ScratchCommentJson extends CanonicalComment {
+  id: string
+  blockId: string | null
+}
+
 interface ScratchProjectBundle {
   project: ScratchProjectJson
   assets: ReadonlyMap<string, Uint8Array>
 }
-
-interface ScratchBlockJson {
-  opcode: string
-  next: string | null
-  parent: string | null
-  inputs: Record<string, ScratchInput>
-  fields: Record<string, [string] | [string, string]>
-  shadow: boolean
-  topLevel: boolean
-  x?: number
-  y?: number
-}
-
-type ScratchPrimitive = [number, CanonicalScalar] | [11 | 12 | 13, string, string]
-type ScratchInputValue = ScratchPrimitive | string
-type ScratchInput = [1, ScratchInputValue] | [2, ScratchInputValue | null] | [3, ScratchInputValue, ScratchInputValue]
 
 const silentWav = (): Uint8Array => {
   const result = new Uint8Array(46)
@@ -161,6 +146,9 @@ const compileCostume = (
   targetName: string,
   registry: AssetRegistry,
 ): ScratchCostumeJson => {
+  if (costume.assetIssue) {
+    throw new Error(`Cannot compile costume "${costume.name}": source asset has ${costume.assetIssue}`)
+  }
   const costumeData = costume.data
   const hasData = typeof costumeData === 'string' && costumeData.length > 0
   const automaticVisual = hasData
@@ -184,6 +172,9 @@ const compileCostume = (
 }
 
 const compileSound = (sound: CanonicalSound, registry: AssetRegistry): ScratchSoundJson => {
+  if (sound.assetIssue) {
+    throw new Error(`Cannot compile sound "${sound.name}": source asset has ${sound.assetIssue}`)
+  }
   const soundData = sound.data
   const hasData = typeof soundData === 'string' && soundData.length > 0
   const dataFormat = hasData ? sound.dataFormat : 'wav'
@@ -211,17 +202,6 @@ const hash = (value: string): string => {
 }
 
 const stableId = (kind: string, value: string): string => `sab_${kind}_${hash(value)}`
-
-const literalPrimitive = (value: CanonicalScalar, inputName: string): ScratchPrimitive => {
-  if (typeof value === 'boolean') return [10, value ? 'true' : 'false']
-  if (typeof value === 'number') {
-    const integerLike = Number.isInteger(value)
-    return [integerLike ? 4 : 5, value]
-  }
-
-  if (/COLOR/i.test(inputName) && /^#[0-9a-f]{6}$/i.test(value)) return [9, value]
-  return [10, value]
-}
 
 interface SymbolTable {
   stageVariables: Map<string, string>
@@ -259,8 +239,9 @@ const compileTarget = (
 ): ScratchTargetJson => {
   const targetKey = isStage ? 'stage' : `sprite:${target.name}`
   const local = createTargetSymbols(target, targetKey)
-  const blocks: Record<string, ScratchBlockJson> = {}
   let blockSequence = 0
+  let commentSequence = 0
+  const comments: Record<string, ScratchCommentJson> = {}
 
   const nextBlockId = (): string => `sab_block_${targetIndex}_${(blockSequence += 1).toString(36)}`
 
@@ -275,135 +256,106 @@ const compileTarget = (
     symbols.broadcasts.set(name, id)
     return id
   }
-
-  const compileReporter = (block: CanonicalBlock, parentId: string): string => {
-    const id = nextBlockId()
-    blocks[id] = {
-      opcode: block.opcode,
-      next: null,
-      parent: parentId,
-      inputs: {},
-      fields: compileFields(block.fields),
-      shadow: false,
-      topLevel: false,
-    }
-    blocks[id].inputs = compileInputs(block.inputs, id, block.opcode)
-    return id
-  }
-
-  const compileMenuShadow = (
-    parentOpcode: string,
-    inputName: string,
-    value: CanonicalScalar,
-    parentId: string,
-  ): string | undefined => {
-    const shadow = getInputCapability(parentOpcode, inputName)?.shadow
-    if (!shadow) return undefined
-    const id = nextBlockId()
-    blocks[id] = {
-      opcode: shadow.opcode,
-      next: null,
-      parent: parentId,
-      inputs: {},
-      fields: { [shadow.field]: [String(value)] },
-      shadow: true,
-      topLevel: false,
+  const addComment = (comment: CanonicalComment, blockId: string | null): string => {
+    const id = `sab_comment_${targetIndex}_${(++commentSequence).toString(36)}`
+    comments[id] = {
+      ...comment,
+      id,
+      blockId,
+      x: comment.x ?? 0,
+      y: comment.y ?? 0,
+      width: comment.width ?? 200,
+      height: comment.height ?? 200,
+      minimized: comment.minimized ?? false,
     }
     return id
   }
+  const procedureDefinitions = target.procedures.map((procedure) => ({
+    ...procedure,
+    definitionId: nextBlockId(),
+    prototypeId: nextBlockId(),
+    argumentIds: procedure.parameters.map(() => nextBlockId()),
+  }))
+  const procedureCodecData = procedureDefinitions.map(
+    ({ definitionId: _definitionId, prototypeId: _prototypeId, ...procedure }) => procedure,
+  )
+  const blocks = encodeCanonicalScriptsToBlockGraph(target.scripts, {
+    nextId: nextBlockId,
+    resolveVariable,
+    resolveList,
+    resolveBroadcast,
+    procedures: procedureCodecData,
+    addComment: (comment, blockId) => addComment(comment, blockId),
+  })
 
-  const compileInput = (
-    input: CanonicalInput,
-    inputName: string,
-    parentId: string,
-    parentOpcode: string,
-  ): ScratchInput => {
-    const menuShadow =
-      input.type === 'literal' ? compileMenuShadow(parentOpcode, inputName, input.value, parentId) : undefined
-    switch (input.type) {
-      case 'literal':
-        if (menuShadow) return [1, menuShadow]
-        return [1, literalPrimitive(input.value, inputName)]
-      case 'variable': {
-        const reporter: ScratchPrimitive = [12, input.name, resolveVariable(input.name)]
-        const shadow = compileMenuShadow(parentOpcode, inputName, '', parentId)
-        return shadow ? [3, reporter, shadow] : [1, reporter]
-      }
-      case 'list': {
-        const reporter: ScratchPrimitive = [13, input.name, resolveList(input.name)]
-        const shadow = compileMenuShadow(parentOpcode, inputName, '', parentId)
-        return shadow ? [3, reporter, shadow] : [1, reporter]
-      }
-      case 'broadcast': {
-        const reporter: ScratchPrimitive = [11, input.name, resolveBroadcast(input.name)]
-        const shadow = compileMenuShadow(parentOpcode, inputName, input.name, parentId)
-        return shadow ? [3, reporter, shadow] : [1, reporter]
-      }
-      case 'block': {
-        const reporter = compileReporter(input.block, parentId)
-        const shadow = compileMenuShadow(parentOpcode, inputName, '', parentId)
-        return shadow ? [3, reporter, shadow] : [2, reporter]
-      }
-      case 'stack':
-        return [2, compileStack(input.blocks, parentId, false)]
+  procedureDefinitions.forEach((procedure, procedureIndex) => {
+    const { definitionId, prototypeId, argumentIds } = procedure
+    const proccode = [
+      procedure.name,
+      ...procedure.parameters.map((parameter) =>
+        parameter.kind === 'boolean' ? '%b' : parameter.kind === 'number' ? '%n' : '%s',
+      ),
+    ]
+      .filter(Boolean)
+      .join(' ')
+    const bodyGraph = encodeCanonicalScriptsToBlockGraph([{ blocks: procedure.body }], {
+      nextId: nextBlockId,
+      resolveVariable,
+      resolveList,
+      resolveBroadcast,
+      procedures: procedureCodecData,
+      addComment: (comment, blockId) => addComment(comment, blockId),
+    })
+    const bodyRoot = Object.entries(bodyGraph).find(([, block]) => block.topLevel)?.[0] ?? null
+
+    for (const [id, block] of Object.entries(bodyGraph)) {
+      block.topLevel = false
+      delete block.x
+      delete block.y
+      block.parent ??= definitionId
+      Object.defineProperty(blocks, id, { value: block, enumerable: true, configurable: true, writable: true })
     }
-  }
 
-  const compileInputs = (
-    inputs: CanonicalBlock['inputs'],
-    parentId: string,
-    parentOpcode: string,
-  ): Record<string, ScratchInput> =>
-    Object.fromEntries(
-      Object.entries(inputs ?? {}).map(([name, input]) => [name, compileInput(input, name, parentId, parentOpcode)]),
-    )
-
-  const compileFields = (fields: CanonicalBlock['fields']): Record<string, [string] | [string, string]> => {
-    const result: Record<string, [string] | [string, string]> = {}
-    for (const [name, value] of Object.entries(fields ?? {})) {
-      const text = String(value)
-      if (name === 'VARIABLE') result[name] = [text, resolveVariable(text)]
-      else if (name === 'LIST') result[name] = [text, resolveList(text)]
-      else if (name === 'BROADCAST_OPTION') result[name] = [text, resolveBroadcast(text)]
-      else result[name] = [text]
-    }
-    return result
-  }
-
-  const compileStack = (
-    canonicalBlocks: CanonicalBlock[],
-    initialParent: string | null,
-    topLevel: boolean,
-    position?: CanonicalScript['position'],
-  ): string | null => {
-    if (canonicalBlocks.length === 0) return null
-    const ids = canonicalBlocks.map(() => nextBlockId())
-
-    canonicalBlocks.forEach((block, index) => {
-      const id = ids[index]
-      blocks[id] = {
-        opcode: block.opcode,
-        next: ids[index + 1] ?? null,
-        parent: index === 0 ? initialParent : ids[index - 1],
+    Object.defineProperty(blocks, prototypeId, {
+      value: {
+        opcode: 'procedures_prototype',
+        next: null,
+        parent: definitionId,
         inputs: {},
-        fields: compileFields(block.fields),
+        fields: {},
         shadow: false,
-        topLevel: topLevel && index === 0,
-      }
-      if (topLevel && index === 0) {
-        blocks[id].x = position?.x ?? 48 + ((blockSequence * 17) % 180)
-        blocks[id].y = position?.y ?? 48 + ((blockSequence * 29) % 240)
-      }
+        topLevel: false,
+        mutation: {
+          tagName: 'mutation',
+          children: [],
+          proccode,
+          argumentids: JSON.stringify(argumentIds),
+          argumentnames: JSON.stringify(procedure.parameters.map(({ name }) => name)),
+          argumentdefaults: JSON.stringify(procedure.parameters.map(({ default: value }) => value)),
+          warp: procedure.warp ? 'true' : 'false',
+        },
+      },
+      enumerable: true,
+      configurable: true,
+      writable: true,
     })
-
-    canonicalBlocks.forEach((block, index) => {
-      blocks[ids[index]].inputs = compileInputs(block.inputs, ids[index], block.opcode)
+    Object.defineProperty(blocks, definitionId, {
+      value: {
+        opcode: 'procedures_definition',
+        next: bodyRoot,
+        parent: null,
+        inputs: { custom_block: [2, prototypeId] },
+        fields: {},
+        shadow: false,
+        topLevel: true,
+        x: 48,
+        y: 48 + procedureIndex * 64,
+      },
+      enumerable: true,
+      configurable: true,
+      writable: true,
     })
-
-    return ids[0]
-  }
-
-  target.scripts.forEach((script) => compileStack(script.blocks, null, true, script.position))
+  })
 
   const variables = Object.fromEntries(
     target.variables.map((variable) => {
@@ -423,6 +375,7 @@ const compileTarget = (
     target.costumes.length > 0
       ? target.costumes
       : [{ name: isStage ? 'backdrop1' : 'costume1', dataFormat: 'svg' as const }]
+  for (const comment of target.comments ?? []) addComment(comment, null)
   const base: ScratchTargetJson = {
     isStage,
     name: target.name,
@@ -432,20 +385,21 @@ const compileTarget = (
       ? Object.fromEntries(Array.from(symbols.broadcasts.entries()).map(([name, id]) => [id, name]))
       : {},
     blocks,
-    comments: {},
-    currentCostume: 0,
+    comments,
+    currentCostume: target.currentCostume ?? 0,
     costumes: sourceCostumes.map((costume) => compileCostume(costume, isStage, projectName, target.name, registry)),
     sounds: target.sounds.map((sound) => compileSound(sound, registry)),
-    volume: 100,
-    layerOrder: targetIndex,
+    volume: target.volume ?? 100,
+    layerOrder: target.layerOrder ?? targetIndex,
   }
 
   if (isStage) {
+    const stage = target as CanonicalProject['stage']
     Object.assign(base, {
-      tempo: 60,
-      videoTransparency: 50,
-      videoState: 'on',
-      textToSpeechLanguage: null,
+      tempo: stage.tempo ?? 60,
+      videoTransparency: stage.videoTransparency ?? 50,
+      videoState: stage.videoState ?? 'on',
+      textToSpeechLanguage: stage.textToSpeechLanguage ?? null,
     })
   } else {
     const sprite = target as CanonicalProject['sprites'][number]
@@ -463,6 +417,35 @@ const compileTarget = (
   return base
 }
 
+const compileMonitors = (project: CanonicalProject): CanonicalMonitor[] =>
+  (project.monitors ?? []).map((monitor) => {
+    const name =
+      monitor.opcode === 'data_variable'
+        ? monitor.params.VARIABLE
+        : monitor.opcode === 'data_listcontents'
+          ? monitor.params.LIST
+          : undefined
+    if (typeof name !== 'string') return monitor
+
+    const target = monitor.spriteName
+      ? project.sprites.find((sprite) => sprite.name === monitor.spriteName)
+      : project.stage
+    const localSymbol =
+      monitor.opcode === 'data_variable'
+        ? target?.variables.find((variable) => variable.name === name)
+        : target?.lists.find((list) => list.name === name)
+    const stageSymbol =
+      monitor.opcode === 'data_variable'
+        ? project.stage.variables.find((variable) => variable.name === name)
+        : project.stage.lists.find((list) => list.name === name)
+    const resolvedTarget = localSymbol ? target : stageSymbol ? project.stage : undefined
+    const resolvedName = localSymbol ?? stageSymbol
+    if (!resolvedTarget || !resolvedName) return monitor
+    const resolvedKey = resolvedTarget === project.stage ? 'stage' : `sprite:${resolvedTarget.name}`
+    const symbolId = stableId(monitor.opcode === 'data_variable' ? 'var' : 'list', `${resolvedKey}:${name}`)
+    return { ...monitor, id: symbolId }
+  })
+
 const buildScratchProjectBundle = (project: CanonicalProject): ScratchProjectBundle => {
   const symbols = createSymbolTable(project)
   const registry = createAssetRegistry()
@@ -477,12 +460,13 @@ const buildScratchProjectBundle = (project: CanonicalProject): ScratchProjectBun
 
   const scratchProject: ScratchProjectJson = {
     targets: [stage, ...sprites],
-    monitors: [],
-    extensions: [],
+    monitors: compileMonitors(project),
+    extensions: project.extensions ?? [],
     meta: {
       semver: '3.0.0',
       vm: '15.2.0',
       agent: 'Scratch AI Bridge 0.1.0',
+      ...project.meta,
     },
   }
 
@@ -495,7 +479,7 @@ export const buildScratchProjectJson = (project: CanonicalProject): ScratchProje
 export const buildScratchProjectArchive = async (project: CanonicalProject): Promise<Uint8Array> => {
   const bundle = buildScratchProjectBundle(project)
   const archive = new JSZip()
-  archive.file('project.json', JSON.stringify(bundle.project))
+  archive.file('project.json', new TextEncoder().encode(JSON.stringify(bundle.project)))
   for (const [filename, data] of bundle.assets) archive.file(filename, data)
   return archive.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
 }

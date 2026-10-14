@@ -2,11 +2,14 @@ import type { CanonicalOpcode } from '../capabilities'
 
 export const CANONICAL_IR_FORMAT = 'scratch-ai-bridge/canonical-ir' as const
 export const CANONICAL_IR_VERSION = 1 as const
+export const CANONICAL_JSON_MAX_DEPTH = 128
+export const CANONICAL_JSON_MAX_NODES = 100_000
 
 export { CANONICAL_OPCODES } from '../capabilities'
-export type { CanonicalOpcode } from '../capabilities'
+export type { CanonicalOpcode, KnownOpcode } from '../capabilities'
 
 export type CanonicalScalar = string | number | boolean
+export type CanonicalJsonValue = CanonicalScalar | null | CanonicalJsonValue[] | { [key: string]: CanonicalJsonValue }
 
 export interface LiteralInput {
   type: 'literal'
@@ -44,6 +47,17 @@ export interface CanonicalBlock {
   opcode: CanonicalOpcode
   inputs?: Record<string, CanonicalInput>
   fields?: Record<string, CanonicalScalar>
+  procedure?: { name: string }
+  comment?: CanonicalComment
+}
+
+export interface CanonicalComment {
+  text: string
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  minimized?: boolean
 }
 
 export interface ScriptPosition {
@@ -71,7 +85,23 @@ export interface CanonicalBroadcast {
   name: string
 }
 
-export type ProcedureParameterKind = 'string-number' | 'boolean'
+export interface CanonicalMonitor {
+  id: string
+  opcode: string
+  params: Record<string, CanonicalScalar | null>
+  spriteName: string | null
+  mode: string
+  value: CanonicalScalar | null | (CanonicalScalar | null)[]
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  visible: boolean
+  min?: number
+  max?: number
+}
+
+export type ProcedureParameterKind = 'string-number' | 'number' | 'boolean'
 
 export interface CanonicalProcedureParameter {
   name: string
@@ -87,11 +117,13 @@ export interface CanonicalProcedure {
 }
 
 export type CostumeDataFormat = 'svg' | 'png' | 'jpg' | 'jpeg' | 'bmp'
+export type CanonicalAssetIssue = 'missing-archive-entry' | 'checksum-mismatch'
 
 export interface CanonicalCostume {
   name: string
   dataFormat: CostumeDataFormat
   data?: string
+  assetIssue?: CanonicalAssetIssue
   rotationCenterX?: number
   rotationCenterY?: number
   bitmapResolution?: number
@@ -103,22 +135,31 @@ export interface CanonicalSound {
   name: string
   dataFormat: SoundDataFormat
   data?: string
+  assetIssue?: CanonicalAssetIssue
   rate?: number
   sampleCount?: number
 }
 
 export interface CanonicalTargetBase {
   name: string
+  currentCostume?: number
+  volume?: number
+  layerOrder?: number
   variables: CanonicalVariable[]
   lists: CanonicalList[]
   costumes: CanonicalCostume[]
   sounds: CanonicalSound[]
   scripts: CanonicalScript[]
   procedures: CanonicalProcedure[]
+  comments?: CanonicalComment[]
 }
 
 export interface CanonicalStage extends CanonicalTargetBase {
   kind: 'stage'
+  tempo?: number
+  videoTransparency?: number
+  videoState?: string
+  textToSpeechLanguage?: string | null
 }
 
 export type RotationStyle = 'all around' | 'left-right' | "don't rotate"
@@ -141,4 +182,7 @@ export interface CanonicalProject {
   stage: CanonicalStage
   sprites: CanonicalSprite[]
   broadcasts: CanonicalBroadcast[]
+  extensions?: string[]
+  meta?: Record<string, CanonicalJsonValue>
+  monitors?: CanonicalMonitor[]
 }

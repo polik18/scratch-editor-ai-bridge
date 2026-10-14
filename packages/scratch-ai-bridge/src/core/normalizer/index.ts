@@ -1,4 +1,5 @@
 export {
+  addExtractionRepair,
   normalizeAiDraft,
   normalizeAiResponse,
   parseAiResponse,

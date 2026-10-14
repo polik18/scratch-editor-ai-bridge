@@ -15,7 +15,26 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
+      - name: Check whether the legacy GitHub Pages branch exists
+        id: pages-branch
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          status=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+            --header "Authorization: Bearer ${GITHUB_TOKEN}" \
+            --header 'Accept: application/vnd.github+json' \
+            "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/branches/gh-pages")
+          case "$status" in
+            200) echo 'exists=true' >> "$GITHUB_OUTPUT" ;;
+            404)
+              echo 'Legacy gh-pages branch is absent; Pages uses workflow artifacts, so cleanup is unnecessary.'
+              echo 'exists=false' >> "$GITHUB_OUTPUT"
+              ;;
+            *) echo "GitHub branch API returned HTTP $status" >&2; exit 1 ;;
+          esac
       - name: Check Out GitHub Pages Branch
+        if: steps.pages-branch.outputs.exists == 'true'
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           # replace `fetch-depth` with `shallow-since` if and when actions/checkout#619 (or an equivalent) gets merged
@@ -23,8 +42,10 @@ jobs:
           fetch-depth: 1
           ref: gh-pages
       - name: Fetch a Bit More History
+        if: steps.pages-branch.outputs.exists == 'true'
         run: git fetch --update-shallow --shallow-since="32 days ago" origin gh-pages
       - name: Mark Stale Directories for Removal
+        if: steps.pages-branch.outputs.exists == 'true'
         run: |
           for dir in */; do
             [ -L "${dir%/}" ] && continue  # skip symlinks (trim trailing slash for test)
@@ -34,10 +55,12 @@ jobs:
             fi
           done
       - name: Configure Git User
+        if: steps.pages-branch.outputs.exists == 'true'
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
       - name: Commit
+        if: steps.pages-branch.outputs.exists == 'true'
         run: |
           if git diff --staged --quiet; then
             echo 'No stale directories were found. Nothing to commit.'
@@ -45,4 +68,5 @@ jobs:
             git commit -m 'chore: remove stale GitHub Pages branches'
           fi
       - name: Push
+        if: steps.pages-branch.outputs.exists == 'true'
         run: "git push"

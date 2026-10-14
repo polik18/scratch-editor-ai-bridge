@@ -6,7 +6,7 @@ on:
     - cron: 0 0 * * * # daily at midnight UTC = 7-8pm US Eastern
 
 concurrency:
-  group: '${{ github.workflow }}'
+  group: "${{ github.workflow }}"
   cancel-in-progress: true
 
 permissions:
@@ -19,8 +19,8 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          cache: 'npm'
-          node-version-file: '.nvmrc'
+          cache: "npm"
+          node-version-file: ".nvmrc"
       - name: Info
         # https://docs.github.com/en/actions/reference/security/secure-use#use-an-intermediate-environment-variable
         env:
@@ -32,14 +32,30 @@ jobs:
           GitHub ref: ${{ github.ref }}
           GitHub head ref: ${GH_HEAD_REF}
           EOF
+      - name: Check Transifex token availability
+        id: tx-token
+        env:
+          TX_TOKEN: ${{ secrets.TX_TOKEN }}
+        shell: bash
+        run: |
+          if [[ -n "$TX_TOKEN" ]]; then
+            echo 'available=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'available=false' >> "$GITHUB_OUTPUT"
+            echo '::warning::TX_TOKEN is not configured; skipping scheduled translation synchronization.'
+          fi
       - name: Setup
+        id: install-dependencies
+        if: ${{ steps.tx-token.outputs.available == 'true' }}
         uses: ./.github/actions/install-dependencies
       - name: Update i18n in scratch-vm
+        if: ${{ steps.tx-token.outputs.available == 'true' }}
         uses: ./.github/actions/update-i18n
         with:
           package_name: scratch-vm
           tx_token: ${{ secrets.TX_TOKEN }}
       - name: Update i18n in scratch-gui
+        if: ${{ !cancelled() && steps.tx-token.outputs.available == 'true' && steps.install-dependencies.outcome == 'success' }}
         uses: ./.github/actions/update-i18n
         with:
           package_name: scratch-gui

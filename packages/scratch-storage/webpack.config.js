@@ -71,6 +71,6 @@ const nodeConfig = baseConfig.clone()
             clean: false
         }
     })
-    .addExternals(['base64-js', 'js-md5', 'localforage', 'text-encoding']);
+    .addExternals(['base64-js', 'localforage', 'text-encoding']);
 
 module.exports = [webNonMinConfig.get(), webMinConfig.get(), nodeConfig.get()];

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob: https://synthesis-service.scratch.mit.edu https://translate-service.scratch.mit.edu ws://127.0.0.1:20111 wss://device-manager.scratch.mit.edu:20110; frame-src 'self'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Scratch isolated preview</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #fff;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        outline: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="stage" width="480" height="360" tabindex="0" aria-label="Scratch 動畫預覽舞台"></canvas>
+    <script type="module" src="/src/preview/main.ts"></script>
+  </body>
+</html>

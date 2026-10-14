@@ -397,7 +397,8 @@ class VirtualMachine extends EventEmitter {
         const zip = new JSZip();
 
         // Put everything in a zip file
-        zip.file('project.json', projectJson);
+        // Keep JSZip from splitting string chunks inside UTF-16 surrogate pairs.
+        zip.file('project.json', new TextEncoder().encode(projectJson));
         this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
 
         return zip.generateAsync({
@@ -446,7 +447,8 @@ class VirtualMachine extends EventEmitter {
         const spriteJson = this.toJSON(targetId);
 
         const zip = new JSZip();
-        zip.file('sprite.json', spriteJson);
+        // JSZip can split string chunks inside UTF-16 surrogate pairs; provide UTF-8 bytes instead.
+        zip.file('sprite.json', new TextEncoder().encode(spriteJson));
         this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
 
         return zip.generateAsync({

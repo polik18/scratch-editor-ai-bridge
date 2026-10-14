@@ -31,9 +31,36 @@
       "items": {
         "$ref": "#/definitions/broadcast"
       }
+    },
+    "extensions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "meta": {
+      "type": "object",
+      "description": "Recursive JSON metadata; implementation bounds depth to 128 and total values to 100000.",
+      "additionalProperties": {
+        "$ref": "#/definitions/jsonValue"
+      }
+    },
+    "monitors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/monitor"
+      }
     }
   },
   "definitions": {
+    "jsonValue": {
+      "anyOf": [
+        { "$ref": "#/definitions/scalar" },
+        { "type": "null" },
+        { "type": "array", "items": { "$ref": "#/definitions/jsonValue" } },
+        { "type": "object", "additionalProperties": { "$ref": "#/definitions/jsonValue" } }
+      ]
+    },
     "scalar": {
       "anyOf": [
         {
@@ -141,34 +168,8 @@
       "required": ["opcode"],
       "properties": {
         "opcode": {
-          "enum": [
-            "event_whenflagclicked",
-            "event_whenkeypressed",
-            "event_whenbroadcastreceived",
-            "event_broadcast",
-            "motion_movesteps",
-            "motion_gotoxy",
-            "motion_changexby",
-            "motion_setx",
-            "motion_changeyby",
-            "motion_sety",
-            "looks_say",
-            "looks_switchcostumeto",
-            "control_wait",
-            "control_repeat",
-            "control_forever",
-            "control_if",
-            "control_if_else",
-            "sensing_touchingobject",
-            "operator_lt",
-            "operator_equals",
-            "operator_gt",
-            "operator_and",
-            "operator_or",
-            "operator_not",
-            "data_setvariableto",
-            "data_changevariableby"
-          ]
+          "type": "string",
+          "minLength": 1
         },
         "inputs": {
           "type": "object",
@@ -181,6 +182,20 @@
           "additionalProperties": {
             "$ref": "#/definitions/scalar"
           }
+        },
+        "procedure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "comment": {
+          "$ref": "#/definitions/comment"
         }
       }
     },
@@ -269,7 +284,7 @@
           "minLength": 1
         },
         "kind": {
-          "enum": ["string-number", "boolean"]
+          "enum": ["string-number", "number", "boolean"]
         },
         "default": {
           "$ref": "#/definitions/scalar"
@@ -317,6 +332,9 @@
         "data": {
           "type": "string"
         },
+        "assetIssue": {
+          "enum": ["missing-archive-entry", "checksum-mismatch"]
+        },
         "rotationCenterX": {
           "type": "number"
         },
@@ -344,6 +362,9 @@
         "data": {
           "type": "string"
         },
+        "assetIssue": {
+          "enum": ["missing-archive-entry", "checksum-mismatch"]
+        },
         "rate": {
           "type": "number",
           "exclusiveMinimum": 0
@@ -361,6 +382,33 @@
       "properties": {
         "kind": {
           "const": "stage"
+        },
+        "currentCostume": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "volume": {
+          "type": "number",
+          "minimum": 0
+        },
+        "layerOrder": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tempo": {
+          "type": "number",
+          "minimum": 0
+        },
+        "videoTransparency": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "videoState": {
+          "type": "string"
+        },
+        "textToSpeechLanguage": {
+          "type": ["string", "null"]
         },
         "name": {
           "type": "string",
@@ -401,6 +449,12 @@
           "items": {
             "$ref": "#/definitions/procedure"
           }
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/comment"
+          }
         }
       }
     },
@@ -427,6 +481,18 @@
       "properties": {
         "kind": {
           "const": "sprite"
+        },
+        "currentCostume": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "volume": {
+          "type": "number",
+          "minimum": 0
+        },
+        "layerOrder": {
+          "type": "integer",
+          "minimum": 0
         },
         "name": {
           "type": "string",
@@ -489,6 +555,120 @@
         },
         "rotationStyle": {
           "enum": ["all around", "left-right", "don't rotate"]
+        },
+        "comments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/comment"
+          }
+        }
+      }
+    },
+    "comment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "minimized": {
+          "type": "boolean"
+        }
+      }
+    },
+    "monitor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "opcode", "params", "spriteName", "mode", "value", "visible"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "opcode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/definitions/scalar"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "spriteName": {
+          "type": ["string", "null"]
+        },
+        "mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/scalar"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "$ref": "#/definitions/scalar"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "width": {
+          "type": "number",
+          "minimum": 0
+        },
+        "height": {
+          "type": "number",
+          "minimum": 0
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
         }
       }
     }

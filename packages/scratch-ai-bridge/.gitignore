@@ -1,3 +1,5 @@
 coverage/
 dist/
+audit-dist/
 node_modules/
+test-results/

@@ -19,5 +19,12 @@ export default eslintConfigScratch.defineConfig(
       globals: globals.node,
     },
   },
-  globalIgnores(['coverage/**', 'dist/**', 'docs/**', 'node_modules/**', 'src/core/validator/generated/*.mjs']),
+  globalIgnores([
+    'audit-dist/**',
+    'coverage/**',
+    'dist/**',
+    'docs/**',
+    'node_modules/**',
+    'src/core/validator/generated/*.mjs',
+  ]),
 )

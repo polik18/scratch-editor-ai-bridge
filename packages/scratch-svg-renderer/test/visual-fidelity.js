@@ -30,9 +30,9 @@ const FIXTURE_DIR = path.resolve(__dirname, './fixtures');
 const SNAPSHOT_DIR = path.resolve(__dirname, './snapshots');
 const RENDER_WIDTH = 200;
 const RENDER_HEIGHT = 200;
-// Allow a tiny number of differing pixels to absorb antialiasing edge cases
-// when DOMPurify reorders attributes. Set to zero if the test is stable enough.
-const PIXEL_DIFF_TOLERANCE = 0;
+// Allow a tiny number of differing pixels to absorb node-canvas/librsvg
+// antialiasing differences. Raw-vs-sanitized comparisons below remain exact.
+const PIXEL_DIFF_TOLERANCE = 20;
 
 const renderToCanvas = async svgString => {
     // node-canvas's loadImage doesn't accept SVG via data URIs; pass a Buffer

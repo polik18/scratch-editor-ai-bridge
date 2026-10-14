@@ -1,3 +1,5 @@
+import { getBlockCapability } from '../capabilities'
+import canonicalSchema from '../ir/schema.json'
 import type { AiDraftRepair, AiDraftWarning } from '../normalizer'
 import type { CanonicalIRValidationIssue, CanonicalSemanticIssue } from '../validator'
 
@@ -39,6 +41,7 @@ export interface CreateRepairReportOptions {
   readonly schemaIssues?: readonly CanonicalIRValidationIssue[]
   readonly semanticIssues?: readonly CanonicalSemanticIssue[]
   readonly parseError?: unknown
+  readonly normalizationError?: unknown
   readonly compileError?: unknown
 }
 
@@ -87,6 +90,9 @@ const errorMessage = (error: unknown): string => {
 }
 
 const schemaPath = (issue: CanonicalIRValidationIssue): string => {
+  if (issue.keyword === 'additionalProperties' && typeof issue.params.additionalProperty === 'string') {
+    return `${issue.instancePath}/${pointerPart(issue.params.additionalProperty)}`
+  }
   if (issue.keyword !== 'required' || typeof issue.params.missingProperty !== 'string') {
     return issue.instancePath || '/'
   }
@@ -98,6 +104,31 @@ const schemaExpectation = (issue: CanonicalIRValidationIssue): string => {
     return `required property ${issue.params.missingProperty}`
   }
   if (issue.keyword === 'type' && typeof issue.params.type === 'string') return `type=${issue.params.type}`
+  if (
+    [
+      'minimum',
+      'maximum',
+      'exclusiveMinimum',
+      'exclusiveMaximum',
+      'minLength',
+      'maxLength',
+      'minItems',
+      'maxItems',
+    ].includes(issue.keyword) &&
+    typeof issue.params.limit === 'number'
+  ) {
+    const operator: Readonly<Record<string, string>> = {
+      exclusiveMaximum: '<',
+      exclusiveMinimum: '>',
+      maxItems: '≤ items',
+      maxLength: '≤ characters',
+      maximum: '≤',
+      minItems: '≥ items',
+      minLength: '≥ characters',
+      minimum: '≥',
+    }
+    return `${operator[issue.keyword]} ${issue.params.limit}`
+  }
   if (issue.keyword === 'const' && 'allowedValue' in issue.params) {
     return `const=${JSON.stringify(issue.params.allowedValue)}`
   }
@@ -107,8 +138,283 @@ const schemaExpectation = (issue: CanonicalIRValidationIssue): string => {
   return `Canonical IR schema keyword=${issue.keyword}`
 }
 
+type SchemaNode = Record<string, unknown>
+
+const asSchemaNode = (value: unknown): SchemaNode | undefined =>
+  typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as SchemaNode) : undefined
+
+const schemaRoot = canonicalSchema as SchemaNode
+
+const schemaValueAtPointer = (pointer: string): unknown => {
+  if (!pointer.startsWith('#/')) return undefined
+  let current: unknown = schemaRoot
+  for (const part of pointer.slice(2).split('/')) {
+    const key = decodePointerPart(part)
+    if (Array.isArray(current)) {
+      const index = Number(key)
+      if (!Number.isInteger(index)) return undefined
+      current = current[index]
+    } else {
+      current = asSchemaNode(current)?.[key]
+    }
+    if (current === undefined) return undefined
+  }
+  return current
+}
+
+const resolveSchemaNode = (input: unknown, depth = 0): SchemaNode | undefined => {
+  if (depth > 32) return undefined
+  const node = asSchemaNode(input)
+  if (!node) return undefined
+  if (typeof node.$ref === 'string' && node.$ref.startsWith('#/')) {
+    let resolved: unknown = schemaRoot
+    for (const part of node.$ref.slice(2).split('/')) resolved = asSchemaNode(resolved)?.[decodePointerPart(part)]
+    return resolveSchemaNode(resolved, depth + 1)
+  }
+  return node
+}
+
+const schemaNodeForValue = (input: unknown, value: unknown): SchemaNode | undefined => {
+  const node = resolveSchemaNode(input)
+  if (!node) return undefined
+  const branches = Array.isArray(node.oneOf) ? node.oneOf : Array.isArray(node.anyOf) ? node.anyOf : undefined
+  if (!branches) return node
+  for (const branch of branches) {
+    const candidate = resolveSchemaNode(branch)
+    if (!candidate) continue
+    const properties = asSchemaNode(candidate.properties)
+    if (asSchemaNode(value) && properties) {
+      const discriminator = Object.entries(properties).find(([, property]) => {
+        const propertyNode = asSchemaNode(property)
+        return propertyNode && Object.hasOwn(propertyNode, 'const')
+      })
+      if (
+        discriminator &&
+        (value as Record<string, unknown>)[discriminator[0]] === asSchemaNode(properties[discriminator[0]])?.const
+      ) {
+        return candidate
+      }
+    }
+    if (candidate.type === 'null' && value === null) return candidate
+    if (candidate.type === 'array' && Array.isArray(value)) return candidate
+    if (candidate.type === 'object' && asSchemaNode(value)) return candidate
+    if (candidate.type === 'string' && typeof value === 'string') return candidate
+    if (candidate.type === 'number' && typeof value === 'number') return candidate
+    if (candidate.type === 'boolean' && typeof value === 'boolean') return candidate
+  }
+  return resolveSchemaNode(branches[0])
+}
+
+const schemaAtInstancePath = (data: unknown, path: string, selectUnionBranch = true): SchemaNode | undefined => {
+  let schema: unknown = schemaRoot
+  let value = data
+  for (const rawPart of path.split('/').filter(Boolean)) {
+    const node = schemaNodeForValue(schema, value)
+    if (!node) return undefined
+    const part = decodePointerPart(rawPart)
+    const properties = asSchemaNode(node.properties)
+    if (Array.isArray(value) && node.items !== undefined) {
+      schema = node.items
+      value = value[Number(part)]
+    } else if (properties && Object.hasOwn(properties, part)) {
+      schema = properties[part]
+      value = asSchemaNode(value)?.[part]
+    } else if (node.additionalProperties !== undefined) {
+      schema = node.additionalProperties
+      value = asSchemaNode(value)?.[part]
+    } else {
+      return undefined
+    }
+  }
+  return selectUnionBranch ? schemaNodeForValue(schema, value) : resolveSchemaNode(schema)
+}
+
+const schemaSample = (input: unknown, depth = 0): unknown => {
+  if (depth > 24) return undefined
+  const node = resolveSchemaNode(input)
+  if (!node) return undefined
+  if (Object.hasOwn(node, 'const')) return node.const
+  if (Array.isArray(node.enum) && node.enum.length > 0) return node.enum[0]
+  const branches = Array.isArray(node.oneOf) ? node.oneOf : Array.isArray(node.anyOf) ? node.anyOf : undefined
+  if (branches) {
+    for (const branch of branches) {
+      const sample = schemaSample(branch, depth + 1)
+      if (sample !== undefined) return sample
+    }
+    return undefined
+  }
+  const type: unknown = Array.isArray(node.type)
+    ? (node.type as unknown[]).find((candidate: unknown) => candidate !== 'null')
+    : node.type
+  if (type === 'string') return typeof node.minLength === 'number' && node.minLength > 0 ? 'Scratch Project' : ''
+  if (type === 'number' || type === 'integer') return 0
+  if (type === 'boolean') return false
+  if (type === 'array') {
+    const minimum = typeof node.minItems === 'number' ? Math.min(node.minItems, 16) : 0
+    const item = schemaSample(node.items, depth + 1)
+    return item === undefined ? [] : Array.from({ length: minimum }, () => item)
+  }
+  if (type === 'object') {
+    const result: Record<string, unknown> = {}
+    const properties = asSchemaNode(node.properties)
+    for (const name of Array.isArray(node.required) ? node.required : []) {
+      if (typeof name !== 'string' || !properties || !Object.hasOwn(properties, name)) continue
+      const sample = schemaSample(properties[name], depth + 1)
+      if (sample !== undefined) result[name] = sample
+    }
+    return result
+  }
+  return undefined
+}
+
+const schemaExample = (
+  issue: CanonicalIRValidationIssue,
+  data: unknown,
+): { readonly example?: unknown; readonly expected?: string } => {
+  if (issue.keyword === 'anyOf' || issue.keyword === 'oneOf') {
+    const instanceSchema = schemaAtInstancePath(data, issue.instancePath, false)
+    const branches =
+      schemaValueAtPointer(issue.schemaPath) ??
+      (issue.keyword === 'oneOf' ? instanceSchema?.oneOf : instanceSchema?.anyOf)
+    if (!Array.isArray(branches)) return {}
+    for (const branch of branches) {
+      const sample = schemaSample(branch)
+      if (sample !== undefined) {
+        return {
+          example: { replaceWith: sample },
+          expected: `a value matching one of the ${issue.keyword === 'oneOf' ? 'exclusive' : 'allowed'} schema variants`,
+        }
+      }
+    }
+    return {}
+  }
+  if (issue.keyword === 'additionalProperties' && typeof issue.params.additionalProperty === 'string') {
+    return {
+      example: { removeProperty: issue.params.additionalProperty },
+      expected: 'no additional property at this path',
+    }
+  }
+  if (issue.keyword === 'required' && typeof issue.params.missingProperty === 'string') {
+    const name = issue.params.missingProperty
+    const properties = asSchemaNode(schemaAtInstancePath(data, issue.instancePath)?.properties)
+    if (!properties || !Object.hasOwn(properties, name)) return {}
+    const sample = schemaSample(properties[name])
+    return {
+      ...(sample === undefined ? {} : { example: { addProperty: { [name]: sample } } }),
+      expected: `required property ${name}`,
+    }
+  }
+  if (issue.keyword === 'enum' && Array.isArray(issue.params.allowedValues)) {
+    const allowedValues = issue.params.allowedValues as unknown[]
+    return { example: { replaceWith: allowedValues[0] }, expected: schemaExpectation(issue) }
+  }
+  if (issue.keyword === 'const' && Object.hasOwn(issue.params, 'allowedValue')) {
+    return { example: { replaceWith: issue.params.allowedValue }, expected: schemaExpectation(issue) }
+  }
+  if (
+    ['minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum'].includes(issue.keyword) &&
+    typeof issue.params.limit === 'number'
+  ) {
+    const limit = issue.params.limit
+    const epsilon = Math.max(1, Math.abs(limit)) * Number.EPSILON
+    const replacement =
+      issue.keyword === 'minimum'
+        ? limit
+        : issue.keyword === 'maximum'
+          ? limit
+          : issue.keyword === 'exclusiveMinimum'
+            ? limit + epsilon
+            : limit - epsilon
+    return { example: { replaceWith: replacement }, expected: schemaExpectation(issue) }
+  }
+  if (issue.keyword === 'minLength' && typeof issue.params.limit === 'number') {
+    const preferred = 'Scratch Project'
+    const instanceSchema = schemaAtInstancePath(data, issue.instancePath)
+    const preferredFitsMaximum =
+      typeof instanceSchema?.maxLength !== 'number' || instanceSchema.maxLength >= preferred.length
+    const replacement =
+      issue.params.limit <= preferred.length && preferredFitsMaximum ? preferred : 'x'.repeat(issue.params.limit)
+    return { example: { replaceWith: replacement }, expected: schemaExpectation(issue) }
+  }
+  if (
+    issue.keyword === 'maxLength' &&
+    typeof issue.params.limit === 'number' &&
+    typeof pointerValue(data, issue.instancePath || '/') === 'string'
+  ) {
+    const actual = pointerValue(data, issue.instancePath || '/') as string
+    return { example: { replaceWith: actual.slice(0, issue.params.limit) }, expected: schemaExpectation(issue) }
+  }
+  if (issue.keyword === 'minItems' && typeof issue.params.limit === 'number') {
+    const replacement = schemaSample(schemaAtInstancePath(data, issue.instancePath))
+    return {
+      ...(replacement === undefined ? {} : { example: { replaceWith: replacement } }),
+      expected: schemaExpectation(issue),
+    }
+  }
+  if (
+    issue.keyword === 'maxItems' &&
+    typeof issue.params.limit === 'number' &&
+    Array.isArray(pointerValue(data, issue.instancePath || '/'))
+  ) {
+    const actual = pointerValue(data, issue.instancePath || '/') as unknown[]
+    return { example: { replaceWith: actual.slice(0, issue.params.limit) }, expected: schemaExpectation(issue) }
+  }
+  if (issue.keyword === 'type' && typeof issue.params.type === 'string') {
+    const sample = schemaSample(schemaAtInstancePath(data, issue.instancePath))
+    const fallback: Readonly<Record<string, unknown>> = {
+      array: [],
+      boolean: false,
+      integer: 0,
+      number: 0,
+      object: {},
+      string: '',
+    }
+    return {
+      example: { replaceWith: sample ?? fallback[issue.params.type] },
+      expected: schemaExpectation(issue),
+    }
+  }
+  return {}
+}
+
+const compileFailureGuidance: Readonly<Record<string, { expected: string; suggestion: string }>> = {
+  'svg-preflight': {
+    expected: 'well-formed SVG costume data that the browser XML parser accepts',
+    suggestion: '修正錯誤素材路徑指出的 SVG XML；保留原造型名稱與畫面意圖，再重新驗證',
+  },
+  'raster-preflight': {
+    expected: 'browser-decodable PNG, JPEG, or BMP costume data',
+    suggestion: '以可解碼的 PNG、JPEG 或 BMP 還原錯誤素材路徑指出的造型，不要只補檔案簽章',
+  },
+  'audio-preflight': {
+    expected: 'browser-decodable WAV or MP3 sound data',
+    suggestion: '以可解碼的 WAV 或 MP3 還原錯誤素材路徑指出的音效，並保留原音效名稱與播放設定',
+  },
+  'archive-generation': {
+    expected: 'Canonical project fields and assets that can be encoded into an SB3 archive',
+    suggestion: '依錯誤路徑修正無法序列化的專案欄位或素材資料，保留其他未涉及的專案內容',
+  },
+  'scratch-vm-load': {
+    expected: 'an SB3 archive accepted by the official Scratch VM',
+    suggestion: '依 VM 錯誤路徑修正 Scratch 不接受的積木圖、符號或素材識別資料；不要移除未涉及的遊戲邏輯',
+  },
+  'scratch-vm-save': {
+    expected: 'a loaded Scratch VM project that can be serialized as SB3',
+    suggestion: '檢查 VM 載入後的專案資料與素材，修正導致 SB3 保存失敗的內容並保留遊戲意圖',
+  },
+  unknown: {
+    expected: 'a project accepted by the local Scratch project compiler',
+    suggestion: '保留專案結構，依錯誤訊息修正無法編譯的積木或素材資料',
+  },
+}
+
 const semanticSuggestion = (issue: CanonicalSemanticIssue): string => {
   const suggestions: Readonly<Record<string, string>> = {
+    'asset-data-invalid': '從來源專案重新匯入有效素材資料；Data URI 或 Base64 必須可解碼且非空',
+    'asset-format-mismatch': '確認 costume 的 dataFormat 與來源素材實際格式相符，再從來源專案重新匯入素材',
+    'asset-checksum-mismatch': '從來源專案還原與原始校驗值相符的素材，再重新匯入；不要用佔位素材取代',
+    'asset-missing': '從來源專案封存檔還原缺少的素材後重新匯入；不要用佔位素材取代',
+    'current-costume-out-of-range': '將 currentCostume 改成現有造型的索引；索引從 0 開始',
     'condition-not-boolean':
       '改用 operator_equals、operator_gt、operator_lt 或其他 shape=boolean reporter 表達明確條件',
     'boolean-input-type': '將此 input 改成 shape=boolean 的 reporter block',
@@ -129,14 +435,85 @@ const semanticSuggestion = (issue: CanonicalSemanticIssue): string => {
     'unknown-opcode': '改用 capability registry 支援的 opcode；沒有安全替代時請簡化功能',
     'unknown-sprite': '將碰撞目標改成既有角色名稱、_edge_ 或 _mouse_',
     'unknown-variable': '在目前 target 或 stage 宣告同名變數，或修正拼字',
+    'invalid-argument-reporter': '確認 VALUE 名稱與型別屬於目前 procedure 的參數',
+    'duplicate-procedure-argument':
+      '將重複名稱改為唯一的 procedure 參數名稱，並同步更新呼叫 input 與 argument reporter',
+    'missing-procedure-argument': '依被呼叫 procedure 的參數定義補上同名 input',
+    'procedure-argument-type': '依 procedure 參數 kind 提供正確的 literal 或 reporter',
+    'unknown-procedure': '建立同 target 的 procedure definition，或修正 procedure 名稱',
+    'unknown-procedure-argument': '移除 procedure 未宣告的參數 input，或修正參數名稱',
   }
   return suggestions[issue.code] ?? '依錯誤訊息與 capability registry 修正此項目'
+}
+
+const pathTail = (path: string): string => decodePointerPart(path.slice(path.lastIndexOf('/') + 1))
+
+const canonicalInputExample = (
+  kind: 'any' | 'number' | 'string' | 'boolean' | 'stack' | 'broadcast' | 'menu',
+  menuValue?: string,
+): unknown => {
+  if (kind === 'stack') return { type: 'stack', blocks: [] }
+  if (kind === 'broadcast') return undefined
+  if (kind === 'boolean') return { type: 'literal', value: false }
+  if (kind === 'number') return { type: 'literal', value: 0 }
+  if (kind === 'menu' && menuValue === undefined) return undefined
+  return { type: 'literal', value: menuValue ?? '' }
+}
+
+const semanticExample = (
+  issue: CanonicalSemanticIssue,
+  data: unknown,
+): { readonly example?: unknown; readonly expected?: string } => {
+  if (issue.code === 'asset-data-invalid') return { expected: 'non-empty decodable Base64, data URI, or inline SVG' }
+  if (issue.code === 'asset-format-mismatch')
+    return { expected: 'raster asset signature must match the declared dataFormat' }
+  if (issue.code === 'asset-missing') return { expected: 'source asset bytes must be present' }
+  if (issue.code === 'asset-checksum-mismatch')
+    return { expected: 'source asset bytes must match the original checksum' }
+  if (issue.code === 'current-costume-out-of-range') {
+    const targetPath = issue.path.replace(/\/currentCostume$/, '')
+    const target = pointerValue(data, targetPath) as { costumes?: unknown[] } | undefined
+    const lastAvailableIndex = Math.max(0, (target?.costumes?.length ?? 0) - 1)
+    return {
+      example: { replaceWith: lastAvailableIndex },
+      expected: `integer index from 0 through ${lastAvailableIndex}`,
+    }
+  }
+  const opcode = opcodeAtPath(data, issue.path)
+  const capability = opcode ? getBlockCapability(opcode) : undefined
+  const propertyName = pathTail(issue.path)
+
+  if (issue.code === 'missing-input' || issue.code === 'input-kind' || issue.code === 'boolean-input-type') {
+    const input = capability?.inputs?.[propertyName]
+    if (!input) return {}
+    let menuValue: string | undefined
+    if (input.kind === 'menu' && input.shadow) {
+      menuValue = getBlockCapability(input.shadow.opcode)?.fields?.[input.shadow.field]?.values?.[0]
+    }
+    const example = canonicalInputExample(input.kind, menuValue)
+    return {
+      ...(example === undefined ? {} : { example: { [propertyName]: example } }),
+      expected: `Canonical input kind=${input.kind}`,
+    }
+  }
+
+  if (issue.code === 'missing-field' || issue.code === 'invalid-field-value') {
+    const field = capability?.fields?.[propertyName]
+    if (!field) return {}
+    return {
+      ...(field.values?.length ? { example: { [propertyName]: field.values[0] } } : {}),
+      expected: field.values?.length ? `one of ${field.values.join(', ')}` : 'scalar field value',
+    }
+  }
+
+  return {}
 }
 
 const schemaSuggestion = (issue: CanonicalIRValidationIssue): string => {
   if (issue.keyword === 'required') return '補上必要欄位，並依 Canonical IR schema 使用正確資料形狀'
   if (issue.keyword === 'additionalProperties') return '移除 schema 未定義的欄位'
   if (issue.keyword === 'type') return '將值改成 expected 指定的資料型別'
+  if (issue.keyword === 'anyOf' || issue.keyword === 'oneOf') return '改用符合其中一種 Canonical IR schema 結構的值'
   return '依 Canonical IR schema 修正此值'
 }
 
@@ -173,6 +550,7 @@ export const createRepairReport = (options: CreateRepairReportOptions): RepairRe
   for (const issue of options.schemaIssues ?? []) {
     const path = schemaPath(issue)
     const actual = pointerValue(data, path)
+    const details = schemaExample(issue, data)
     issues.push({
       severity: 'error',
       status: 'must-fix',
@@ -181,14 +559,16 @@ export const createRepairReport = (options: CreateRepairReportOptions): RepairRe
       path,
       message: issue.message,
       ...(actual === undefined ? {} : { actual }),
-      expected: schemaExpectation(issue),
+      expected: details.expected ?? schemaExpectation(issue),
       suggestion: schemaSuggestion(issue),
+      ...(details.example === undefined ? {} : { example: details.example }),
     })
   }
 
   for (const issue of options.semanticIssues ?? []) {
     const actual = pointerValue(data, issue.path)
     const opcode = opcodeAtPath(data, issue.path)
+    const details = semanticExample(issue, data)
     issues.push({
       severity: issue.severity,
       status: issue.severity === 'error' ? 'must-fix' : 'review',
@@ -198,7 +578,9 @@ export const createRepairReport = (options: CreateRepairReportOptions): RepairRe
       ...(opcode ? { opcode } : {}),
       message: issue.message,
       ...(actual === undefined ? {} : { actual }),
+      ...(details.expected ? { expected: details.expected } : {}),
       suggestion: semanticSuggestion(issue),
+      ...(details.example === undefined ? {} : { example: details.example }),
     })
   }
 
@@ -229,16 +611,37 @@ export const createRepairReport = (options: CreateRepairReportOptions): RepairRe
     })
   }
 
+  if (options.normalizationError !== undefined) {
+    issues.push({
+      severity: 'error',
+      status: 'must-fix',
+      phase: 'normalize',
+      code: 'normalization-failed',
+      path: '/',
+      message: errorMessage(options.normalizationError),
+      expected: 'parsed AI data within normalization depth and value limits',
+      suggestion: '縮小巢狀資料或移除循環參照，再重新輸出完整 Canonical IR JSON',
+    })
+  }
+
   if (options.compileError !== undefined) {
+    const message = errorMessage(options.compileError)
+    const path = /\bat (\/[^:]+):/.exec(message)?.[1] ?? '/'
+    const stage =
+      isRecord(options.compileError) && typeof options.compileError.stage === 'string'
+        ? options.compileError.stage
+        : 'unknown'
+    const guidance = compileFailureGuidance[stage] ?? compileFailureGuidance.unknown
     issues.push({
       severity: 'error',
       status: 'must-fix',
       phase: 'compile',
       code: 'compile-failed',
-      path: '/',
-      message: errorMessage(options.compileError),
-      expected: 'project accepted by the Scratch VM compiler',
-      suggestion: '保留專案結構，依錯誤訊息修正無法編譯的積木或素材資料',
+      path,
+      message,
+      actual: { stage },
+      expected: guidance.expected,
+      suggestion: guidance.suggestion,
     })
   }
 

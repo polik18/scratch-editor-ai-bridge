@@ -1,0 +1,65 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Move and Say",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [],
+    "lists": [],
+    "costumes": [],
+    "sounds": [],
+    "scripts": [],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Sprite1",
+      "x": 0,
+      "y": 0,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "all around",
+      "variables": [],
+      "lists": [],
+      "costumes": [],
+      "sounds": [],
+      "scripts": [
+        {
+          "position": {
+            "x": 40,
+            "y": 60
+          },
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "motion_movesteps",
+              "inputs": {
+                "STEPS": {
+                  "type": "literal",
+                  "value": 10
+                }
+              }
+            },
+            {
+              "opcode": "looks_say",
+              "inputs": {
+                "MESSAGE": {
+                  "type": "literal",
+                  "value": "Hello"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    }
+  ],
+  "broadcasts": []
+}

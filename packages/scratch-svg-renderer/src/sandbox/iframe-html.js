@@ -15,7 +15,8 @@
  * `index.js` chooses between the two. Neither policy allows `'unsafe-eval'`.
  */
 
-const CSP = "default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:;";
+const CSP =
+    "default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:;";
 
 /**
  * Build the frame document.
@@ -24,11 +25,19 @@ const CSP = "default-src 'none'; style-src 'unsafe-inline'; font-src data:; img-
  * @param {string[]} [scripts.texts] Script sources to embed in the document.
  *     Either way the scripts run in document order, and the frame's `load`
  *     event waits for all of them, so a later script can use an earlier one.
+ * @param {boolean} [scripts.allowOpaqueParentSource] Allow parent message
+ *     events without a WindowProxy source match inside an isolated opaque-origin preview.
  * @returns {string} The document for `iframe.srcdoc`.
  */
-const buildFrameDocument = ({urls, texts}) => {
-    const nonce = Array.from(crypto.getRandomValues(new Uint8Array(16)), byte =>
-        byte.toString(16).padStart(2, '0')).join('');
+const buildFrameDocument = ({
+    urls,
+    texts,
+    allowOpaqueParentSource = false
+}) => {
+    const nonce = Array.from(
+        crypto.getRandomValues(new Uint8Array(16)),
+        byte => byte.toString(16).padStart(2, '0')
+    ).join('');
     let scriptTags;
 
     if (urls) {
@@ -36,15 +45,20 @@ const buildFrameDocument = ({urls, texts}) => {
         // Resolve them here. Normalization also percent-encodes the quotes and
         // angle brackets that would otherwise escape the src attribute below.
         const absolute = urls.map(url => new URL(url, document.baseURI).href);
-        scriptTags = absolute.map(href => `<script nonce="${nonce}" src="${href}"></script>`);
+        scriptTags = absolute.map(
+            href => `<script nonce="${nonce}" src="${href}"></script>`
+        );
     } else {
-        scriptTags = texts.map(text => `<script nonce="${nonce}">${text}</script>`);
+        scriptTags = texts.map(
+            text => `<script nonce="${nonce}">${text}</script>`
+        );
     }
 
     return `<!DOCTYPE html>
 <html>
 <head>
 <meta http-equiv="Content-Security-Policy" content="${CSP} script-src 'nonce-${nonce}';">
+<meta name="scratch-svg-renderer-opaque-parent" content="${allowOpaqueParentSource ? 'true' : 'false'}">
 </head>
 <body>
 ${scriptTags.join('\n')}

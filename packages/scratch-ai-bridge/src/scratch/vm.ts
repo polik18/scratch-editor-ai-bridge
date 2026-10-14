@@ -1,5 +1,11 @@
 import type { ScratchStorage } from '@scratch/scratch-storage'
 import ScratchVM from '@scratch/scratch-vm'
+import parseScratchProject from './csp-scratch-parser'
+import {
+  DISABLED_SCRATCH_EXTENSION_IDS,
+  SCRATCH_LINK_HARDWARE_EXTENSION_IDS,
+  LOCAL_SCRATCH_EXTENSION_IDS,
+} from './extensions'
 import { createOfflineScratchStorage } from './storage'
 
 export type Sb3Input = Blob | ArrayBuffer | ArrayBufferView
@@ -14,6 +20,12 @@ export type ScratchProjectJson = Record<string, unknown>
  */
 export interface ScratchVMHandle {
   quit(): void
+}
+
+export interface ScratchVariableSnapshot {
+  readonly id: string
+  readonly name: string
+  readonly value: unknown
 }
 
 /**
@@ -61,23 +73,180 @@ interface ScratchBlockContainerInternal {
 
 interface ScratchTargetInternal extends ScratchTarget {
   readonly blocks: ScratchBlockContainerInternal
+  readonly variables: Record<string, ScratchVariableSnapshot>
+  readonly drawableID: number | null
+  readonly draggable: boolean
+  readonly x: number
+  readonly y: number
+  goToFront(): void
 }
 
 interface ScratchRuntimeInternal {
   readonly targets: ScratchTargetInternal[]
+  getTargetById(id: string): ScratchTargetInternal | null
+  _step(): void
+  handleProjectLoaded(): void
 }
 
 interface ScratchVMInternal extends ScratchVMHandle {
   readonly runtime: ScratchRuntimeInternal
+  readonly renderer: {
+    draw(): void
+    getNativeSize(): [number, number]
+    pick(
+      centerX: number,
+      centerY: number,
+      touchWidth?: number,
+      touchHeight?: number,
+      candidateIDs?: number[],
+    ): number | null
+  } | null
+  readonly extensionManager: {
+    loadExtensionURL(extensionURL: string): Promise<unknown>
+  }
+  start(): void
+  greenFlag(): void
+  stopAll(): void
+  startDrag(targetId: string): void
+  stopDrag(targetId: string): void
+  postSpriteInfo(data: Record<string, unknown>): void
+  getTargetIdForDrawableId(drawableId: number): string | null
+  postIOData(device: string, data: Record<string, unknown>): void
+  scanForPeripheral(extensionId: string): void
+  connectPeripheral(extensionId: string, peripheralId: string | number): void
+  disconnectPeripheral(extensionId: string): void
+  on(event: string, listener: (...args: unknown[]) => void): void
+  removeListener(event: string, listener: (...args: unknown[]) => void): void
+  attachAudioEngine(audioEngine: { audioContext: AudioContext }): void
   attachStorage(storage: ScratchStorage): void
+  attachRenderer(renderer: { draw(): void }): void
+  attachV2BitmapAdapter(adapter: {
+    resize(image: HTMLCanvasElement, width: number, height: number): HTMLCanvasElement
+    convertDataURIToBinary(dataURI: string): Uint8Array
+  }): void
   loadProject(input: string | object | ArrayBuffer | ArrayBufferView): Promise<void>
+  deserializeProject(projectJSON: ScratchProjectJson, zip: unknown): Promise<void>
   saveProjectSb3(): Promise<Blob>
   toJSON(): string
 }
 
+export interface ScratchPeripheralInfo {
+  readonly peripheralId: string | number
+  readonly peripheralName?: string
+  readonly name?: string
+}
+
+export type ScratchPeripheralEvent =
+  | 'PERIPHERAL_LIST_UPDATE'
+  | 'PERIPHERAL_CONNECTED'
+  | 'PERIPHERAL_DISCONNECTED'
+  | 'PERIPHERAL_SCAN_TIMEOUT'
+  | 'PERIPHERAL_REQUEST_ERROR'
+
+/**
+ * Start a hardware scan for an extension exposed by the preview UI.
+ * @param vm Preview VM.
+ * @param extensionId Allowlisted bundled Scratch hardware extension ID.
+ */
+export const scanScratchPeripheral = (vm: ScratchVMHandle, extensionId: string): void => {
+  if (!SCRATCH_LINK_HARDWARE_EXTENSION_IDS.has(extensionId)) throw new Error('Unsupported hardware extension')
+  asInternalVM(vm).scanForPeripheral(extensionId)
+}
+
+/**
+ * Load a bundled hardware adapter declared by the preview project.
+ * @param vm Isolated VM that will own the adapter instance.
+ * @param extensionId ID of a locally bundled Scratch hardware adapter.
+ * @returns A promise resolved when the local adapter is initialized.
+ */
+export const loadPreviewHardwareExtension = (vm: ScratchVMHandle, extensionId: string): Promise<unknown> => {
+  if (!SCRATCH_LINK_HARDWARE_EXTENSION_IDS.has(extensionId))
+    return Promise.reject(new Error('Unsupported hardware extension'))
+  return asInternalVM(vm).extensionManager.loadExtensionURL(extensionId)
+}
+
+/**
+ * Connect a discovered hardware peripheral.
+ * @param vm Preview VM.
+ * @param extensionId Allowlisted bundled Scratch hardware extension ID.
+ * @param peripheralId ID reported by Scratch Link discovery.
+ */
+export const connectScratchPeripheral = (
+  vm: ScratchVMHandle,
+  extensionId: string,
+  peripheralId: string | number,
+): void => {
+  if (!SCRATCH_LINK_HARDWARE_EXTENSION_IDS.has(extensionId)) throw new Error('Unsupported hardware extension')
+  asInternalVM(vm).connectPeripheral(extensionId, peripheralId)
+}
+
+/**
+ * Disconnect an extension's current peripheral.
+ * @param vm Preview VM.
+ * @param extensionId Allowlisted bundled Scratch hardware extension ID.
+ */
+export const disconnectScratchPeripheral = (vm: ScratchVMHandle, extensionId: string): void => {
+  if (!SCRATCH_LINK_HARDWARE_EXTENSION_IDS.has(extensionId)) throw new Error('Unsupported hardware extension')
+  asInternalVM(vm).disconnectPeripheral(extensionId)
+}
+
+/**
+ * Subscribe to one Scratch VM hardware event.
+ * @param vm Preview VM.
+ * @param event Hardware event to observe.
+ * @param listener Event callback.
+ * @returns A function that removes the listener.
+ */
+export const subscribeScratchPeripheralEvent = (
+  vm: ScratchVMHandle,
+  event: ScratchPeripheralEvent,
+  listener: (...args: unknown[]) => void,
+): (() => void) => {
+  const internalVM = asInternalVM(vm)
+  internalVM.on(event, listener)
+  return () => internalVM.removeListener(event, listener)
+}
+
 const asInternalVM = (vm: ScratchVMHandle): ScratchVMInternal => vm as ScratchVMInternal
 
+const parseScratchProjectAsync = (
+  input: string | ArrayBuffer | ArrayBufferView,
+): Promise<[ScratchProjectJson, unknown]> =>
+  new Promise((resolve, reject) => {
+    parseScratchProject(input, false, (error, result) => {
+      if (error) {
+        reject(error instanceof Error ? error : new Error('Scratch project parsing failed', { cause: error }))
+        return
+      }
+      if (!result) {
+        reject(new Error('Scratch parser returned no project'))
+        return
+      }
+      resolve(result)
+    })
+  })
+
+const loadParsedProject = async (
+  vm: ScratchVMInternal,
+  input: string | ArrayBuffer | ArrayBufferView,
+): Promise<void> => {
+  try {
+    const [project, zip] = await parseScratchProjectAsync(input)
+    await vm.deserializeProject(project, zip)
+    vm.runtime.handleProjectLoaded()
+  } catch (error) {
+    if (typeof error === 'object' && error !== null && 'validationError' in error) {
+      // Keep the JSON-string schema rejection used by Scratch VM's public loader.
+      // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- Preserve Scratch VM's legacy rejection type.
+      return Promise.reject(JSON.stringify(error))
+    }
+    throw error
+  }
+}
+
 const targetHandles = new WeakMap<ScratchTarget, ScratchTargetInternal>()
+const bitmapAdapterPromises = new WeakMap<ScratchVMHandle, Promise<void>>()
+const previewAudioContexts = new WeakMap<ScratchVMHandle, AudioContext>()
 
 const MAX_SB3_BYTES = 64 * 1024 * 1024
 const MAX_SB3_ENTRIES = 2_048
@@ -216,9 +385,87 @@ const validateSb3Archive = (input: ArrayBuffer | ArrayBufferView): void => {
  */
 export const createVM = (): ScratchVMHandle => {
   const vm = new ScratchVM() as unknown as ScratchVMInternal
+  const loadExtensionURL = vm.extensionManager.loadExtensionURL.bind(vm.extensionManager)
+
+  // Scratch VM treats an unknown extension ID as a worker script URL. Keep
+  // unknown blocks in the project graph, but never let imported project data
+  // choose executable code to load into the page.
+  vm.extensionManager.loadExtensionURL = (extensionURL) =>
+    LOCAL_SCRATCH_EXTENSION_IDS.has(extensionURL) && !DISABLED_SCRATCH_EXTENSION_IDS.has(extensionURL)
+      ? loadExtensionURL(extensionURL)
+      : Promise.resolve()
 
   vm.attachStorage(createOfflineScratchStorage())
   return vm
+}
+
+/**
+ * Create a VM for interactive preview with Scratch's official audio engine.
+ * Its AudioContext is closed when the VM quits.
+ * @param wrapFetch Optional wrapper for this VM's network fetch function.
+ * @returns An audio-enabled Scratch VM handle.
+ */
+export const createPreviewVM = async (
+  wrapFetch?: (fetcher: typeof fetch) => typeof fetch,
+): Promise<ScratchVMHandle> => {
+  const originalFetch = globalThis.fetch
+  if (wrapFetch) globalThis.fetch = wrapFetch(originalFetch.bind(globalThis))
+  try {
+    const vm = asInternalVM(createVM())
+    const { default: ScratchAudio } = await import('scratch-audio')
+    const audioEngine = new ScratchAudio()
+    const decodeSoundPlayer = audioEngine.decodeSoundPlayer.bind(audioEngine)
+    audioEngine.decodeSoundPlayer = (sound: unknown) => {
+      const soundRecord = sound as { data?: { buffer?: unknown } }
+      const importedAsset = soundRecord.data?.buffer
+      const assetUrl =
+        typeof importedAsset === 'object' && importedAsset !== null && 'default' in importedAsset
+          ? importedAsset.default
+          : importedAsset
+      if (typeof assetUrl !== 'string') return decodeSoundPlayer(sound)
+
+      return fetch(new URL(assetUrl, import.meta.url))
+        .then((response) => {
+          if (!response.ok) throw new Error(`Could not load bundled Scratch sound (${response.status})`)
+          return response.arrayBuffer()
+        })
+        .then((buffer) => decodeSoundPlayer({ ...soundRecord, data: { ...soundRecord.data, buffer } }))
+    }
+    vm.attachAudioEngine(audioEngine)
+    previewAudioContexts.set(vm, audioEngine.audioContext)
+    const quit = vm.quit.bind(vm)
+    vm.quit = () => {
+      quit()
+      if (wrapFetch) globalThis.fetch = originalFetch
+      if (audioEngine.audioContext.state !== 'closed') {
+        void audioEngine.audioContext.close().catch(() => undefined)
+      }
+    }
+    return vm
+  } catch (error) {
+    if (wrapFetch) globalThis.fetch = originalFetch
+    throw error
+  }
+}
+
+/**
+ * Resume interactive preview audio after a real keyboard or pointer gesture.
+ * @param vm Preview VM whose audio context should resume.
+ */
+export const resumePreviewAudio = (vm: ScratchVMHandle): void => {
+  const audioContext = previewAudioContexts.get(vm)
+  if (audioContext?.state === 'suspended') void audioContext.resume().catch(() => undefined)
+}
+
+const attachBitmapAdapter = (vm: ScratchVMHandle): Promise<void> => {
+  let adapterPromise = bitmapAdapterPromises.get(vm)
+  if (!adapterPromise) {
+    adapterPromise = import('@scratch/scratch-svg-renderer').then(({ BitmapAdapter }) => {
+      asInternalVM(vm).attachV2BitmapAdapter(new BitmapAdapter())
+    })
+    bitmapAdapterPromises.set(vm, adapterPromise)
+  }
+  return adapterPromise
 }
 
 /**
@@ -234,7 +481,8 @@ export const loadSb3 = async (file: Sb3Input, vm?: ScratchVMHandle): Promise<Scr
   try {
     const input = await normalizeSb3Input(file)
     validateSb3Archive(input)
-    await asInternalVM(targetVM).loadProject(input)
+    await attachBitmapAdapter(targetVM)
+    await loadParsedProject(asInternalVM(targetVM), input)
     return targetVM
   } catch (error) {
     if (!vm) {
@@ -243,6 +491,181 @@ export const loadSb3 = async (file: Sb3Input, vm?: ScratchVMHandle): Promise<Scr
     throw error
   }
 }
+
+/**
+ * Attach Scratch's renderer before loading bitmap costumes that require VM skin creation.
+ * @param vm VM that will load a project with bitmap assets.
+ * @returns Nothing.
+ */
+export const prepareVmForBitmapAssetImport = async (vm: ScratchVMHandle): Promise<() => void> => {
+  const internalVM = asInternalVM(vm)
+  if (internalVM.renderer) return () => undefined
+  if (typeof document === 'undefined') {
+    throw new Error('Importing bitmap costumes requires a browser canvas renderer')
+  }
+  const { default: ScratchRender } = await import('@scratch/scratch-render')
+  const canvas = document.createElement('canvas')
+  canvas.width = 480
+  canvas.height = 360
+  canvas.setAttribute('aria-hidden', 'true')
+  canvas.style.position = 'fixed'
+  canvas.style.left = '-10000px'
+  canvas.style.top = '0'
+  document.body.append(canvas)
+  try {
+    internalVM.attachRenderer(new ScratchRender(canvas))
+  } catch (error) {
+    canvas.remove()
+    throw error
+  }
+  return () => {
+    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
+    gl?.getExtension('WEBGL_lose_context')?.loseContext()
+    canvas.remove()
+  }
+}
+
+/**
+ * Render an imported SB3's initial stage state through the official Scratch renderer.
+ * Project scripts are not started; the canvas shows the saved positions and costumes.
+ * @param file Scratch SB3 archive bytes.
+ * @param vm Scratch VM instance to reuse.
+ * @param canvas Canvas receiving the rendered stage.
+ */
+export const renderSb3Preview = async (
+  file: Sb3Input,
+  vm: ScratchVMHandle,
+  canvas: HTMLCanvasElement,
+): Promise<void> => {
+  const internalVM = asInternalVM(vm)
+  if (!internalVM.renderer) {
+    const { default: ScratchRender } = await import('@scratch/scratch-render')
+    internalVM.attachRenderer(new ScratchRender(canvas))
+  }
+  await loadSb3(file, vm)
+  const renderer = internalVM.renderer
+  if (!renderer) throw new Error('Scratch renderer did not attach to the VM')
+  renderer.draw()
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  renderer.draw()
+}
+
+/**
+ * Start Scratch's browser runtime after an initial stage render.
+ * @param vm Loaded VM instance.
+ */
+export const startProjectRuntime = (vm: ScratchVMHandle): void => {
+  const internalVM = asInternalVM(vm)
+  internalVM.start()
+  internalVM.greenFlag()
+}
+
+/**
+ * Stop all scripts and block threads without exposing the VM runtime object.
+ * @param vm VM instance to stop.
+ * @returns Nothing.
+ */
+export const stopProjectRuntime = (vm: ScratchVMHandle): void => asInternalVM(vm).stopAll()
+
+/**
+ * Forward an explicit browser input event through Scratch VM's public IO channel.
+ * @param vm VM that receives input.
+ * @param device Scratch IO device name.
+ * @param data Device event values.
+ * @returns Nothing.
+ */
+export const postScratchIOData = (vm: ScratchVMHandle, device: string, data: Record<string, unknown>): void =>
+  asInternalVM(vm).postIOData(device, data)
+
+export interface ScratchPreviewDragState {
+  readonly targetId: string
+  readonly offsetX: number
+  readonly offsetY: number
+}
+
+/**
+ * Begin a player-style drag for a draggable target under the stage pointer.
+ * Coordinates are CSS pixels relative to the preview canvas, matching Scratch GUI.
+ * @param vm VM receiving the drag interaction.
+ * @param x Pointer position relative to the preview canvas.
+ * @param y Pointer position relative to the preview canvas.
+ * @param canvasWidth Preview canvas width in CSS pixels.
+ * @param canvasHeight Preview canvas height in CSS pixels.
+ * @returns Target and stage-coordinate offset, or null when no draggable target was hit.
+ */
+export const startScratchPreviewDrag = (
+  vm: ScratchVMHandle,
+  x: number,
+  y: number,
+  canvasWidth: number,
+  canvasHeight: number,
+): ScratchPreviewDragState | null => {
+  const internalVM = asInternalVM(vm)
+  const renderer = internalVM.renderer
+  if (!renderer || canvasWidth <= 0 || canvasHeight <= 0) return null
+  const targets = internalVM.runtime.targets.filter(
+    (target) => Number.isFinite(target.drawableID) && target.draggable,
+  )
+  if (targets.length === 0) return null
+  const drawableIds = targets.flatMap((target) =>
+    typeof target.drawableID === 'number' && Number.isFinite(target.drawableID) ? [target.drawableID] : [],
+  )
+  const drawableId = renderer.pick(x, y, 1, 1, drawableIds)
+  if (drawableId === null) return null
+  const targetId = internalVM.getTargetIdForDrawableId(drawableId)
+  if (targetId === null) return null
+  const target = internalVM.runtime.getTargetById(targetId)
+  if (!target) return null
+  const nativeSize = renderer.getNativeSize()
+  const scratchMouseX = (nativeSize[0] / canvasWidth) * (x - canvasWidth / 2)
+  const scratchMouseY = (nativeSize[1] / canvasHeight) * (y - canvasHeight / 2)
+  const state = {
+    targetId,
+    offsetX: target.x - scratchMouseX,
+    offsetY: -(target.y + scratchMouseY),
+  }
+  target.goToFront()
+  internalVM.startDrag(targetId)
+  return state
+}
+
+/**
+ * Move the active player-style drag using Scratch's native stage coordinates.
+ * @param vm VM receiving the drag movement.
+ * @param drag Drag state returned by startScratchPreviewDrag.
+ * @param x Pointer position relative to the preview canvas.
+ * @param y Pointer position relative to the preview canvas.
+ * @param canvasWidth Preview canvas width in CSS pixels.
+ * @param canvasHeight Preview canvas height in CSS pixels.
+ */
+export const moveScratchPreviewDrag = (
+  vm: ScratchVMHandle,
+  drag: ScratchPreviewDragState,
+  x: number,
+  y: number,
+  canvasWidth: number,
+  canvasHeight: number,
+): void => {
+  const renderer = asInternalVM(vm).renderer
+  if (!renderer || canvasWidth <= 0 || canvasHeight <= 0) return
+  const nativeSize = renderer.getNativeSize()
+  const scratchMouseX = (nativeSize[0] / canvasWidth) * (x - canvasWidth / 2)
+  const scratchMouseY = (nativeSize[1] / canvasHeight) * (y - canvasHeight / 2)
+  asInternalVM(vm).postSpriteInfo({
+    x: scratchMouseX + drag.offsetX,
+    y: -(scratchMouseY + drag.offsetY),
+    force: true,
+  })
+}
+
+/**
+ * End an active player-style drag.
+ * @param vm VM whose drag interaction should end.
+ * @param drag Active drag state.
+ * @returns Nothing.
+ */
+export const stopScratchPreviewDrag = (vm: ScratchVMHandle, drag: ScratchPreviewDragState): void =>
+  asInternalVM(vm).stopDrag(drag.targetId)
 
 /**
  * Load a Scratch 3 project JSON object through Scratch VM's official loader.
@@ -257,7 +680,7 @@ export const loadProjectJson = async (
   const targetVM = vm ?? createVM()
 
   try {
-    await asInternalVM(targetVM).loadProject(project)
+    await loadParsedProject(asInternalVM(targetVM), JSON.stringify(project))
     return targetVM
   } catch (error) {
     if (!vm) {
@@ -307,3 +730,60 @@ export const getTargets = (vm: ScratchVMHandle): readonly ScratchTarget[] =>
  */
 export const getBlocks = (target: ScratchTarget): readonly ScratchBlock[] =>
   Object.freeze(Object.values(getInternalTarget(target).blocks._blocks).map(snapshotBlock))
+
+/**
+ * Start the loaded project and advance its runtime by a bounded number of ticks.
+ * This deterministic execution hook is intended for validation and integration
+ * checks; it does not run the VM's browser timer loop.
+ * @param vm VM to execute.
+ * @param ticks Number of synchronous runtime ticks to execute.
+ */
+export const runForTicks = (vm: ScratchVMHandle, ticks: number): void => {
+  if (!Number.isSafeInteger(ticks) || ticks < 0 || ticks > 100_000) {
+    throw new Error('Scratch VM tick count must be an integer between 0 and 100000')
+  }
+
+  const internalVM = asInternalVM(vm)
+  internalVM.start()
+  internalVM.greenFlag()
+  for (let tick = 0; tick < ticks; tick += 1) internalVM.runtime._step()
+}
+
+/**
+ * Start the loaded project and advance it while yielding between runtime ticks
+ * so Promise-returning Scratch blocks can finish their current step.
+ * @param vm VM to execute.
+ * @param ticks Number of bounded runtime ticks to execute.
+ */
+export const runForTicksAsync = async (vm: ScratchVMHandle, ticks: number): Promise<void> => {
+  if (!Number.isSafeInteger(ticks) || ticks < 0 || ticks > 100_000) {
+    throw new Error('Scratch VM tick count must be an integer between 0 and 100000')
+  }
+
+  const internalVM = asInternalVM(vm)
+  internalVM.start()
+  internalVM.greenFlag()
+  for (let tick = 0; tick < ticks; tick += 1) {
+    internalVM.runtime._step()
+    await Promise.resolve()
+  }
+}
+
+/**
+ * Read a variable from an original target by its visible name.
+ * @param vm VM containing the loaded project.
+ * @param targetName Stage or sprite name.
+ * @param variableName Visible variable name.
+ * @returns A frozen variable snapshot, or undefined when not found.
+ */
+export const getVariable = (
+  vm: ScratchVMHandle,
+  targetName: string,
+  variableName: string,
+): ScratchVariableSnapshot | undefined => {
+  const target = asInternalVM(vm).runtime.targets.find(
+    (candidate) => candidate.isOriginal && candidate.getName() === targetName,
+  )
+  const variable = target && Object.values(target.variables).find((candidate) => candidate.name === variableName)
+  return variable ? Object.freeze({ id: variable.id, name: variable.name, value: variable.value }) : undefined
+}

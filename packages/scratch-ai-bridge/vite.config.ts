@@ -25,7 +25,12 @@ export default defineConfig(({ mode }) => {
       alias: {
         '@scratch/scratch-vm': fileURLToPath(new URL('../scratch-vm/src/index.js', import.meta.url)),
         ...(useCspParser
-          ? { 'scratch-parser': fileURLToPath(new URL('./src/scratch/csp-scratch-parser.ts', import.meta.url)) }
+          ? {
+              'scratch-parser': fileURLToPath(new URL('./src/scratch/csp-scratch-parser.ts', import.meta.url)),
+              'scratch-sb1-converter': fileURLToPath(
+                new URL('./src/scratch/unsupported-sb1-converter.ts', import.meta.url),
+              ),
+            }
           : {}),
         '@tensorflow-models/face-detection': fileURLToPath(
           new URL('./src/scratch/unsupported-face-detection.ts', import.meta.url),
@@ -33,6 +38,14 @@ export default defineConfig(({ mode }) => {
         'node:buffer': fileURLToPath(new URL('../../node_modules/buffer/index.js', import.meta.url)),
         buffer: fileURLToPath(new URL('../../node_modules/buffer/index.js', import.meta.url)),
         events: fileURLToPath(new URL('../../node_modules/events/events.js', import.meta.url)),
+      },
+    },
+    build: {
+      rollupOptions: {
+        input: {
+          app: fileURLToPath(new URL('./index.html', import.meta.url)),
+          preview: fileURLToPath(new URL('./preview.html', import.meta.url)),
+        },
       },
     },
     test: {

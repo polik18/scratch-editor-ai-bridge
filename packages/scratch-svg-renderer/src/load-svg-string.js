@@ -3,7 +3,7 @@ const convertFonts = require('./font-converter');
 const transformStrokeWidths = require('./transform-applier');
 const {sanitizeSvgText} = require('./sanitize-svg');
 const {Sandbox} = require('./sandbox/index');
-const MEASURE_URL = require('./sandbox/measure-svg.js?resource');
+const MEASURE_ASSET = require('./sandbox/measure-svg.js?resource');
 const MEASURE_TEXT = require('./sandbox/measure-svg.js?source');
 const getFonts = require('scratch-render-fonts');
 
@@ -30,8 +30,12 @@ const getMeasurementSandbox = () => {
         // into the handler so the handler can be a static asset.
         const fonts = getFonts();
         const fontCSS = Object.values(fonts).join('');
+        const measureURL = new URL(MEASURE_ASSET, window.location.href).href.replace(
+            /\/assets\/assets\//,
+            '/assets/'
+        );
         measurementSandbox = new Sandbox(
-            [{url: MEASURE_URL, text: MEASURE_TEXT}],
+            [{url: measureURL, text: MEASURE_TEXT}],
             {
                 idleTimeoutMs: MEASUREMENT_IDLE_TIMEOUT_MS,
                 init: fontCSS

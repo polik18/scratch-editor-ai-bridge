@@ -483,7 +483,7 @@ class Scratch3LooksBlocks {
                 this._setBackdrop(
                     this.runtime.getTargetForStage(),
                     args.BACKDROP
-                )
+                ) || []
             );
             if (util.stackFrame.startedThreads.length === 0) {
                 // Nothing was started.

@@ -19,6 +19,7 @@ npm-*
 /dist
 /playground
 /benchmark
+/browser/default-stylesheet.css
 
 # Localization
 /translations

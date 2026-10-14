@@ -1,6 +1,5 @@
 const EventEmitter = require('events');
 
-const hull = require('hull.js');
 const twgl = require('twgl.js');
 
 const BitmapSkin = require('./BitmapSkin');
@@ -13,6 +12,7 @@ const SVGSkin = require('./SVGSkin');
 const TextBubbleSkin = require('./TextBubbleSkin');
 const EffectTransform = require('./EffectTransform');
 const log = require('./util/log');
+const convexHull = require('./util/convex-hull');
 
 const __isTouchingDrawablesPoint = twgl.v3.create();
 const __candidatesBounds = new Rectangle();
@@ -1990,9 +1990,8 @@ class RenderWebGL extends EventEmitter {
             hullPoints.push(rightHull[j]);
         }
 
-        // Simplify boundary points using hull.js.
-        // TODO: Remove this; this algorithm already generates convex hulls.
-        return hull(hullPoints, Infinity);
+        // Remove duplicate and interior points from the generated boundary.
+        return convexHull(hullPoints);
     }
 
     /**

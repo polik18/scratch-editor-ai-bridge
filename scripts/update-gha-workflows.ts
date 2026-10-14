@@ -22,6 +22,7 @@ const execAsync = promisify(exec);
 type PackageJson = {
     name: string;
     location: string;
+    private?: boolean;
     dependencies?: Record<string, string>;
     devDependencies?: Record<string, string>;
     peerDependencies?: Record<string, string>;
@@ -34,6 +35,8 @@ type Workspace = {
     bareName: string;
     /** Relative dir, e.g. "packages/scratch-vm" */
     location: string;
+    /** Private workspaces run CI but must not receive npm publish steps. */
+    isPrivate: boolean;
     /** Direct workspace dependencies (production only) */
     directDeps: string[];
     /** Transitive closure of workspace dependencies (production only), including self */
@@ -54,6 +57,7 @@ function resolveWorkspaces(packages: PackageJson[]): Workspace[] {
             name: pkg.name,
             bareName,
             location: pkg.location,
+            isPrivate: pkg.private === true,
             directDeps,
             deepDeps: [],
         });
@@ -166,6 +170,7 @@ function updatePublishWorkflow(content: string, workspaces: Workspace[]): string
     // Determine which workspaces need a new publish step
     const missing: Workspace[] = [];
     for (const ws of workspaces) {
+        if (ws.isPrivate) continue;
         // Check if there's already a publish step matching this workspace's bare name
         if (existingPublishSteps.has(ws.bareName)) continue;
         // Also check for any step that mentions the full @scratch/ name in its title

@@ -26,11 +26,16 @@
     // init is kept and reported on every later message. Otherwise the frame
     // would keep answering with the data missing.
     let initError = null;
+    const opaqueParentMeta = document.querySelector(
+        'meta[name="scratch-svg-renderer-opaque-parent"]'
+    );
+    const allowOpaqueParentSource =
+        opaqueParentMeta && opaqueParentMeta.content === 'true';
 
     window.addEventListener('message', event => {
-        // Window references are reachable cross-origin (w.frames[0].frames[k]),
-        // so without this any page that embeds the editor could drive the frame.
-        if (event.source !== parent) return;
+        // Keep the source guard except inside the isolated Scratch AI Bridge
+        // preview, where nested opaque-origin WindowProxy identity can fail.
+        if (!allowOpaqueParentSource && event.source !== parent) return;
 
         const data = event.data;
         const ticket = data && data.__sandbox_ticket;
@@ -42,7 +47,7 @@
                     if (typeof window.onSandboxInit !== 'function') {
                         throw new Error(
                             'Sandbox: init data was provided but no frame script ' +
-                            'defined window.onSandboxInit'
+                                'defined window.onSandboxInit'
                         );
                     }
                     window.onSandboxInit(data.__sandbox_init);
@@ -67,9 +72,19 @@
 
             Promise.resolve(window.onSandboxMessage(data.__sandbox_payload))
                 .then(result => post(ticket, '__sandbox_result', result))
-                .catch(err => post(ticket, '__sandbox_error', (err && err.message) || String(err)));
+                .catch(err =>
+                    post(
+                        ticket,
+                        '__sandbox_error',
+                        (err && err.message) || String(err)
+                    )
+                );
         } catch (err) {
-            post(ticket, '__sandbox_error', (err && err.message) || String(err));
+            post(
+                ticket,
+                '__sandbox_error',
+                (err && err.message) || String(err)
+            );
         }
     });
 }());

@@ -63,7 +63,12 @@ const webConfig = new ScratchWebpackConfigBuilder(common)
             library: {
                 name: 'ScratchSVGRenderer',
                 type: 'umd'
-            }
+            },
+            // The renderer is also imported from Node-based tests where
+            // document.currentScript and importScripts do not exist. An empty
+            // base keeps Webpack from throwing while the renderer resolves its
+            // sandbox asset against window.location at runtime.
+            publicPath: ''
         }
     })
     .get();

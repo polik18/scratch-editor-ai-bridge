@@ -70,24 +70,30 @@ const enhanceError = async (outerError, cause, driver) => {
     // Don't make a second copy of this debug info if an inner error has already done it,
     // especially since retrieving the browser log is a destructive operation.
     if (driver && !isEnhancedError(cause)) {
-        await fs.mkdir(testResultsDir, {recursive: true});
-        const errorInfoDir = await fs.mkdtemp(`${testResultsDir}/selenium-error-`);
-        outerError.message += `\nDebug info stored in: ${errorInfoDir}`;
+        try {
+            await fs.mkdir(testResultsDir, {recursive: true});
+            const errorInfoDir = await fs.mkdtemp(`${testResultsDir}/selenium-error-`);
+            outerError.message += `\nDebug info stored in: ${errorInfoDir}`;
 
-        const pageInfoPath = path.join(errorInfoDir, 'info.json');
-        await fs.writeFile(pageInfoPath, JSON.stringify({
-            currentUrl: await driver.getCurrentUrl(),
-            pageTitle: await driver.getTitle()
-        }, null, 2));
+            const pageInfoPath = path.join(errorInfoDir, 'info.json');
+            await fs.writeFile(pageInfoPath, JSON.stringify({
+                currentUrl: await driver.getCurrentUrl(),
+                pageTitle: await driver.getTitle()
+            }, null, 2));
 
-        const pageSourcePath = path.join(errorInfoDir, 'page.html');
-        await fs.writeFile(pageSourcePath, await driver.getPageSource());
+            const pageSourcePath = path.join(errorInfoDir, 'page.html');
+            await fs.writeFile(pageSourcePath, await driver.getPageSource());
 
-        const browserLogPath = path.join(errorInfoDir, 'browser-log.txt');
-        const browserLogEntries = await driver.manage()
-            .logs()
-            .get('browser');
-        await fs.writeFile(browserLogPath, JSON.stringify(browserLogEntries, null, 2));
+            const browserLogPath = path.join(errorInfoDir, 'browser-log.txt');
+            const browserLogEntries = await driver.manage()
+                .logs()
+                .get('browser');
+            await fs.writeFile(browserLogPath, JSON.stringify(browserLogEntries, null, 2));
+        } catch (diagnosticError) {
+            const message = diagnosticError && diagnosticError.message ?
+                diagnosticError.message : String(diagnosticError);
+            outerError.message += `\nDiagnostic capture failed: ${message}`;
+        }
     }
     return outerError;
 };
@@ -300,8 +306,13 @@ class SeleniumHelper {
             // Using `scrollIntoView` didn't seem to do the trick.
             const WINDOW_WIDTH = 1024;
             const WINDOW_HEIGHT = 960;
+            const fragmentIndex = uri.indexOf('#');
+            const uriPath = fragmentIndex === -1 ? uri : uri.slice(0, fragmentIndex);
+            const uriFragment = fragmentIndex === -1 ? '' : uri.slice(fragmentIndex);
+            const testUri = /[?&](locale|lang)=/.test(uriPath) ?
+                uri : `${uriPath}${uriPath.includes('?') ? '&' : '?'}locale=en${uriFragment}`;
             await this.driver
-                .get(`file://${uri}`);
+                .get(`file://${testUri}`);
             await this.driver
                 .executeScript('window.onbeforeunload = undefined;');
             await this.driver.manage().window()
@@ -341,8 +352,17 @@ class SeleniumHelper {
         const outerError = new Error(`clickText failed with arguments:\n\ttext: ${text}\n\tscope: ${scope}`);
         try {
             await this.setTitle(`clickText ${text}`);
-            const el = await this.findByText(text, scope);
-            return el.click();
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const el = await this.findByText(text, scope);
+                    return await el.click();
+                } catch (cause) {
+                    if (!/stale element reference/i.test(cause.message) || attempt === 2) {
+                        throw cause;
+                    }
+                    await this.driver.sleep(100);
+                }
+            }
         } catch (cause) {
             throw await enhanceError(outerError, cause, this.driver);
         }
@@ -413,7 +433,18 @@ class SeleniumHelper {
             await this.setTitle(`clickBlocksCategory ${categoryText}`);
 
             const desiredCategoryContainer = this.scopeForCategoryText(categoryText);
-            await this.clickXpath(`//${desiredCategoryContainer}`);
+            let clicked = false;
+            for (let attempt = 0; attempt < 3 && !clicked; attempt++) {
+                try {
+                    await this.clickXpath(`//${desiredCategoryContainer}`);
+                    clicked = true;
+                } catch (cause) {
+                    if (!/stale element reference/i.test(cause.message) || attempt === 2) {
+                        throw cause;
+                    }
+                    await this.driver.sleep(100);
+                }
+            }
 
             await this.driver.sleep(500); // Wait for scroll to finish
         } catch (cause) {

@@ -32,6 +32,13 @@ test('cycle', t => {
             t.end();
         }, 100);
     }, 100);
-    rt._step();
-    t.ok(c.projectTimer() > 0);
+    const stepAfterClockAdvances = () => {
+        if (Date.now() <= rt.currentMSecs) {
+            setTimeout(stepAfterClockAdvances, 1);
+            return;
+        }
+        rt._step();
+        t.ok(c.projectTimer() > 0);
+    };
+    stepAfterClockAdvances();
 });

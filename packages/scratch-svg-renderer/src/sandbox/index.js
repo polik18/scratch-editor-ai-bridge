@@ -2,8 +2,13 @@ const {buildFrameDocument} = require('./iframe-html');
 
 // Both forms are bundled: which one is used depends on the host at runtime.
 // They are small enough that this costs less than an async constructor would.
-const RUNNER_URL = require('./runner.js?resource');
+const RUNNER_ASSET = require('./runner.js?resource');
 const RUNNER_TEXT = require('./runner.js?source');
+const resolveSandboxAssetUrl = asset =>
+    new URL(asset, window.location.href).href.replace(
+        /\/assets\/assets\//,
+        '/assets/'
+    );
 
 const DEFAULT_TIMEOUT_MS = 30000;
 
@@ -12,8 +17,16 @@ const DEFAULT_TIMEOUT_MS = 30000;
  * unknown scheme uses inline delivery, which needs no network.
  * @returns {boolean} True if scripts should be delivered by URL.
  */
+const isOpaquePreview = () =>
+    window.origin === 'null' &&
+    new URLSearchParams(window.location.search).has(
+        'scratchSvgRendererOpaquePreview'
+    );
+
 const usesUrlDelivery = () =>
-    window.location.protocol === 'http:' || window.location.protocol === 'https:';
+    (window.location.protocol === 'http:' ||
+        window.location.protocol === 'https:') &&
+    window.origin !== 'null';
 
 /**
  * A sandboxed iframe that runs caller-provided scripts. It uses
@@ -45,9 +58,14 @@ class Sandbox {
      *     frame recreated after idle teardown receives it again. A frame
      *     script must define `window.onSandboxInit` if this is given.
      */
-    constructor (scripts, {timeoutMs = DEFAULT_TIMEOUT_MS, idleTimeoutMs = 0, init} = {}) {
+    constructor (
+        scripts,
+        {timeoutMs = DEFAULT_TIMEOUT_MS, idleTimeoutMs = 0, init} = {}
+    ) {
         if (!Array.isArray(scripts)) {
-            throw new TypeError(`Sandbox: expected an array of script descriptors, got ${typeof scripts}.`);
+            throw new TypeError(
+                `Sandbox: expected an array of script descriptors, got ${typeof scripts}.`
+            );
         }
         // Copied so a caller mutating the array or a descriptor after
         // construction cannot change a frame built later by the first send().
@@ -82,7 +100,11 @@ class Sandbox {
      */
     _scheduleIdleTeardown () {
         this._clearIdleTimer();
-        if (this._idleTimeoutMs > 0 && this._iframe && this._pendingTickets.size === 0) {
+        if (
+            this._idleTimeoutMs > 0 &&
+            this._iframe &&
+            this._pendingTickets.size === 0
+        ) {
             this._idleTimerId = setTimeout(() => {
                 this._idleTimerId = null;
                 // A send may have started after the timer was armed; only
@@ -107,8 +129,8 @@ class Sandbox {
             if (typeof script[required] !== 'string') {
                 throw new Error(
                     `Sandbox: scripts[${index}] has no '${required}'. This host ` +
-                    `(${window.location.protocol}) uses ` +
-                    `${byUrl ? 'URL' : 'inline'} delivery.`
+                        `(${window.location.protocol}) uses ` +
+                        `${byUrl ? 'URL' : 'inline'} delivery.`
                 );
             }
         });
@@ -118,20 +140,25 @@ class Sandbox {
         // Use visibility:hidden instead of display:none so the iframe's
         // rendering tree stays active. This is required for DOM
         // measurement APIs (e.g. getBBox) to return correct values.
-        iframe.style.position = 'absolute';
-        iframe.style.visibility = 'hidden';
-        iframe.style.width = '0';
-        iframe.style.height = '0';
-        iframe.style.border = 'none';
-        iframe.style.overflow = 'hidden';
-        iframe.style.pointerEvents = 'none';
+        if (!document.getElementById('scratch-svg-renderer-sandbox-style')) {
+            const style = document.createElement('style');
+            style.id = 'scratch-svg-renderer-sandbox-style';
+            style.textContent =
+                'iframe.scratch-svg-renderer-sandbox{position:absolute;visibility:hidden;' +
+                'width:0;height:0;border:0;overflow:hidden;pointer-events:none}';
+            document.head.appendChild(style);
+        }
+        iframe.className = 'scratch-svg-renderer-sandbox';
         this._iframe = iframe;
 
         this._onMessage = event => {
             // The sandboxed iframe (no allow-same-origin) always has an opaque origin,
-            // reported as 'null'. Combined with the source check, this is defense-in-depth.
+            // reported as 'null'. WindowProxy identity checks fail for the nested renderer
+            // sandbox inside the explicitly opted-in opaque preview frame.
             if (event.origin !== 'null') return;
-            if (event.source !== iframe.contentWindow) return;
+            if (!isOpaquePreview() && event.source !== iframe.contentWindow) {
+                return;
+            }
             const data = event.data;
             if (!data || typeof data.__sandbox_ticket === 'undefined') return;
 
@@ -171,11 +198,16 @@ class Sandbox {
             throw error;
         });
 
-        const scripts = [{url: RUNNER_URL, text: RUNNER_TEXT}].concat(this._scripts);
+        const scripts = [
+            {url: resolveSandboxAssetUrl(RUNNER_ASSET), text: RUNNER_TEXT}
+        ].concat(this._scripts);
 
-        iframe.srcdoc = buildFrameDocument(byUrl ?
-            {urls: scripts.map(script => script.url)} :
-            {texts: scripts.map(script => script.text)});
+        iframe.srcdoc = buildFrameDocument({
+            ...(byUrl ?
+                {urls: scripts.map(script => script.url)} :
+                {texts: scripts.map(script => script.text)}),
+            allowOpaqueParentSource: isOpaquePreview()
+        });
         document.body.appendChild(iframe);
 
         return this._ready;
@@ -210,7 +242,11 @@ class Sandbox {
         this._clearIdleTimer();
         await this._ensureIframe();
 
-        const ticket = this._nextTicket++;
+        const ticketBytes = new Uint32Array(4);
+        globalThis.crypto.getRandomValues(ticketBytes);
+        const ticket = Array.from(ticketBytes, value =>
+            value.toString(16).padStart(8, '0')
+        ).join('');
         const message = warm ?
             {__sandbox_warm: true, __sandbox_ticket: ticket} :
             {__sandbox_payload: payload, __sandbox_ticket: ticket};
@@ -225,9 +261,11 @@ class Sandbox {
             if (this._timeoutMs > 0) {
                 timeoutId = setTimeout(() => {
                     this._pendingTickets.delete(ticket);
-                    reject(new Error(
-                        `Sandbox: timed out after ${this._timeoutMs}ms`
-                    ));
+                    reject(
+                        new Error(
+                            `Sandbox: timed out after ${this._timeoutMs}ms`
+                        )
+                    );
                     // The call settled (by timing out); restart the idle
                     // countdown if nothing else is in flight.
                     this._scheduleIdleTeardown();

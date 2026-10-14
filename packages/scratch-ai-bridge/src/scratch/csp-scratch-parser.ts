@@ -38,7 +38,7 @@ const unpack = async (
     const filename = isSprite ? /^(?:[^/]+\/)?sprite\.json$/ : /^(?:[^/]+\/)?project\.json$/
     const projectFile = Object.values(zip.files).find((file) => !file.dir && filename.test(file.name))
     if (!projectFile) throw new Error(`SB3 archive is missing ${isSprite ? 'sprite.json' : 'project.json'}`)
-    projectSource = await projectFile.async('string')
+    projectSource = new TextDecoder('utf-8', { fatal: true }).decode(await projectFile.async('uint8array'))
   }
 
   const project = JSON.parse(stripBackspaces(projectSource)) as ScratchProject

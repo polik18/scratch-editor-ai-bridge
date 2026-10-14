@@ -31,7 +31,7 @@ The complete result follows.
 {
   "format": "scratch-ai-bridge/canonical-ir",
   "version": 1,
-  "name": "Mario Mixed Response",
+  "name": "Mario ``` Mixed Response",
   "stage": {
     "kind": "stage",
     "name": "Stage",

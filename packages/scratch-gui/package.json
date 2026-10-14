@@ -59,7 +59,7 @@
     "prepublishOnly": "echo \"Please publish through CI only.\" && exit 1",
     "start": "webpack serve",
     "test": "npm run test:lint && npm run test:unit && npm run test:integration && npm run test:playwright",
-    "test:integration": "cross-env JEST_JUNIT_OUTPUT_NAME=integration-tests-results.xml jest --maxWorkers=4 test[\\\\/]integration",
+    "test:integration": "cross-env JEST_JUNIT_OUTPUT_NAME=integration-tests-results.xml jest --maxWorkers=2 test[\\\\/]integration",
     "test:lint": "eslint",
     "test:playwright": "playwright test",
     "test:smoke": "jest --runInBand test[\\\\/]smoke",

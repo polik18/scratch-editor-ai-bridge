@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import example from '../../src/core/ir/examples/03-repeat-score.json'
-import type { CanonicalProject } from '../../src/core/ir/types'
+import { CANONICAL_JSON_MAX_DEPTH, CANONICAL_JSON_MAX_NODES, type CanonicalProject } from '../../src/core/ir/types'
 import { normalizeAiDraft, normalizeAiResponse, parseAiResponse } from '../../src/core/normalizer/ai-draft'
 import { validateCanonicalProject } from '../../src/core/validator/canonical-ir'
 import { validateCanonicalSemantics } from '../../src/core/validator/semantic'
@@ -49,6 +49,49 @@ describe('AI draft normalizer', () => {
     expect(normalized.warnings).toEqual([])
   })
 
+  it('bounds nested AI project data before recursive normalization', () => {
+    const draft: Record<string, unknown> = {}
+    let current = draft
+    for (let depth = 0; depth <= CANONICAL_JSON_MAX_DEPTH; depth += 1) {
+      const nested: Record<string, unknown> = {}
+      current.child = nested
+      current = nested
+    }
+
+    expect(() => normalizeAiDraft(draft)).toThrow(`巢狀超過 ${CANONICAL_JSON_MAX_DEPTH} 層上限`)
+  })
+
+  it('accepts nested AI project data exactly at the maximum depth', () => {
+    const draft: Record<string, unknown> = {}
+    let current = draft
+    for (let depth = 0; depth < CANONICAL_JSON_MAX_DEPTH; depth += 1) {
+      const nested: Record<string, unknown> = {}
+      current.child = nested
+      current = nested
+    }
+
+    expect(normalizeAiDraft(draft).data).toEqual(draft)
+  })
+
+  it('bounds AI project value counts before recursive normalization', () => {
+    expect(() => normalizeAiDraft({ values: Array.from({ length: CANONICAL_JSON_MAX_NODES }, () => null) })).toThrow(
+      `${CANONICAL_JSON_MAX_NODES.toLocaleString()} 個值的上限`,
+    )
+  })
+
+  it('accepts AI project data with exactly the maximum number of values', () => {
+    const values = Array.from({ length: CANONICAL_JSON_MAX_NODES - 2 }, () => null)
+    const normalized = normalizeAiDraft({ values })
+
+    expect((normalized.data as { values: unknown[] }).values).toHaveLength(CANONICAL_JSON_MAX_NODES - 2)
+  })
+
+  it('rejects cyclic AI draft objects before recursive normalization', () => {
+    const draft: Record<string, unknown> = {}
+    draft.child = draft
+    expect(() => normalizeAiDraft(draft)).toThrow('不可包含循環參照')
+  })
+
   it('extracts the largest Canonical IR from a Gemini notebook response and repairs field/asset wrappers', () => {
     const response = readFileSync(mixedResponseFixture, 'utf8')
     const parsed = parseAiResponse(response)
@@ -57,14 +100,14 @@ describe('AI draft normalizer', () => {
 
     expect(parsed.extracted).toBe(true)
     expect(parsed.candidateCount).toBe(2)
-    expect((parsed.data as { name?: unknown }).name).toBe('Mario Mixed Response')
+    expect((parsed.data as { name?: unknown }).name).toBe('Mario ``` Mixed Response')
     expect(validation.valid).toBe(true)
     expect(new Set(normalized.repairs.map((repair) => repair.code))).toEqual(
       new Set(['extract-json', 'field-scalar', 'costume-data-format']),
     )
     if (!validation.valid) return
 
-    expect(validation.data.name).toBe('Mario Mixed Response')
+    expect(validation.data.name).toBe('Mario ``` Mixed Response')
     expect(validation.data.stage.costumes[0]?.dataFormat).toBe('svg')
     expect(validation.data.sprites[0]?.scripts[0]?.blocks[0]?.fields?.KEY_OPTION).toBe('right arrow')
     expect(validation.data.sprites[0]?.scripts[0]?.blocks[1]?.fields?.VARIABLE).toBe('vy')
@@ -75,5 +118,125 @@ describe('AI draft normalizer', () => {
     expect(() => parseAiResponse('```python\nprint("no project")\n```')).toThrow(
       '找不到完整的 Scratch AI Bridge Canonical IR JSON',
     )
+  })
+
+  it('extracts generated Canonical projects from noisy Markdown responses', () => {
+    let state = 0x51a1c0de
+    const nextRandom = () => {
+      state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0
+      return state
+    }
+    const alphabet = ['{', '}', '"', '\\', '`', '雪', '🚀', '\n', ':', '[', ']']
+
+    for (let sample = 0; sample < 256; sample += 1) {
+      const noise = Array.from(
+        { length: 8 + (nextRandom() % 40) },
+        () => alphabet[nextRandom() % alphabet.length],
+      ).join('')
+      const target = {
+        ...example,
+        name: `seed-${sample}-${noise}`,
+        description: `literal braces { "format": "decoy" } and unicode 雪 🚀 ${noise}`,
+      }
+      const decoy = JSON.stringify({ format: 'scratch-ai-bridge/canonical-ir', version: 1, name: `small-${sample}` })
+      const embedded = JSON.stringify(target, null, sample % 2 === 0 ? 0 : 2)
+      const fence = (sample % 2 === 0 ? '`' : '~').repeat(3 + (sample % 3))
+      const openingIndent = ' '.repeat(sample % 4)
+      const eol = sample % 5 === 0 ? '\r\n' : '\n'
+      const response = `Notes ${noise}${eol}${openingIndent}${fence}json${eol}${decoy}${eol}${fence}${eol}${eol}${openingIndent}${fence}json${eol}${embedded}${eol}${fence}${eol}End ${noise}`
+
+      const parsed = parseAiResponse(response)
+      expect(parsed.extracted).toBe(true)
+      expect(parsed.candidateCount).toBeGreaterThan(0)
+      expect(parsed.data).toEqual(target)
+    }
+  })
+
+  it('selects the largest valid project across seeded malformed and mixed-fence responses', () => {
+    let state = 0x2b7e1516
+    const nextRandom = () => {
+      state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0
+      return state
+    }
+    const alphabet = ['{', '}', '"', '\\', '`', '~', '雪', '🚀', '\t', ':', '[', ']']
+
+    for (let sample = 0; sample < 256; sample += 1) {
+      const noise = Array.from(
+        { length: 24 + (nextRandom() % 128) },
+        () => alphabet[nextRandom() % alphabet.length],
+      ).join('')
+      const eol = sample % 3 === 0 ? '\r\n' : '\n'
+      const validFenceChar = sample % 2 === 0 ? '`' : '~'
+      const invalidFenceChar = validFenceChar === '`' ? '~' : '`'
+      const validFenceLength = 3 + (nextRandom() % 6)
+      const validFence = validFenceChar.repeat(validFenceLength)
+      const closingFence = `${validFenceChar.repeat(validFenceLength + (nextRandom() % 3))}${' '.repeat(nextRandom() % 4)}\t`
+      const openingIndent = ' '.repeat(nextRandom() % 4)
+      const closingIndent = ' '.repeat(nextRandom() % 4)
+      const decoy = {
+        format: 'scratch-ai-bridge/canonical-ir',
+        version: 1,
+        name: `decoy-${sample}`,
+      }
+      const target = {
+        ...example,
+        name: `selected-${sample}`,
+        description: `${noise} ${JSON.stringify(decoy)} ${noise}`,
+      }
+      const response = [
+        `Malformed draft ${noise}`,
+        `${invalidFenceChar.repeat(3 + (sample % 4))}json`,
+        `This opening fence is intentionally never closed ${noise}`,
+        `${openingIndent}${validFence}json`,
+        JSON.stringify(decoy),
+        `${closingIndent}${closingFence}`,
+        `${openingIndent}${validFence}json`,
+        JSON.stringify(target),
+        `${closingIndent}${closingFence}`,
+        `Trailing prose ${noise}`,
+      ].join(eol)
+
+      const parsed = parseAiResponse(response)
+      expect(parsed.extracted, `seed ${sample}`).toBe(true)
+      expect(parsed.candidateCount, `seed ${sample}`).toBe(2)
+      expect(parsed.data, `seed ${sample}`).toEqual(target)
+    }
+  })
+
+  it('recovers generated embedded projects after malformed prose and rejects malformed noise', () => {
+    let state = 0x6d2b79f5
+    const nextRandom = () => {
+      state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0
+      return state
+    }
+    const alphabet = ['{', '}', '[', ']', '"', '\\', '`', '~', ':', '雪', '\n', '\r', ' ']
+
+    for (let sample = 0; sample < 512; sample += 1) {
+      const noise = Array.from(
+        { length: 16 + (nextRandom() % 96) },
+        () => alphabet[nextRandom() % alphabet.length],
+      ).join('')
+      const target = { ...example, name: `recovery-${sample}-${noise}` }
+      const embedded = JSON.stringify(target)
+      const fenceCharacter = sample % 2 === 0 ? '`' : '~'
+      const fence = fenceCharacter.repeat(3 + (sample % 4))
+      const malformedPrefix = `Draft ${noise} {"format":"scratch-ai-bridge/canonical-ir","version":1,"truncated":`
+      const response = `${malformedPrefix}\n${fence}json\n${embedded}\n${fence}\n${noise}`
+
+      expect(parseAiResponse(response).data).toEqual(target)
+      expect(() => parseAiResponse(`Draft ${noise} {"truncated": [ ${noise}`)).toThrow(
+        '找不到完整的 Scratch AI Bridge Canonical IR JSON',
+      )
+    }
+  })
+
+  it('accepts a JSON response at the two-million-character limit and rejects the next character', () => {
+    const atLimit = JSON.stringify('x'.repeat(1_999_998))
+    expect(atLimit).toHaveLength(2_000_000)
+    expect(parseAiResponse(atLimit).data).toBe('x'.repeat(1_999_998))
+
+    const overLimit = JSON.stringify('x'.repeat(1_999_999))
+    expect(overLimit).toHaveLength(2_000_001)
+    expect(() => parseAiResponse(overLimit)).toThrow('AI 回覆超過 2,000,000 字元上限')
   })
 })

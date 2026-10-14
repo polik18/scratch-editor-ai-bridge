@@ -1,6 +1,7 @@
 export {
   exportLosslessSb3,
   importLosslessSb3,
+  patchLosslessSb3BlockGraphs,
   type RawSb3ArchiveEntry,
   type RawSb3Project,
   type Sb3ArchiveInput,

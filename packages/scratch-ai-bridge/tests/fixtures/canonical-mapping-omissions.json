@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "name": "default.sb3",
+      "omissions": []
+    },
+    {
+      "name": "comments.sb3",
+      "omissions": []
+    },
+    {
+      "name": "comments_no_duplicate_id_serialization.sb3",
+      "omissions": []
+    },
+    {
+      "name": "draggable.sb3",
+      "omissions": []
+    },
+    {
+      "name": "edge-triggered-hat.sb3",
+      "omissions": []
+    },
+    {
+      "name": "execute/order-library.sb3",
+      "omissions": []
+    },
+    {
+      "name": "execute/order-library-reverse.sb3",
+      "omissions": []
+    },
+    {
+      "name": "list-monitor-rename.sb3",
+      "omissions": []
+    },
+    {
+      "name": "monitored_variables.sb3",
+      "omissions": []
+    },
+    {
+      "name": "monitors.sb3",
+      "omissions": []
+    },
+    {
+      "name": "origin-absent.sb3",
+      "omissions": []
+    },
+    {
+      "name": "top-level-reporters.sb3",
+      "omissions": []
+    },
+    {
+      "name": "variable_characters.sb3",
+      "omissions": []
+    },
+    {
+      "name": "broadcast_special_chars.sb3",
+      "omissions": []
+    },
+    {
+      "name": "load-extensions/confirm-load/pen-dolphin-3d.sb3",
+      "omissions": [
+        {
+          "targetIndex": 0,
+          "targetName": "Stage",
+          "opcode": "looks_backdrops",
+          "reason": "shadow-menu-value-represented-in-parent-input",
+          "blockIds": ["%PeP4+`k-4+Y,GP!Qc=q", "VAvCrv]x4O8yK%oRu+_9"]
+        },
+        {
+          "targetIndex": 0,
+          "targetName": "Stage",
+          "opcode": "sound_sounds_menu",
+          "reason": "shadow-menu-value-represented-in-parent-input",
+          "blockIds": ["56KIc/4/Qk|0pib.*@Yx"]
+        },
+        {
+          "targetIndex": 1,
+          "targetName": "Pen",
+          "opcode": "argument_reporter_string_number",
+          "reason": "procedure-argument-represented-in-canonical-parameters",
+          "blockIds": [
+            "!8NMnt=JdUA,*zoAykr2",
+            "#r6pL9D#R.GbtXBS,zMo",
+            "$#4oq9fSsf)%aKl9on`T",
+            "$$X[Z)Np2g,VJN%)B.Y?",
+            "-W)2SCDs^hm?C1KSLe{w",
+            "4}ZaJeai)v(*kXSZno`d",
+            "6UV,8agZ|41$LPki{}Ou",
+            "6v/SJ(d[i#S-=_=q856!",
+            "EwE4]mnw![28M|hWDB?6",
+            "LQZI,@Vp;TzGB`,vzD[[",
+            "SUt^xLtcW6OUH.q#nqlP",
+            "WfRA?kLb!M2}DQ2R1hqz",
+            "Z)t@5V+;ePGLtsXxwcK~",
+            "bF/67e^K1T{UwbFMO=;;",
+            "cFz)s!8[=GXR[4[GwU)x",
+            "dlHn(0[y_Z.]~k?Zn47x",
+            "fgY/XTnELO8LZ([z~ZS.",
+            "mOiJ}.|~t]gwAfvWhMa?",
+            "nOu7:kr|UWM/X%C;;(?J",
+            "pV?EL~R5@*XJewsAE]1g",
+            "yHtUSOdn^K+59#nO7k)Y",
+            "yI@BMjLo`(e|dx?G7yXb",
+            "yj.]yKf8m/SkNP6Sum~E"
+          ]
+        },
+        {
+          "targetIndex": 1,
+          "targetName": "Pen",
+          "opcode": "sensing_of_object_menu",
+          "reason": "shadow-menu-value-represented-in-parent-input",
+          "blockIds": [
+            "+*657{WUX9~GVSPsDX#M",
+            ".ZdEpGz^;^GfGhtu|w`n",
+            "3DY/=A4i:56e0J/R8|Jx",
+            ";4h!nUTJ1Pbtg~,@ZE[]",
+            "F|QEqpw!qV:h!:q3ZR;i",
+            "L#Irz~1),KvHJaI-nXMT",
+            "kqnvKMSt4yxTXz@@p^xb",
+            "mn0(*PkrEHvx(HIDIfOu",
+            "t9Vq%qHF#:7!*hB|AWC/",
+            "y4Kq),3TbtMTK:{XxA8`"
+          ]
+        },
+        {
+          "targetIndex": 3,
+          "targetName": "Title",
+          "opcode": "looks_costume",
+          "reason": "shadow-menu-value-represented-in-parent-input",
+          "blockIds": ["2h%02[mLF3znamce.2zF", "FSQlAOIaK4=5}g|j%1!l"]
+        },
+        {
+          "targetIndex": 4,
+          "targetName": "Trivia",
+          "opcode": "looks_costume",
+          "reason": "shadow-menu-value-represented-in-parent-input",
+          "blockIds": ["23G[?(7V~xXw9s?--@0q"]
+        }
+      ]
+    },
+    {
+      "name": "load-extensions/confirm-load/pen-simple-project.sb3",
+      "omissions": []
+    },
+    {
+      "name": "load-extensions/confirm-load/videoSensing-simple-project.sb3",
+      "omissions": []
+    },
+    {
+      "name": "load-extensions/confirm-load/text2speech-simple-project.sb3",
+      "omissions": []
+    },
+    {
+      "name": "load-extensions/confirm-load/music-simple-project.sb3",
+      "omissions": []
+    },
+    {
+      "name": "load-extensions/confirm-load/wedo2-simple-project.sb3",
+      "omissions": []
+    },
+    {
+      "name": "load-extensions/confirm-load/ev3-simple-project.sb3",
+      "omissions": []
+    },
+    {
+      "name": "load-extensions/confirm-load/microbit-simple-project.sb3",
+      "omissions": []
+    },
+    {
+      "name": "cloud_variables_limit.sb3",
+      "omissions": []
+    },
+    {
+      "name": "cloud_variables_local.sb3",
+      "omissions": []
+    },
+    {
+      "name": "cloud_variables_simple.sb3",
+      "omissions": []
+    },
+    {
+      "name": "timer-monitor.sb3",
+      "omissions": []
+    }
+  ]
+}

@@ -221,6 +221,14 @@ class GdxFor {
      * Reset all the state and timeout/interval ids.
      */
     reset () {
+        // Go Direct owns a polling interval for its command queue. The BLE
+        // transport can close without the Go Direct device receiving a close
+        // callback, so stop that interval when Scratch Link disconnects.
+        if (this._device && this._device.deviceWriteInterval) {
+            clearInterval(this._device.deviceWriteInterval);
+            this._device.deviceWriteInterval = null;
+        }
+
         this._sensors = {
             force: 0,
             accelerationX: 0,

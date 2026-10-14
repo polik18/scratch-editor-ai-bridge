@@ -10,15 +10,21 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Install Playwright
-      if: ${{ inputs.package_name == 'scratch-render' || inputs.package_name == 'scratch-gui' }}
+    - name: Build local Scratch renderer and VM dependencies
+      if: ${{ inputs.package_name == 'scratch-ai-bridge' }}
       shell: bash
-      # Install both browsers for any package that needs Playwright,
-      # even if a particular package only uses one of them — keeping
-      # the install step uniform is much simpler than maintaining a
-      # per-package browser list, and Firefox in scratch-render is
-      # cheap unused weight rather than a correctness problem.
-      run: npx playwright install --with-deps chromium firefox
+      working-directory: .
+      run: npm run build:ai-bridge-deps
+    - name: Install Playwright
+      if: ${{ inputs.package_name == 'scratch-render' || inputs.package_name == 'scratch-gui' || inputs.package_name == 'scratch-ai-bridge' }}
+      shell: bash
+      # The Bridge has browser smoke coverage for Chromium, Firefox, and WebKit.
+      run: |
+        if [ "${{ inputs.package_name }}" = "scratch-ai-bridge" ]; then
+          npx playwright install --with-deps chromium firefox webkit
+        else
+          npx playwright install --with-deps chromium firefox
+        fi
     - name: Test
       working-directory: ./packages/${{ inputs.package_name }}
       shell: bash
@@ -32,7 +38,33 @@ runs:
       # fine under xvfb too.
       run: |
         mkdir -p test-results
-        xvfb-run --auto-servernum npm run test
+        if [ "${{ inputs.package_name }}" = "scratch-ai-bridge" ]; then
+          npm run test -- --reporter=junit --outputFile=test-results/junit.xml
+        else
+          xvfb-run --auto-servernum npm run test
+        fi
+    - name: Lint AI Bridge
+      if: ${{ inputs.package_name == 'scratch-ai-bridge' }}
+      shell: bash
+      working-directory: ./packages/${{ inputs.package_name }}
+      run: npm run lint
+    - name: Benchmark AI Bridge processing
+      if: ${{ inputs.package_name == 'scratch-ai-bridge' }}
+      shell: bash
+      working-directory: ./packages/${{ inputs.package_name }}
+      run: |
+        mkdir -p test-results
+        npm run bench
+    - name: Browser smoke AI Bridge
+      if: ${{ inputs.package_name == 'scratch-ai-bridge' }}
+      shell: bash
+      working-directory: ./packages/${{ inputs.package_name }}
+      env:
+        BROWSER_NEAR_LIMIT_IMPORT_BYTES: "268435456"
+      run: |
+        npm run test:browser
+        npm run test:browser:firefox
+        npm run test:browser:webkit
     - name: Store Test Results
       if: ${{ !cancelled() }}
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5

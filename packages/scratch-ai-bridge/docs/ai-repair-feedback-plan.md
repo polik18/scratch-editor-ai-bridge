@@ -1,6 +1,6 @@
 # AI 錯誤回饋與修復循環計畫
 
-目前狀態：A + B 第一版已實作；C 的 capability 精準範例與 D 的完整 AI 修正版往返仍待完成。
+目前狀態：A + B 第一版已實作；preservation-edit 現可對指定 block 使用 `removeProperties` 刪除頂層欄位，並以 JSON Pointer `setPaths`/`removePaths` 局部修改既有巢狀物件欄位而保留旁支；三瀏覽器下載後重讀 smoke 與 SB3 round-trip 已通過；C 已從 capability registry 為缺少的 input／field 與無效 enum field 產生局部期望值，並為 Canonical schema 現有的 required/type/const/enum/additionalProperties、字串/陣列長度、數值上下界及 oneOf/anyOf 分支錯誤產生修復資訊。inclusive/exclusive 數值下界範例也經完整 Canonical revalidation。所有 semantic validator codes 均有非泛用修復建議。D 的瀏覽器 smoke 已涵蓋失敗、複製提示／報告、貼回完整有效回覆、驗證、VM 編譯下載、重新匯入分析。Validation report v2 另外標示編譯失敗階段；SVG、raster 與 audio preflight 失敗會把 Scratch VM compile 記為 skipped，並保留素材 JSON Pointer。Repair Report 現依 SVG／raster／audio preflight、archive generation、Scratch VM load/save 與 unknown failure 分別提供 expected、修復建議及實際 stage；固定 schema shape 與 `compile-failed` code 未變。Chromium、Firefox、WebKit smoke 均下載並驗證三種 media-preflight 報告。三引擎覆蓋 Canonical schema `name` 型別錯誤、額外未定義欄位、enum 不合法值、const 不符及巢狀 union 必填欄位缺漏：複製包含精確 JSON Pointer 和可用補值／修正的提示，貼回完整有效 Canonical 專案，再下載 SB3 並重新匯入確認修復值。巢狀 `oneOf` required 範例先前漏產生；schema 選擇現在依輸入 discriminator 選取分支，同時保留 `oneOf` 分支錯誤的替代值產生。`/name` 的 minLength 修正建議為可直接使用的 `Scratch Project`，並遵守 schema 的最大長度。注意 SB3 不儲存 Canonical 專案名稱；重新匯入時名稱由上傳檔名推導。語意修復流程覆蓋 `current-costume-out-of-range`、`unknown-sprite`、`unknown-variable`、`unknown-broadcast`、`unknown-list`、`unknown-procedure` 與 `unknown-procedure-argument`；各流程檢查錯誤路徑與值、複製修復提示、回覆完整 Canonical 專案、下載 SB3 並重新匯入確認修復資料保留。十三條非編譯修復流程通過 Chromium、Firefox、WebKit：六種 schema 錯誤加上七種語意錯誤。未知角色流程確認 `Platform` 碰撞目標；未知廣播、清單、程序、多餘程序參數、額外 schema 欄位及 minLength／enum／const／required 修正流程均確認下載後的修復結果。其他語意/schema/VM 失敗類型、Safari 與易用性驗證仍待完成。
 
 ## 目標
 
@@ -130,6 +130,8 @@ Current Canonical IR:
 - 對 `condition-not-boolean` 僅列可選的比較方式，不擅自判定應為 `= 0` 或 `> 0`。
 - unsupported opcode 提供目前最接近的已支援能力；沒有安全替代時明說無法自動轉換。
 
+進度：Repair Report 現已依 registry 為 `missing-input`、`missing-field`、`invalid-field-value` 提供 expected 與局部 example；enum field 範例使用 registry 第一個允許值，不自行推測遊戲語意。Canonical schema required property 的合併修復例經 validator 驗證可通過；type/const/enum、additionalProperties 精確 pointer/removal、長度限制、inclusive/exclusive 數值上下界、最小清單項目 replacement，以及 oneOf/anyOf 分支替代值、maxLength/maxItems 截短操作均有 fixture 驗收；分支範例會重新驗證完整 Canonical project。所有 semantic validator codes 有專屬建議並有 coverage assertion；素材缺檔、checksum 不符與空／錯誤 Base64、Data URI 現於 VM compile 前回報精確素材路徑，建議回到來源專案還原素材，不產生佔位 bytes。schema 現有關鍵字皆有對應修復路徑或明確不產生範例，VM compile errors now receive stage-specific expected values and repair directions while retaining stable `compile-failed` code and existing report shape; `unknown` retains a generic fallback. Stage guidance is covered by unit tests and malformed SVG/raster/audio browser reports. Non-compile error types and end-to-end guidance usability remain open.
+
 驗收：所有現有 semantic code 都有說明；建議範例本身通過局部 capability 驗證；不把猜測標成自動修復。
 
 ### D. 修復循環回歸測試
@@ -139,6 +141,8 @@ Current Canonical IR:
 - field wrapper、缺少 costume `dataFormat`、字串 broadcasts、裸 script arrays。
 - 無效 key、未知 sprite、未知變數、錯誤 target、未知 opcode、VM compile rejection。
 - 瀏覽器 smoke 實際點擊複製，解析其中 Repair Report，貼回修正版後完成 `.sb3` 往返。
+
+進度：Chromium、Firefox、WebKit smoke 現以未知 opcode 觸發 must-fix，實際複製提示與報告，再貼回完整有效 Canonical 回覆，經 validate、Scratch VM compile/download、SB3 re-import 和 analysis。Gemini 混合回覆與 106 項 shorthand repair 仍各有獨立 regression；另有 `schema-type`、`current-costume-out-of-range`、`unknown-sprite`、`unknown-variable`、`unknown-broadcast` 五種端到端修復案例。三引擎 JSON artifacts 保存回復結果，Pages release evidence gate 要求各案例下載成功且 re-import 核對成立；其他 semantic/schema/VM failure 類型及 Safari 尚未覆蓋。
 
 驗收：CI 驗證「失敗 → 複製提示 → 修正版 → Validate → Compile → Re-import」完整路徑；複製內容不依賴畫面截斷文字。
 

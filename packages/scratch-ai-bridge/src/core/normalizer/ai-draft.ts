@@ -1,3 +1,5 @@
+import { CANONICAL_JSON_MAX_DEPTH, CANONICAL_JSON_MAX_NODES } from '../ir/types'
+
 export interface AiDraftRepair {
   readonly path: string
   readonly code: string
@@ -24,6 +26,34 @@ export interface AiResponseParseResult {
 
 const MAX_AI_RESPONSE_LENGTH = 2_000_000
 
+const assertAiDraftLimits = (input: unknown): void => {
+  const active = new WeakSet<object>()
+  const stack: ({ value: unknown; depth: number } | { exit: object })[] = [{ value: input, depth: 0 }]
+  let nodes = 0
+  while (stack.length > 0) {
+    const current = stack.pop()
+    if (!current) continue
+    if ('exit' in current) {
+      active.delete(current.exit)
+      continue
+    }
+    nodes += 1
+    if (nodes > CANONICAL_JSON_MAX_NODES) {
+      throw new Error(`AI 專案資料超過 ${CANONICAL_JSON_MAX_NODES.toLocaleString()} 個值的上限`)
+    }
+    if (current.depth > CANONICAL_JSON_MAX_DEPTH) {
+      throw new Error(`AI 專案資料巢狀超過 ${CANONICAL_JSON_MAX_DEPTH} 層上限`)
+    }
+    if (typeof current.value !== 'object' || current.value === null) continue
+    if (active.has(current.value)) throw new Error('AI 專案資料不可包含循環參照')
+    active.add(current.value)
+    stack.push({ exit: current.value })
+    for (const child of Object.values(current.value as Record<string, unknown>)) {
+      stack.push({ value: child, depth: current.depth + 1 })
+    }
+  }
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
@@ -34,13 +64,20 @@ const isScalar = (value: unknown): value is string | number | boolean =>
 
 const responseSegments = (source: string): string[] => {
   const segments: string[] = []
-  const fence = /```[^\r\n]*\r?\n([\s\S]*?)```/g
+  const openingFence = /^ {0,3}(`{3,}|~{3,})[^\r\n]*(?:\r?\n|$)/gm
   let offset = 0
-  for (const match of source.matchAll(fence)) {
+  for (const match of source.matchAll(openingFence)) {
     const index = match.index
+    if (index < offset) continue
+    const fence = match[1]
+    if (!fence) continue
+    const closingFence = new RegExp(`^ {0,3}${fence[0]}{${fence.length},}[ \\t]*(?:\\r?\\n|$)`, 'gm')
+    closingFence.lastIndex = index + match[0].length
+    const closingMatch = closingFence.exec(source)
+    if (!closingMatch || closingMatch.index < offset) continue
     if (index > offset) segments.push(source.slice(offset, index))
-    segments.push(match[1])
-    offset = index + match[0].length
+    segments.push(source.slice(index + match[0].length, closingMatch.index))
+    offset = closingMatch.index + closingMatch[0].length
   }
   if (offset < source.length) segments.push(source.slice(offset))
   return segments.length > 0 ? segments : [source]
@@ -118,6 +155,7 @@ export const parseAiResponse = (source: string): AiResponseParseResult => {
  * @returns A new value, structural repair log, and semantic warnings.
  */
 export const normalizeAiDraft = (input: unknown): AiDraftNormalizationResult => {
+  assertAiDraftLimits(input)
   const repairs: AiDraftRepair[] = []
   const warnings: AiDraftWarning[] = []
 
@@ -291,6 +329,19 @@ export const normalizeAiDraft = (input: unknown): AiDraftNormalizationResult => 
 export const normalizeAiResponse = (source: string): AiDraftNormalizationResult => {
   const parsed = parseAiResponse(source)
   const normalized = normalizeAiDraft(parsed.data)
+  return addExtractionRepair(normalized, parsed)
+}
+
+/**
+ * Apply response-extraction metadata after parsing and draft normalization have been run as separate gates.
+ * @param normalized Result from normalizeAiDraft.
+ * @param parsed Parse metadata from parseAiResponse.
+ * @returns The normalized draft with an extraction repair when the source contained surrounding prose.
+ */
+export const addExtractionRepair = (
+  normalized: AiDraftNormalizationResult,
+  parsed: AiResponseParseResult,
+): AiDraftNormalizationResult => {
   if (!parsed.extracted) return normalized
   return {
     ...normalized,

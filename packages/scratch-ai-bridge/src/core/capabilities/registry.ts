@@ -1,6 +1,7 @@
 import { BUILT_IN_BACKDROP_VISUALS, BUILT_IN_SPRITE_VISUALS } from '../visuals/presets'
 
-export type CanonicalBlockCategory = 'motion' | 'looks' | 'events' | 'control' | 'sensing' | 'operators' | 'data'
+export type CanonicalBlockCategory =
+  'motion' | 'looks' | 'events' | 'control' | 'sensing' | 'operators' | 'data' | 'sound'
 export type CanonicalBlockShape = 'hat' | 'command' | 'reporter' | 'boolean'
 export type CanonicalInputKind = 'any' | 'number' | 'string' | 'boolean' | 'stack' | 'broadcast' | 'menu'
 export type CanonicalTargetKind = 'stage' | 'sprite'
@@ -61,12 +62,106 @@ export const CANONICAL_BLOCK_CAPABILITIES = {
     targets: bothTargets,
     inputs: { BROADCAST_INPUT: { kind: 'broadcast', required: true } },
   },
+  event_broadcastandwait: {
+    category: 'events',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { BROADCAST_INPUT: { kind: 'broadcast', required: true } },
+  },
+  event_whenstageclicked: { category: 'events', shape: 'hat', targets: ['stage'] },
+  event_whenthisspriteclicked: { category: 'events', shape: 'hat', targets: spriteTarget },
+  event_whenbackdropswitchesto: {
+    category: 'events',
+    shape: 'hat',
+    targets: bothTargets,
+    fields: { BACKDROP: { required: true } },
+  },
+  event_whentouchingobject: {
+    category: 'events',
+    shape: 'hat',
+    targets: spriteTarget,
+    fields: { TOUCHINGOBJECTMENU: { required: true } },
+  },
+  event_whengreaterthan: {
+    category: 'events',
+    shape: 'hat',
+    targets: bothTargets,
+    inputs: { VALUE: { kind: 'number', required: true } },
+    fields: { WHENGREATERTHANMENU: { required: true, values: ['LOUDNESS', 'TIMER'] } },
+  },
   motion_movesteps: {
     category: 'motion',
     shape: 'command',
     targets: spriteTarget,
     inputs: { STEPS: { kind: 'number', required: true } },
   },
+  motion_turnright: {
+    category: 'motion',
+    shape: 'command',
+    targets: spriteTarget,
+    inputs: { DEGREES: { kind: 'number', required: true } },
+  },
+  motion_turnleft: {
+    category: 'motion',
+    shape: 'command',
+    targets: spriteTarget,
+    inputs: { DEGREES: { kind: 'number', required: true } },
+  },
+  motion_pointindirection: {
+    category: 'motion',
+    shape: 'command',
+    targets: spriteTarget,
+    inputs: { DIRECTION: { kind: 'number', required: true } },
+  },
+  motion_pointtowards: {
+    category: 'motion',
+    shape: 'command',
+    targets: spriteTarget,
+    inputs: {
+      TOWARDS: {
+        kind: 'menu',
+        required: true,
+        shadow: { opcode: 'motion_pointtowards_menu', field: 'TOWARDS' },
+      },
+    },
+  },
+  motion_goto: {
+    category: 'motion',
+    shape: 'command',
+    targets: spriteTarget,
+    inputs: {
+      TO: { kind: 'menu', required: true, shadow: { opcode: 'motion_goto_menu', field: 'TO' } },
+    },
+  },
+  motion_glidesecstoxy: {
+    category: 'motion',
+    shape: 'command',
+    targets: spriteTarget,
+    inputs: {
+      SECS: { kind: 'number', required: true },
+      X: { kind: 'number', required: true },
+      Y: { kind: 'number', required: true },
+    },
+  },
+  motion_glideto: {
+    category: 'motion',
+    shape: 'command',
+    targets: spriteTarget,
+    inputs: {
+      SECS: { kind: 'number', required: true },
+      TO: { kind: 'menu', required: true, shadow: { opcode: 'motion_glideto_menu', field: 'TO' } },
+    },
+  },
+  motion_ifonedgebounce: { category: 'motion', shape: 'command', targets: spriteTarget },
+  motion_setrotationstyle: {
+    category: 'motion',
+    shape: 'command',
+    targets: spriteTarget,
+    fields: { STYLE: { required: true, values: ['all around', 'left-right', "don't rotate"] } },
+  },
+  motion_xposition: { category: 'motion', shape: 'reporter', targets: spriteTarget },
+  motion_yposition: { category: 'motion', shape: 'reporter', targets: spriteTarget },
+  motion_direction: { category: 'motion', shape: 'reporter', targets: spriteTarget },
   motion_gotoxy: {
     category: 'motion',
     shape: 'command',
@@ -103,6 +198,30 @@ export const CANONICAL_BLOCK_CAPABILITIES = {
     targets: bothTargets,
     inputs: { MESSAGE: { kind: 'string', required: true } },
   },
+  looks_sayforsecs: {
+    category: 'looks',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: {
+      MESSAGE: { kind: 'string', required: true },
+      SECS: { kind: 'number', required: true },
+    },
+  },
+  looks_think: {
+    category: 'looks',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { MESSAGE: { kind: 'string', required: true } },
+  },
+  looks_thinkforsecs: {
+    category: 'looks',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: {
+      MESSAGE: { kind: 'string', required: true },
+      SECS: { kind: 'number', required: true },
+    },
+  },
   looks_switchcostumeto: {
     category: 'looks',
     shape: 'command',
@@ -114,6 +233,83 @@ export const CANONICAL_BLOCK_CAPABILITIES = {
         shadow: { opcode: 'looks_costume', field: 'COSTUME' },
       },
     },
+  },
+  looks_show: { category: 'looks', shape: 'command', targets: spriteTarget },
+  looks_hide: { category: 'looks', shape: 'command', targets: spriteTarget },
+  looks_nextcostume: { category: 'looks', shape: 'command', targets: spriteTarget },
+  looks_changesizeby: {
+    category: 'looks',
+    shape: 'command',
+    targets: spriteTarget,
+    inputs: { CHANGE: { kind: 'number', required: true } },
+  },
+  looks_setsizeto: {
+    category: 'looks',
+    shape: 'command',
+    targets: spriteTarget,
+    inputs: { SIZE: { kind: 'number', required: true } },
+  },
+  looks_switchbackdropto: {
+    category: 'looks',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: {
+      BACKDROP: { kind: 'menu', required: true, shadow: { opcode: 'looks_backdrops', field: 'BACKDROP' } },
+    },
+  },
+  looks_switchbackdroptoandwait: {
+    category: 'looks',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: {
+      BACKDROP: { kind: 'menu', required: true, shadow: { opcode: 'looks_backdrops', field: 'BACKDROP' } },
+    },
+  },
+  looks_nextbackdrop: { category: 'looks', shape: 'command', targets: bothTargets },
+  looks_changeeffectby: {
+    category: 'looks',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { CHANGE: { kind: 'number', required: true } },
+    fields: {
+      EFFECT: { required: true, values: ['color', 'fisheye', 'whirl', 'pixelate', 'mosaic', 'brightness', 'ghost'] },
+    },
+  },
+  looks_seteffectto: {
+    category: 'looks',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { VALUE: { kind: 'number', required: true } },
+    fields: {
+      EFFECT: { required: true, values: ['color', 'fisheye', 'whirl', 'pixelate', 'mosaic', 'brightness', 'ghost'] },
+    },
+  },
+  looks_cleargraphiceffects: { category: 'looks', shape: 'command', targets: bothTargets },
+  looks_size: { category: 'looks', shape: 'reporter', targets: spriteTarget },
+  looks_costumenumbername: {
+    category: 'looks',
+    shape: 'reporter',
+    targets: spriteTarget,
+    fields: { NUMBER_NAME: { required: true, values: ['number', 'name'] } },
+  },
+  looks_backdropnumbername: {
+    category: 'looks',
+    shape: 'reporter',
+    targets: bothTargets,
+    fields: { NUMBER_NAME: { required: true, values: ['number', 'name'] } },
+  },
+  looks_gotofrontback: {
+    category: 'looks',
+    shape: 'command',
+    targets: spriteTarget,
+    fields: { FRONT_BACK: { required: true, values: ['front', 'back'] } },
+  },
+  looks_goforwardbackwardlayers: {
+    category: 'looks',
+    shape: 'command',
+    targets: spriteTarget,
+    inputs: { NUM: { kind: 'number', required: true } },
+    fields: { FORWARD_BACKWARD: { required: true, values: ['forward', 'backward'] } },
   },
   control_wait: {
     category: 'control',
@@ -152,6 +348,69 @@ export const CANONICAL_BLOCK_CAPABILITIES = {
       SUBSTACK2: { kind: 'stack', required: true },
     },
   },
+  control_repeat_until: {
+    category: 'control',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: {
+      CONDITION: { kind: 'boolean', required: true },
+      SUBSTACK: { kind: 'stack', required: true },
+    },
+  },
+  control_wait_until: {
+    category: 'control',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { CONDITION: { kind: 'boolean', required: true } },
+  },
+  control_stop: {
+    category: 'control',
+    shape: 'command',
+    targets: bothTargets,
+    fields: { STOP_OPTION: { required: true, values: ['all', 'this script', 'other scripts in sprite'] } },
+  },
+  control_start_as_clone: { category: 'control', shape: 'hat', targets: spriteTarget },
+  control_create_clone_of: {
+    category: 'control',
+    shape: 'command',
+    targets: spriteTarget,
+    inputs: {
+      CLONE_OPTION: {
+        kind: 'menu',
+        required: true,
+        shadow: { opcode: 'control_create_clone_of_menu', field: 'CLONE_OPTION' },
+      },
+    },
+  },
+  control_delete_this_clone: { category: 'control', shape: 'command', targets: spriteTarget },
+  control_while: {
+    category: 'control',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: {
+      CONDITION: { kind: 'boolean', required: true },
+      SUBSTACK: { kind: 'stack', required: true },
+    },
+  },
+  control_for_each: {
+    category: 'control',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: {
+      VALUE: { kind: 'any', required: true },
+      SUBSTACK: { kind: 'stack', required: true },
+    },
+    fields: { VARIABLE: { required: true } },
+  },
+  control_all_at_once: {
+    category: 'control',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { SUBSTACK: { kind: 'stack', required: true } },
+  },
+  control_get_counter: { category: 'control', shape: 'reporter', targets: bothTargets },
+  control_incr_counter: { category: 'control', shape: 'command', targets: bothTargets },
+  control_clear_counter: { category: 'control', shape: 'command', targets: bothTargets },
   sensing_touchingobject: {
     category: 'sensing',
     shape: 'boolean',
@@ -163,6 +422,85 @@ export const CANONICAL_BLOCK_CAPABILITIES = {
         shadow: { opcode: 'sensing_touchingobjectmenu', field: 'TOUCHINGOBJECTMENU' },
       },
     },
+  },
+  sensing_timer: { category: 'sensing', shape: 'reporter', targets: bothTargets },
+  sensing_resettimer: { category: 'sensing', shape: 'command', targets: bothTargets },
+  sensing_mousex: { category: 'sensing', shape: 'reporter', targets: bothTargets },
+  sensing_mousey: { category: 'sensing', shape: 'reporter', targets: bothTargets },
+  sensing_mousedown: { category: 'sensing', shape: 'boolean', targets: bothTargets },
+  sensing_keypressed: {
+    category: 'sensing',
+    shape: 'boolean',
+    targets: bothTargets,
+    inputs: {
+      KEY_OPTION: {
+        kind: 'menu',
+        required: true,
+        shadow: { opcode: 'sensing_keyoptions', field: 'KEY_OPTION' },
+      },
+    },
+  },
+  sensing_distanceto: {
+    category: 'sensing',
+    shape: 'reporter',
+    targets: spriteTarget,
+    inputs: {
+      DISTANCETOMENU: {
+        kind: 'menu',
+        required: true,
+        shadow: { opcode: 'sensing_distancetomenu', field: 'DISTANCETOMENU' },
+      },
+    },
+  },
+  sensing_touchingcolor: {
+    category: 'sensing',
+    shape: 'boolean',
+    targets: spriteTarget,
+    inputs: { COLOR: { kind: 'string', required: true } },
+  },
+  sensing_coloristouchingcolor: {
+    category: 'sensing',
+    shape: 'boolean',
+    targets: spriteTarget,
+    inputs: {
+      COLOR: { kind: 'string', required: true },
+      COLOR2: { kind: 'string', required: true },
+    },
+  },
+  sensing_askandwait: {
+    category: 'sensing',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { QUESTION: { kind: 'string', required: true } },
+  },
+  sensing_answer: { category: 'sensing', shape: 'reporter', targets: bothTargets },
+  sensing_loudness: { category: 'sensing', shape: 'reporter', targets: bothTargets },
+  sensing_loud: { category: 'sensing', shape: 'boolean', targets: bothTargets },
+  sensing_current: {
+    category: 'sensing',
+    shape: 'reporter',
+    targets: bothTargets,
+    fields: {
+      CURRENTMENU: { required: true, values: ['year', 'month', 'date', 'dayofweek', 'hour', 'minute', 'second'] },
+    },
+  },
+  sensing_dayssince2000: { category: 'sensing', shape: 'reporter', targets: bothTargets },
+  sensing_online: { category: 'sensing', shape: 'boolean', targets: bothTargets },
+  sensing_username: { category: 'sensing', shape: 'reporter', targets: bothTargets },
+  sensing_of: {
+    category: 'sensing',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: {
+      OBJECT: { kind: 'menu', required: true, shadow: { opcode: 'sensing_of_object_menu', field: 'OBJECT' } },
+    },
+    fields: { PROPERTY: { required: true } },
+  },
+  sensing_setdragmode: {
+    category: 'sensing',
+    shape: 'command',
+    targets: spriteTarget,
+    fields: { DRAG_MODE: { required: true, values: ['draggable', 'not draggable'] } },
   },
   operator_lt: {
     category: 'operators',
@@ -181,6 +519,99 @@ export const CANONICAL_BLOCK_CAPABILITIES = {
     shape: 'boolean',
     targets: bothTargets,
     inputs: { OPERAND1: { kind: 'any', required: true }, OPERAND2: { kind: 'any', required: true } },
+  },
+  operator_subtract: {
+    category: 'operators',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { NUM1: { kind: 'number', required: true }, NUM2: { kind: 'number', required: true } },
+  },
+  operator_add: {
+    category: 'operators',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { NUM1: { kind: 'number', required: true }, NUM2: { kind: 'number', required: true } },
+  },
+  operator_multiply: {
+    category: 'operators',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { NUM1: { kind: 'number', required: true }, NUM2: { kind: 'number', required: true } },
+  },
+  operator_divide: {
+    category: 'operators',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { NUM1: { kind: 'number', required: true }, NUM2: { kind: 'number', required: true } },
+  },
+  operator_mod: {
+    category: 'operators',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { NUM1: { kind: 'number', required: true }, NUM2: { kind: 'number', required: true } },
+  },
+  operator_random: {
+    category: 'operators',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { FROM: { kind: 'number', required: true }, TO: { kind: 'number', required: true } },
+  },
+  operator_join: {
+    category: 'operators',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { STRING1: { kind: 'string', required: true }, STRING2: { kind: 'string', required: true } },
+  },
+  operator_round: {
+    category: 'operators',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { NUM: { kind: 'number', required: true } },
+  },
+  operator_mathop: {
+    category: 'operators',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { NUM: { kind: 'number', required: true } },
+    fields: {
+      OPERATOR: {
+        required: true,
+        values: [
+          'abs',
+          'floor',
+          'ceiling',
+          'sqrt',
+          'sin',
+          'cos',
+          'tan',
+          'asin',
+          'acos',
+          'atan',
+          'ln',
+          'log',
+          'e ^',
+          '10 ^',
+        ],
+      },
+    },
+  },
+  operator_length: {
+    category: 'operators',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { STRING: { kind: 'string', required: true } },
+  },
+  operator_letter_of: {
+    category: 'operators',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { LETTER: { kind: 'number', required: true }, STRING: { kind: 'string', required: true } },
+  },
+  operator_contains: {
+    category: 'operators',
+    shape: 'boolean',
+    targets: bothTargets,
+    inputs: { STRING1: { kind: 'string', required: true }, STRING2: { kind: 'string', required: true } },
   },
   operator_and: {
     category: 'operators',
@@ -220,21 +651,200 @@ export const CANONICAL_BLOCK_CAPABILITIES = {
     inputs: { VALUE: { kind: 'number', required: true } },
     fields: { VARIABLE: { required: true } },
   },
+  data_showvariable: {
+    category: 'data',
+    shape: 'command',
+    targets: bothTargets,
+    fields: { VARIABLE: { required: true } },
+  },
+  data_hidevariable: {
+    category: 'data',
+    shape: 'command',
+    targets: bothTargets,
+    fields: { VARIABLE: { required: true } },
+  },
+  data_showlist: {
+    category: 'data',
+    shape: 'command',
+    targets: bothTargets,
+    fields: { LIST: { required: true } },
+  },
+  data_hidelist: {
+    category: 'data',
+    shape: 'command',
+    targets: bothTargets,
+    fields: { LIST: { required: true } },
+  },
+  data_addtolist: {
+    category: 'data',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { ITEM: { kind: 'any', required: true } },
+    fields: { LIST: { required: true } },
+  },
+  data_deleteoflist: {
+    category: 'data',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { INDEX: { kind: 'any', required: true } },
+    fields: { LIST: { required: true } },
+  },
+  data_deletealloflist: {
+    category: 'data',
+    shape: 'command',
+    targets: bothTargets,
+    fields: { LIST: { required: true } },
+  },
+  data_insertatlist: {
+    category: 'data',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: {
+      ITEM: { kind: 'any', required: true },
+      INDEX: { kind: 'any', required: true },
+    },
+    fields: { LIST: { required: true } },
+  },
+  data_replaceitemoflist: {
+    category: 'data',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: {
+      ITEM: { kind: 'any', required: true },
+      INDEX: { kind: 'any', required: true },
+    },
+    fields: { LIST: { required: true } },
+  },
+  data_itemoflist: {
+    category: 'data',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { INDEX: { kind: 'any', required: true } },
+    fields: { LIST: { required: true } },
+  },
+  data_itemnumoflist: {
+    category: 'data',
+    shape: 'reporter',
+    targets: bothTargets,
+    inputs: { ITEM: { kind: 'any', required: true } },
+    fields: { LIST: { required: true } },
+  },
+  data_lengthoflist: {
+    category: 'data',
+    shape: 'reporter',
+    targets: bothTargets,
+    fields: { LIST: { required: true } },
+  },
+  data_listcontainsitem: {
+    category: 'data',
+    shape: 'boolean',
+    targets: bothTargets,
+    inputs: { ITEM: { kind: 'any', required: true } },
+    fields: { LIST: { required: true } },
+  },
+  data_listcontents: {
+    category: 'data',
+    shape: 'reporter',
+    targets: bothTargets,
+    fields: { LIST: { required: true } },
+  },
+  data_variable: {
+    category: 'data',
+    shape: 'reporter',
+    targets: bothTargets,
+    fields: { VARIABLE: { required: true } },
+  },
+  sound_play: {
+    category: 'sound',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: {
+      SOUND_MENU: { kind: 'menu', required: true, shadow: { opcode: 'sound_sounds_menu', field: 'SOUND_MENU' } },
+    },
+  },
+  sound_playuntildone: {
+    category: 'sound',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: {
+      SOUND_MENU: { kind: 'menu', required: true, shadow: { opcode: 'sound_sounds_menu', field: 'SOUND_MENU' } },
+    },
+  },
+  sound_stopallsounds: { category: 'sound', shape: 'command', targets: bothTargets },
+  sound_changeeffectby: {
+    category: 'sound',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { VALUE: { kind: 'number', required: true } },
+    fields: { EFFECT: { required: true, values: ['pitch', 'pan'] } },
+  },
+  sound_seteffectto: {
+    category: 'sound',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { VALUE: { kind: 'number', required: true } },
+    fields: { EFFECT: { required: true, values: ['pitch', 'pan'] } },
+  },
+  sound_cleareffects: { category: 'sound', shape: 'command', targets: bothTargets },
+  sound_changevolumeby: {
+    category: 'sound',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { VOLUME: { kind: 'number', required: true } },
+  },
+  sound_setvolumeto: {
+    category: 'sound',
+    shape: 'command',
+    targets: bothTargets,
+    inputs: { VOLUME: { kind: 'number', required: true } },
+  },
+  sound_volume: { category: 'sound', shape: 'reporter', targets: bothTargets },
 } as const satisfies Readonly<Record<string, CanonicalBlockCapability>>
 
-export type CanonicalOpcode = keyof typeof CANONICAL_BLOCK_CAPABILITIES
+export type KnownOpcode = keyof typeof CANONICAL_BLOCK_CAPABILITIES
+/** Any Scratch opcode string; capability checks narrow this to `KnownOpcode`. */
+export type CanonicalOpcode = string
 
-export const CANONICAL_OPCODES: readonly CanonicalOpcode[] = Object.freeze(
-  Object.keys(CANONICAL_BLOCK_CAPABILITIES) as CanonicalOpcode[],
+export const CANONICAL_OPCODES: readonly KnownOpcode[] = Object.freeze(
+  Object.keys(CANONICAL_BLOCK_CAPABILITIES) as KnownOpcode[],
 )
 
+/** Legacy VM no-ops stay available to raw preservation workflows, not strict authoring. */
+export const CORE_PRESERVED_LEGACY_OPCODES = [
+  'looks_changestretchby',
+  'looks_hideallsprites',
+  'looks_setstretchto',
+  'motion_align_scene',
+  'motion_scroll_right',
+  'motion_scroll_up',
+  'motion_xscroll',
+  'motion_yscroll',
+  // Scratch VM's current implementation is an empty function; preserve old projects without advertising behavior.
+  // Scratch VM's current implementation is an empty function; preserve old projects without advertising behavior.
+  'sensing_userid',
+] as const
+
+/** Sound menu blocks are created as shadows by their parent capabilities. */
+export const CORE_INTERNAL_MENU_OPCODES = ['sound_beats_menu', 'sound_effects_menu', 'sound_sounds_menu'] as const
+
+/** Procedure graph blocks are modeled by CanonicalProcedure and its graph codec. */
+export const CORE_PROCEDURE_GRAPH_OPCODES = [
+  'argument_reporter_boolean',
+  'argument_reporter_string_number',
+  'procedures_call',
+  'procedures_definition',
+] as const
+
+export const isKnownOpcode = (opcode: string): opcode is KnownOpcode =>
+  Object.hasOwn(CANONICAL_BLOCK_CAPABILITIES, opcode)
+
 export const getBlockCapability = (opcode: string): CanonicalBlockCapability | undefined =>
-  CANONICAL_BLOCK_CAPABILITIES[opcode as CanonicalOpcode]
+  isKnownOpcode(opcode) ? CANONICAL_BLOCK_CAPABILITIES[opcode] : undefined
 
 export const getInputCapability = (opcode: string, inputName: string): CanonicalInputCapability | undefined =>
   getBlockCapability(opcode)?.inputs?.[inputName]
 
-const describeBlock = (opcode: CanonicalOpcode): string => {
+const describeBlock = (opcode: KnownOpcode): string => {
   const capability: CanonicalBlockCapability = CANONICAL_BLOCK_CAPABILITIES[opcode]
   const inputs = Object.entries(capability.inputs ?? {}).map(
     ([name, input]) => `${name}:${input.kind}${input.required ? '' : '?'}`,

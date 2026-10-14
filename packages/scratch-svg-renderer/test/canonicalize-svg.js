@@ -19,7 +19,9 @@ const FIXTURE_DIR = path.resolve(__dirname, './fixtures');
 const SNAPSHOT_DIR = path.resolve(__dirname, './snapshots');
 const RENDER_WIDTH = 200;
 const RENDER_HEIGHT = 200;
-const PIXEL_DIFF_TOLERANCE = 0;
+// Snapshot baselines may differ slightly across node-canvas/librsvg builds;
+// raw-vs-canonicalized comparisons below remain exact.
+const PIXEL_DIFF_TOLERANCE = 20;
 
 // ── Rendering helpers (shared shape with visual-fidelity.js) ───────────────
 

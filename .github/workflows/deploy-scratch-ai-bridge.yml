@@ -9,6 +9,8 @@ on:
       - "packages/scratch-storage/**"
       - "packages/scratch-svg-renderer/**"
       - "packages/scratch-render/**"
+      - "scripts/**"
+      - ".nvmrc"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/deploy-scratch-ai-bridge.yml"
@@ -21,6 +23,8 @@ on:
       - "packages/scratch-storage/**"
       - "packages/scratch-svg-renderer/**"
       - "packages/scratch-render/**"
+      - "scripts/**"
+      - ".nvmrc"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/deploy-scratch-ai-bridge.yml"
@@ -28,8 +32,6 @@ on:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: scratch-ai-bridge-pages
@@ -39,36 +41,123 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
+      pages: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version-file: ".nvmrc"
           cache: npm
       - run: npm ci
       - run: npm run build:ai-bridge-deps
+      - name: Audit production bundle dependency reachability
+        working-directory: ./packages/scratch-ai-bridge
+        shell: bash
+        run: |
+          mkdir -p test-results
+          set -o pipefail
+          set +e
+          npm audit --workspace @scratch/scratch-ai-bridge --omit=dev --json > test-results/bridge-production-audit.json
+          audit_status=$?
+          set -e
+          if [ "$audit_status" -gt 1 ]; then
+            exit "$audit_status"
+          fi
+          npx vite build --sourcemap --outDir audit-dist --emptyOutDir
+          npm run --silent audit:reachability -- test-results/bridge-production-audit.json audit-dist | tee test-results/bridge-audit-reachability.json
+          node -e "for (const file of process.argv.slice(1)) JSON.parse(require('node:fs').readFileSync(file, 'utf8'))" test-results/bridge-production-audit.json test-results/bridge-audit-reachability.json
+      - name: Store production dependency audit report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: scratch-ai-bridge-security-audit
+          path: packages/scratch-ai-bridge/test-results/bridge-*.json
       - run: npm test --workspace=@scratch/scratch-ai-bridge
       - run: npm run lint --workspace=@scratch/scratch-ai-bridge
       - run: npm run build --workspace=@scratch/scratch-ai-bridge
+      - run: npm run bench --workspace=@scratch/scratch-ai-bridge
       - run: test -f packages/scratch-ai-bridge/dist/index.html
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser --workspace=@scratch/scratch-ai-bridge
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Run cross-browser release smoke
+        working-directory: ./packages/scratch-ai-bridge
+        env:
+          BROWSER_NEAR_LIMIT_IMPORT_BYTES: "268435456"
+        run: |
+          npm run test:browser
+          npm run test:browser:firefox
+          npm run test:browser:webkit
+      - name: Require Linux PSS evidence from all release engines
+        working-directory: ./packages/scratch-ai-bridge
+        run: >-
+          node scripts/check-browser-release-evidence.mjs
+          test-results/browser-chromium.json
+          test-results/browser-firefox.json
+          test-results/browser-webkit.json
+      - name: Store browser release evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: scratch-ai-bridge-browser-release-evidence
+          path: |
+            packages/scratch-ai-bridge/test-results/browser-*.json
+            packages/scratch-ai-bridge/test-results/performance.json
+          retention-days: 90
       - if: github.event_name != 'pull_request'
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
       - if: github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: packages/scratch-ai-bridge/dist
 
+  safari:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+      - run: npm ci
+      - run: npm run build:ai-bridge-deps
+      - run: npm run build --workspace=@scratch/scratch-ai-bridge
+      - name: Enable Safari WebDriver
+        run: sudo safaridriver --enable
+      - name: Run native Safari release smoke
+        run: npm run test:browser:safari --workspace=@scratch/scratch-ai-bridge
+      - name: Store native Safari evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: scratch-ai-bridge-safari-release-evidence
+          path: packages/scratch-ai-bridge/test-results/browser-safari.json
+          retention-days: 90
+
   deploy:
-    if: github.event_name != 'pull_request'
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_dispatch' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: build
+    needs: [build, safari]
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
+      - name: Verify deployed Pages entrypoint and assets
+        env:
+          PAGES_URL: ${{ steps.deployment.outputs.page_url }}
+        run: node packages/scratch-ai-bridge/scripts/verify-deployed-pages.mjs "$PAGES_URL"
