@@ -3873,11 +3873,21 @@ try {
     }
     if (requireAudioPlayback) {
       await stageFixturePage.frameLocator(`iframe[data-stage-fixture-token="${token}"]`).locator('#stage').click()
-      await stageFixturePage.waitForFunction(
-        (activeToken) => window.__officialStageFixtureStatus?.[activeToken]?.audioContextStates.includes('running'),
-        token,
-        { timeout: browserName === 'firefox' ? 15_000 : 5_000 },
-      )
+      try {
+        await stageFixturePage.waitForFunction(
+          (activeToken) => window.__officialStageFixtureStatus?.[activeToken]?.audioContextStates.includes('running'),
+          token,
+          { timeout: browserName === 'firefox' ? 15_000 : 5_000 },
+        )
+      } catch (error) {
+        const audioStatus = await stageFixturePage.evaluate(
+          (activeToken) => window.__officialStageFixtureStatus?.[activeToken],
+          token,
+        )
+        throw new Error(`${browserName} preview AudioContext did not start: ${JSON.stringify(audioStatus)}`, {
+          cause: error,
+        })
+      }
       await stageFixturePage.waitForFunction(
         (activeToken) => (window.__officialStageFixtureStatus?.[activeToken]?.audioSourcesStarted ?? 0) > 0,
         token,
