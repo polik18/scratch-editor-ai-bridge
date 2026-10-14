@@ -27,6 +27,13 @@ if (
 }
 const browserTypes = { chromium, firefox, webkit }
 const browserType = browserTypes[browserName]
+
+const clickStudentPreviewStart = async (page) => {
+  await page
+    .locator('#student-preview .student-preview-actions button')
+    .filter({ hasText: '執行作品' })
+    .click({ force: process.env.BROWSER_HEADLESS === 'false' })
+}
 if (!browserType) throw new Error(`Unsupported BROWSER value: ${browserName}`)
 
 const sitePrefix = '/scratch-editor-ai-bridge/'
@@ -601,10 +608,7 @@ try {
     ) {
       throw new Error(`${fixtureName} static preview did not show the SVG placeholder`)
     }
-    await damagedSvgPage
-      .locator('#student-preview .student-preview-actions button')
-      .filter({ hasText: '執行作品' })
-      .click()
+    await clickStudentPreviewStart(damagedSvgPage)
     await damagedSvgPage.waitForFunction(
       () =>
         ['已將 1 個損壞造型替換為示意素材', '動畫預覽載入失敗'].some((message) =>
@@ -714,10 +718,7 @@ try {
       `Missing bitmap preview did not show an isolated placeholder: ${JSON.stringify(missingAssetPreview)}`,
     )
   }
-  await firstImportPage
-    .locator('#student-preview .student-preview-actions button')
-    .filter({ hasText: '執行作品' })
-    .click()
+  await clickStudentPreviewStart(firstImportPage)
   await firstImportPage.waitForFunction(
     () =>
       ['已將 1 個損壞造型替換為示意素材', '動畫預覽載入失敗'].some((message) =>
@@ -821,10 +822,7 @@ try {
       `Checksum-mismatch preview did not show an isolated placeholder: ${JSON.stringify(corruptAssetPreview)}`,
     )
   }
-  await corruptImportPage
-    .locator('#student-preview .student-preview-actions button')
-    .filter({ hasText: '執行作品' })
-    .click()
+  await clickStudentPreviewStart(corruptImportPage)
   await corruptImportPage.waitForFunction(
     () =>
       ['已將 1 個損壞造型替換為示意素材', '動畫預覽載入失敗'].some((message) =>
@@ -2747,7 +2745,7 @@ try {
   if ((await page.locator('#student-preview .student-preview-tile').count()) < 1) {
     throw new Error('Strict-CSP project preview did not include any visible Scratch sprites')
   }
-  await page.locator('#student-preview .student-preview-actions button').filter({ hasText: '執行作品' }).click()
+  await clickStudentPreviewStart(page)
   const animatedFrame = page.locator('#student-preview iframe.student-preview-animation')
   await animatedFrame.waitFor({ state: 'attached' })
   if ((await animatedFrame.getAttribute('sandbox')) !== 'allow-scripts') {
@@ -2947,7 +2945,7 @@ try {
     .locator('#student-preview .student-preview-tile figcaption')
     .filter({ hasText: /^Sprite1$/ })
     .waitFor()
-  await page.locator('#student-preview .student-preview-actions button').filter({ hasText: '執行作品' }).click()
+  await clickStudentPreviewStart(page)
   const draggableFrame = page.locator('#student-preview iframe.student-preview-animation')
   await draggableFrame.waitFor({ state: 'attached' })
   await page.waitForFunction(
@@ -3045,7 +3043,7 @@ try {
   await page.locator('#preview-imported-project').click()
   await page.locator('#student-preview .student-preview-canvas').waitFor({ state: 'visible' })
   const edgeTriggeredStatic = await page.locator('#student-preview .student-preview-canvas').screenshot()
-  await page.locator('#student-preview .student-preview-actions button').filter({ hasText: '執行作品' }).click()
+  await clickStudentPreviewStart(page)
   const edgeTriggeredFrame = page.locator('#student-preview iframe.student-preview-animation')
   await edgeTriggeredFrame.waitFor({ state: 'attached' })
   await page.waitForFunction(
