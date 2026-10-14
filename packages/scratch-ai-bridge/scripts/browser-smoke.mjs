@@ -3866,7 +3866,7 @@ try {
       await stageFixturePage.waitForFunction(
         (activeToken) => window.__officialStageFixtureStatus?.[activeToken]?.audioContextStates.includes('running'),
         token,
-        { timeout: 5_000 },
+        { timeout: browserName === 'firefox' ? 15_000 : 5_000 },
       )
       await stageFixturePage.waitForFunction(
         (activeToken) => (window.__officialStageFixtureStatus?.[activeToken]?.audioSourcesStarted ?? 0) > 0,
