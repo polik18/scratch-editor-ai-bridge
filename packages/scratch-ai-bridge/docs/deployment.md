@@ -25,6 +25,11 @@ run `37132144623` for `main` at source SHA `e814add96a5ee243f15a1626821e61f1afe2
 `github-pages` deployment status records the same environment URL. The authenticated Pages settings API reports
 `build_type: workflow`, source `main`/`/`, and the expected URL; nullable `status` is not a failure signal for Actions mode.
 
+Candidate SHA `1e53623d0cfb827d18d2335fecf8b6e501d94ee7` passed PR CI run `38630001414` and push CI run `38629992286`
+(12/12 jobs each), plus Pages run `38630001191` (production build, native Safari, Chromium/Firefox/WebKit release smoke,
+and Linux PSS). Deployment was skipped because the run came from the draft PR branch. PR #1 remains open/draft, so the
+candidate is not published; post-deployment verification and release acceptance remain pending.
+
 One direct check on 2026-10-14 returned HTTP 404, but a later deployed-page smoke passed three consecutive checks: each
 received HTTP 200 and downloaded the app JavaScript and stylesheet (about 4.38 MB total). The earlier unauthenticated Pages
 settings API 404 was an authentication limitation, not evidence that Pages was disabled. The live site is currently
