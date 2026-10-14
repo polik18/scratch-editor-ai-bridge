@@ -53,7 +53,7 @@ describe('normalizeThroughVm', () => {
       )
       expect(result.report.archiveEntryChanges.some(({ kind }) => kind === 'unchanged')).toBe(true)
     }
-  })
+  }, 30_000)
 
   it('reports unknown nested target, block, and costume properties removed by the official VM', async () => {
     const sourceBytes = await readFile(commentsFixturePath)

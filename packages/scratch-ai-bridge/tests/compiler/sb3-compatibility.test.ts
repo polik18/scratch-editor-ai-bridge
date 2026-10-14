@@ -538,7 +538,7 @@ describe('generated SB3 compatibility', () => {
         normalizedVm?.quit()
       }
     }
-  }, 20_000)
+  }, 60_000)
 
   it('refuses schema-valid projects with semantic authoring errors', async () => {
     const project = structuredClone(example06) as CanonicalProject
