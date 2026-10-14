@@ -3893,6 +3893,7 @@ try {
         )
         const inputEvents = await stageFixturePage
           .frameLocator(`iframe[data-stage-fixture-token="${token}"]`)
+          .locator('#stage')
           .evaluate(() => window.__officialStageFixtureInputEvents)
         throw new Error(`${browserName} preview AudioContext did not start: ${JSON.stringify(audioStatus)}`, {
           cause: new Error(`Input events: ${JSON.stringify(inputEvents)}`, { cause: error }),
