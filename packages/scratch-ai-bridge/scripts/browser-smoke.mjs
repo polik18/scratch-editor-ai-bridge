@@ -225,6 +225,7 @@ const failures = []
 try {
   browser = await browserType.launch({
     headless: process.env.BROWSER_HEADLESS !== 'false',
+    ...(browserName === 'firefox' ? { firefoxUserPrefs: { 'media.autoplay.block-webaudio': false } } : {}),
   })
   page = await browser.newPage({ acceptDownloads: true })
   const scratchLinkMethods = []
