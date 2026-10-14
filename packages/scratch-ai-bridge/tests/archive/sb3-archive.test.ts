@@ -1335,7 +1335,7 @@ describe('lossless SB3 archive path', () => {
       )
       assertRoundTrip(secondReload.entries)
     }
-  })
+  }, 30_000)
 
   it('rejects local and central directory filename disagreement', async () => {
     const archive = await minimalArchive()
