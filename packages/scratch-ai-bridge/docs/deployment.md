@@ -83,9 +83,14 @@ only after the Linux and native Safari jobs pass. Candidate branch run [38596592
 passed the production audit, Bridge tests/lint/build/bench, Chromium/Firefox/WebKit, native Safari, Linux PSS, and artifact
 upload on source SHA `4749f4a8d8c11fa6f81da1c946f00c3c07207bb5`; deployment correctly skipped because the branch is not
 `main` or `develop`. This establishes the candidate workflow gates, not post-deployment behavior or a release decision.
-The candidate branch's subsequent push-triggered monorepo `CI` run on documentation-only SHA `3ab9633c47` ended as
-`startup_failure` with zero jobs/check runs (run `38598379134`); GitHub's public response exposes no runner error. No pull
-request is currently listed for the candidate, so the successful Pages gate is not a merge or deployment.
+The candidate branch's first push-triggered monorepo `CI` run on SHA `3ab9633c47` ended as `startup_failure` because the
+caller lacked permissions required by the reusable test-report job. Scoped permissions were added to the CI and Publish
+call sites. On SHA `61d7c76c1d`, the workflow then built the monorepo and ran workspace jobs, but the Bridge Firefox smoke
+had a transient 30-second Playwright click-stability timeout. The Firefox test action was aligned with the successful Pages
+runner setup (PulseAudio, headed Firefox under Xvfb, software GL). The follow-up run [38600719853](https://github.com/polik18/scratch-editor-ai-bridge/actions/runs/38600719853)
+on SHA `967382bd88` passed on attempt 2, including all workspace jobs, Bridge browser smokes and test-report publication;
+attempt 1's transient timeout did not reproduce. There is no pull request for the candidate, so these CI checks are not a
+merge or deployment.
 
 All external Actions used by the Pages workflow are pinned to verified 40-character commit SHAs. Its push and pull-request
 filters include `.nvmrc` and `scripts/**`, which affect Node selection and dependency builds; the candidate run above confirms
