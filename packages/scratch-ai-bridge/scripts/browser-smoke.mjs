@@ -34,6 +34,12 @@ const clickStudentPreviewStart = async (page) => {
     .filter({ hasText: '執行作品' })
     .click({ force: process.env.BROWSER_HEADLESS === 'false' })
 }
+const clickStudentBuild = async (page) => {
+  // The headed Firefox/WebGL lane can report layout instability for this visible
+  // action after large student payload updates; keep a pointer click while
+  // skipping only Playwright's stability precheck in that lane.
+  await page.locator('#student-build').click({ force: process.env.BROWSER_HEADLESS === 'false' })
+}
 if (!browserType) throw new Error(`Unsupported BROWSER value: ${browserName}`)
 
 const sitePrefix = '/scratch-editor-ai-bridge/'
@@ -4368,7 +4374,7 @@ try {
   bitmapPlayer.costumes[0].bitmapResolution = 1
   bitmapPlayer.currentCostume = 0
   await page.locator('#json-editor').fill(JSON.stringify(bitmapProject))
-  await page.locator('#student-build').click()
+  await clickStudentBuild(page)
   await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
   if ((await page.locator('#generate-status').getAttribute('data-kind')) !== 'ok') {
     throw new Error(
@@ -4454,7 +4460,7 @@ try {
   await page.locator('button[data-tab="generate"]').click()
   await page.locator('#json-editor').fill(officialBitmapCanonical)
   const officialBitmapDownloadPromise = page.waitForEvent('download')
-  await page.locator('#student-build').click()
+  await clickStudentBuild(page)
   await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
   if ((await page.locator('#generate-status').getAttribute('data-kind')) !== 'ok') {
     throw new Error(
