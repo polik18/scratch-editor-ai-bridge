@@ -25,6 +25,13 @@ runs:
         else
           npx playwright install --with-deps chromium firefox
         fi
+    - name: Start PulseAudio for Firefox WebAudio
+      if: ${{ inputs.package_name == 'scratch-ai-bridge' }}
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install --yes pulseaudio
+        pulseaudio --start --exit-idle-time=-1
     - name: Test
       working-directory: ./packages/${{ inputs.package_name }}
       shell: bash
@@ -63,7 +70,7 @@ runs:
         BROWSER_NEAR_LIMIT_IMPORT_BYTES: "268435456"
       run: |
         npm run test:browser
-        npm run test:browser:firefox
+        xvfb-run -a env BROWSER_HEADLESS=false LIBGL_ALWAYS_SOFTWARE=1 npm run test:browser:firefox
         npm run test:browser:webkit
     - name: Store Test Results
       if: ${{ !cancelled() }}
