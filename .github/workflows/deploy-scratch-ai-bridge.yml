@@ -86,7 +86,7 @@ jobs:
           BROWSER_NEAR_LIMIT_IMPORT_BYTES: "268435456"
         run: |
           npm run test:browser
-          npm run test:browser:firefox
+          xvfb-run -a env BROWSER_HEADLESS=false LIBGL_ALWAYS_SOFTWARE=1 npm run test:browser:firefox
           npm run test:browser:webkit
       - name: Require Linux PSS evidence from all release engines
         working-directory: ./packages/scratch-ai-bridge

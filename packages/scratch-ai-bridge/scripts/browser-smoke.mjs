@@ -216,7 +216,7 @@ let strictCspSvgPage
 let stageFixturePage
 const failures = []
 try {
-  browser = await browserType.launch({ headless: true })
+  browser = await browserType.launch({ headless: process.env.BROWSER_HEADLESS !== 'false' })
   page = await browser.newPage({ acceptDownloads: true })
   const scratchLinkMethods = []
   let scratchLinkCloseCount = 0
