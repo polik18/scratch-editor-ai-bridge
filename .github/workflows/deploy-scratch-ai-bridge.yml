@@ -80,6 +80,12 @@ jobs:
       - run: npm run bench --workspace=@scratch/scratch-ai-bridge
       - run: test -f packages/scratch-ai-bridge/dist/index.html
       - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Start PulseAudio for Firefox WebAudio
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes pulseaudio
+          pulseaudio --start --exit-idle-time=-1
+          pactl info
       - name: Run cross-browser release smoke
         working-directory: ./packages/scratch-ai-bridge
         env:
