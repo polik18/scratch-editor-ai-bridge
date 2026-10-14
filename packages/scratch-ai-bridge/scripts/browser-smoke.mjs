@@ -225,7 +225,6 @@ const failures = []
 try {
   browser = await browserType.launch({
     headless: process.env.BROWSER_HEADLESS !== 'false',
-    ...(browserName === 'firefox' ? { firefoxUserPrefs: { 'media.autoplay.block-webaudio': false } } : {}),
   })
   page = await browser.newPage({ acceptDownloads: true })
   const scratchLinkMethods = []
@@ -3632,6 +3631,20 @@ try {
   const defaultStageBytes = await archiveWithProjectJson(officialStageFixturePath, defaultStageProject)
   stageFixturePage = await browser.newPage()
   await stageFixturePage.addInitScript(() => {
+    window.__officialStageFixtureInputEvents = []
+    for (const eventName of ['pointerdown', 'keydown']) {
+      document.addEventListener(
+        eventName,
+        (event) => {
+          window.__officialStageFixtureInputEvents.push({
+            type: eventName,
+            trusted: event.isTrusted,
+            target: event.target instanceof HTMLElement ? event.target.id : '',
+          })
+        },
+        true,
+      )
+    }
     if (!(window.AudioBufferSourceNode instanceof Function)) return
     const originalStart = window.AudioBufferSourceNode.prototype.start
     let activeAudioSources = 0
@@ -3878,8 +3891,11 @@ try {
           (activeToken) => window.__officialStageFixtureStatus?.[activeToken],
           token,
         )
+        const inputEvents = await stageFixturePage
+          .frameLocator(`iframe[data-stage-fixture-token="${token}"]`)
+          .evaluate(() => window.__officialStageFixtureInputEvents)
         throw new Error(`${browserName} preview AudioContext did not start: ${JSON.stringify(audioStatus)}`, {
-          cause: error,
+          cause: new Error(`Input events: ${JSON.stringify(inputEvents)}`, { cause: error }),
         })
       }
       await stageFixturePage.waitForFunction(
