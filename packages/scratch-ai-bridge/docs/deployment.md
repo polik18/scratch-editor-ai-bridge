@@ -20,8 +20,8 @@ The Vite build uses relative asset URLs, so both user sites and project sites su
 
 ## Current public deployment evidence
 
-The public Pages URL is `https://polik18.github.io/scratch-editor-ai-bridge/`. The latest successful deployment run visible on
-2026-10-14 is `37132144623` for `main` at source SHA `e814add96a5ee243f15a1626821e61f1afe270c2` (2026-10-03); its
+The public Pages URL is `https://polik18.github.io/scratch-editor-ai-bridge/`. The latest successful deployment remains
+run `37132144623` for `main` at source SHA `e814add96a5ee243f15a1626821e61f1afe270c2` (2026-10-03); its
 `github-pages` deployment status records the same environment URL. The authenticated Pages settings API reports
 `build_type: workflow`, source `main`/`/`, and the expected URL; nullable `status` is not a failure signal for Actions mode.
 
@@ -34,11 +34,12 @@ catch a deployment that reports success while the URL or worker is unavailable.
 
 The Pages verifier was rerun at 2026-10-14 11:35 UTC after the earlier conflicting response: the entrypoint returned HTTP 200
 on two direct requests and in `verify-deployed-pages.mjs`; the title, app mount, 4,372,597-byte JavaScript bundle, and
-7,356-byte stylesheet all passed. The public Actions API still shows `main` at `e814add96a5ee243f15a1626821e61f1afe270c2`;
-the latest push run is cancelled and the latest successful manual deployment uses that same October 3 SHA. The current
-local worktree is not published.
+7,356-byte stylesheet all passed. At that check, the public Actions API showed `main` at
+`e814add96a5ee243f15a1626821e61f1afe270c2`; this remains the deployed source SHA.
 
-The current local production build succeeds with relative asset paths, a complete `dist/` artifact, and
+The current public page was rechecked on 2026-10-15: it returns HTTP 200 and still serves the October 3 assets; the new
+service worker returns 404, confirming that the candidate has not been published. The current local production build
+succeeds with relative asset paths, a complete `dist/` artifact, and
 `service-worker.js` for offline reload. The October 3 public artifact does not have this file;
 the strengthened local verifier returns HTTP 404 for that old service-worker path, as expected. After the next authorized
 deployment, the verifier will require the worker to be served beneath the repository Pages path with the precache and
@@ -78,21 +79,25 @@ Scratch workspaces, then runs:
 
 The Pages workflow runs and stores the Vitest benchmark, dependency reachability report, browser evidence and Safari evidence.
 Pull requests run build and browser gates without deploying. Pushes to `main` or `develop` upload and deploy the Pages artifact
-only after the Linux and native Safari jobs pass. The current local exact-cap recheck passes in Chromium 153, Firefox 155, and
-WebKit 26.6; macOS process-tree RSS samples are not a substitute for the required Ubuntu PSS artifact from a hosted run.
+only after the Linux and native Safari jobs pass. Candidate branch run [38596592201](https://github.com/polik18/scratch-editor-ai-bridge/actions/runs/38596592201)
+passed the production audit, Bridge tests/lint/build/bench, Chromium/Firefox/WebKit, native Safari, Linux PSS, and artifact
+upload on source SHA `4749f4a8d8c11fa6f81da1c946f00c3c07207bb5`; deployment correctly skipped because the branch is not
+`main` or `develop`. This establishes the candidate workflow gates, not post-deployment behavior or a release decision.
+The candidate branch's subsequent push-triggered monorepo `CI` run on documentation-only SHA `3ab9633c47` ended as
+`startup_failure` with zero jobs/check runs (run `38598379134`); GitHub's public response exposes no runner error. No pull
+request is currently listed for the candidate, so the successful Pages gate is not a merge or deployment.
 
 All external Actions used by the Pages workflow are pinned to verified 40-character commit SHAs. Its push and pull-request
-filters include `.nvmrc` and `scripts/**`, which affect Node selection and dependency builds. These workflow edits require a
-hosted run before their runner compatibility is confirmed. After deployment, the workflow now fetches the published entrypoint
+filters include `.nvmrc` and `scripts/**`, which affect Node selection and dependency builds; the candidate run above confirms
+these paths and hosted runner jobs execute successfully. After deployment, the workflow fetches the published entrypoint
 and all script/style URLs under the Pages path; a failed response or unexpected app document fails the deployment job.
 
-The latest local whole-monorepo `npm run build` exits 0 on 2026-10-14, and Bridge passes 408/408 across 32 files. The
-concurrent whole-monorepo `npm test` exited 1: two GUI Selenium cases (the same toolbox click in regular and standalone
-builds) opened Chromium's local-file error page while the GUI production build was cleaning and recreating its `build/`
-directory. Both cases pass when rerun separately after the build, with matching ChromeDriver 155 on PATH. This points to
-test/build artifact contention; a sequential full-workspace test rerun is still needed before claiming the root test gate
-passes. GUI Playwright previously passed 8/8. Local results do not show that changes have been published or that hosted
-Safari/Ubuntu PSS gates have passed.
+The latest recorded sequential whole-monorepo `npm test` and `npm run build` both exit 0 on 2026-10-14; Bridge passes
+410/410 across 32 files, VM 3,872/3,872, GUI Selenium 127 passed/7 skipped, and GUI Playwright 8/8. The earlier concurrent
+test/build attempt failed two GUI Selenium cases because the GUI build was cleaning its shared output directory; the
+sequential rerun passed after build completion. The hosted candidate run on 2026-10-15 independently passed Bridge tests and
+all browser, Safari, and Linux PSS release gates. Neither local nor candidate evidence shows that the candidate has been
+published; deployed-page functional verification remains pending.
 
 ## Runtime protections
 
@@ -124,9 +129,9 @@ Safari/Ubuntu PSS gates have passed.
   candidates; this does not confirm owner attribution or remediation. See `security-audit.md`. Do not describe the beta as
   security-audited production software.
 - The production JavaScript budget is split across the app, deferred renderer, and sandbox assets; see `docs/status.md` for
-  current measurements. All three local browser engines accept an exact 256 MiB archive and reject 256 MiB + 1 before
-  decompression. The available macOS process-tree RSS samples are sparse and are neither exact peaks nor PSS. Ubuntu PSS,
-  additional large-asset workloads, and student usability remain open.
+  current measurements. All three browser engines accept an exact 256 MiB archive and reject 256 MiB + 1 before
+  decompression. Candidate run 38596592201 provides the first passing hosted Ubuntu PSS evidence; 40 ms sampling can still
+  miss brief peaks. Additional large-asset workloads and student usability remain open.
 - Strict Canonical authoring supports 130 registered opcode capabilities. Procedure compile/decompile and raw block-graph
   preservation have verified slices; exhaustive procedure/opcode behavior and arbitrary extension runtime support remain open.
   Unknown extension code is never downloaded or executed by the app.

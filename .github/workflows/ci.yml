@@ -7,13 +7,13 @@ on:
   workflow_call:
     inputs:
       force-full-build:
-        description: 'Build all packages regardless of path filters'
+        description: "Build all packages regardless of path filters"
         type: boolean
         default: false
   workflow_dispatch:
     inputs:
       force-full-build:
-        description: 'Build all packages regardless of path filters'
+        description: "Build all packages regardless of path filters"
         type: boolean
         default: false
 
@@ -21,10 +21,15 @@ concurrency:
   group: "${{ github.workflow }} @ ${{ github.event.compare || github.head_ref || github.ref }}"
   cancel-in-progress: true
 
+permissions: {}
+
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       any-workspace: ${{ steps.filter.outputs.any-workspace }}
       packages: ${{ steps.filter.outputs.changes }}
@@ -32,8 +37,8 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          cache: 'npm'
-          node-version-file: '.nvmrc'
+          cache: "npm"
+          node-version-file: ".nvmrc"
       - name: Debug Info
         # https://docs.github.com/en/actions/reference/security/secure-use#use-an-intermediate-environment-variable
         env:
@@ -89,6 +94,11 @@ jobs:
   test:
     name: Test
     needs: build
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
+      issues: read
     if: ${{ needs.build.outputs.any-workspace == 'true' && needs.build.outputs.packages != '[]' }}
     uses: ./.github/workflows/test-packages.yml
     with:
@@ -97,6 +107,8 @@ jobs:
   preview:
     name: Preview
     needs: build
+    permissions:
+      contents: write
     # We don't want to give forks free reign to publish to our GitHub Pages, so run this job only if both:
     # - any workspace changed (otherwise there's no work to do)
     # - and either
@@ -105,12 +117,12 @@ jobs:
     # - and
     #   - it's not a Renovate branch (just to reduce noise)
     if: ${{
-        (needs.build.outputs.any-workspace == 'true') &&
-        (
-          (!github.event.pull_request) ||
-          (github.event.pull_request.head.repo.full_name == github.repository)
-        ) &&
-        (!startsWith((github.head_ref || github.ref_name), 'renovate/'))
+      (needs.build.outputs.any-workspace == 'true') &&
+      (
+      (!github.event.pull_request) ||
+      (github.event.pull_request.head.repo.full_name == github.repository)
+      ) &&
+      (!startsWith((github.head_ref || github.ref_name), 'renovate/'))
       }}
     uses: ./.github/workflows/deploy-playground-preview.yml
     with:
