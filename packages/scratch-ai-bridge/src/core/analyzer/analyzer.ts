@@ -8,7 +8,7 @@ import {
 } from '../../scratch/extensions'
 import { CANONICAL_OPCODES } from '../capabilities'
 import type { ScratchTargetBlockGraph } from '../graph'
-import type { CanonicalBlock, CanonicalProcedure, CanonicalProject, CanonicalScript } from '../ir/types'
+import type { CanonicalBlock, CanonicalProject, CanonicalScript } from '../ir/types'
 
 export interface AnalysisDiagnostic {
   severity: 'info' | 'warning'
@@ -92,7 +92,6 @@ const HAT_OPCODES = new Set([
   'control_start_as_clone',
   'procedures_definition',
 ])
-const YIELD_OPCODES = new Set(['control_wait', 'event_broadcastandwait', 'sensing_askandwait'])
 
 const visitBlock = (
   block: CanonicalBlock,
@@ -109,43 +108,6 @@ const visitBlock = (
     }
   }
   active.delete(block)
-}
-
-const findYieldingProcedures = (procedures: readonly CanonicalProcedure[]): ReadonlySet<string> => {
-  const proceduresByName = new Map<string, CanonicalProcedure>()
-  for (const procedure of procedures) {
-    if (!proceduresByName.has(procedure.name)) proceduresByName.set(procedure.name, procedure)
-  }
-  const callersByCallee = new Map<string, Set<string>>()
-  const yieldingProcedures = new Set<string>()
-
-  for (const procedure of proceduresByName.values()) {
-    const calls = new Set<string>()
-    for (const block of procedure.body) {
-      visitBlock(block, (candidate) => {
-        if (candidate.opcode === 'procedures_call' && candidate.procedure?.name) {
-          calls.add(candidate.procedure.name)
-        }
-        if (YIELD_OPCODES.has(candidate.opcode)) yieldingProcedures.add(procedure.name)
-      })
-    }
-    for (const callee of calls) {
-      if (!proceduresByName.has(callee)) continue
-      const callers = callersByCallee.get(callee) ?? new Set<string>()
-      callers.add(procedure.name)
-      callersByCallee.set(callee, callers)
-    }
-  }
-
-  const pending = [...yieldingProcedures]
-  for (const callee of pending) {
-    for (const caller of callersByCallee.get(callee) ?? []) {
-      if (yieldingProcedures.has(caller)) continue
-      yieldingProcedures.add(caller)
-      pending.push(caller)
-    }
-  }
-  return yieldingProcedures
 }
 
 const scriptBlockCount = (script: CanonicalScript): number => {
@@ -170,7 +132,6 @@ const analyzeScript = (
   index: number,
   targetName: string,
   diagnostics: AnalysisDiagnostic[],
-  yieldingProcedures: ReadonlySet<string>,
 ): AnalysisScriptSummary => {
   const opcodes: string[] = []
   const reads = new Set<string>()
@@ -181,28 +142,14 @@ const analyzeScript = (
   const receives = new Set<string>()
   const procedureCalls = new Set<string>()
   const variableInitializationsInForever: string[] = []
-  const foreverLoopsWithoutYield = new Set<CanonicalBlock>()
 
-  const inspect = (
-    block: CanonicalBlock,
-    inForever: boolean,
-    active: Set<CanonicalBlock>,
-    foreverAncestors: { yielded: boolean }[],
-  ): void => {
+  const inspect = (block: CanonicalBlock, inForever: boolean, active: Set<CanonicalBlock>): void => {
     if (active.has(block)) return
     const nextActive = new Set(active)
     nextActive.add(block)
 
     opcodes.push(block.opcode)
-    if (YIELD_OPCODES.has(block.opcode)) {
-      for (const loop of foreverAncestors) loop.yielded = true
-    }
-    if (block.opcode === 'procedures_call' && block.procedure?.name && yieldingProcedures.has(block.procedure.name)) {
-      for (const loop of foreverAncestors) loop.yielded = true
-    }
     if (block.opcode === 'procedures_call' && block.procedure?.name) procedureCalls.add(block.procedure.name)
-    const currentForever = block.opcode === 'control_forever' ? { yielded: false } : undefined
-    const nestedForeverAncestors = currentForever ? [...foreverAncestors, currentForever] : foreverAncestors
     const nestedForever = inForever || block.opcode === 'control_forever'
     if (block.opcode === 'data_setvariableto') {
       const name = field(block, 'VARIABLE')
@@ -249,19 +196,18 @@ const analyzeScript = (
       if (input.type === 'variable') reads.add(input.name)
       if (input.type === 'list') listReads.add(input.name)
       if (input.type === 'broadcast') broadcasts.add(input.name)
-      if (input.type === 'block') inspect(input.block, nestedForever, nextActive, nestedForeverAncestors)
+      if (input.type === 'block') inspect(input.block, nestedForever, nextActive)
       if (input.type === 'stack') {
-        for (const child of input.blocks) inspect(child, nestedForever, nextActive, nestedForeverAncestors)
+        for (const child of input.blocks) inspect(child, nestedForever, nextActive)
       }
     }
     if (block.opcode === 'event_whenbroadcastreceived') {
       const name = field(block, 'BROADCAST_OPTION')
       if (name) receives.add(name)
     }
-    if (currentForever && !currentForever.yielded) foreverLoopsWithoutYield.add(block)
   }
 
-  for (const block of script.blocks) inspect(block, false, new Set(), [])
+  for (const block of script.blocks) inspect(block, false, new Set())
 
   const first = script.blocks.at(0)
   if (first && !HAT_OPCODES.has(first.opcode)) {
@@ -273,22 +219,14 @@ const analyzeScript = (
       message: `腳本從「${first.opcode}」開始，沒有事件帽積木；一般執行時可能不會自動啟動。`,
     })
   }
-  if (foreverLoopsWithoutYield.size > 0) {
-    diagnostics.push({
-      severity: 'warning',
-      code: 'forever-without-yield',
-      target: targetName,
-      script: index,
-      message: '偵測到 forever 腳本中沒有明顯 wait/yield；請確認是否造成高 CPU 或其他腳本飢餓。',
-    })
-  }
   if (variableInitializationsInForever.length > 0) {
+    const variableNames = Array.from(new Set(variableInitializationsInForever.filter(Boolean)))
     diagnostics.push({
       severity: 'info',
       code: 'forever-reinitialize',
       target: targetName,
       script: index,
-      message: '偵測到 forever 內設定變數；若原意是只初始化一次，應將初始化移到迴圈外。',
+      message: `偵測到 forever 內設定變數${variableNames.length ? `（${variableNames.join('、')}）` : ''}。碰撞反彈、計分或狀態更新通常是預期行為；只有只需執行一次的初始值設定，才應移到迴圈外。`,
     })
   }
 
@@ -378,9 +316,8 @@ export const analyzeCanonicalProject = (
     })
   }
   const targets = sourceTargets.map((target) => {
-    const yieldingProcedures = findYieldingProcedures(target.procedures)
     const scripts = target.scripts.map((script, scriptIndex) =>
-      analyzeScript(script, scriptIndex + 1, target.name, diagnostics, yieldingProcedures),
+      analyzeScript(script, scriptIndex + 1, target.name, diagnostics),
     )
     const procedures = target.procedures.map((procedure) => {
       const calls = new Set<string>()

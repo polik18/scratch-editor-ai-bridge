@@ -41,7 +41,7 @@ describe('analysis IR', () => {
     expect(project.stage.variables).toEqual(before)
   })
 
-  it('checks yield behavior inside each forever loop rather than elsewhere in the script', () => {
+  it('does not treat a forever loop without an explicit wait as a busy loop', () => {
     const project = structuredClone(broadcastExample as CanonicalProject)
     project.stage.scripts = [
       {
@@ -56,7 +56,7 @@ describe('analysis IR', () => {
       },
     ]
 
-    expect(analyzeCanonicalProject(project).diagnostics).toContainEqual(
+    expect(analyzeCanonicalProject(project).diagnostics).not.toContainEqual(
       expect.objectContaining({ code: 'forever-without-yield', script: 1 }),
     )
 
@@ -72,35 +72,42 @@ describe('analysis IR', () => {
       expect.objectContaining({ code: 'forever-without-yield', script: 1 }),
     )
 
-    project.stage.procedures = [
-      {
-        name: 'waitIndirectly',
-        parameters: [],
-        warp: false,
-        body: [{ opcode: 'procedures_call', procedure: { name: 'waitDirectly' } }],
-      },
-      {
-        name: 'waitDirectly',
-        parameters: [],
-        warp: false,
-        body: [{ opcode: 'control_wait' }],
-      },
-    ]
-    project.stage.scripts[0].blocks = [
-      { opcode: 'event_whenflagclicked' },
-      {
-        opcode: 'control_forever',
-        inputs: {
-          SUBSTACK: {
-            type: 'stack',
-            blocks: [{ opcode: 'procedures_call', procedure: { name: 'waitIndirectly' } }],
-          },
-        },
-      },
-    ]
     expect(analyzeCanonicalProject(project).diagnostics).not.toContainEqual(
       expect.objectContaining({ code: 'forever-without-yield', script: 1 }),
     )
+  })
+
+  it('explains that variable assignments in forever may be intentional state updates', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    project.stage.scripts = [
+      {
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          {
+            opcode: 'control_forever',
+            inputs: {
+              SUBSTACK: {
+                type: 'stack',
+                blocks: [
+                  {
+                    opcode: 'data_setvariableto',
+                    fields: { VARIABLE: 'dy' },
+                    inputs: { VALUE: { type: 'literal', value: -6 } },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    ]
+
+    const diagnostic = analyzeCanonicalProject(project).diagnostics.find(
+      ({ code }) => code === 'forever-reinitialize',
+    )
+    expect(diagnostic?.message).toContain('dy')
+    expect(diagnostic?.message).toContain('碰撞反彈、計分或狀態更新通常是預期行為')
+    expect(diagnostic?.message).toContain('只需執行一次')
   })
 
   it('includes raw graph preservation and structural diagnostics', () => {

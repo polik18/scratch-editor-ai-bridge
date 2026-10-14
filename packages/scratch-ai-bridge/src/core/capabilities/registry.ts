@@ -884,6 +884,7 @@ ${CANONICAL_OPCODES.map(describeBlock).join('\n')}
 鍵盤 KEY_OPTION 可用 space、方向鍵（up/down/right/left arrow）、any、a-z、0-9。
 碰撞 TOUCHINGOBJECTMENU 可用角色名稱、_edge_ 或 _mouse_。
 不要自行加入 Scratch block id、parent、next 或 shadow id；這些由 compiler 產生。
+Scratch 的 control_forever 每輪都會讓出執行時間，不要只為消除分析器警告而額外插入 control_wait。若迴圈內設定變數是碰撞、計分或狀態更新，保留在迴圈內；只把只需執行一次的初始值設定放在迴圈前。
 若需求超出上述 capability，只產生可執行的簡化示範，不得杜撰 opcode。`
 
 export const createStudentProjectInstruction = (request: string): string => `請依照下面的作品需求製作 Scratch 專案。
