@@ -1190,6 +1190,104 @@ describe('lossless SB3 archive path', () => {
     }
   })
 
+  it('preserves generated multi-entry archive structure across repeated lossless exports', async () => {
+    let state = 0x4f1bbcdc
+    const nextRandom = (): number => {
+      state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0
+      return state >>> 0
+    }
+    const segments = ['sprites', '角色', 'costumes', '音效', 'café', 'λ']
+    const filenameAlphabet = ['a', 'Z', '0', '雪', '角', 'é', 'λ', '中', '🚀', '_', '-']
+    const randomText = (): string =>
+      Array.from({ length: nextRandom() % 48 }, () => String.fromCodePoint(0x20 + (nextRandom() % 0x2fff))).join('')
+    const randomFilename = (): string =>
+      Array.from(
+        { length: 1 + (nextRandom() % 24) },
+        () => filenameAlphabet[nextRandom() % filenameAlphabet.length],
+      ).join('')
+
+    for (let sample = 0; sample < 96; sample += 1) {
+      const zip = new JSZip()
+      const targetComment = `generated-${sample}-${randomText()}`
+      const projectJson = {
+        targets: [],
+        meta: {
+          seed: sample,
+          label: randomText(),
+          opaque: { nested: [nextRandom(), randomText(), { keep: true }] },
+        },
+        extensions: sample % 3 === 0 ? [`vendor_${sample}`] : [],
+      }
+      const projectCompression = sample % 2 === 0 ? 'STORE' : 'DEFLATE'
+      const projectJsonBytes = new TextEncoder().encode(JSON.stringify(projectJson))
+      zip.file('project.json', projectJsonBytes, { compression: projectCompression })
+
+      const assetCount = 1 + (nextRandom() % 6)
+      const expectedEntries: { name: string; bytes: Uint8Array; compressionMethod: number }[] = [
+        { name: 'project.json', bytes: projectJsonBytes, compressionMethod: projectCompression === 'STORE' ? 0 : 8 },
+      ]
+      for (let index = 0; index < assetCount; index += 1) {
+        const name = `assets/${segments[nextRandom() % segments.length]}/${sample}-${index}-${randomFilename()}.bin`
+        const bytes = new Uint8Array(nextRandom() % 2_048)
+        for (let offset = 0; offset < bytes.byteLength; offset += 1) bytes[offset] = nextRandom() & 0xff
+        const compressionMethod = (sample + index) % 2 === 0 ? 0 : 8
+        expectedEntries.push({ name, bytes, compressionMethod })
+        zip.file(name, bytes, {
+          compression: compressionMethod === 0 ? 'STORE' : 'DEFLATE',
+          createFolders: false,
+        })
+      }
+
+      const source = await zip.generateAsync({ type: 'uint8array', comment: targetComment })
+      const imported = await importLosslessSb3(source)
+      expect(imported.projectJson, `project seed ${sample}`).toEqual(projectJson)
+      expect(imported.projectJsonBytes, `project bytes seed ${sample}`).toEqual(projectJsonBytes)
+      expect(imported.archiveCommentBytes, `comment seed ${sample}`).toEqual(new TextEncoder().encode(targetComment))
+      expect(
+        imported.entries.map(({ name }) => name),
+        `entry order seed ${sample}`,
+      ).toEqual(expectedEntries.map(({ name }) => name))
+
+      const expectedByName = new Map(expectedEntries.map((entry) => [entry.name, entry]))
+      const assertRoundTrip = (entries: Awaited<ReturnType<typeof importLosslessSb3>>['entries']): void => {
+        expect(
+          entries.map(({ name }) => name),
+          `entry order seed ${sample}`,
+        ).toEqual(expectedEntries.map(({ name }) => name))
+        for (const entry of entries) {
+          const expected = expectedByName.get(entry.name)
+          expect(expected, `unexpected entry ${entry.name} / seed ${sample}`).toBeDefined()
+          expect(entry.bytes, `payload ${entry.name} / seed ${sample}`).toEqual(expected?.bytes)
+          expect(entry.compressionMethod, `compression ${entry.name} / seed ${sample}`).toBe(
+            expected?.compressionMethod,
+          )
+          expect(entry.sha256, `hash ${entry.name} / seed ${sample}`).toBe(
+            createHash('sha256')
+              .update(expected?.bytes ?? new Uint8Array())
+              .digest('hex'),
+          )
+        }
+      }
+      assertRoundTrip(imported.entries)
+
+      const firstExport = await exportLosslessSb3(imported)
+      const firstReload = await importLosslessSb3(await firstExport.arrayBuffer())
+      expect(firstReload.projectJsonBytes, `project bytes seed ${sample}`).toEqual(imported.projectJsonBytes)
+      expect(firstReload.archiveCommentBytes, `first export comment seed ${sample}`).toEqual(
+        imported.archiveCommentBytes,
+      )
+      assertRoundTrip(firstReload.entries)
+
+      const secondExport = await exportLosslessSb3(firstReload)
+      const secondReload = await importLosslessSb3(await secondExport.arrayBuffer())
+      expect(secondReload.projectJsonBytes, `second project bytes seed ${sample}`).toEqual(imported.projectJsonBytes)
+      expect(secondReload.archiveCommentBytes, `second export comment seed ${sample}`).toEqual(
+        imported.archiveCommentBytes,
+      )
+      assertRoundTrip(secondReload.entries)
+    }
+  })
+
   it('rejects local and central directory filename disagreement', async () => {
     const archive = await minimalArchive()
     const localHeader = findSignature(archive, 0x04034b50)
