@@ -25,10 +25,11 @@ run `37132144623` for `main` at source SHA `e814add96a5ee243f15a1626821e61f1afe2
 `github-pages` deployment status records the same environment URL. The authenticated Pages settings API reports
 `build_type: workflow`, source `main`/`/`, and the expected URL; nullable `status` is not a failure signal for Actions mode.
 
-Candidate SHA `1e53623d0cfb827d18d2335fecf8b6e501d94ee7` passed PR CI run `38630001414` and push CI run `38629992286`
-(12/12 jobs each), plus Pages run `38630001191` (production build, native Safari, Chromium/Firefox/WebKit release smoke,
+Candidate SHA `78065675c6a55742a371f7c605dcff0f4dc67eb7` passed PR CI run `38634729619` and push CI run `38634727505`
+(12/12 jobs each), plus Pages run `38634729574` (production build, native Safari, Chromium/Firefox/WebKit release smoke,
 and Linux PSS). Deployment was skipped because the run came from the draft PR branch. PR #1 remains open/draft, so the
-candidate is not published; post-deployment verification and release acceptance remain pending.
+candidate is not published; post-deployment verification and release acceptance remain pending. Signature Assistant run
+`38634725453` still fails because maintainer-managed CLA credentials are not configured for this workflow.
 
 One direct check on 2026-10-14 returned HTTP 404, but a later deployed-page smoke passed three consecutive checks: each
 received HTTP 200 and downloaded the app JavaScript and stylesheet (about 4.38 MB total). The earlier unauthenticated Pages
@@ -44,11 +45,10 @@ on two direct requests and in `verify-deployed-pages.mjs`; the title, app mount,
 
 The current public page was rechecked on 2026-10-15: it returns HTTP 200 and still serves the October 3 assets; the new
 service worker returns 404, confirming that the candidate has not been published. The current local production build
-succeeds with relative asset paths, a complete `dist/` artifact, and
-`service-worker.js` for offline reload. The October 3 public artifact does not have this file;
-the strengthened local verifier returns HTTP 404 for that old service-worker path, as expected. After the next authorized
-deployment, the verifier will require the worker to be served beneath the repository Pages path with the precache and
-offline-navigation fallback code.
+succeeds with relative asset paths, a complete `dist/` artifact, and `service-worker.js` for offline reload. Running the
+strengthened verifier against the live old deployment therefore fails at that worker URL, as expected. After the next
+authorized deployment, the verifier will require the worker to be served beneath the repository Pages path with the
+precache and offline-navigation fallback code.
 
 For post-deployment verification, resolve the URL from the `github-pages` deployment environment first, then the configured
 Pages URL or repository metadata. Ask the user for a URL only when those sources do not identify one; the verifier should
