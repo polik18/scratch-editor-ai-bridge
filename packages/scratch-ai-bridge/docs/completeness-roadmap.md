@@ -337,7 +337,7 @@ archives with mixed STORE/DEFLATE entries and asset sizes immediately below, at,
 threshold; each archive imports, losslessly exports, and re-imports with project JSON, payload hashes, and compression methods
 asserted. A duplicate-payload regression also verifies that two differently named assets with identical bytes remain distinct
 entries through lossless export and retain their STORE/DEFLATE methods. Broader structure-aware fuzzing across parser/Raw IR/VM normalization remains open.
-The AI response parser also accepts exactly 2,000,000 JSON characters and rejects 2,000,001 before parsing. Its deterministic embedded-response corpus now includes 256 Markdown/noise extraction cases plus 512 malformed-prose recovery and rejection cases; broader parser fuzzing across larger adversarial corpora remains open.
+The AI response parser also accepts exactly 2,000,000 JSON characters and rejects 2,000,001 before parsing. Its deterministic embedded-response corpus now includes 1,024 Markdown/noise extraction cases, 1,024 malformed/mixed-fence selection cases, and 2,048 malformed-prose recovery/rejection cases. Seed 1885 exposed an unmatched prose quote that hid a later valid project; the scanner now resets JSON string state at literal line breaks, which are illegal inside JSON strings. Broader parser fuzzing across larger adversarial corpora remains open.
 
 The package now runs a repeatable Vitest benchmark for 100/500/2,000-block synthetic projects, measuring JSON parse, AI draft
 normalization, Canonical schema validation, project analysis, and SB3 archive compilation. CI writes the machine-tagged JSON report

@@ -91,6 +91,14 @@ const canonicalCandidates = (segment: string): unknown[] => {
 
   for (let index = 0; index < segment.length; index += 1) {
     const character = segment[index]
+    // JSON strings cannot contain literal line breaks. Reset quote recovery at
+    // line boundaries so an unmatched quote in surrounding prose cannot hide
+    // a complete Canonical object later in the same Markdown segment.
+    if (character === '\r' || character === '\n') {
+      quote = false
+      escaped = false
+      continue
+    }
     if (quote) {
       if (escaped) escaped = false
       else if (character === '\\') escaped = true

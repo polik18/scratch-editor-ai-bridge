@@ -128,7 +128,7 @@ describe('AI draft normalizer', () => {
     }
     const alphabet = ['{', '}', '"', '\\', '`', '雪', '🚀', '\n', ':', '[', ']']
 
-    for (let sample = 0; sample < 256; sample += 1) {
+    for (let sample = 0; sample < 1_024; sample += 1) {
       const noise = Array.from(
         { length: 8 + (nextRandom() % 40) },
         () => alphabet[nextRandom() % alphabet.length],
@@ -160,7 +160,7 @@ describe('AI draft normalizer', () => {
     }
     const alphabet = ['{', '}', '"', '\\', '`', '~', '雪', '🚀', '\t', ':', '[', ']']
 
-    for (let sample = 0; sample < 256; sample += 1) {
+    for (let sample = 0; sample < 1_024; sample += 1) {
       const noise = Array.from(
         { length: 24 + (nextRandom() % 128) },
         () => alphabet[nextRandom() % alphabet.length],
@@ -211,7 +211,7 @@ describe('AI draft normalizer', () => {
     }
     const alphabet = ['{', '}', '[', ']', '"', '\\', '`', '~', ':', '雪', '\n', '\r', ' ']
 
-    for (let sample = 0; sample < 512; sample += 1) {
+    for (let sample = 0; sample < 2_048; sample += 1) {
       const noise = Array.from(
         { length: 16 + (nextRandom() % 96) },
         () => alphabet[nextRandom() % alphabet.length],
@@ -223,7 +223,13 @@ describe('AI draft normalizer', () => {
       const malformedPrefix = `Draft ${noise} {"format":"scratch-ai-bridge/canonical-ir","version":1,"truncated":`
       const response = `${malformedPrefix}\n${fence}json\n${embedded}\n${fence}\n${noise}`
 
-      expect(parseAiResponse(response).data).toEqual(target)
+      let parsed: ReturnType<typeof parseAiResponse>
+      try {
+        parsed = parseAiResponse(response)
+      } catch (error) {
+        throw new Error(`seed ${sample} failed to recover its embedded project`, { cause: error })
+      }
+      expect(parsed.data, `seed ${sample}`).toEqual(target)
       expect(() => parseAiResponse(`Draft ${noise} {"truncated": [ ${noise}`)).toThrow(
         '找不到完整的 Scratch AI Bridge Canonical IR JSON',
       )
