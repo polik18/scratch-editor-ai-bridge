@@ -117,6 +117,8 @@ const stop = (notifyParent = true): void => {
     }
     vm.quit()
     vm = null
+    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
+    gl?.getExtension('WEBGL_lose_context')?.loseContext()
   }
   pressedKeys.clear()
   pointerDown = false
