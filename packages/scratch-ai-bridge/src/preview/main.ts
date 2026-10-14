@@ -349,7 +349,9 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
       send('ready')
     } catch (error) {
       stop(false)
-      send('error', error instanceof Error ? (error.stack ?? error.message) : String(error))
+      const message = error instanceof Error ? error.message : String(error)
+      const stack = error instanceof Error ? error.stack : undefined
+      send('error', stack ? `${message || 'Unknown preview error'}\n${stack}` : message)
     }
   })()
 })

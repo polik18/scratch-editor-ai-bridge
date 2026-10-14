@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { setTimeout as delay } from 'node:timers/promises'
 import { fileURLToPath } from 'node:url'
 
@@ -105,9 +105,32 @@ try {
     value: 'button[data-tab="analyze"]',
   })
   await command('POST', `/element/${tab.ELEMENT ?? tab['element-6066-11e4-a52e-4f735466cecf']}/click`, {})
-  const fileInput = await command('POST', '/element', { using: 'css selector', value: '#sb3-file' })
-  const elementId = fileInput.ELEMENT ?? fileInput['element-6066-11e4-a52e-4f735466cecf']
-  await command('POST', `/element/${elementId}/value`, { text: fixturePath, value: [...fixturePath] })
+  // SafariDriver's native file upload can fail with an I/O error on hosted
+  // runners. Create a real File in the Safari page and dispatch the same
+  // input/change events used by the browser's file picker instead.
+  const fixtureBytes = await readFile(fixturePath)
+  if (fixtureBytes.byteLength === 0) throw new Error(`Safari SB3 fixture is empty: ${fixturePath}`)
+  await command('POST', '/execute/sync', {
+    script: `
+      const input = document.querySelector('#sb3-file');
+      if (!input) throw new Error('SB3 file input is missing');
+      const binary = atob(arguments[0]);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+      const file = new File([bytes], 'default.sb3', { type: 'application/zip' });
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      input.files = transfer.files;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return { name: input.files[0]?.name, size: input.files[0]?.size };
+    `,
+    args: [fixtureBytes.toString('base64')],
+  }).then((result) => {
+    if (result?.name !== 'default.sb3' || result.size !== fixtureBytes.byteLength) {
+      throw new Error(`Safari did not receive the SB3 fixture (${JSON.stringify(result)})`)
+    }
+  })
 
   const result = await waitFor(
     'SB3 import and analysis',
