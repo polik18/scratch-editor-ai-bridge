@@ -1205,12 +1205,61 @@ describe('lossless SB3 archive path', () => {
         { length: 1 + (nextRandom() % 24) },
         () => filenameAlphabet[nextRandom() % filenameAlphabet.length],
       ).join('')
+    const randomOpaqueValue = (depth = 0): unknown => {
+      const choice = nextRandom() % (depth >= 3 ? 5 : 7)
+      if (choice === 0) return null
+      if (choice === 1) return nextRandom() % 2 === 0
+      if (choice === 2) return nextRandom()
+      if (choice === 3) return randomText()
+      if (choice === 4) {
+        return Array.from({ length: nextRandom() % 4 }, () => randomOpaqueValue(depth + 1))
+      }
+      const keys = ['opaque', 'vendor/data', '雪', '__proto__']
+      return Object.fromEntries(
+        Array.from({ length: nextRandom() % (keys.length + 1) }, (_, index) => [
+          keys[(index + (nextRandom() % keys.length)) % keys.length],
+          randomOpaqueValue(depth + 1),
+        ]),
+      )
+    }
 
     for (let sample = 0; sample < 96; sample += 1) {
       const zip = new JSZip()
       const targetComment = `generated-${sample}-${randomText()}`
+      const targets = Array.from({ length: 1 + (nextRandom() % 3) }, (_, targetIndex) => {
+        const blockCount = 1 + (nextRandom() % 6)
+        const blocks = Object.fromEntries(
+          Array.from({ length: blockCount }, (_, blockIndex) => {
+            const id = `opaque-${sample}-${targetIndex}-${blockIndex}`
+            return [
+              id,
+              {
+                opcode: `vendor_${sample}_${targetIndex}_${blockIndex}`,
+                next: null,
+                parent: null,
+                inputs: {},
+                fields: randomOpaqueValue(),
+                mutation: randomOpaqueValue(),
+                comment: randomOpaqueValue(),
+                extensionData: randomOpaqueValue(),
+                unknownBlockProperty: randomOpaqueValue(),
+                topLevel: true,
+                shadow: false,
+              },
+            ]
+          }),
+        )
+        return {
+          name: targetIndex === 0 ? 'Stage' : `Sprite${targetIndex}`,
+          isStage: targetIndex === 0,
+          blocks,
+          opaqueTargetData: randomOpaqueValue(),
+        }
+      })
       const projectJson = {
-        targets: [],
+        targets,
+        monitors: Array.from({ length: nextRandom() % 5 }, () => randomOpaqueValue()),
+        vendorRootData: randomOpaqueValue(),
         meta: {
           seed: sample,
           label: randomText(),
