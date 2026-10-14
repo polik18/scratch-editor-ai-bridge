@@ -1,6 +1,9 @@
 import type { CanonicalProject } from '../ir/types'
 
 export const BUILT_IN_SPRITE_VISUALS = [
+  'paddle',
+  'wall',
+  'brick',
   'platform-hero',
   'platform-enemy',
   'coin',
@@ -104,6 +107,49 @@ const backdrop = (preset: string): string => {
 }
 
 const sprite = (preset: string, name: string, costumeName: string): ResolvedVisual => {
+  if (preset === 'paddle') {
+    return {
+      preset,
+      data: svg(
+        104,
+        18,
+        preset,
+        '<rect x="2" y="2" width="100" height="14" rx="7" fill="#4c97ff" stroke="#194c9b" stroke-width="4"/><path d="M16 6h72" stroke="#b9dcff" stroke-width="2" stroke-linecap="round"/>',
+      ),
+      rotationCenterX: 52,
+      rotationCenterY: 9,
+    }
+  }
+  if (preset === 'wall') {
+    const normalizedName = name.toLowerCase()
+    const vertical = containsAny(normalizedName, ['left', 'right', '左', '右'])
+    const width = vertical ? 18 : 480
+    const height = vertical ? 360 : 18
+    return {
+      preset,
+      data: svg(
+        width,
+        height,
+        preset,
+        `<rect x="2" y="2" width="${width - 4}" height="${height - 4}" rx="5" fill="#6b7280" stroke="#374151" stroke-width="4"/>`,
+      ),
+      rotationCenterX: width / 2,
+      rotationCenterY: height / 2,
+    }
+  }
+  if (preset === 'brick') {
+    return {
+      preset,
+      data: svg(
+        64,
+        28,
+        preset,
+        '<rect x="2" y="2" width="60" height="24" rx="4" fill="#e75b45" stroke="#8d2f27" stroke-width="4"/><path d="M8 10h48M20 3v7m24-7v7M32 10v16" stroke="#ffc4a8" stroke-width="2"/>',
+      ),
+      rotationCenterX: 32,
+      rotationCenterY: 14,
+    }
+  }
   if (preset === 'platform') {
     return {
       preset,
@@ -250,6 +296,14 @@ const selectSpritePreset = (value: string): string => {
   return 'generic-character'
 }
 
+const selectTargetRolePreset = (targetName: string): string | undefined => {
+  const normalized = targetName.toLowerCase()
+  if (containsAny(normalized, ['paddle', 'bat', '球拍', '擋板', '擋球板'])) return 'paddle'
+  if (containsAny(normalized, ['wall', 'boundary', '邊界', '牆'])) return 'wall'
+  if (containsAny(normalized, ['brick', 'block', '磚', '磚塊'])) return 'brick'
+  return undefined
+}
+
 export const resolveAutomaticVisual = (options: {
   readonly isStage: boolean
   readonly projectName: string
@@ -261,7 +315,7 @@ export const resolveAutomaticVisual = (options: {
     return { data: backdrop(preset), preset, rotationCenterX: 240, rotationCenterY: 180 }
   }
   return sprite(
-    selectSpritePreset(`${options.targetName} ${options.costumeName}`),
+    selectTargetRolePreset(options.targetName) ?? selectSpritePreset(`${options.targetName} ${options.costumeName}`),
     options.targetName,
     options.costumeName,
   )

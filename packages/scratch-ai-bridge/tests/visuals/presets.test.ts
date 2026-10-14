@@ -30,6 +30,28 @@ describe('automatic visual presets', () => {
     }
   })
 
+  it('prioritizes breakout target roles over generic costume labels and orients walls', () => {
+    const cases = [
+      { targetName: 'Paddle', costumeName: 'platform', expected: 'paddle', width: 104, height: 18 },
+      { targetName: 'TopWall', costumeName: 'platform', expected: 'wall', width: 480, height: 18 },
+      { targetName: 'BottomWall', costumeName: 'platform', expected: 'wall', width: 480, height: 18 },
+      { targetName: 'LeftWall', costumeName: 'platform', expected: 'wall', width: 18, height: 360 },
+      { targetName: 'RightWall', costumeName: 'platform', expected: 'wall', width: 18, height: 360 },
+      { targetName: 'Brick1', costumeName: 'coin', expected: 'brick', width: 64, height: 28 },
+    ] as const
+
+    for (const { targetName, costumeName, expected, width, height } of cases) {
+      const visual = resolveAutomaticVisual({
+        isStage: false,
+        projectName: 'Breakout Game',
+        targetName,
+        costumeName,
+      })
+      expect(visual.preset, targetName).toBe(expected)
+      expect(visual.data, targetName).toContain(`width="${width}" height="${height}"`)
+    }
+  })
+
   it('selects a backdrop from the project theme and escapes generic labels', () => {
     const space = resolveAutomaticVisual({
       isStage: true,

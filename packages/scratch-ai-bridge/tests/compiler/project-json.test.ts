@@ -59,6 +59,56 @@ describe('Scratch project JSON compiler', () => {
     expect(presets).toEqual(['platform-day', 'platform-hero', 'platform-enemy', 'coin', 'generic-character'])
   })
 
+  it('compiles Breakout target names into correctly sized paddle, walls, and bricks', async () => {
+    const project = structuredClone(emptyVisuals) as CanonicalProject
+    project.name = 'Breakout Game'
+    project.sprites = [
+      ['Paddle', 'platform'],
+      ['TopWall', 'platform'],
+      ['LeftWall', 'platform'],
+      ['Brick1', 'coin'],
+    ].map(([name, costumeName]) => ({
+      kind: 'sprite' as const,
+      name,
+      x: 0,
+      y: 0,
+      direction: 90,
+      size: 100,
+      visible: true,
+      draggable: false,
+      rotationStyle: 'all around' as const,
+      variables: [],
+      lists: [],
+      costumes: [{ name: costumeName, dataFormat: 'svg' as const }],
+      sounds: [],
+      scripts: [],
+      procedures: [],
+    }))
+
+    const archive = await buildScratchProjectArchive(project)
+    const zip = await JSZip.loadAsync(archive)
+    const projectFile = zip.file('project.json')
+    expect(projectFile).not.toBeNull()
+    if (!projectFile) return
+    const compiled = JSON.parse(await projectFile.async('string')) as ReturnType<typeof buildScratchProjectJson>
+    const visuals = await Promise.all(
+      compiled.targets.slice(1).map(async (target) => {
+        const asset = zip.file(target.costumes[0].md5ext)
+        expect(asset).not.toBeNull()
+        return asset ? await asset.async('string') : ''
+      }),
+    )
+
+    expect(visuals[0]).toContain('data-sab-preset="paddle"')
+    expect(visuals[0]).toContain('width="104" height="18"')
+    expect(visuals[1]).toContain('data-sab-preset="wall"')
+    expect(visuals[1]).toContain('width="480" height="18"')
+    expect(visuals[2]).toContain('data-sab-preset="wall"')
+    expect(visuals[2]).toContain('width="18" height="360"')
+    expect(visuals[3]).toContain('data-sab-preset="brick"')
+    expect(visuals[3]).toContain('width="64" height="28"')
+  })
+
   it('creates deterministic block graph, symbols and nested substacks', () => {
     const result = buildScratchProjectJson(example as CanonicalProject)
     const stage = result.targets[0]
