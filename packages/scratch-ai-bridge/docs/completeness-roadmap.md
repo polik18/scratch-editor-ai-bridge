@@ -300,6 +300,8 @@ memory and first-interaction latency on low-memory devices remain unverified. De
 references, parent mismatch, cycles, duplicate references, multiple parents, invalid substack boundaries, and invalid input
 descriptors. Every SB3 fixture classified `lossless` now passes raw import/export
 differential checks for exact project JSON bytes and ordered entry hashes.
+
+The 2026-10-15 follow-up adds 48 deterministic nested `control_repeat` + `control_if_else` programs with generated numeric comparison boundaries and Unicode/punctuation branch payloads. Each source SB3 is checked by the official parser, imported through the VM/Raw Graph path, recompiled, checked again by the parser, and executed in both source and normalized VMs; each trace is compared with the expected selected branch repeated the generated number of times. This strengthens runtime differential coverage for nested branch execution; it does not close broad structure-aware fuzzing or replace minimized-regression review.
 An additional seeded property check builds 128 valid nested C-block graphs at depths 1–128 and verifies copy/patch preservation,
 opaque node data, and graph invariants. Four official malformed/missing costume fixtures now decode their actual 480×360
 preview screenshots in Chromium, Firefox, and WebKit and assert at least 90% opaque pixels plus 16 distinct colors; exact

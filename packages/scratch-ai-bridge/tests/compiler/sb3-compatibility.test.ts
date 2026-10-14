@@ -540,6 +540,95 @@ describe('generated SB3 compatibility', () => {
     }
   }, 60_000)
 
+  it('preserves generated nested branch execution traces through VM normalization', async () => {
+    let state = 0x4c2f91ab
+    const nextRandom = () => {
+      state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0
+      return state
+    }
+    const alphabet = ['中', '雪', '🚀', '<', '&', '/', '~', 'e\u0301']
+
+    for (let sample = 0; sample < 48; sample += 1) {
+      const left = (nextRandom() % 11) - 5
+      const right = (nextRandom() % 11) - 5
+      const repeatCount = 1 + (nextRandom() % 4)
+      const operator = nextRandom() % 2 === 0 ? 'operator_gt' : 'operator_lt'
+      const thenMessage = `then-${sample}-${Array.from({ length: 6 }, () => alphabet[nextRandom() % alphabet.length]).join('')}`
+      const elseMessage = `else-${sample}-${Array.from({ length: 6 }, () => alphabet[nextRandom() % alphabet.length]).join('')}`
+      const project = structuredClone(example03) as CanonicalProject
+      project.stage.scripts[0].blocks = [
+        { opcode: 'event_whenflagclicked' },
+        {
+          opcode: 'control_repeat',
+          inputs: {
+            TIMES: { type: 'literal', value: repeatCount },
+            SUBSTACK: {
+              type: 'stack',
+              blocks: [
+                {
+                  opcode: 'control_if_else',
+                  inputs: {
+                    CONDITION: {
+                      type: 'block',
+                      block: {
+                        opcode: operator,
+                        inputs: {
+                          OPERAND1: { type: 'literal', value: left },
+                          OPERAND2: { type: 'literal', value: right },
+                        },
+                      },
+                    },
+                    SUBSTACK: {
+                      type: 'stack',
+                      blocks: [{ opcode: 'looks_say', inputs: { MESSAGE: { type: 'literal', value: thenMessage } } }],
+                    },
+                    SUBSTACK2: {
+                      type: 'stack',
+                      blocks: [{ opcode: 'looks_say', inputs: { MESSAGE: { type: 'literal', value: elseMessage } } }],
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      ]
+
+      const sourceCompilation = await compileCanonicalProject(project)
+      let normalizedVm: ScratchVMHandle | undefined
+      try {
+        const parsed = await parseOfficialProject(Buffer.from(await sourceCompilation.sb3.arrayBuffer()))
+        const parsedProject: unknown = Array.isArray(parsed) ? (parsed[0] as unknown) : parsed
+        expect(stringLeaves(parsedProject), `source seed ${sample}`).toContain(thenMessage)
+        expect(stringLeaves(parsedProject), `source seed ${sample}`).toContain(elseMessage)
+
+        const imported = await decompileSb3WithBlockGraphs(sourceCompilation.sb3, project.name)
+        expect(
+          imported.rawBlockGraphs.every(({ issues }) => issues.length === 0),
+          `graph seed ${sample}`,
+        ).toBe(true)
+        const normalizedCompilation = await compileCanonicalProject(imported.canonical)
+        normalizedVm = normalizedCompilation.vm
+        const normalizedParsed = await parseOfficialProject(
+          Buffer.from(await normalizedCompilation.sb3.arrayBuffer()),
+        )
+        const normalizedProject: unknown = Array.isArray(normalizedParsed)
+          ? (normalizedParsed[0] as unknown)
+          : normalizedParsed
+        expect(stringLeaves(normalizedProject), `normalized seed ${sample}`).toContain(thenMessage)
+        expect(stringLeaves(normalizedProject), `normalized seed ${sample}`).toContain(elseMessage)
+
+        const expectedMessage = (operator === 'operator_gt' ? left > right : left < right) ? thenMessage : elseMessage
+        const expectedTrace = Array.from({ length: repeatCount }, () => expectedMessage)
+        expect(executeSayTrace(sourceCompilation.vm), `source execution seed ${sample}`).toEqual(expectedTrace)
+        expect(executeSayTrace(normalizedVm), `normalized execution seed ${sample}`).toEqual(expectedTrace)
+      } finally {
+        sourceCompilation.vm.quit()
+        normalizedVm?.quit()
+      }
+    }
+  }, 60_000)
+
   it('refuses schema-valid projects with semantic authoring errors', async () => {
     const project = structuredClone(example06) as CanonicalProject
     project.sprites[0].scripts.push({ blocks: [{ opcode: 'event_whenkeypressed' }] })
