@@ -695,6 +695,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
       frame.className = 'student-preview-animation'
       frame.title = 'Scratch 作品動畫預覽（隔離執行）'
       frame.setAttribute('sandbox', 'allow-scripts')
+      frame.setAttribute('allow', 'autoplay')
       frame.setAttribute('referrerpolicy', 'no-referrer')
       frame.style.opacity = '0'
       frame.style.pointerEvents = 'none'

@@ -225,14 +225,6 @@ const failures = []
 try {
   browser = await browserType.launch({
     headless: process.env.BROWSER_HEADLESS !== 'false',
-    ...(browserName === 'firefox'
-      ? {
-          firefoxUserPrefs: {
-            'media.autoplay.default': 0,
-            'media.autoplay.blocking_policy': 0,
-          },
-        }
-      : {}),
   })
   page = await browser.newPage({ acceptDownloads: true })
   const scratchLinkMethods = []
@@ -3755,6 +3747,7 @@ try {
         frame.style.height = '360px'
         frame.dataset.stageFixtureToken = activeToken
         frame.setAttribute('sandbox', 'allow-scripts')
+        frame.setAttribute('allow', 'autoplay')
         const archiveBytes = Uint8Array.from(atob(base64Archive), (character) => character.charCodeAt(0))
         const archive = new Blob([archiveBytes], { type: 'application/zip' })
         const status = {
