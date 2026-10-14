@@ -2736,11 +2736,14 @@ try {
     return gl.getParameter(gl.VIEWPORT).join('x')
   })
   const stagePreviewCanvas = page.locator('#student-preview .student-preview-canvas')
-  const visibleStage = await page.locator('#student-preview').screenshot()
+  const stagePreviewRegion = await page.locator('#student-preview').boundingBox()
+  if (!stagePreviewRegion) throw new Error('Scratch VM stage preview did not have a visible screenshot region')
+  const captureStagePreview = () => page.screenshot({ clip: stagePreviewRegion, animations: 'disabled' })
+  const visibleStage = await captureStagePreview()
   await stagePreviewCanvas.evaluate((canvas) => {
     canvas.hidden = true
   })
-  const stageWithoutRenderer = await page.locator('#student-preview').screenshot()
+  const stageWithoutRenderer = await captureStagePreview()
   await stagePreviewCanvas.evaluate((canvas) => {
     canvas.hidden = false
   })
