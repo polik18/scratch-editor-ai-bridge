@@ -356,6 +356,13 @@ app.innerHTML = `
         </article>
       </section>
     </div>
+    <footer class="license-notice">
+      <p>
+        本工具採用 AGPL-3.0-only 授權。<a href="https://github.com/polik18/scratch-editor-ai-bridge" target="_blank" rel="noopener noreferrer">取得本網站對應源碼（GitHub）</a> ·
+        <a href="https://github.com/polik18/scratch-editor-ai-bridge/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">查看授權條款</a>
+      </p>
+      <p>Scratch 為 Scratch Foundation 的商標；本工具是獨立專案，未獲 Scratch Foundation 背書。</p>
+    </footer>
   </div>
 `
 

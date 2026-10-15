@@ -35,6 +35,8 @@ stores benchmark and browser JSON evidence, then uploads and deploys the Pages a
       bundled assets with paths that resolve under the deployed project path (for this Vite app, `base: './'` produces
       `./assets/...` references). Verify the app at `https://USER.github.io/REPOSITORY/`; an absolute root path such as
       `/assets/...` would incorrectly point outside the repository site.
+- [ ] Confirm the visible app footer offers the corresponding source repository and AGPL-3.0-only terms, and does not
+      imply Scratch Foundation endorsement. Chromium, Firefox, WebKit and native Safari smoke gates assert both links.
 
 ## After deployment
 

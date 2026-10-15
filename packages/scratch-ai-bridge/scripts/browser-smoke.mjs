@@ -304,6 +304,13 @@ try {
 
   await page.goto(`http://127.0.0.1:${address.port}${sitePrefix}`, { waitUntil: 'networkidle' })
 
+  const licenseFooter = page.locator('footer.license-notice')
+  const sourceOffer = licenseFooter.getByRole('link', { name: '取得本網站對應源碼（GitHub）' })
+  const licenseTerms = licenseFooter.getByRole('link', { name: '查看授權條款' })
+  if (!(await licenseFooter.isVisible()) || !(await sourceOffer.isVisible()) || !(await licenseTerms.isVisible())) {
+    throw new Error(`${browserName} did not display the AGPL source offer and license link`)
+  }
+
   const serviceWorkerReady = await page.evaluate(async () => {
     if (!('serviceWorker' in navigator)) return false
     const registration = await navigator.serviceWorker.ready

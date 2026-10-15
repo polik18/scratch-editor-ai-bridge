@@ -28,8 +28,10 @@ run `38668384921` for `main` at source SHA `4caeb86bf1558269431818eab0148b7a2e13
 Candidate SHA `78065675c6a55742a371f7c605dcff0f4dc67eb7` passed PR CI run `38634729619` and push CI run `38634727505`
 (12/12 jobs each), plus Pages run `38634729574` (production build, native Safari, Chromium/Firefox/WebKit release smoke,
 and Linux PSS). Deployment was skipped because the run came from the draft PR branch. PR #1 remains open/draft, so the
-candidate is not published; post-deployment verification and release acceptance remain pending. Signature Assistant run
-`38634725453` still fails because maintainer-managed CLA credentials are not configured for this workflow.
+PR event did not publish Pages. Signature Assistant run `38634725453` still fails because maintainer-managed CLA
+credentials are not configured for that PR workflow; this does not prevent the repository owner from deploying to their
+own `main` branch. The feedback release was later deployed directly to the personal repository after the user clarified
+they were not submitting a contribution to Scratch Foundation.
 
 One direct check on 2026-10-14 returned HTTP 404, but a later deployed-page smoke passed three consecutive checks: each
 received HTTP 200 and downloaded the app JavaScript and stylesheet (about 4.38 MB total). The earlier unauthenticated Pages
@@ -47,6 +49,16 @@ The 2026-10-15 deployment run `38668384921` passed its build and native Safari j
 page verifier passed against the deployed URL: HTTP 200, expected title and app mount, all same-path JavaScript/CSS assets,
 and `/scratch-editor-ai-bridge/service-worker.js` (3,343 bytes) with precache and offline-navigation fallback. This verifies
 the hosted release gates and serving path; student usability sessions and hardware validation remain separate open work.
+
+Docs-only `main` commit `98c5bd98e0e85ad523f8f22e5136557bf5e2ade8` was deployed by run `38669377341`; its first Safari
+attempt failed, but the failed-job rerun passed and the deploy job succeeded. The app asset set remained identical and the
+Pages verifier passed again. The follow-up release adds the source offer to the app footer and requires it in Chromium/
+Firefox/WebKit and native Safari smoke checks.
+
+The app footer links users directly to the corresponding public source repository and AGPL-3.0-only license, with a
+separate statement that Scratch Foundation does not endorse this independent project. The deployment workflow now checks
+that both links are visible in Chromium, Firefox, WebKit, and native Safari. Keep this source offer visible in future UI
+redesigns.
 
 For post-deployment verification, resolve the URL from the `github-pages` deployment environment first, then the configured
 Pages URL or repository metadata. Ask the user for a URL only when those sources do not identify one; the verifier should

@@ -100,6 +100,18 @@ try {
       args: [],
     }).then((value) => value === true),
   )
+  const sourceOfferVisible = await command('POST', '/execute/sync', {
+    script: `
+      const footer = document.querySelector('footer.license-notice');
+      const links = footer ? [...footer.querySelectorAll('a')] : [];
+      const source = links.find((link) => link.href === 'https://github.com/polik18/scratch-editor-ai-bridge');
+      const terms = links.find((link) => link.href === 'https://github.com/polik18/scratch-editor-ai-bridge/blob/main/LICENSE');
+      const visible = (link) => link && link.getBoundingClientRect().width > 0 && getComputedStyle(link).visibility !== 'hidden';
+      return Boolean(footer && visible(source) && visible(terms));
+    `,
+    args: [],
+  })
+  if (sourceOfferVisible !== true) throw new Error('Native Safari did not display the AGPL source and license links')
   const tab = await command('POST', '/element', {
     using: 'css selector',
     value: 'button[data-tab="analyze"]',
