@@ -892,7 +892,8 @@ Scratch 的 control_forever 每輪都會讓出執行時間，不要只為消除�
 若需求超出上述 capability，只產生可執行的簡化示範，不得杜撰 opcode.${
   withRequirementCoverage
     ? `
-requirementCoverage 必須逐項列出原作品需求中的角色、玩法與目標，使用 id、requirement、status、evidencePointers 欄位。status 只能是 implemented-structure、approximated、not-implemented、runtime-unavailable、not-verifiable-from-ir。implemented-structure 必須引用 project 內實際存在的 block JSON Pointer；只近似或未做的項目不得標成 implemented-structure。FPS、手感及未執行行為使用 not-verifiable-from-ir。Bridge 會檢查 pointer，但 AI 自述不等於 runtime 驗證。
+requirementCoverage 必須逐項列出原作品需求中的角色、玩法與目標，使用 id、requirement、status、evidencePointers 欄位。status 只能是 implemented-structure、approximated、not-implemented、runtime-unavailable、not-verifiable-from-ir。implemented-structure 必須引用 project 內實際存在的 block JSON Pointer；路徑以 project 物件為根，不要加 /project 前綴（例如 /sprites/0/scripts/0/blocks/0）。只近似或未做的項目不得標成 implemented-structure。FPS、手感及未執行行為使用 not-verifiable-from-ir。Bridge 會檢查 pointer，但 AI 自述不等於 runtime 驗證。
+rotationStyle 只能使用 "all around"、"left-right" 或 "don't rotate"，不要使用 "all-around"。
 回覆格式：{"format":"scratch-ai-bridge/ai-response","version":1,"project":{...Canonical IR...},"requirementCoverage":[{"id":"R1","requirement":"...","status":"implemented-structure","evidencePointers":["/sprites/0/scripts/0/blocks/0"]}]}`
     : ''
 }`

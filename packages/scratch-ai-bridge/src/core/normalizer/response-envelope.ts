@@ -83,7 +83,11 @@ export const parseAiProjectResponse = (value: unknown): ParsedAiProjectResponse 
       throw new Error(`requirementCoverage[${index}] evidencePointers 不可重複`)
     }
     for (const pointer of entry.evidencePointers) {
-      const evidence = pointerValue(value.project, pointer)
+      // Models sometimes write JSON Pointers from the outer response envelope
+      // (`/project/...`) even though the documented root is the project object.
+      // Accept both forms while keeping the supplied pointer for reporting.
+      const projectPointer = pointer.startsWith('/project/') ? pointer.slice('/project'.length) : pointer
+      const evidence = pointerValue(value.project, projectPointer)
       if (evidence === undefined) {
         throw new Error(`requirementCoverage[${index}] 的 evidence pointer 不存在：${pointer}`)
       }

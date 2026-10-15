@@ -302,6 +302,14 @@ export const normalizeAiDraft = (input: unknown): AiDraftNormalizationResult => 
       addDefault(target, 'visible', true, path)
       addDefault(target, 'draggable', false, path)
       addDefault(target, 'rotationStyle', 'all around', path)
+      if (target.rotationStyle === 'all-around') {
+        target.rotationStyle = 'all around'
+        repair(
+          `${path}/rotationStyle`,
+          'rotation-style-alias',
+          '將 all-around 正規化為 Canonical IR 使用的 all around',
+        )
+      }
     }
     if (Array.isArray(target.scripts)) {
       target.scripts = target.scripts.map((script, index) => normalizeScript(script, `${path}/scripts/${index}`))
