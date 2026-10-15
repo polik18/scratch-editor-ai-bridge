@@ -967,3 +967,5 @@ Phase 8 benchmark recheck after parser corpus expansion: Node 26.8.2/macOS arm64
 2026-10-15 學生 AI 提示可讀性修正：原 evidence packet 以引號一概遮蔽文字，連積木說明和座標也刪除；且只傳 opcode/path，導致 AI 看不到 X 值卻建議改成 -150。改成依資料類型匿名化、為常見積木生成中文安全摘要、保留數字及舞台左右意義；合併未解讀積木說明。學生 prompt 依提示層級限制為兩段、90 字內、一次一個步驟，不輸出 evidence IDs/opcode/JSON 路徑，資料不足時禁止猜值。程式清單與證據按鈕改用中文名稱，移除可見 block IDs。Production build 與 bundle budget 通過；尚未新增/執行測試，需由部署 CI 及真實學生試用驗收。
 
 2026-10-15 學生專用解惑入口實作：新增 `student-help.html`，提供獨立短流程：上傳 `.sb3` → 本機分析 → 寫問題 → 複製匿名作品線索與學習提示，貼到教師允許使用的 AI。頁面不呈現分數、Scratch 生成器、技術診斷區或回首頁連結；加入剪貼簿失敗時的手動複製欄及個資提醒。Vite 多頁建置、Pages 部署驗證器、部署說明及 portfolio Education 頁面/sitemap 均加入新入口。本機 lint、production build/bundle budget 及 `git diff --check` 通過；部署 CI 和線上學生 URL 驗收待推送後確認。預定網址：`https://polik18.github.io/scratch-editor-ai-bridge/student-help.html`。
+
+2026-10-15 教師分享連結快捷操作：主轉譯器頁面在頂端新增學生解惑頁說明、可開啟網址與「一鍵複製學生連結」按鈕；剪貼簿不可用時自動顯示並選取可手動複製的網址。本機 lint、production build/bundle budget、`git diff --check` 通過；待 CI、部署後主頁確認。

@@ -225,6 +225,71 @@ h1 {
   border-radius: 50%;
   background: #2fb36f;
 }
+.student-share-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px 28px;
+  margin: 0 0 20px;
+  padding: 18px 22px;
+  border: 1px solid #b8d7c5;
+  border-radius: 18px;
+  background: #edf7f0;
+}
+.student-share-eyebrow {
+  color: var(--forest);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+}
+.student-share-copy h2 {
+  margin: 3px 0 5px;
+  color: var(--forest-dark);
+  font-size: 20px;
+}
+.student-share-copy p {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.student-share-copy a {
+  color: var(--forest);
+  font-size: 13px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+.student-share-action {
+  min-width: 210px;
+  text-align: right;
+}
+.student-share-action .button {
+  border-radius: 12px;
+}
+.student-share-action p {
+  min-height: 1.2em;
+  margin: 6px 0 0;
+  color: var(--success);
+  font-size: 13px;
+}
+.student-share-fallback {
+  grid-column: 1 / -1;
+}
+.student-share-fallback label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.student-share-fallback input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 8px 10px;
+  color: var(--ink);
+  background: #fff;
+}
 .tabs {
   display: inline-flex;
   gap: 5px;
@@ -1140,6 +1205,15 @@ pre {
     gap: 16px;
     padding: 22px 19px;
     border-radius: 20px;
+  }
+  .student-share-panel {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 17px;
+  }
+  .student-share-action {
+    min-width: 0;
+    text-align: left;
   }
 }
 

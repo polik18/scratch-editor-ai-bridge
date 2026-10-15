@@ -247,6 +247,23 @@ app.innerHTML = `
       <div class="status-pill"><span></span> Scratch 工具已準備好</div>
     </header>
 
+    <aside class="student-share-panel" aria-labelledby="student-share-title">
+      <div class="student-share-copy">
+        <span class="student-share-eyebrow">教師分享</span>
+        <h2 id="student-share-title">給學生的解惑小幫手</h2>
+        <p>學生可以上傳 Scratch 作品、寫下問題，再帶著作品線索去問 AI。這個專頁不顯示成績，也沒有作品生成功能。</p>
+        <a href="https://polik18.github.io/scratch-editor-ai-bridge/student-help.html" target="_blank" rel="noopener noreferrer">開啟學生專頁 ↗</a>
+      </div>
+      <div class="student-share-action">
+        <button id="copy-student-help-link" class="button primary" type="button">一鍵複製學生連結</button>
+        <p id="student-help-link-status" role="status" aria-live="polite"></p>
+      </div>
+      <div id="student-help-link-fallback" class="student-share-fallback" hidden>
+        <label for="student-help-link-text">無法自動複製時，請全選下方網址：</label>
+        <input id="student-help-link-text" type="text" readonly value="https://polik18.github.io/scratch-editor-ai-bridge/student-help.html" />
+      </div>
+    </aside>
+
     <nav class="tabs" role="tablist" aria-label="選擇功能">
       <button id="generate-tab" class="tab active" role="tab" aria-selected="true" aria-controls="generate-panel" data-tab="generate">用 AI 做 Scratch</button>
       <button id="analyze-tab" class="tab" role="tab" aria-selected="false" aria-controls="analyze-panel" data-tab="analyze">請 AI 幫我檢查作品</button>
@@ -1937,6 +1954,25 @@ copyPrompt.addEventListener('click', () => {
     .catch((error) => {
       setStatus(fileStatus, error instanceof Error ? error.message : String(error), 'error')
     })
+})
+byId<HTMLButtonElement>('copy-student-help-link').addEventListener('click', () => {
+  const studentHelpUrl = 'https://polik18.github.io/scratch-editor-ai-bridge/student-help.html'
+  const status = byId<HTMLElement>('student-help-link-status')
+  const fallback = byId<HTMLElement>('student-help-link-fallback')
+  const fallbackInput = byId<HTMLInputElement>('student-help-link-text')
+  const copyStudentHelpUrl = async (): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(studentHelpUrl)
+      fallback.hidden = true
+      status.textContent = '已複製，可以貼給學生。'
+    } catch {
+      fallback.hidden = false
+      fallbackInput.focus()
+      fallbackInput.select()
+      status.textContent = '瀏覽器不允許自動複製，已選取網址，請按複製。'
+    }
+  }
+  void copyStudentHelpUrl()
 })
 copyScoringPrompt.addEventListener('click', () => {
   if (!projectMap || !projectScore) return
