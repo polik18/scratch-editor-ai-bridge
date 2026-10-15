@@ -278,22 +278,22 @@ app.innerHTML = `
           <li><span>4</span>下載作品</li>
         </ol>
         <article class="card idea-card">
-          <div class="step-heading"><span>1</span><div><h2>你想做什麼作品？</h2><p>用平常說話的方式描述角色、玩法和目標。</p></div></div>
+          <div class="step-heading"><span>1</span><div><h2>你想做什麼作品？</h2><p>一句主題或角色也可以；AI 會先陪你聊一兩個玩法點子，再一起做成作品。</p></div></div>
           <label for="project-request" class="field-label">我的作品想法</label>
-          <textarea id="project-request" class="request-input" maxlength="1000" placeholder="例如：做一個平台遊戲，角色可以左右移動和跳躍，收集金幣會加分。"></textarea>
+          <textarea id="project-request" class="request-input" maxlength="1000" placeholder="例如：我想做一個關於深海探險的遊戲，主角是一條小魚。"></textarea>
           <div class="idea-examples" aria-label="作品想法範例">
-            <span>試試看：</span>
-            <button type="button" class="idea-chip" data-request="做一個平台遊戲：角色可以用方向鍵左右移動、按上鍵跳躍，收集金幣會加分，碰到敵人會失去生命。">平台遊戲</button>
-            <button type="button" class="idea-chip" data-request="做一個方向鍵挑戰：按左右方向鍵移動角色，每移動一次就增加分數，達到 100 分時說出過關。">方向鍵挑戰</button>
-            <button type="button" class="idea-chip" data-request="做一個動畫故事：點綠旗後，兩個角色輪流說話、移動，最後廣播結束訊息。">動畫故事</button>
+            <span>找靈感：</span>
+            <button type="button" class="idea-chip" data-request="我想做一個深海救援遊戲，主角是小魚，要找到走失的海龜朋友。">深海救援</button>
+            <button type="button" class="idea-chip" data-request="我想做一個機器人送信遊戲，主角要把重要信件送到城市另一邊。">機器人送信</button>
+            <button type="button" class="idea-chip" data-request="我想做一個校園解謎故事，主角在學校裡發現一張奇怪的紙條。">校園解謎</button>
           </div>
           <div class="button-row"><button id="copy-instruction" class="button primary" disabled>複製完整訊息給 AI</button></div>
           <p id="copy-status" class="inline-status" role="status" aria-live="polite">先寫下作品想法，或選一個範例。</p>
         </article>
         <article class="card wide">
-          <div class="step-heading"><span>2</span><div><h2>把 AI 的完整回覆貼在這裡</h2><p>可以整段貼上，不需要刪除 AI 的說明或程式碼框。</p></div></div>
+          <div class="step-heading"><span>2</span><div><h2>把 AI 最後做好的作品貼在這裡</h2><p>先回答 AI 的發想問題；等它回傳完整 JSON 作品後，再整段貼上，不需要刪除程式碼框。</p></div></div>
           <label for="json-editor" class="visually-hidden">AI 的完整回覆</label>
-          <textarea id="json-editor" class="mono editor student-editor" spellcheck="false" placeholder="回到 AI 對話，複製完整回覆後貼在這裡。"></textarea>
+          <textarea id="json-editor" class="mono editor student-editor" spellcheck="false" placeholder="和 AI 討論完成後，貼上它最後產生的完整作品回覆。"></textarea>
           <div class="button-row student-actions"><button id="student-build" class="button primary">檢查並製作 Scratch</button><button id="load-sample" class="button secondary">試用平台遊戲範例</button></div>
           <div id="generate-status" class="status-box" role="status" aria-live="polite"></div>
           <section id="student-result" class="student-result" hidden>
@@ -1079,7 +1079,7 @@ copyInstruction.addEventListener('click', () => {
   void navigator.clipboard
     .writeText(completeInstruction)
     .then(() => {
-      copyStatus.textContent = '已複製！下一步：到 AI 對話貼上，取得回覆後再回到這裡。'
+      copyStatus.textContent = '已複製！貼到 AI 後先回答它的發想問題；等它產生完整作品，再回到這裡。'
       copyStatus.dataset.kind = 'ok'
       setProgress(2)
     })
