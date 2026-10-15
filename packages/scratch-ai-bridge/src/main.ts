@@ -2,7 +2,15 @@ import { Buffer } from 'node:buffer'
 import { md5 } from '@noble/hashes/legacy.js'
 import { bytesToHex } from '@noble/hashes/utils.js'
 import { initializeScratchVM } from './bootstrap/vm-bootstrap'
-import { analyzeCanonicalProject, type AnalysisIR } from './core/analyzer'
+import {
+  analyzeCanonicalProject,
+  createProjectFeedback,
+  createProjectMap,
+  type AnalysisIR,
+  type ProjectEvidence,
+  type ProjectFeedback,
+  type ProjectMap,
+} from './core/analyzer'
 import {
   exportLosslessSb3,
   patchLosslessSb3BlockGraphs,
@@ -22,14 +30,23 @@ import {
 } from './core/graph'
 import sampleProject from './core/ir/examples/06-platformer-core.json'
 import type { CanonicalProject } from './core/ir/types'
-import { addExtractionRepair, normalizeAiDraft, normalizeAiResponse, parseAiResponse } from './core/normalizer'
+import {
+  addExtractionRepair,
+  normalizeAiDraft,
+  normalizeAiResponse,
+  parseAiProjectResponse,
+  parseAiResponse,
+  type RequirementCoverageEntry,
+} from './core/normalizer'
 import { createAnalysisPrompt, type TutorMode } from './core/prompt'
 import {
   createAiOutputValidationReport,
   createRepairPrompt,
   createRepairReport,
+  findRepeatedRepairIssues,
   type AiOutputValidationReport,
   type RepairReport,
+  type RepeatedRepairIssue,
 } from './core/repair'
 import {
   validateCanonicalProject,
@@ -251,6 +268,7 @@ app.innerHTML = `
           <section id="student-result" class="student-result" hidden>
             <strong id="student-result-title"></strong>
             <p id="student-result-message"></p>
+            <ul id="student-requirement-coverage"></ul>
             <div id="student-preview" class="student-preview" hidden aria-label="作品畫面預覽"></div>
             <button id="download-student-validation-report" class="button secondary" hidden>下載驗證報告.json</button>
           </section>
@@ -294,7 +312,13 @@ app.innerHTML = `
           <h2>2. 作品檢查結果</h2>
           <div id="stats" class="stats muted">尚未載入專案</div>
           <div id="diagnostics" class="diagnostics"></div>
-          <details class="target-script-list"><summary>角色與程式清單</summary><div id="target-script-list"></div></details>
+          <section aria-labelledby="project-map-title" class="project-map">
+            <h3 id="project-map-title">作品目前看得出的行為</h3>
+            <p id="project-map-coverage" class="muted">載入作品後顯示有積木依據的觀察與分析限制。</p>
+            <ul id="project-map-facts"></ul>
+            <details class="feedback-details"><summary>確認與下一步</summary><ul id="project-feedback-items"></ul><ul id="project-feedback-limits"></ul><button id="download-anonymous-feedback" class="button secondary" disabled>下載匿名回饋記錄</button><span id="feedback-export-status" role="status"></span></details>
+          </section>
+          <details class="target-script-list"><summary>角色與程式清單</summary><label class="field-label" for="target-script-filter">搜尋角色</label><input id="target-script-filter" type="search" placeholder="輸入角色名稱"><div id="target-script-list"></div></details>
         </article>
         <article class="card wide">
           <h2>3. 請 AI 協助</h2>
@@ -352,6 +376,7 @@ const studentResultTitle = byId<HTMLElement>('student-result-title')
 const studentResultMessage = byId<HTMLParagraphElement>('student-result-message')
 const studentPreview = byId<HTMLDivElement>('student-preview')
 const downloadStudentValidationReport = byId<HTMLButtonElement>('download-student-validation-report')
+const studentRequirementCoverage = byId<HTMLUListElement>('student-requirement-coverage')
 const progressSteps = [...document.querySelectorAll<HTMLElement>('.progress-steps li')]
 instruction.value = AI_INSTRUCTION
 editor.value = ''
@@ -374,6 +399,7 @@ const setProgress = (step: 1 | 2 | 3 | 4): void => {
 interface RepairContext {
   readonly report: RepairReport
   readonly currentProject: unknown
+  readonly repeatedIssues: readonly RepeatedRepairIssue[]
   readonly validationReport?: AiOutputValidationReport
 }
 
@@ -390,6 +416,7 @@ const clipboardFallbackText = byId<HTMLTextAreaElement>('clipboard-fallback-text
 let latestRepairContext: RepairContext | null = null
 let repairUndoSnapshot: string | null = null
 let latestStudentValidationReport: AiOutputValidationReport | null = null
+let latestRequirementCoverage: readonly RequirementCoverageEntry[] | null = null
 
 const renderRepairTools = (): void => {
   const report = latestRepairContext?.report
@@ -421,11 +448,13 @@ const renderRepairTools = (): void => {
         : '格式已自動整理完成'
     : '作品檢查結果'
   repairExplanation.textContent = report
-    ? report.summary.errors > 0
-      ? `AI 回覆還缺少 ${report.summary.errors} 個製作作品需要的資料。請複製修正訊息，貼回 AI 後再試一次。`
-      : report.summary.warnings > 0
-        ? `有 ${report.summary.warnings} 個遊戲規則不夠清楚。Bridge 不會自行猜測，以免改變你的作品。`
-        : `已自動整理 ${report.summary.autoRepaired} 個格式問題；作品內容沒有需要確認的地方。`
+    ? latestRepairContext?.repeatedIssues.length
+      ? `上一輪修正後仍有 ${latestRepairContext.repeatedIssues.length} 個相同問題。請依 fingerprint 與欄位路徑檢查；若 AI 反覆輸出同一內容，可改用下方欄位範例手動修正。`
+      : report.summary.errors > 0
+        ? `AI 回覆還缺少 ${report.summary.errors} 個製作作品需要的資料。請複製修正訊息，貼回 AI 後再試一次。`
+        : report.summary.warnings > 0
+          ? `有 ${report.summary.warnings} 個遊戲規則不夠清楚。Bridge 不會自行猜測，以免改變你的作品。`
+          : `已自動整理 ${report.summary.autoRepaired} 個格式問題；作品內容沒有需要確認的地方。`
     : ''
 }
 
@@ -434,7 +463,8 @@ const publishRepairContext = (
   currentProject: unknown,
   validationReport?: AiOutputValidationReport,
 ): void => {
-  latestRepairContext = { report, currentProject, ...(validationReport ? { validationReport } : {}) }
+  const repeatedIssues = findRepeatedRepairIssues(latestRepairContext?.report, report)
+  latestRepairContext = { report, currentProject, repeatedIssues, ...(validationReport ? { validationReport } : {}) }
   clipboardFallback.hidden = true
   renderRepairTools()
 }
@@ -860,11 +890,13 @@ const clearStudentResult = (): void => {
   stopStudentAnimation('動畫預覽已停止；作品結果已清除。')
   studentPreviewGeneration += 1
   latestStudentValidationReport = null
+  latestRequirementCoverage = null
   downloadStudentValidationReport.hidden = true
   studentResult.hidden = true
   studentResult.removeAttribute('data-kind')
   studentResultTitle.textContent = ''
   studentResultMessage.textContent = ''
+  studentRequirementCoverage.replaceChildren()
   studentPreview.replaceChildren()
   studentPreview.hidden = true
 }
@@ -882,6 +914,7 @@ const diagnoseEditor = (compileError?: unknown): RepairContext => {
           schemaIssues: validation.errors,
         }),
         currentProject: normalized.data,
+        repeatedIssues: [],
       }
     }
     const semanticIssues = validateCanonicalSemantics(validation.data)
@@ -894,11 +927,13 @@ const diagnoseEditor = (compileError?: unknown): RepairContext => {
         ...(compileError === undefined ? {} : { compileError }),
       }),
       currentProject: validation.data,
+      repeatedIssues: [],
     }
   } catch (parseError) {
     return {
       report: createRepairReport({ parseError }),
       currentProject: editor.value,
+      repeatedIssues: [],
     }
   }
 }
@@ -1183,7 +1218,9 @@ const buildStudentProject = async (): Promise<void> => {
 
   let normalized: ReturnType<typeof normalizeAiDraft>
   try {
-    normalized = addExtractionRepair(normalizeAiDraft(parsed.data), parsed)
+    const aiResponse = parseAiProjectResponse(parsed.data)
+    latestRequirementCoverage = aiResponse.requirementCoverage
+    normalized = addExtractionRepair(normalizeAiDraft(aiResponse.project), parsed)
   } catch (normalizationError) {
     const report = createRepairReport({ normalizationError })
     const validationReport = await createAiOutputValidationReport({
@@ -1273,6 +1310,7 @@ const buildStudentProject = async (): Promise<void> => {
       sourceResponse,
       canonicalProject: validation.data,
       repairReport: report,
+      ...(latestRequirementCoverage ? { requirementCoverage: latestRequirementCoverage } : {}),
       checks: {
         responseParsed: 'passed',
         normalization: 'passed',
@@ -1288,9 +1326,25 @@ const buildStudentProject = async (): Promise<void> => {
     setStatus(generateStatus, '完成！Scratch 專案已開始下載。', 'ok')
     setStudentResult(
       `已完成「${validation.data.name}」`,
-      `作品包含 ${validation.data.sprites.length} 個角色。${describeAutomaticVisuals(automaticVisuals)}${describeOfflineCloudVariables(validation.data)}請開啟下載的 .sb3 檔案繼續創作；本次驗證報告也可以下載。`,
+      `作品包含 ${validation.data.sprites.length} 個角色。${describeAutomaticVisuals(automaticVisuals)}${describeOfflineCloudVariables(validation.data)}${latestRequirementCoverage ? '下方需求完成度是 AI 自述，Bridge 已檢查引用位置，但不代表已執行驗證。' : 'AI 回覆未提供需求完成度清單；格式與編譯通過不代表原始需求全數完成。'}請開啟下載的 .sb3 檔案繼續創作；本次驗證報告也可以下載。`,
       'success',
     )
+    if (latestRequirementCoverage) {
+      const labels: Record<RequirementCoverageEntry['status'], string> = {
+        'implemented-structure': '結構上有對應積木',
+        approximated: '簡化近似',
+        'not-implemented': '未實作',
+        'runtime-unavailable': '執行環境不可用',
+        'not-verifiable-from-ir': '無法從 IR 驗證',
+      }
+      studentRequirementCoverage.replaceChildren(
+        ...latestRequirementCoverage.map((entry) => {
+          const item = document.createElement('li')
+          item.textContent = `${entry.id} · ${entry.requirement} — AI 自述：${labels[entry.status]}${entry.evidencePointers.length ? `（${entry.evidencePointers.join('、')}）` : ''}`
+          return item
+        }),
+      )
+    }
     renderStudentPreview(validation.data, sb3)
   } catch (compileError) {
     const compileFailureStage = compileError instanceof ProjectCompileError ? compileError.stage : 'unknown'
@@ -1301,6 +1355,7 @@ const buildStudentProject = async (): Promise<void> => {
       sourceResponse,
       canonicalProject: validation.data,
       repairReport: compileReport,
+      ...(latestRequirementCoverage ? { requirementCoverage: latestRequirementCoverage } : {}),
       compileFailureStage,
       checks: {
         responseParsed: 'passed',
@@ -1334,7 +1389,12 @@ copyRepairPrompt.addEventListener('click', () => {
   if (!latestRepairContext) return
   const request = projectRequest.value.trim()
   const capabilityGuide = request ? createStudentProjectInstruction(request) : AI_INSTRUCTION
-  const prompt = createRepairPrompt(latestRepairContext.report, latestRepairContext.currentProject, capabilityGuide)
+  const prompt = createRepairPrompt(
+    latestRepairContext.report,
+    latestRepairContext.currentProject,
+    capabilityGuide,
+    latestRepairContext.repeatedIssues,
+  )
   void copyTextWithFallback(prompt, '已複製修正訊息；請貼回 AI 對話。')
 })
 
@@ -1407,6 +1467,8 @@ activateTab(initialTab)
 
 let canonical: CanonicalProject | null = null
 let analysis: AnalysisIR | null = null
+let projectMap: ProjectMap | null = null
+let projectFeedback: ProjectFeedback | null = null
 let procedureNormalizationReport: ProcedureNormalizationReport | null = null
 let vmNormalizationReport: VmNormalizationReport | null = null
 let vmNormalizationGeneration = 0
@@ -1418,6 +1480,14 @@ const fileStatus = byId<HTMLDivElement>('file-status')
 const stats = byId<HTMLDivElement>('stats')
 const diagnostics = byId<HTMLDivElement>('diagnostics')
 const targetScriptList = byId<HTMLDivElement>('target-script-list')
+const targetScriptFilter = byId<HTMLInputElement>('target-script-filter')
+const projectMapCoverage = byId<HTMLParagraphElement>('project-map-coverage')
+const projectMapFacts = byId<HTMLUListElement>('project-map-facts')
+const projectFeedbackItems = byId<HTMLUListElement>('project-feedback-items')
+const projectFeedbackLimits = byId<HTMLUListElement>('project-feedback-limits')
+const downloadAnonymousFeedback = byId<HTMLButtonElement>('download-anonymous-feedback')
+const feedbackExportStatus = byId<HTMLSpanElement>('feedback-export-status')
+const feedbackRatings = new Map<string, 'helpful' | 'inaccurate' | 'not-my-goal'>()
 const canonicalOutput = byId<HTMLElement>('canonical-output')
 const analysisOutput = byId<HTMLElement>('analysis-output')
 const procedureNormalizationOutput = byId<HTMLElement>('procedure-normalization-output')
@@ -1439,8 +1509,43 @@ const copyPreservationPrompt = byId<HTMLButtonElement>('copy-preservation-prompt
 const applyPreservationPatch = byId<HTMLButtonElement>('apply-preservation-patch')
 const preservationStatus = byId<HTMLDivElement>('preservation-status')
 
+const filterTargetScriptList = (): void => {
+  const query = targetScriptFilter.value.trim().toLocaleLowerCase()
+  targetScriptList.querySelectorAll<HTMLElement>('[data-target-index]').forEach((target) => {
+    target.hidden = !target.textContent.toLocaleLowerCase().includes(query)
+  })
+}
+
+const focusProjectEvidence = (source: ProjectEvidence): void => {
+  const disclosure = targetScriptList.closest('details')
+  if (disclosure) disclosure.open = true
+  const evidenceTarget =
+    source.scriptIndex === null && source.blockId
+      ? document.getElementById(`raw-block-${source.targetIndex}-${encodeURIComponent(source.blockId)}`)
+      : source.scriptIndex === null
+        ? targetScriptList.querySelector<HTMLElement>(`[data-target-index="${source.targetIndex}"] summary`)
+        : document.getElementById(`target-script-${source.targetIndex}-script-${source.scriptIndex}`)
+  const targetSection = evidenceTarget?.closest('details')
+  if (targetSection) targetSection.open = true
+  evidenceTarget?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  evidenceTarget?.focus()
+}
+
+targetScriptFilter.addEventListener('input', filterTargetScriptList)
+
+downloadAnonymousFeedback.addEventListener('click', () => {
+  if (!projectFeedback || feedbackRatings.size === 0) return
+  const responses = [...feedbackRatings.entries()].flatMap(([id, rating]) => {
+    const index = projectFeedback?.items.findIndex((item) => item.id === id) ?? -1
+    return index >= 0 ? [{ feedbackItem: index + 1, rating }] : []
+  })
+  downloadJson({ format: 'scratch-ai-bridge/anonymous-feedback', version: 1, responses }, 'anonymous-feedback.json')
+  feedbackExportStatus.textContent = '匿名回饋記錄已下載；檔案不含作品、角色名稱或 AI 對話。'
+})
+
 const renderAnalysis = () => {
-  if (!canonical || !analysis) return
+  if (!canonical || !analysis || !projectMap || !projectFeedback) return
+  const currentProjectMap = projectMap
   const summary = analysis.summary
   stats.classList.remove('muted')
   stats.innerHTML = [
@@ -1476,11 +1581,100 @@ const renderAnalysis = () => {
     diagnostic.append(code, message)
     diagnostics.replaceChildren(diagnostic)
   }
+  projectMapCoverage.textContent = `保留 ${projectMap.coverage.importedBlocks} 個原始積木；其中 ${projectMap.coverage.recognizedBlocks} 個可辨識、${projectMap.coverage.opaqueBlocks} 個目前無法完整解讀。回編/執行驗證：尚未執行。`
+  projectMapFacts.replaceChildren(
+    ...projectMap.facts.slice(0, 30).map((fact) => {
+      const item = document.createElement('li')
+      const claim = document.createElement('p')
+      claim.textContent = `${fact.confidence === 'high' ? '積木中可見：' : '需要確認：'}${fact.claim}`
+      item.append(claim)
+      for (const source of fact.evidence) {
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'button secondary evidence-link'
+        button.textContent =
+          source.scriptIndex === null
+            ? `查看 ${source.targetName} 原始積木圖${source.blockId ? `（積木 ${source.blockId}）` : ''}`
+            : `查看 ${source.targetName} 的程式 ${source.scriptIndex + 1}${source.blockId ? `（積木 ${source.blockId}）` : ''}`
+        button.addEventListener('click', () => {
+          focusProjectEvidence(source)
+        })
+        item.append(button)
+      }
+      return item
+    }),
+  )
+  projectFeedbackItems.replaceChildren(
+    ...projectFeedback.items
+      .filter(({ kind }) => kind !== 'confirmed-structure')
+      .slice(0, 30)
+      .map((feedback) => {
+        const item = document.createElement('li')
+        const title = document.createElement('strong')
+        title.textContent =
+          feedback.kind === 'confirmed-structure'
+            ? `${feedback.title}（有積木證據）`
+            : `${feedback.title}（供師生確認）`
+        const message = document.createElement('p')
+        message.textContent = feedback.message
+        const nextStep = document.createElement('p')
+        nextStep.textContent = `可以試試：${feedback.nextStep}`
+        item.append(title, message, nextStep)
+        for (const evidenceId of feedback.evidenceIds) {
+          const source = currentProjectMap.evidence.find(({ id }) => id === evidenceId)
+          if (!source) continue
+          const button = document.createElement('button')
+          button.type = 'button'
+          button.className = 'button secondary evidence-link'
+          button.textContent =
+            source.scriptIndex === null
+              ? `查看 ${source.targetName} 原始積木圖${source.blockId ? `（積木 ${source.blockId}）` : ''}`
+              : `查看 ${source.targetName} 的程式 ${source.scriptIndex + 1}${source.blockId ? `（積木 ${source.blockId}）` : ''}`
+          button.addEventListener('click', () => {
+            focusProjectEvidence(source)
+          })
+          item.append(button)
+        }
+        const ratings = [
+          ['helpful', '有幫助'],
+          ['inaccurate', '不準確'],
+          ['not-my-goal', '不是我的目標'],
+        ] as const
+        for (const [value, label] of ratings) {
+          const button = document.createElement('button')
+          button.type = 'button'
+          button.className = 'button secondary evidence-link'
+          button.textContent = label
+          button.dataset.feedbackId = feedback.id
+          button.setAttribute('aria-pressed', String(feedbackRatings.get(feedback.id) === value))
+          button.addEventListener('click', () => {
+            feedbackRatings.set(feedback.id, value)
+            item.querySelectorAll<HTMLButtonElement>('[data-feedback-rating]').forEach((ratingButton) => {
+              ratingButton.setAttribute('aria-pressed', String(ratingButton.dataset.feedbackRating === value))
+            })
+            button.dataset.feedbackRating = value
+            downloadAnonymousFeedback.disabled = false
+            feedbackExportStatus.textContent = '已記錄在本機記憶體；按「下載匿名回饋記錄」才會匯出。'
+          })
+          button.dataset.feedbackRating = value
+          item.append(button)
+        }
+        return item
+      }),
+  )
+  projectFeedbackLimits.replaceChildren(
+    ...projectFeedback.limits.slice(0, 8).map((limit) => {
+      const item = document.createElement('li')
+      item.textContent = limit
+      return item
+    }),
+  )
   targetScriptList.replaceChildren(
-    ...[canonical.stage, ...canonical.sprites].map((target) => {
-      const section = document.createElement('section')
+    ...[canonical.stage, ...canonical.sprites].map((target, targetIndex) => {
+      const section = document.createElement('details')
       section.className = 'target-script-entry'
-      const heading = document.createElement('h3')
+      section.dataset.targetIndex = String(targetIndex)
+      const heading = document.createElement('summary')
       heading.textContent = `${target.kind === 'stage' ? '舞台' : '角色'}：${target.name}`
       const summary = document.createElement('p')
       summary.textContent = `${target.scripts.length} 組程式 · ${target.procedures.length} 個自訂積木`
@@ -1489,7 +1683,20 @@ const renderAnalysis = () => {
         const list = document.createElement('ol')
         target.scripts.forEach((script, index) => {
           const item = document.createElement('li')
+          item.id = `target-script-${targetIndex}-script-${index}`
+          item.tabIndex = -1
           item.textContent = `程式 ${index + 1}（${script.blocks.length} 個頂層積木）`
+          const scriptEvidence = currentProjectMap.evidence.filter(
+            (entry) => entry.targetIndex === targetIndex && entry.scriptIndex === index,
+          )
+          if (scriptEvidence.length > 0) {
+            const source = document.createElement('small')
+            source.textContent = `積木依據：${scriptEvidence
+              .slice(0, 8)
+              .map(({ blockId, opcode }) => `${blockId ?? 'IR'} ${opcode}`)
+              .join('、')}${scriptEvidence.length > 8 ? `；另有 ${scriptEvidence.length - 8} 個` : ''}`
+            item.append(source)
+          }
           list.append(item)
         })
         section.append(list)
@@ -1499,9 +1706,25 @@ const renderAnalysis = () => {
         procedures.textContent = `自訂積木：${target.procedures.map(({ name }) => name).join('、')}`
         section.append(procedures)
       }
+      const rawEvidence = currentProjectMap.evidence.filter(
+        (entry) => entry.targetIndex === targetIndex && entry.scriptIndex === null,
+      )
+      if (rawEvidence.length > 0) {
+        const rawList = document.createElement('ul')
+        rawList.setAttribute('aria-label', '無法投影至 Canonical 腳本的原始積木')
+        for (const source of rawEvidence) {
+          const rawItem = document.createElement('li')
+          rawItem.id = `raw-block-${targetIndex}-${encodeURIComponent(source.blockId ?? source.id)}`
+          rawItem.tabIndex = -1
+          rawItem.textContent = `原始積木 ${source.blockId ?? '未知 ID'}：${source.opcode}（尚未對應到可解讀腳本）`
+          rawList.append(rawItem)
+        }
+        section.append(rawList)
+      }
       return section
     }),
   )
+  filterTargetScriptList()
   canonicalOutput.textContent = JSON.stringify(canonical, null, 2)
   analysisOutput.textContent = JSON.stringify(analysis, null, 2)
   procedureNormalizationOutput.textContent = JSON.stringify(procedureNormalizationReport, null, 2)
@@ -1520,6 +1743,9 @@ const renderAnalysis = () => {
 const analyzeFile = async (file: File) => {
   vmNormalizationGeneration += 1
   rawArchive = null
+  feedbackRatings.clear()
+  downloadAnonymousFeedback.disabled = true
+  feedbackExportStatus.textContent = ''
   vmNormalizationReport = null
   downloadVmNormalizationReport.disabled = true
   vmNormalizationOutput.textContent = '尚未執行 VM 正規化'
@@ -1541,6 +1767,8 @@ const analyzeFile = async (file: File) => {
     rawArchive = decompiled.rawArchive
     sourceBlockGraphs = decompiled.rawBlockGraphs
     analysis = analyzeCanonicalProject(canonical, decompiled.rawBlockGraphs)
+    projectMap = createProjectMap(canonical, analysis, decompiled.rawBlockGraphs, decompiled.canonicalBlockMappings)
+    projectFeedback = createProjectFeedback(analysis, projectMap)
     renderAnalysis()
     const warning = decompiled.archiveWarnings.length > 0 ? `（${decompiled.archiveWarnings.join('；')}）` : ''
     setStatus(
@@ -1551,6 +1779,8 @@ const analyzeFile = async (file: File) => {
   } catch (error) {
     canonical = null
     analysis = null
+    projectMap = null
+    projectFeedback = null
     procedureNormalizationReport = null
     canonicalBlockMappings = []
     rawArchive = null
@@ -1624,8 +1854,17 @@ copyPrompt.addEventListener('click', () => {
   const hintLevel = Number(byId<HTMLSelectElement>('hint-level').value) as 1 | 2 | 3 | 4
   const question = byId<HTMLInputElement>('question').value
   void navigator.clipboard
-    .writeText(createAnalysisPrompt({ analysis, canonical, mode, hintLevel, question }))
-    .then(() => setStatus(fileStatus, '已複製問題與作品資料；可以直接貼到 AI 對話。', 'ok'))
+    .writeText(
+      createAnalysisPrompt({
+        analysis,
+        canonical,
+        projectMap: createProjectMap(canonical, analysis, sourceBlockGraphs, canonicalBlockMappings),
+        mode,
+        hintLevel,
+        question,
+      }),
+    )
+    .then(() => setStatus(fileStatus, '已複製精簡 evidence packet（不含素材內容）；可以貼到 AI 對話。', 'ok'))
     .catch((error) => {
       setStatus(fileStatus, error instanceof Error ? error.message : String(error), 'error')
     })

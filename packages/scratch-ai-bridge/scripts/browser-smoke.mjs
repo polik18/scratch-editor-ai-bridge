@@ -4585,7 +4585,7 @@ try {
   if (!procedureNormalizationOutput.includes('scratch-ai-bridge/procedure-normalization-report')) {
     throw new Error('Procedure normalization report is missing from the advanced analysis output')
   }
-  await page.locator('.target-script-list summary').click()
+  await page.locator('details.target-script-list > summary').click()
   const targetScriptEntries = await page.locator('#target-script-list .target-script-entry').count()
   if (targetScriptEntries !== downloadedProject.targets.length) {
     throw new Error(
@@ -4595,6 +4595,10 @@ try {
   if ((await page.locator('#target-script-list').innerText()).includes('undefined 個程式')) {
     throw new Error('Target script summary contains a missing script count')
   }
+  const evidenceButton = page.locator('#project-map-facts .evidence-link').first()
+  if ((await evidenceButton.count()) === 0) throw new Error('Project map does not expose navigable block evidence')
+  await evidenceButton.click()
+  await page.waitForFunction(() => document.activeElement?.id.startsWith('target-script-'))
   if (await page.locator('#download-original-sb3').isDisabled()) {
     throw new Error('Lossless source archive download was not enabled after analysis')
   }

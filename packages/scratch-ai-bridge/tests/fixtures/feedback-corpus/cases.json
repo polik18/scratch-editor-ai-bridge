@@ -1,0 +1,190 @@
+{
+  "format": "scratch-ai-bridge/feedback-corpus",
+  "version": 1,
+  "privacy": "synthetic-only; no student archives or names",
+  "cases": [
+    {
+      "id": "synthetic-motion-green-flag",
+      "category": "motion",
+      "source": "generated",
+      "projectFile": "projects/synthetic-motion-green-flag.json",
+      "review": "pending",
+      "expected": ["event_whenflagclicked", "motion_changexby"],
+      "must-not-claim": ["runtime-tested"]
+    },
+    {
+      "id": "synthetic-keyboard-control",
+      "category": "input",
+      "source": "generated",
+      "projectFile": "projects/synthetic-keyboard-control.json",
+      "review": "pending",
+      "expected": ["event_whenkeypressed", "left arrow"],
+      "must-not-claim": ["key press behavior was executed"]
+    },
+    {
+      "id": "synthetic-sprite-click",
+      "category": "events",
+      "source": "generated",
+      "projectFile": "projects/synthetic-sprite-click.json",
+      "review": "pending",
+      "expected": ["event_whenthisspriteclicked"],
+      "must-not-claim": ["student intent"]
+    },
+    {
+      "id": "synthetic-dialogue-story",
+      "category": "story",
+      "source": "generated",
+      "projectFile": "projects/synthetic-dialogue-story.json",
+      "review": "pending",
+      "expected": ["looks_say", "Hello from a synthetic story"],
+      "must-not-claim": ["full story meaning"]
+    },
+    {
+      "id": "synthetic-costume-animation",
+      "category": "animation",
+      "source": "generated",
+      "projectFile": "projects/synthetic-costume-animation.json",
+      "review": "pending",
+      "expected": ["looks_switchcostumeto"],
+      "must-not-claim": ["animation appearance quality"]
+    },
+    {
+      "id": "synthetic-score-variable",
+      "category": "state",
+      "source": "generated",
+      "projectFile": "projects/synthetic-score-variable.json",
+      "review": "pending",
+      "expected": ["data_setvariableto", "score"],
+      "must-not-claim": ["game is balanced"]
+    },
+    {
+      "id": "synthetic-list-inventory",
+      "category": "lists",
+      "source": "generated",
+      "projectFile": "projects/synthetic-list-inventory.json",
+      "review": "pending",
+      "expected": ["data_addtolist", "items"],
+      "must-not-claim": ["inventory works at runtime"]
+    },
+    {
+      "id": "synthetic-broadcast-pair",
+      "category": "broadcast",
+      "source": "generated",
+      "projectFile": "projects/synthetic-broadcast-pair.json",
+      "review": "pending",
+      "expected": ["event_broadcast", "event_whenbroadcastreceived"],
+      "must-not-claim": ["timing order between scripts"]
+    },
+    {
+      "id": "synthetic-broadcast-orphan",
+      "category": "broadcast",
+      "source": "generated",
+      "projectFile": "projects/synthetic-broadcast-orphan.json",
+      "review": "pending",
+      "expected": ["event_broadcast", "orphan"],
+      "must-not-claim": ["message is definitely unused at runtime"]
+    },
+    {
+      "id": "synthetic-custom-procedure",
+      "category": "procedures",
+      "source": "generated",
+      "projectFile": "projects/synthetic-custom-procedure.json",
+      "review": "pending",
+      "expected": ["procedure definition is present"],
+      "must-not-claim": ["procedure always runs"]
+    },
+    {
+      "id": "synthetic-parallel-scripts",
+      "category": "events",
+      "source": "generated",
+      "projectFile": "projects/synthetic-parallel-scripts.json",
+      "review": "pending",
+      "expected": ["event_whenflagclicked", "event_whenkeypressed"],
+      "must-not-claim": ["sequential ordering across scripts"]
+    },
+    {
+      "id": "synthetic-conditional-branch",
+      "category": "control",
+      "source": "generated",
+      "projectFile": "projects/synthetic-conditional-branch.json",
+      "review": "pending",
+      "expected": ["control_if", "operator_equals"],
+      "must-not-claim": ["branch result without input values"]
+    },
+    {
+      "id": "synthetic-repeat-loop",
+      "category": "control",
+      "source": "generated",
+      "projectFile": "projects/synthetic-repeat-loop.json",
+      "review": "pending",
+      "expected": ["control_repeat"],
+      "must-not-claim": ["measured performance"]
+    },
+    {
+      "id": "synthetic-forever-state-update",
+      "category": "diagnostic-negative",
+      "source": "generated",
+      "projectFile": "projects/synthetic-forever-state-update.json",
+      "review": "pending",
+      "expected": ["forever-reinitialize is informational"],
+      "must-not-claim": ["must move initialization"]
+    },
+    {
+      "id": "synthetic-opaque-extension",
+      "category": "extension",
+      "source": "generated",
+      "projectFile": "projects/synthetic-opaque-extension.json",
+      "rawGraphFile": "raw-graphs/synthetic-opaque-extension.json",
+      "review": "pending",
+      "expected": ["thirdparty_sensor_read is opaque"],
+      "must-not-claim": ["extension sensor value"]
+    },
+    {
+      "id": "synthetic-camera-disabled",
+      "category": "extension",
+      "source": "generated",
+      "projectFile": "projects/synthetic-camera-disabled.json",
+      "rawGraphFile": "raw-graphs/synthetic-camera-disabled.json",
+      "review": "pending",
+      "expected": ["videoSensing_videoOn is preserved"],
+      "must-not-claim": ["camera output"]
+    },
+    {
+      "id": "synthetic-malformed-graph",
+      "category": "malformed",
+      "source": "generated",
+      "projectFile": "projects/synthetic-malformed-graph.json",
+      "rawGraphFile": "raw-graphs/synthetic-malformed-graph.json",
+      "review": "pending",
+      "expected": ["graph issue with block ID"],
+      "must-not-claim": ["complete script behavior"]
+    },
+    {
+      "id": "synthetic-missing-asset",
+      "category": "assets",
+      "source": "generated",
+      "projectFile": "projects/synthetic-missing-asset.json",
+      "review": "pending",
+      "expected": ["missing-archive-entry"],
+      "must-not-claim": ["visual appearance"]
+    },
+    {
+      "id": "synthetic-legacy-procedure",
+      "category": "legacy",
+      "source": "generated",
+      "projectFile": "projects/synthetic-legacy-procedure.json",
+      "review": "pending",
+      "expected": ["procedure metadata is visible"],
+      "must-not-claim": ["original argument value if absent"]
+    },
+    {
+      "id": "synthetic-incomplete-project",
+      "category": "incomplete",
+      "source": "generated",
+      "projectFile": "projects/synthetic-incomplete-project.json",
+      "review": "pending",
+      "expected": ["empty scripts are retained as an observable state"],
+      "must-not-claim": ["incomplete means poor quality"]
+    }
+  ]
+}

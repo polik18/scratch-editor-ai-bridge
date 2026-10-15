@@ -372,6 +372,10 @@ ceiling; latest post-import retained heap plus backing-store growth is 5,610,983
 
 退出條件：L1/L2/L3 各自有綠燈；任何未完成能力都在 UI、README、CI artifact 與 release notes 明確列出。
 
+## 學生作品理解與有價值回饋計畫
+
+Phase 7 的產品目標、實作順序、匿名真實樣本驗收與教師品質門檻，見 [student-work-feedback-plan.md](./student-work-feedback-plan.md)。目前 Analysis IR 偏重結構統計與規則診斷；匯入、語意理解、runtime、回編仍需分開報告。該改善計畫狀態為研究完成、待依序實作。
+
 ## 建議實施順序
 
 不要先把所有 opcode 填進 strict schema，也不要把 SVG renderer 當成文字轉積木工具。依賴現有官方路徑，按以下交付順序推進：
@@ -591,3 +595,15 @@ The stage-specific compile-repair report assertions now pass in Chromium 153.0.8
 ## 2026-10-15 Gemini Breakout generated-artwork regression
 
 A real Canonical IR sample used `platform` as the costume name for the paddle and all four walls, and `coin` for every `BrickN`. The compiler correctly generated safe fallback SVGs, but its generic name matcher rendered the paddle and each wall as the same 240×36 horizontal platform and rendered bricks as coins. Role inference now takes precedence over generic costume labels: paddle uses 104×18, left/right walls use 18×360, top/bottom walls use 480×18, and bricks use 64×28. Gemini authoring instructions document these role names and wall orientation. Regression coverage verifies the role resolver and compiled SB3 asset dimensions. This repairs generated artwork and collision footprint for the represented roles; it does not establish complete gameplay equivalence or validate a file opened in Scratch Desktop.
+
+Real competition-project study (2026-10-15): `Breakout user sample.sb3` exposes legacy array metadata in `target.blocks` and empty costume names. Import now skips and diagnoses non-block map entries, preserves the original archive, and assigns fallback names to blank costumes. Tests cover both behaviors. Full source import yields 55 targets/233 scripts/1,383 Canonical blocks, but compile is correctly blocked by unsupported music/handpose/facemesh opcodes, uppercase EFFECT enum values, and malformed missing-input reporters. No Scratch Desktop gameplay claim; local changes remain uncommitted.
+
+2026-10-15 使用者真實作品 SB3 相容性研究（來源檔未修改）：
+
+- `Sample A.sb3`（614,679 bytes）：匯入/分析成功，14 targets、502 Canonical blocks、561 raw graph blocks；Canonical 回編失敗，共有 55 個未支援 opcode：`text2speech_setVoice`×22、`text2speech_speakAndWait`×26、`text2speech_setLanguage`×2、`videoSensing_videoOn`×1、`videoSensing_setVideoTransparency`×1、`faceSensing_goToPart`×3。分析另報 2 個 detached scripts、face/video runtime unavailable、1 個無 sender 廣播。
+- `Sample B.sb3`（10,895,123 bytes）：匯入/分析成功，28 targets、1,265 Canonical blocks、1,322 raw graph blocks；Canonical 回編失敗。未支援 opcode 包含 `videoSensing_videoOn`×12、`videoSensing_videoToggle`×3、`videoSensing_setVideoTransparency`×3、text2speech 四種 opcode 合計 7 個錯誤；另有 10 個空名稱 `unknown-procedure`，raw graph 指出 1 筆無效自訂程序定義與 1 筆無效 argument reporter。分析提示 10 個 forever-reinitialize、video/text2speech runtime 未驗證。
+- `Sample C.sb3`（2,452,647 bytes）：匯入/分析、Canonical 回編及 Scratch VM SB3 重新載入均成功；16 targets、320 Canonical blocks、342 raw graph blocks。這驗證了基本 round-trip，但未執行遊戲流程，也不代表所有素材/互動已通過 Scratch Desktop 驗收。
+- 三份封存均無 archive warnings。可見兩層能力差異：Raw SB3 匯入與原始 block graph 分析三份皆可；完整 Canonical 回編僅第三份通過。第一、二份必須先處理 extension opcode/runtime 能力；第二份另需修復 legacy procedure metadata 導致的空名稱呼叫/定義映射。未支援 opcode 應保留 raw graph，且在無對應 runtime 時明確列為不可完整執行，不可只為通過編譯而靜默丟棄。
+- 報告產物：`/Users/huangjianzhe/Desktop/貓咪盃比賽/Scratch AI Bridge 轉譯結果_20261015_追加測試/`。逐案 `.result.json`、Canonical IR、analysis IR；僅第三案有 `.roundtrip.sb3`。
+
+2026-10-15 已知轉譯失敗案例補記（Breakout Game）：Canonical IR 匯入/分析可成功，但目前 Canonical 回編阻擋項仍有 48 項：27 個未知 opcode（7 種：`facemesh2scratch_getX`、`facemesh2scratch_setVideoTransparency`、`handpose2scratch_getX`、`handpose2scratch_getY`、`music_playDrumForBeats`、`music_playNoteForBeats`、`music_setInstrument`）、17 個 `EFFECT` 欄位 enum 因來源大寫（`GHOST`×13、`PIXELATE`×3、`COLOR`×1）、2 個缺少 reporter inputs、2 個條件型別警告。分析另有 22 個 detached-script 堆疊，以及 facemesh/handpose runtime 不可用。已確認 unknown extension 保存在 raw block graph；需要決定支援/保留/無 runtime 時的明確處理策略，並以此樣本建立回歸測試。來源與原測試摘要見桌面 `Scratch AI Bridge 轉譯結果_20261015/`。

@@ -178,6 +178,12 @@ export const normalizeAiDraft = (input: unknown): AiDraftNormalizationResult => 
   const normalizeBlock = (value: unknown, path: string): unknown => {
     if (!isRecord(value)) return value
     const block: Record<string, unknown> = { ...value }
+    // `shape` is useful metadata in the capability guide, but it is not part
+    // of the Canonical IR block contract. Some models copy it into JSON.
+    if (Object.hasOwn(block, 'shape')) {
+      delete block.shape
+      repair(`${path}/shape`, 'block-shape-metadata', '移除非 Canonical IR 的 shape metadata；積木形狀由 opcode 決定')
+    }
     if (isRecord(block.fields)) {
       block.fields = Object.fromEntries(
         Object.entries(block.fields).map(([name, field]) => {

@@ -1,0 +1,68 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "synthetic-conditional-branch",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [],
+    "lists": [],
+    "costumes": [{ "name": "platform-day", "dataFormat": "svg" }],
+    "sounds": [],
+    "scripts": [],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Sample sprite",
+      "variables": [{ "name": "score", "value": 0 }],
+      "lists": [],
+      "costumes": [{ "name": "generic-character", "dataFormat": "svg" }],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            { "opcode": "event_whenflagclicked", "inputs": {}, "fields": {} },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_equals",
+                    "inputs": {
+                      "OPERAND1": { "type": "variable", "name": "score" },
+                      "OPERAND2": { "type": "literal", "value": 10 }
+                    },
+                    "fields": {}
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "looks_say",
+                      "inputs": { "MESSAGE": { "type": "literal", "value": "Target reached" } },
+                      "fields": {}
+                    }
+                  ]
+                }
+              },
+              "fields": {}
+            }
+          ]
+        }
+      ],
+      "procedures": [],
+      "x": 0,
+      "y": 0,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "broadcasts": []
+}

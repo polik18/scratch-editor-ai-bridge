@@ -856,10 +856,14 @@ const describeBlock = (opcode: KnownOpcode): string => {
   return `- ${opcode} [${capability.shape}; ${capability.targets.join('|')}]${argumentsText ? ` (${argumentsText})` : ''}`
 }
 
-export const createAuthoringInstruction = (): string => `你要輸出 Scratch AI Bridge Canonical IR JSON。
+export const createAuthoringInstruction = (withRequirementCoverage = false): string => `${
+  withRequirementCoverage
+    ? '最外層只輸出一個 scratch-ai-bridge/ai-response v1 JSON 物件；Canonical IR 放在 project 欄位。'
+    : '你要輸出 Scratch AI Bridge Canonical IR JSON。'
+}
 不要執行 Python、不要使用程式碼工具、不要顯示思考或驗證過程。
 只輸出一個最終 JSON 根物件；不要 Markdown code fence、說明文字或多個候選版本。
-根物件必須包含 format="scratch-ai-bridge/canonical-ir"、version=1、name、stage、sprites、broadcasts。
+${withRequirementCoverage ? 'project 物件' : '根物件'}必須包含 format="scratch-ai-bridge/canonical-ir"、version=1、name、stage、sprites、broadcasts。
 stage 必須包含 kind="stage"、name、variables、lists、costumes、sounds、scripts、procedures。
 每個 sprite 必須包含 kind="sprite"、name、variables、lists、costumes、sounds、scripts、procedures、x、y、direction、size、visible、draggable、rotationStyle。
 每個 script 必須是 {"blocks":[...]}，不能直接使用積木陣列。
@@ -878,14 +882,20 @@ fields 的值必須直接是 string、number 或 boolean，例如 {"KEY_OPTION":
 使用上述內建名稱時不要輸出 data，Bridge 會安全加入圖像；若不確定造型，角色使用 generic-character，背景使用 platform-day。Paddle/球拍、Wall/牆/邊界、Brick/磚塊等角色名稱會優先決定造型；Left/Right wall 會使用直向牆，Top/Bottom wall 使用橫向牆，避免被泛用 costume 名稱覆蓋。
 不要使用 Mario、Goomba 等受版權保護角色的原始圖像；應使用通用平台英雄與敵人造型。
 空的 lists、costumes、sounds、scripts、procedures 也必須輸出 []。
-布林條件必須使用 shape=boolean 的 reporter，不可直接把數值變數當條件。
+布林條件必須使用 capability registry 標示為 boolean 的 reporter，不可直接把數值變數當條件。registry 的 shape 僅供辨識積木類型；Canonical IR block 禁止輸出 shape 欄位，積木形狀由 opcode 決定。
 可用積木與必要參數：
 ${CANONICAL_OPCODES.map(describeBlock).join('\n')}
 鍵盤 KEY_OPTION 可用 space、方向鍵（up/down/right/left arrow）、any、a-z、0-9。
 碰撞 TOUCHINGOBJECTMENU 可用角色名稱、_edge_ 或 _mouse_。
 不要自行加入 Scratch block id、parent、next 或 shadow id；這些由 compiler 產生。
 Scratch 的 control_forever 每輪都會讓出執行時間，不要只為消除分析器警告而額外插入 control_wait。若迴圈內設定變數是碰撞、計分或狀態更新，保留在迴圈內；只把只需執行一次的初始值設定放在迴圈前。
-若需求超出上述 capability，只產生可執行的簡化示範，不得杜撰 opcode。`
+若需求超出上述 capability，只產生可執行的簡化示範，不得杜撰 opcode.${
+  withRequirementCoverage
+    ? `
+requirementCoverage 必須逐項列出原作品需求中的角色、玩法與目標，使用 id、requirement、status、evidencePointers 欄位。status 只能是 implemented-structure、approximated、not-implemented、runtime-unavailable、not-verifiable-from-ir。implemented-structure 必須引用 project 內實際存在的 block JSON Pointer；只近似或未做的項目不得標成 implemented-structure。FPS、手感及未執行行為使用 not-verifiable-from-ir。Bridge 會檢查 pointer，但 AI 自述不等於 runtime 驗證。
+回覆格式：{"format":"scratch-ai-bridge/ai-response","version":1,"project":{...Canonical IR...},"requirementCoverage":[{"id":"R1","requirement":"...","status":"implemented-structure","evidencePointers":["/sprites/0/scripts/0/blocks/0"]}]}`
+    : ''
+}`
 
 export const createStudentProjectInstruction = (request: string): string => `請依照下面的作品需求製作 Scratch 專案。
 保留需求中的角色、玩法與目標；若目前能力無法完整做到，請產生可執行的簡化版本。
@@ -893,4 +903,4 @@ export const createStudentProjectInstruction = (request: string): string => `請
 作品需求：
 ${request.trim()}
 
-${createAuthoringInstruction()}`
+${createAuthoringInstruction(true)}`

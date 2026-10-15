@@ -625,13 +625,25 @@ export const extractProjectBlockGraphs = (project: unknown): ScratchTargetBlockG
     if (typeof target.name !== 'string' || typeof target.isStage !== 'boolean') {
       throw new Error(`Scratch project target ${index} has invalid identity fields`)
     }
-    const blocks = copyScratchBlockGraph(target.blocks ?? {})
+    const targetName = target.name
+    const rawBlocks = target.blocks ?? {}
+    if (!isRecord(rawBlocks)) throw new Error(`Scratch target ${targetName} blocks must be an object`)
+    const malformedEntries = Object.entries(rawBlocks).filter(([, value]) => !isBlockNode(value))
+    const blocks = copyScratchBlockGraph(
+      Object.fromEntries(Object.entries(rawBlocks).filter(([, value]) => isBlockNode(value))),
+    )
+    const issues = malformedEntries.map(([blockId]) => ({
+      code: 'invalid-node-property' as const,
+      blockId,
+      relatedId: 'opcode',
+      message: `Scratch target ${targetName} entry ${blockId} is not a block node and was skipped during analysis`,
+    }))
     return {
       targetIndex: index,
-      targetName: target.name,
+      targetName,
       isStage: target.isStage,
       blocks,
-      issues: validateScratchBlockGraph(blocks),
+      issues: [...issues, ...validateScratchBlockGraph(blocks)],
     }
   })
 }

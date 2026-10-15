@@ -1,0 +1,36 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "synthetic-camera-disabled",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [],
+    "lists": [],
+    "costumes": [{ "name": "platform-day", "dataFormat": "svg" }],
+    "sounds": [],
+    "scripts": [],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Sample sprite",
+      "variables": [],
+      "lists": [],
+      "costumes": [{ "name": "generic-character", "dataFormat": "svg" }],
+      "sounds": [],
+      "scripts": [],
+      "procedures": [],
+      "x": 0,
+      "y": 0,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "broadcasts": [],
+  "extensions": ["videoSensing"]
+}

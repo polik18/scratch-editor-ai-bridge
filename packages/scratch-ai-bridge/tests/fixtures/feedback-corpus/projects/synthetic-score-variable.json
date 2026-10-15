@@ -1,0 +1,46 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "synthetic-score-variable",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [],
+    "lists": [],
+    "costumes": [{ "name": "platform-day", "dataFormat": "svg" }],
+    "sounds": [],
+    "scripts": [],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Sample sprite",
+      "variables": [{ "name": "score", "value": 0 }],
+      "lists": [],
+      "costumes": [{ "name": "generic-character", "dataFormat": "svg" }],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            { "opcode": "event_whenflagclicked", "inputs": {}, "fields": {} },
+            {
+              "opcode": "data_setvariableto",
+              "inputs": { "VALUE": { "type": "literal", "value": 0 } },
+              "fields": { "VARIABLE": "score" }
+            }
+          ]
+        }
+      ],
+      "procedures": [],
+      "x": 0,
+      "y": 0,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "broadcasts": []
+}

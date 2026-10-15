@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest'
 import platformer from '../../src/core/ir/examples/06-platformer-core.json'
 import type { CanonicalProject } from '../../src/core/ir/types'
 import { normalizeAiDraft, type AiDraftRepair } from '../../src/core/normalizer'
-import { createRepairPrompt, createRepairReport, type RepairReport } from '../../src/core/repair'
+import {
+  createRepairPrompt,
+  createRepairReport,
+  findRepeatedRepairIssues,
+  type RepairReport,
+} from '../../src/core/repair'
 import repairReportSchema from '../../src/core/repair/schema.json'
 import type { CanonicalIRValidationIssue } from '../../src/core/validator'
 import { validateCanonicalProject, validateCanonicalSemantics } from '../../src/core/validator'
@@ -359,6 +364,11 @@ describe('AI repair report', () => {
 
     expect(report.issues).toHaveLength(codes.length)
     expect(report.issues.every(({ suggestion }) => suggestion !== genericSuggestion)).toBe(true)
+    const booleanSuggestions = report.issues
+      .filter(({ code }) => ['boolean-input-type', 'condition-not-boolean', 'input-block-shape'].includes(code))
+      .map(({ suggestion }) => suggestion)
+    expect(booleanSuggestions.join(' ')).not.toMatch(/boolean shape|shape 的積木/)
+    expect(booleanSuggestions.join(' ')).toContain('不要在 block JSON 輸出 shape')
   })
 
   it('reports missing and mismatched assets as actionable semantic errors', () => {
@@ -459,8 +469,33 @@ describe('AI repair report', () => {
     expect(prompt).toContain('只回傳一個完整 JSON 根物件')
     expect(prompt).toContain('不要 Markdown、Python、說明、patch 或多個候選版本')
     expect(prompt).toContain('CAPABILITY GUIDE')
+    expect(prompt).toContain('絕不可輸出 shape')
     expect(prompt).toContain('"format": "scratch-ai-bridge/repair-report"')
     expect(prompt).toContain('"format": "scratch-ai-bridge/canonical-ir"')
     expect(prompt).not.toContain('/Users/example')
+  })
+
+  it('fingerprints repeated issues across repair attempts and directs the next prompt to them', () => {
+    const projectWithShape = structuredClone(platformer) as unknown as Record<string, unknown>
+    const sprites = projectWithShape.sprites as { scripts: { blocks: Record<string, unknown>[] }[] }[]
+    sprites[0].scripts[0].blocks[0].shape = 'boolean'
+    const validation = validateCanonicalProject(projectWithShape)
+    if (validation.valid) throw new Error('Expected the extra shape property to fail schema validation')
+    const previous = createRepairReport({ data: projectWithShape, schemaIssues: validation.errors })
+    const current = createRepairReport({ data: projectWithShape, schemaIssues: validation.errors })
+    const repeated = findRepeatedRepairIssues(previous, current)
+
+    expect(repeated).toHaveLength(1)
+    expect(repeated[0]).toMatchObject({
+      phase: 'schema',
+      code: 'schema-additionalProperties',
+      path: expect.stringContaining('/shape') as string,
+    })
+    const prompt = createRepairPrompt(current, projectWithShape, 'CAPABILITY GUIDE', repeated)
+    expect(prompt).toContain('前一次修正後仍存在 1 個相同問題')
+    expect(repeated[0].previousFingerprint).toBe(repeated[0].currentFingerprint)
+    expect(prompt).toContain(repeated[0].previousFingerprint)
+    expect(prompt).toContain('before')
+    expect(prompt).toContain('after')
   })
 })

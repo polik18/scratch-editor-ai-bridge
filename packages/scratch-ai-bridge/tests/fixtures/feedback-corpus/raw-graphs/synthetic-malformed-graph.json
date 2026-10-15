@@ -1,0 +1,9 @@
+[
+  {
+    "targetIndex": 1,
+    "targetName": "Sample sprite",
+    "isStage": false,
+    "blocks": { "broken": { "opcode": "event_whenflagclicked", "shadow": false } },
+    "issues": [{ "code": "missing-block", "blockId": "broken", "message": "next block reference is missing" }]
+  }
+]

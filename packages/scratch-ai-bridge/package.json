@@ -12,6 +12,8 @@
     "clean": "rimraf dist coverage",
     "dev": "vite",
     "generate:validator": "node scripts/generate-validator.mjs",
+    "feedback:review": "node scripts/evaluate-feedback-reviews.mjs",
+    "feedback:corpus:generate": "node scripts/generate-feedback-corpus.mjs",
     "lint": "eslint . && prettier --check .",
     "measure:archive-memory": "node --expose-gc scripts/measure-archive-memory.mjs",
     "prebuild": "npm run generate:validator",

@@ -1,0 +1,17 @@
+[
+  {
+    "caseId": "synthetic-broadcast-pair",
+    "reviewerCode": "reviewer-a",
+    "items": [
+      {
+        "feedbackId": "fact-1",
+        "type": "other",
+        "judgedCorrect": true,
+        "evidenceResolvable": true,
+        "usefulness": 4,
+        "highImpactError": false,
+        "unsupportedCertaintyClaim": false
+      }
+    ]
+  }
+]

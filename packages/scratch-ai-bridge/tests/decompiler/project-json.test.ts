@@ -137,6 +137,25 @@ describe('Scratch project JSON decompiler', () => {
     }
   })
 
+  it('decompiles valid blocks when legacy array metadata appears in the block map', () => {
+    const scratchProject = buildScratchProjectJson(structuredClone(example) as CanonicalProject)
+    const rawBlocks = scratchProject.targets[0].blocks as unknown as Record<string, unknown>
+    rawBlocks.legacyProcedureMetadata = [13, 'legacy procedure', 'prototype-id', 2562, 85]
+
+    const imported = projectJsonToCanonicalWithReport(scratchProject)
+    expect(imported.canonical.stage.scripts.map(({ blocks }) => blocks)).toEqual(
+      (example as CanonicalProject).stage.scripts.map(({ blocks }) => blocks),
+    )
+  })
+
+  it('assigns a compilable fallback name to a Scratch costume with a blank name', () => {
+    const scratchProject = buildScratchProjectJson(structuredClone(example) as CanonicalProject)
+    scratchProject.targets[0].costumes[0].name = ''
+
+    const imported = projectJsonToCanonicalWithReport(scratchProject)
+    expect(imported.canonical.stage.costumes[0].name).toBe('Costume 1')
+  })
+
   it('keeps same-named procedures target-local through SB3 compile and reload', async () => {
     const source = structuredClone(example) as CanonicalProject
     source.stage.variables = [{ name: 'result', value: '' }]

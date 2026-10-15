@@ -39,6 +39,30 @@ describe('generic Scratch block graph', () => {
     expect(validateScratchBlockGraph(graph)).toEqual([])
   })
 
+  it('skips non-block metadata entries while reporting them during project graph extraction', () => {
+    const result = extractProjectBlockGraphs({
+      targets: [
+        {
+          name: 'Stage',
+          isStage: true,
+          blocks: {
+            valid: { opcode: 'event_whenflagclicked', next: null, parent: null, inputs: {} },
+            legacyMetadata: [13, 'legacy procedure', 'prototype-id', 2562, 85],
+          },
+        },
+      ],
+    })
+
+    expect(Object.keys(result[0].blocks)).toEqual(['valid'])
+    expect(result[0].issues).toContainEqual(
+      expect.objectContaining({
+        code: 'invalid-node-property',
+        blockId: 'legacyMetadata',
+        relatedId: 'opcode',
+      }),
+    )
+  })
+
   it('preserves deterministic generated chains and opaque node data across patches', () => {
     let state = 0x5eed1234
     const nextRandom = () => {

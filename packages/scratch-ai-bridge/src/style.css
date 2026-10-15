@@ -661,6 +661,28 @@ pre {
   white-space: pre-wrap;
   word-break: break-word;
 }
+.project-map {
+  margin-block: 16px;
+  padding: 14px;
+  border: 1px solid #d6deea;
+  border-radius: 11px;
+  background: #f8faff;
+}
+.project-map h3,
+.project-map p {
+  margin-top: 0;
+}
+.project-map li {
+  margin-block: 10px;
+}
+.feedback-details {
+  margin-top: 12px;
+  border-top: 1px solid #d6deea;
+  padding-top: 10px;
+}
+.evidence-link {
+  margin: 2px 6px 4px 0;
+}
 @media (max-width: 820px) {
   .topbar {
     flex-direction: column;

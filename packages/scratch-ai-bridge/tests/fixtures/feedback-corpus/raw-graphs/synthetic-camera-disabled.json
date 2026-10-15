@@ -1,0 +1,9 @@
+[
+  {
+    "targetIndex": 1,
+    "targetName": "Sample sprite",
+    "isStage": false,
+    "blocks": { "cameraExtension": { "opcode": "videoSensing_videoOn", "shadow": false } },
+    "issues": []
+  }
+]

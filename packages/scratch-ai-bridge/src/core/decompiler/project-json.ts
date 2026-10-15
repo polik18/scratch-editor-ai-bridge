@@ -57,6 +57,17 @@ interface RawScratchTarget {
   rotationStyle?: string
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const copyImportedBlockGraph = (value: unknown) => {
+  if (!isRecord(value)) return copyScratchBlockGraph(value)
+  const blocks = Object.fromEntries(
+    Object.entries(value).filter(([, node]) => isRecord(node) && typeof node.opcode === 'string'),
+  )
+  return copyScratchBlockGraph(blocks)
+}
+
 export const MAX_SCRATCH_BLOCKS = 100_000
 export const MAX_SCRATCH_BLOCK_DEPTH = 128
 
@@ -142,8 +153,8 @@ const decodeLists = (raw: Record<string, unknown> = {}): CanonicalList[] =>
   })
 
 const decodeCostumes = (raw: Record<string, unknown>[] = []): CanonicalCostume[] =>
-  raw.map((costume) => ({
-    name: text(costume.name, 'costume'),
+  raw.map((costume, index) => ({
+    name: text(costume.name, '').trim() || `Costume ${index + 1}`,
     dataFormat: text(costume.dataFormat, 'svg') as CanonicalCostume['dataFormat'],
     ...(typeof costume.rotationCenterX === 'number' ? { rotationCenterX: costume.rotationCenterX } : {}),
     ...(typeof costume.rotationCenterY === 'number' ? { rotationCenterY: costume.rotationCenterY } : {}),
@@ -237,7 +248,7 @@ const decodeProcedures = (
   normalizationItems: ProcedureNormalizationItem[],
 ): CanonicalProcedure[] => {
   const targetIdentity = { targetIndex, targetName: target.name, isStage: target.isStage }
-  const blocks = copyScratchBlockGraph(target.blocks ?? {})
+  const blocks = copyImportedBlockGraph(target.blocks ?? {})
   const comments = decodeComments(target)
   const parsed: {
     procedure: CanonicalProcedure
@@ -304,7 +315,7 @@ const decodeProcedures = (
       },
     )
     if (typeof definition.next !== 'string') continue
-    const bodyGraph = copyScratchBlockGraph(blocks)
+    const bodyGraph = copyImportedBlockGraph(blocks)
     for (const block of Object.values(bodyGraph)) block.topLevel = false
     if (Object.hasOwn(bodyGraph, definition.next)) bodyGraph[definition.next].topLevel = true
     procedure.body =
@@ -337,7 +348,7 @@ const decodeTargetScripts = (
   procedures: readonly CanonicalProcedure[],
   normalizationItems: ProcedureNormalizationItem[],
 ) => {
-  const blocks = copyScratchBlockGraph(target.blocks ?? {})
+  const blocks = copyImportedBlockGraph(target.blocks ?? {})
   const comments = decodeComments(target)
   for (const [id, block] of Object.entries(blocks)) {
     if (block.opcode === 'procedures_definition' || block.opcode === 'procedures_prototype') delete blocks[id]
@@ -453,7 +464,7 @@ export interface ProcedureNormalizationReport {
 const inspectProcedureNormalization = (targets: readonly RawScratchTarget[]): ProcedureNormalizationReport => {
   const items: ProcedureNormalizationItem[] = []
   for (const target of targets) {
-    const blocks = copyScratchBlockGraph(target.blocks ?? {})
+    const blocks = copyImportedBlockGraph(target.blocks ?? {})
     for (const [definitionId, definition] of Object.entries(blocks)) {
       if (definition.opcode !== 'procedures_definition') continue
       const customBlockInput = definition.inputs?.custom_block

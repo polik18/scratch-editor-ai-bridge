@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { compileCanonicalProjectToSb3 } from '../../src/core/compiler'
 import example from '../../src/core/ir/examples/03-repeat-score.json'
+import platformerCore from '../../src/core/ir/examples/06-platformer-core.json'
 import { CANONICAL_JSON_MAX_DEPTH, CANONICAL_JSON_MAX_NODES, type CanonicalProject } from '../../src/core/ir/types'
 import { normalizeAiDraft, normalizeAiResponse, parseAiResponse } from '../../src/core/normalizer/ai-draft'
 import { validateCanonicalProject } from '../../src/core/validator/canonical-ir'
@@ -47,6 +49,57 @@ describe('AI draft normalizer', () => {
     expect(normalized.data).toEqual(example)
     expect(normalized.repairs).toEqual([])
     expect(normalized.warnings).toEqual([])
+  })
+
+  it('removes registry shape metadata copied onto nested block JSON', () => {
+    const draft = JSON.parse(JSON.stringify(example)) as Record<string, unknown>
+    draft.meta = { shape: 'project-metadata' }
+    const stage = draft.stage as { scripts: { blocks: Record<string, unknown>[] }[] }
+    const blocks = stage.scripts[0].blocks
+    blocks[0].shape = 'hat'
+    blocks[0].inputs = {
+      CONDITION: {
+        type: 'block',
+        block: { opcode: 'operator_equals', shape: 'boolean', inputs: {} },
+      },
+    }
+
+    const normalized = normalizeAiDraft(draft)
+    const validation = validateCanonicalProject(normalized.data)
+
+    expect(validation.valid).toBe(true)
+    expect(normalized.repairs.filter((repair) => repair.code === 'block-shape-metadata')).toHaveLength(2)
+    const normalizedStage = (normalized.data as { stage: { scripts: { blocks: Record<string, unknown>[] }[] } }).stage
+    const normalizedBlocks = normalizedStage.scripts[0].blocks
+    expect(normalizedBlocks[0]).not.toHaveProperty('shape')
+    const reporter = (normalizedBlocks[0].inputs as { CONDITION: { block: Record<string, unknown> } }).CONDITION.block
+    expect(reporter).not.toHaveProperty('shape')
+    expect((normalized.data as { meta: { shape: string } }).meta.shape).toBe('project-metadata')
+  })
+
+  it('compiles a Gemini-style platformer draft after removing copied shape labels', async () => {
+    const draft = structuredClone(platformerCore) as Record<string, unknown>
+    const markBlocks = (value: unknown): void => {
+      if (Array.isArray(value)) {
+        value.forEach(markBlocks)
+      } else if (typeof value === 'object' && value !== null) {
+        const record = value as Record<string, unknown>
+        if (typeof record.opcode === 'string') record.shape = 'boolean'
+        Object.values(record).forEach(markBlocks)
+      }
+    }
+    markBlocks(draft.stage)
+    markBlocks(draft.sprites)
+
+    const normalized = normalizeAiDraft(draft)
+    const validation = validateCanonicalProject(normalized.data)
+    expect(validation.valid).toBe(true)
+    if (!validation.valid) return
+    expect(validateCanonicalSemantics(validation.data)).toEqual([])
+
+    const archive = await compileCanonicalProjectToSb3(validation.data)
+    expect(archive.size).toBeGreaterThan(0)
+    expect(normalized.repairs.some(({ code }) => code === 'block-shape-metadata')).toBe(true)
   })
 
   it('bounds nested AI project data before recursive normalization', () => {

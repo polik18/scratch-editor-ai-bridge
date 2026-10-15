@@ -1,4 +1,5 @@
 import type { ProjectCompileFailureStage } from '../compiler/compiler'
+import type { RequirementCoverageEntry } from '../normalizer'
 import type { RepairReport } from './report'
 
 export type ValidationCheckStatus = 'passed' | 'failed' | 'review' | 'skipped'
@@ -19,6 +20,7 @@ export interface AiOutputValidationReport {
     readonly scratchVmCompile: ValidationCheckStatus
   }
   readonly repairReport: RepairReport
+  readonly requirementCoverage?: readonly RequirementCoverageEntry[]
 }
 
 export interface CreateAiOutputValidationReportOptions {
@@ -27,6 +29,7 @@ export interface CreateAiOutputValidationReportOptions {
   readonly repairReport: RepairReport
   readonly checks: AiOutputValidationReport['checks']
   readonly compileFailureStage?: ProjectCompileFailureStage | null
+  readonly requirementCoverage?: readonly RequirementCoverageEntry[]
 }
 
 const sha256Text = async (text: string): Promise<string> => {
@@ -43,7 +46,14 @@ const sha256Text = async (text: string): Promise<string> => {
 export const createAiOutputValidationReport = async (
   options: CreateAiOutputValidationReportOptions,
 ): Promise<AiOutputValidationReport> => {
-  const { sourceResponse, canonicalProject, repairReport, checks, compileFailureStage = null } = options
+  const {
+    sourceResponse,
+    canonicalProject,
+    repairReport,
+    checks,
+    compileFailureStage = null,
+    requirementCoverage,
+  } = options
   const canonicalJson = canonicalProject === undefined ? undefined : JSON.stringify(canonicalProject)
   return {
     format: 'scratch-ai-bridge/validation-report',
@@ -55,5 +65,6 @@ export const createAiOutputValidationReport = async (
     compileFailureStage,
     checks,
     repairReport,
+    ...(requirementCoverage ? { requirementCoverage } : {}),
   }
 }

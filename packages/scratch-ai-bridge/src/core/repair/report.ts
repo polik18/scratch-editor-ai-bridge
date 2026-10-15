@@ -34,6 +34,39 @@ export interface RepairReport {
   readonly issues: readonly RepairIssue[]
 }
 
+export interface RepeatedRepairIssue {
+  readonly phase: RepairIssuePhase
+  readonly code: string
+  readonly path: string
+  readonly previousFingerprint: string
+  readonly currentFingerprint: string
+}
+
+const issueFingerprint = (issue: RepairIssue): string =>
+  JSON.stringify([issue.phase, issue.code, issue.path, issue.opcode ?? ''])
+
+export const findRepeatedRepairIssues = (
+  previous: RepairReport | undefined,
+  current: RepairReport,
+): RepeatedRepairIssue[] => {
+  if (!previous) return []
+  const prior = new Map(previous.issues.map((issue) => [issueFingerprint(issue), issue]))
+  return current.issues.flatMap((issue) => {
+    const currentFingerprint = issueFingerprint(issue)
+    const previousIssue = prior.get(currentFingerprint)
+    if (!previousIssue) return []
+    return [
+      {
+        phase: issue.phase,
+        code: issue.code,
+        path: issue.path,
+        previousFingerprint: issueFingerprint(previousIssue),
+        currentFingerprint,
+      },
+    ]
+  })
+}
+
 export interface CreateRepairReportOptions {
   readonly data?: unknown
   readonly repairs?: readonly AiDraftRepair[]
@@ -416,12 +449,14 @@ const semanticSuggestion = (issue: CanonicalSemanticIssue): string => {
     'asset-missing': '從來源專案封存檔還原缺少的素材後重新匯入；不要用佔位素材取代',
     'current-costume-out-of-range': '將 currentCostume 改成現有造型的索引；索引從 0 開始',
     'condition-not-boolean':
-      '改用 operator_equals、operator_gt、operator_lt 或其他 shape=boolean reporter 表達明確條件',
-    'boolean-input-type': '將此 input 改成 shape=boolean 的 reporter block',
+      '改用 operator_equals、operator_gt、operator_lt 或 capability registry 標示為 boolean 的 reporter 表達明確條件；不要在 block JSON 加入 shape 欄位',
+    'boolean-input-type':
+      '將此 input 改成 capability registry 標示為 boolean 的 reporter block；不要在 block JSON 加入 shape 欄位',
     'broadcast-input-type': '使用 {"type":"broadcast","name":"..."} input，並在 broadcasts 宣告同名廣播',
     'hat-not-first': '把事件 hat 移到 script 的第一個 block，或拆成另一個 script',
     'hat-not-top-level': '事件 hat 只能位於 script 第一層的第一個 block',
-    'input-block-shape': '改用 reporter 或 boolean shape 的積木作為 input',
+    'input-block-shape':
+      '依 capability registry 確認此 input 接受的 block 類型；boolean 類型由 opcode 決定，不要在 block JSON 輸出 shape',
     'input-kind': '依 capability registry 改用 literal 或 reporter input',
     'invalid-field-value': '改用 capability registry 列出的 field 值',
     'missing-field': '依 capability registry 補上必要 field，且 field 值必須是純量',
@@ -666,12 +701,14 @@ export const createRepairReport = (options: CreateRepairReportOptions): RepairRe
  * @param report Complete machine-readable diagnostics.
  * @param currentProject Current normalized project, or raw input when parsing failed.
  * @param capabilityGuide Current Canonical IR authoring contract.
+ * @param repeatedIssues - Matching issue fingerprints from the prior attempt.
  * @returns Plain text without Markdown fences.
  */
 export const createRepairPrompt = (
   report: RepairReport,
   currentProject: unknown,
   capabilityGuide: string,
+  repeatedIssues: readonly RepeatedRepairIssue[] = [],
 ): string => {
   const serializedProject =
     typeof currentProject === 'string'
@@ -689,6 +726,14 @@ export const createRepairPrompt = (
 
 可用能力與格式規則：
 ${capabilityGuide}
+
+Canonical IR 欄位優先規則：registry 中的 shape 只描述積木類型，不是 JSON 欄位。每個 block 只能輸出 Canonical IR 定義的欄位；絕不可輸出 shape。boolean 類型由 opcode 決定。
+
+${
+  repeatedIssues.length > 0
+    ? `前一次修正後仍存在 ${repeatedIssues.length} 個相同問題。請優先處理前後 fingerprint 相同的欄位，勿重複上一輪的修法：\n${repeatedIssues.map(({ previousFingerprint, currentFingerprint }) => `- before ${previousFingerprint}\n  after  ${currentFingerprint}`).join('\n')}\n${JSON.stringify(repeatedIssues, null, 2)}\n`
+    : ''
+}
 
 Repair Report:
 ${JSON.stringify(report, null, 2)}

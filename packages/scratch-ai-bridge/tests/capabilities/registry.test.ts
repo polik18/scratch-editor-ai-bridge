@@ -151,6 +151,8 @@ describe('Canonical block capability registry', () => {
     expect(instruction).toContain('platform-hero')
     expect(instruction).toContain('platform-day')
     expect(instruction).toContain('Bridge 會安全加入圖像')
+    expect(instruction).toContain('Canonical IR block 禁止輸出 shape 欄位')
+    expect(instruction).not.toContain('shape=boolean 的 reporter')
   })
 
   it('describes the platform-game authoring slice', () => {

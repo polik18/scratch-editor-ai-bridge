@@ -1,11 +1,61 @@
 import { describe, expect, it } from 'vitest'
-import { analyzeCanonicalProject } from '../../src/core/analyzer'
+import { analyzeCanonicalProject, createProjectMap } from '../../src/core/analyzer'
 import { extractProjectBlockGraphs } from '../../src/core/graph'
 import broadcastExample from '../../src/core/ir/examples/04-broadcast-flow.json'
 import fullEntitiesExample from '../../src/core/ir/examples/05-full-entities.json'
 import type { CanonicalProject } from '../../src/core/ir/types'
 
 describe('analysis IR', () => {
+  it('creates grounded project facts with stable raw block evidence and separate coverage', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    const rawGraphs = [
+      {
+        targetIndex: 0,
+        targetName: 'Stage',
+        isStage: true,
+        blocks: {
+          green: { opcode: 'event_whenflagclicked', shadow: false },
+          unknown: { opcode: 'thirdparty_sensor_read', shadow: false },
+        },
+        issues: [{ code: 'missing-block' as const, blockId: 'unknown', message: 'missing link' }],
+      },
+    ]
+    const mappings = [
+      {
+        irPath: '/stage/scripts/0/blocks/0',
+        blockId: 'green',
+        opcode: 'event_whenflagclicked',
+        targetIndex: 0,
+        targetName: 'Stage',
+        isStage: true,
+      },
+    ]
+
+    const result = createProjectMap(project, analyzeCanonicalProject(project, rawGraphs), rawGraphs, mappings)
+
+    expect(result.format).toBe('scratch-ai-bridge/project-map')
+    expect(result.facts).toContainEqual(
+      expect.objectContaining({
+        kind: 'trigger',
+        claim: '按下綠旗時，角色「Stage」開始執行這段程式。',
+        evidence: [expect.objectContaining({ blockId: 'green', opcode: 'event_whenflagclicked' })],
+      }),
+    )
+    expect(result.facts.some(({ claim }) => claim.includes('目前未識別'))).toBe(true)
+    expect(result.evidence).toContainEqual(
+      expect.objectContaining({ blockId: 'unknown', opcode: 'thirdparty_sensor_read', scriptIndex: null }),
+    )
+    expect(result.coverage).toMatchObject({
+      roundTrip: 'not-run',
+      importedBlocks: 2,
+      opaqueBlocks: 1,
+      malformedGraphIssues: 1,
+    })
+    expect(result.facts.every(({ confidence, evidence }) => confidence === 'limited' || evidence.length > 0)).toBe(
+      true,
+    )
+  })
+
   it('summarizes scripts and broadcast dependencies', () => {
     const result = analyzeCanonicalProject(broadcastExample as CanonicalProject)
     expect(result.summary.scripts).toBe(2)
