@@ -642,7 +642,7 @@ export const createRepairReport = (options: CreateRepairReportOptions): RepairRe
       path: '/',
       message: errorMessage(options.parseError),
       expected: 'one complete scratch-ai-bridge/canonical-ir v1 JSON root object',
-      suggestion: '只回傳一個完整 Canonical IR JSON 根物件，不要 Markdown、Python、說明或多個候選版本',
+      suggestion: '先修復錯誤位置附近的 JSON 語法（逗號、括號或字串逸出），只改語法，不要重寫遊戲邏輯',
     })
   }
 
@@ -710,6 +710,20 @@ export const createRepairPrompt = (
   capabilityGuide: string,
   repeatedIssues: readonly RepeatedRepairIssue[] = [],
 ): string => {
+  const parseIssue = report.issues.find((issue) => issue.phase === 'parse')
+  if (parseIssue && typeof currentProject === 'string') {
+    const sourceResponse = sanitizeSensitiveText(currentProject)
+    const responseEnvelope = /"format"\s*:\s*"scratch-ai-bridge\/ai-response"/u.test(sourceResponse)
+    return `上一版回覆在 JSON 解析階段就失敗，Bridge 尚未檢查或修改作品積木。錯誤訊息：${parseIssue.message}
+
+請只修復下方原文的 JSON 語法錯誤，保留所有角色、素材、積木、變數、需求覆蓋資料及其值，不要重新設計、刪減或改寫遊戲邏輯，也不要新增積木。特別檢查錯誤位置附近的逗號、方括號、大括號與字串逸出。
+${responseEnvelope ? '原文使用 scratch-ai-bridge/ai-response 外層格式；請保留 format、version、project 與 requirementCoverage 欄位。project 內才是 Canonical IR。' : '原文使用 scratch-ai-bridge/canonical-ir 根物件；請保留其 format、version 與完整專案欄位。'}
+只輸出一份完整且可解析的 JSON，不要 Markdown、說明或多個候選版本。
+
+需要修復的完整原文：
+${sourceResponse}`
+  }
+
   const serializedProject =
     typeof currentProject === 'string'
       ? sanitizeSensitiveText(currentProject)
