@@ -337,6 +337,7 @@ export const createProjectMap = (
     }
     for (const issue of graph.issues) {
       const existing = evidence.find((entry) => entry.blockId === issue.blockId)
+      const issueBlock = graph.blocks[issue.blockId]
       const source =
         existing ??
         ({
@@ -346,7 +347,9 @@ export const createProjectMap = (
           targetIndex: targetIndex < 0 ? graph.targetIndex : targetIndex,
           scriptIndex: null,
           blockId: issue.blockId,
-          opcode: graph.blocks[issue.blockId].opcode,
+          // Invalid graph entries are intentionally omitted from `graph.blocks`.
+          // Keep their diagnostic evidence without dereferencing a missing node.
+          opcode: issueBlock?.opcode ?? 'unknown',
           path: `/targets/${graph.targetIndex}/blocks/${pointerPart(issue.blockId)}`,
         } satisfies ProjectEvidence)
       if (!existing) evidence.push(source)
