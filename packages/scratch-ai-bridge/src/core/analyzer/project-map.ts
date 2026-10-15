@@ -337,7 +337,7 @@ export const createProjectMap = (
     }
     for (const issue of graph.issues) {
       const existing = evidence.find((entry) => entry.blockId === issue.blockId)
-      const issueBlock = graph.blocks[issue.blockId]
+      const issueBlock = Object.entries(graph.blocks).find(([blockId]) => blockId === issue.blockId)?.[1]
       const source =
         existing ??
         ({

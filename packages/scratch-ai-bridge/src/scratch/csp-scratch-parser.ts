@@ -65,7 +65,9 @@ const normalizeNonstandardMetadata = async (project: ScratchProject, zip: JSZip 
           (candidate): candidate is string => typeof candidate === 'string' && zip.file(candidate) !== null,
         )
         if (!source) continue
-        const bytes = await zip.file(source)!.async('uint8array')
+        const sourceFile = zip.file(source)
+        if (!sourceFile) continue
+        const bytes = await sourceFile.async('uint8array')
         const normalizedId = bytesToHex(md5(bytes))
         const normalizedPath = `${normalizedId}.${dataFormat}`
         zip.file(normalizedPath, bytes)
