@@ -668,6 +668,26 @@ pre {
   border-radius: 11px;
   background: #f8faff;
 }
+.project-score {
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid #b7c8e6;
+  border-radius: 10px;
+  background: #fff;
+}
+.project-score h3 {
+  margin: 0 0 8px;
+}
+.project-score ol,
+.project-score ul {
+  padding-inline-start: 22px;
+}
+.project-score li {
+  margin-block: 10px;
+}
+.project-score li p {
+  margin: 4px 0;
+}
 .project-map h3,
 .project-map p {
   margin-top: 0;

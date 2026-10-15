@@ -6,10 +6,12 @@ import {
   analyzeCanonicalProject,
   createProjectFeedback,
   createProjectMap,
+  createProjectScore,
   type AnalysisIR,
   type ProjectEvidence,
   type ProjectFeedback,
   type ProjectMap,
+  type ProjectScore,
 } from './core/analyzer'
 import {
   exportLosslessSb3,
@@ -38,7 +40,7 @@ import {
   parseAiResponse,
   type RequirementCoverageEntry,
 } from './core/normalizer'
-import { createAnalysisPrompt, type TutorMode } from './core/prompt'
+import { createAnalysisPrompt, createScoringFeedbackPrompt, type TutorMode } from './core/prompt'
 import {
   createAiOutputValidationReport,
   createRepairPrompt,
@@ -313,6 +315,13 @@ app.innerHTML = `
           <div id="stats" class="stats muted">尚未載入專案</div>
           <div id="diagnostics" class="diagnostics"></div>
           <section aria-labelledby="project-map-title" class="project-map">
+            <section class="project-score" aria-labelledby="project-score-title">
+              <h3 id="project-score-title">依 SB3 檔案估算作品分數</h3>
+              <p id="project-score-summary" class="muted">只分析檔案中可讀的程式結構；作品不會上傳。</p>
+              <ol id="project-score-criteria"></ol>
+              <ul id="project-score-limits"></ul>
+              <button id="copy-scoring-prompt" class="button secondary" disabled>複製評分回饋提示給 Gemini</button>
+            </section>
             <h3 id="project-map-title">作品目前看得出的行為</h3>
             <p id="project-map-coverage" class="muted">載入作品後顯示有積木依據的觀察與分析限制。</p>
             <ul id="project-map-facts"></ul>
@@ -1476,6 +1485,7 @@ let canonical: CanonicalProject | null = null
 let analysis: AnalysisIR | null = null
 let projectMap: ProjectMap | null = null
 let projectFeedback: ProjectFeedback | null = null
+let projectScore: ProjectScore | null = null
 let procedureNormalizationReport: ProcedureNormalizationReport | null = null
 let vmNormalizationReport: VmNormalizationReport | null = null
 let vmNormalizationGeneration = 0
@@ -1492,6 +1502,10 @@ const projectMapCoverage = byId<HTMLParagraphElement>('project-map-coverage')
 const projectMapFacts = byId<HTMLUListElement>('project-map-facts')
 const projectFeedbackItems = byId<HTMLUListElement>('project-feedback-items')
 const projectFeedbackLimits = byId<HTMLUListElement>('project-feedback-limits')
+const projectScoreSummary = byId<HTMLParagraphElement>('project-score-summary')
+const projectScoreCriteria = byId<HTMLOListElement>('project-score-criteria')
+const projectScoreLimits = byId<HTMLUListElement>('project-score-limits')
+const copyScoringPrompt = byId<HTMLButtonElement>('copy-scoring-prompt')
 const downloadAnonymousFeedback = byId<HTMLButtonElement>('download-anonymous-feedback')
 const feedbackExportStatus = byId<HTMLSpanElement>('feedback-export-status')
 const feedbackRatings = new Map<string, 'helpful' | 'inaccurate' | 'not-my-goal'>()
@@ -1551,9 +1565,36 @@ downloadAnonymousFeedback.addEventListener('click', () => {
 })
 
 const renderAnalysis = () => {
-  if (!canonical || !analysis || !projectMap || !projectFeedback) return
+  if (!canonical || !analysis || !projectMap || !projectFeedback || !projectScore) return
   const currentProjectMap = projectMap
   const summary = analysis.summary
+  projectScoreSummary.textContent = `暫定作品分數：${projectScore.total}/${projectScore.max}（SB3 分析覆蓋 ${projectScore.coverage}%）。這不是學生能力分數，也不代表作品已執行。`
+  projectScoreCriteria.replaceChildren(
+    ...projectScore.criteria.map((criterion) => {
+      const item = document.createElement('li')
+      const heading = document.createElement('strong')
+      heading.textContent = `${criterion.title}：${criterion.score}/${criterion.points} 分`
+      const detail = document.createElement('p')
+      detail.textContent = criterion.explanation
+      item.append(heading, detail)
+      for (const evidenceId of criterion.evidenceIds.slice(0, 4)) {
+        const source = currentProjectMap.evidence.find(({ id }) => id === evidenceId)
+        if (!source) continue
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'button secondary evidence-link'
+        button.textContent = `查看 ${source.targetIndex === 0 ? '舞台' : `角色 ${source.targetIndex}`} 程式 ${source.scriptIndex === null ? '原始積木圖' : source.scriptIndex + 1}`
+        button.addEventListener('click', () => focusProjectEvidence(source))
+        item.append(button)
+      }
+      return item
+    }),
+  )
+  projectScoreLimits.replaceChildren(...projectScore.limits.map((limit) => {
+    const item = document.createElement('li')
+    item.textContent = limit
+    return item
+  }))
   stats.classList.remove('muted')
   stats.innerHTML = [
     ['角色', summary.sprites],
@@ -1749,6 +1790,8 @@ const renderAnalysis = () => {
 
 const analyzeFile = async (file: File) => {
   vmNormalizationGeneration += 1
+  projectScore = null
+  copyScoringPrompt.disabled = true
   rawArchive = null
   feedbackRatings.clear()
   downloadAnonymousFeedback.disabled = true
@@ -1776,6 +1819,8 @@ const analyzeFile = async (file: File) => {
     analysis = analyzeCanonicalProject(canonical, decompiled.rawBlockGraphs)
     projectMap = createProjectMap(canonical, analysis, decompiled.rawBlockGraphs, decompiled.canonicalBlockMappings)
     projectFeedback = createProjectFeedback(analysis, projectMap)
+    projectScore = createProjectScore(canonical, analysis, projectMap)
+    copyScoringPrompt.disabled = false
     renderAnalysis()
     const warning = decompiled.archiveWarnings.length > 0 ? `（${decompiled.archiveWarnings.join('；')}）` : ''
     setStatus(
@@ -1788,6 +1833,8 @@ const analyzeFile = async (file: File) => {
     analysis = null
     projectMap = null
     projectFeedback = null
+    projectScore = null
+    copyScoringPrompt.disabled = true
     procedureNormalizationReport = null
     canonicalBlockMappings = []
     rawArchive = null
@@ -1875,6 +1922,14 @@ copyPrompt.addEventListener('click', () => {
     .catch((error) => {
       setStatus(fileStatus, error instanceof Error ? error.message : String(error), 'error')
     })
+})
+copyScoringPrompt.addEventListener('click', () => {
+  if (!projectMap || !projectScore) return
+  const prompt = createScoringFeedbackPrompt(projectScore, projectMap)
+  void navigator.clipboard
+    .writeText(prompt)
+    .then(() => setStatus(fileStatus, '已複製匿名評分依據與學生回饋提示；請檢視後再貼到 Gemini。', 'ok'))
+    .catch((error) => setStatus(fileStatus, error instanceof Error ? error.message : String(error), 'error'))
 })
 copyPreservationPrompt.addEventListener('click', () => {
   if (!rawArchive) return

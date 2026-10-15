@@ -1,5 +1,13 @@
 # Scratch AI Bridge implementation status
 
+## 2026-10-15 — SB3-only scoring first implementation
+
+Implemented the first local scoring slice: `createProjectScore()` returns a repeatable `sb3-static-v1` 100-point result with six criterion scores, evidence IDs, import coverage, and static-analysis limits. The Analyze UI now shows the total and per-criterion evidence links. A separate copy action creates a Gemini coaching prompt that carries the fixed score and anonymized evidence; Gemini is instructed not to change the score or invent runtime/test results. No SB3, costume/sound bytes, or original sprite names are included in the copied packet. Unknown blocks are reported as a coverage limitation. This remains a provisional rule-based estimate: tests, lint/build, teacher calibration, and student usability review were not run in this task.
+
+## 2026-10-15 — SB3-only student scoring plan
+
+Defined a proposed 100-point rubric that uses only evidence inside the uploaded `.sb3`: observable project behavior/structure (25), program logic and flow (25), state/data use when applicable (15), interaction/feedback design (15), statically verifiable integrity/risk (15), and script organization/readability (5). It does not require an assignment prompt, questionnaire, test log, or reflection. Testing, runtime stability, student understanding, creativity, and aesthetics are excluded because the SB3 alone cannot establish them. Every score must cite project evidence; unsupported blocks reduce analysis coverage confidence and are not treated as student errors. Bridge computes the score deterministically; Gemini only explains the supplied score/evidence. This is a design proposal, not implemented or teacher-calibrated.
+
 ## 基線與回復狀態
 
 本工程以完整 `scratch-editor` monorepo 為基底。`scratch-gui`、`scratch-vm`、`scratch-paint`、`scratch-render`、`scratch-storage` 與其他既有 workspace 均保留；直接使用版只放在根目錄 `ready-to-use/`，不再取代工程本體。
