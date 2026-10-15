@@ -20,8 +20,8 @@ The Vite build uses relative asset URLs, so both user sites and project sites su
 
 ## Current public deployment evidence
 
-The public Pages URL is `https://polik18.github.io/scratch-editor-ai-bridge/`. The latest successful deployment remains
-run `37132144623` for `main` at source SHA `e814add96a5ee243f15a1626821e61f1afe270c2` (2026-10-03); its
+The public Pages URL is `https://polik18.github.io/scratch-editor-ai-bridge/`. The feedback release was deployed by
+run `38668384921` for `main` at source SHA `4caeb86bf1558269431818eab0148b7a2e13e266` (2026-10-15); its
 `github-pages` deployment status records the same environment URL. The authenticated Pages settings API reports
 `build_type: workflow`, source `main`/`/`, and the expected URL; nullable `status` is not a failure signal for Actions mode.
 
@@ -43,12 +43,10 @@ on two direct requests and in `verify-deployed-pages.mjs`; the title, app mount,
 7,356-byte stylesheet all passed. At that check, the public Actions API showed `main` at
 `e814add96a5ee243f15a1626821e61f1afe270c2`; this remains the deployed source SHA.
 
-The current public page was rechecked on 2026-10-15: it returns HTTP 200 and still serves the October 3 assets; the new
-service worker returns 404, confirming that the candidate has not been published. The current local production build
-succeeds with relative asset paths, a complete `dist/` artifact, and `service-worker.js` for offline reload. Running the
-strengthened verifier against the live old deployment therefore fails at that worker URL, as expected. After the next
-authorized deployment, the verifier will require the worker to be served beneath the repository Pages path with the
-precache and offline-navigation fallback code.
+The 2026-10-15 deployment run `38668384921` passed its build and native Safari jobs, then deployed successfully. The public
+page verifier passed against the deployed URL: HTTP 200, expected title and app mount, all same-path JavaScript/CSS assets,
+and `/scratch-editor-ai-bridge/service-worker.js` (3,343 bytes) with precache and offline-navigation fallback. This verifies
+the hosted release gates and serving path; student usability sessions and hardware validation remain separate open work.
 
 For post-deployment verification, resolve the URL from the `github-pages` deployment environment first, then the configured
 Pages URL or repository metadata. Ask the user for a URL only when those sources do not identify one; the verifier should
@@ -105,9 +103,9 @@ and all script/style URLs under the Pages path; a failed response or unexpected 
 The latest recorded sequential whole-monorepo `npm test` and `npm run build` both exit 0 on 2026-10-14; Bridge passes
 410/410 across 32 files, VM 3,872/3,872, GUI Selenium 127 passed/7 skipped, and GUI Playwright 8/8. The earlier concurrent
 test/build attempt failed two GUI Selenium cases because the GUI build was cleaning its shared output directory; the
-sequential rerun passed after build completion. The hosted candidate run on 2026-10-15 independently passed Bridge tests and
-all browser, Safari, and Linux PSS release gates. Neither local nor candidate evidence shows that the candidate has been
-published; deployed-page functional verification remains pending.
+sequential rerun passed after build completion. The deployed `main` run `38668384921` passed Bridge tests, browser and
+Linux PSS release gates, native Safari, and post-deployment asset/service-worker verification. Student usability, hardware
+validation, dependency-owner triage, rollback drill, and final L1/L2/L3 release decision remain open.
 
 ## Runtime protections
 
