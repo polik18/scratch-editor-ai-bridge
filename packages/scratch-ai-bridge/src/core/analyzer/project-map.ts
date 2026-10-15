@@ -11,6 +11,7 @@ export interface ProjectEvidence {
   readonly scriptIndex: number | null
   readonly blockId?: string
   readonly opcode: string
+  readonly studentLabel: string
   readonly path: string
 }
 
@@ -94,6 +95,119 @@ const nestedBlocks = (block: CanonicalBlock): { block: CanonicalBlock; suffix: s
 
 const literalValue = (input: CanonicalInput | undefined): string | number | boolean | undefined =>
   input?.type === 'literal' ? input.value : undefined
+
+const numericLiteralValue = (input: CanonicalInput | undefined): number | undefined => {
+  const value = literalValue(input)
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string' && /^-?\d+(?:\.\d+)?$/.test(value)) return Number(value)
+  return undefined
+}
+
+const safeNumber = (input: CanonicalInput | undefined): string => {
+  if (!input) return '未提供數字'
+  if (input.type === 'variable') return '由變數提供'
+  if (input.type === 'block') return '由其他積木決定'
+  if (input.type !== 'literal') return '內容已隱去'
+  const value = literalValue(input)
+  const number = numericLiteralValue(input)
+  if (number !== undefined) return String(value)
+  return '文字內容已隱去'
+}
+
+const safeKeyName = (value: unknown): string => {
+  const key = String(value ?? '').toLocaleLowerCase()
+  if (key === 'space') return '空白鍵'
+  if (key === 'up arrow') return '向上鍵'
+  if (key === 'down arrow') return '向下鍵'
+  if (key === 'left arrow') return '向左鍵'
+  if (key === 'right arrow') return '向右鍵'
+  if (key === 'any') return '任意按鍵'
+  return /^[a-z0-9]$/.test(key) ? `${key} 鍵` : '指定按鍵'
+}
+
+const xPositionHint = (input: CanonicalInput | undefined): string => {
+  const x = numericLiteralValue(input)
+  if (x === undefined) return ''
+  if (x > 0) return '（在舞台中線右邊）'
+  if (x < 0) return '（在舞台中線左邊）'
+  return '（在舞台正中間）'
+}
+
+const xMovementHint = (input: CanonicalInput | undefined): string => {
+  const dx = numericLiteralValue(input)
+  if (dx === undefined) return ''
+  if (dx > 0) return '（往右移）'
+  if (dx < 0) return '（往左移）'
+  return '（不會左右移動）'
+}
+
+const studentBlockLabel = (block: CanonicalBlock): string => {
+  const inputs = block.inputs ?? {}
+  switch (block.opcode) {
+    case 'event_whenflagclicked':
+      return '當綠旗被點擊'
+    case 'event_whenkeypressed':
+      return `當按下${safeKeyName(block.fields?.KEY_OPTION)}`
+    case 'event_whenbroadcastreceived':
+      return '當收到角色訊息'
+    case 'event_whenthisspriteclicked':
+      return '當這個角色被點擊'
+    case 'event_whenstageclicked':
+      return '當舞台被點擊'
+    case 'control_start_as_clone':
+      return '當分身建立'
+    case 'motion_gotoxy':
+      return `定位到 x：${safeNumber(inputs.X)}、y：${safeNumber(inputs.Y)}${xPositionHint(inputs.X)}`
+    case 'motion_setx':
+      return `把 x 設成 ${safeNumber(inputs.X)}${xPositionHint(inputs.X)}`
+    case 'motion_sety':
+      return `把 y 設成 ${safeNumber(inputs.Y)}`
+    case 'motion_changexby':
+      return `x 改變 ${safeNumber(inputs.DX)}${xMovementHint(inputs.DX)}`
+    case 'motion_changeyby':
+      return `y 改變 ${safeNumber(inputs.DY)}`
+    case 'motion_movesteps':
+      return `移動 ${safeNumber(inputs.STEPS)} 步`
+    case 'looks_say':
+      return '顯示對話'
+    case 'control_forever':
+      return '重複執行裡面的積木'
+    case 'control_repeat':
+      return `重複 ${safeNumber(inputs.TIMES)} 次`
+    case 'control_if':
+      return '如果條件成立，就執行裡面的積木'
+    case 'control_if_else':
+      return '依照條件選擇要執行的積木'
+    case 'control_wait':
+      return `等待 ${safeNumber(inputs.DURATION)} 秒`
+    case 'data_setvariableto':
+      return `把一個變數設成 ${safeNumber(inputs.VALUE)}`
+    case 'data_changevariableby':
+      return `改變一個變數 ${safeNumber(inputs.VALUE)}`
+    case 'sensing_touchingobject':
+      return '看看有沒有碰到另一個角色'
+    case 'event_broadcast':
+      return '送出角色訊息'
+    case 'operator_equals':
+      return '比較兩個值是否相同'
+    case 'operator_gt':
+      return '比較左邊的數字是否比較大'
+    case 'operator_lt':
+      return '比較左邊的數字是否比較小'
+    case 'operator_and':
+      return '兩個情況都要符合'
+    case 'operator_or':
+      return '兩個情況至少一個符合'
+    case 'operator_not':
+      return '把結果反過來看'
+    case 'sensing_keypressed':
+      return '檢查有沒有按下按鍵'
+    case 'procedures_call':
+      return '執行一個自己做的積木'
+    default:
+      return '其他 Scratch 積木'
+  }
+}
 
 const triggerText = (block: CanonicalBlock): string | undefined => {
   if (block.opcode === 'event_whenflagclicked') return '按下綠旗時'
@@ -213,6 +327,7 @@ export const createProjectMap = (
           scriptIndex,
           ...(rawId ? { blockId: rawId } : {}),
           opcode: block.opcode,
+          studentLabel: studentBlockLabel(block),
           path,
         } satisfies ProjectEvidence
       })
@@ -286,6 +401,7 @@ export const createProjectMap = (
               scriptIndex,
               blockId: source,
               opcode: unknown?.opcode ?? 'unknown',
+              studentLabel: '目前無法解讀的積木',
               path: `${scriptPath}/blocks/${source}`,
             } satisfies ProjectEvidence)
           : undefined
@@ -323,6 +439,7 @@ export const createProjectMap = (
         scriptIndex: null,
         blockId,
         opcode: block.opcode,
+        studentLabel: '目前無法解讀的擴充積木',
         path: `/targets/${graph.targetIndex}/blocks/${pointerPart(blockId)}`,
       }
       evidence.push(source)
@@ -350,6 +467,7 @@ export const createProjectMap = (
           // Invalid graph entries are intentionally omitted from `graph.blocks`.
           // Keep their diagnostic evidence without dereferencing a missing node.
           opcode: issueBlock?.opcode ?? 'unknown',
+          studentLabel: '目前無法解讀的積木',
           path: `/targets/${graph.targetIndex}/blocks/${pointerPart(issue.blockId)}`,
         } satisfies ProjectEvidence)
       if (!existing) evidence.push(source)

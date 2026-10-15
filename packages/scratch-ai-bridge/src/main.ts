@@ -344,11 +344,11 @@ app.innerHTML = `
         <article class="card wide">
           <h2>3. 請 AI 協助</h2>
           <div class="analysis-controls">
-            <label>你想了解什麼？ <input id="question" type="text" placeholder="例如：為什麼角色沒有收到廣播？"></label>
+            <label>你想了解什麼？ <input id="question" type="text" placeholder="例如：為什麼按下綠旗後角色沒有動？"></label>
             <label>回答方式 <select id="tutor-mode"><option value="student">給學生提示</option><option value="teacher">給老師建議</option></select></label>
             <label>提示程度 <select id="hint-level"><option value="1">簡短提示</option><option value="2" selected>逐步引導</option><option value="3">詳細說明</option><option value="4">完整解法</option></select></label>
           </div>
-          <div class="button-row"><button id="copy-prompt" class="button primary" disabled>複製問題給 AI</button><button id="preview-imported-project" class="button secondary" disabled>預覽匯入作品</button></div>
+          <div class="button-row"><button id="copy-prompt" class="button primary" disabled>複製學習提示給 AI</button><button id="preview-imported-project" class="button secondary" disabled>預覽匯入作品</button></div>
           <details class="advanced-tools">
             <summary>查看教師／技術資料</summary>
             <div class="button-row"><button id="download-original-sb3" class="button secondary" disabled>下載保留原始資料副本 .sb3</button><button id="normalize-vm-sb3" class="button secondary" disabled>VM 正規化並下載 .sb3</button><button id="download-vm-normalization-report" class="button secondary" disabled>下載 VM 差異報告.json</button><button id="download-canonical" class="button secondary" disabled>下載 Canonical IR</button><button id="download-analysis" class="button secondary" disabled>下載 Analysis IR</button><button id="download-procedure-report" class="button secondary" disabled>下載程序正規化報告</button><button id="download-block-mapping" class="button secondary" disabled>下載 Canonical／Scratch 積木對照表</button></div>
@@ -1564,6 +1564,11 @@ const focusProjectEvidence = (source: ProjectEvidence): void => {
   evidenceTarget?.focus()
 }
 
+const evidenceLocationLabel = (source: ProjectEvidence): string =>
+  source.scriptIndex === null
+    ? `查看「${source.targetName}」中尚未解讀的積木`
+    : `查看「${source.targetName}」的第 ${source.scriptIndex + 1} 段程式`
+
 targetScriptFilter.addEventListener('input', filterTargetScriptList)
 
 downloadAnonymousFeedback.addEventListener('click', () => {
@@ -1595,7 +1600,7 @@ const renderAnalysis = () => {
         const button = document.createElement('button')
         button.type = 'button'
         button.className = 'button secondary evidence-link'
-        button.textContent = `查看 ${source.targetIndex === 0 ? '舞台' : `角色 ${source.targetIndex}`} 程式 ${source.scriptIndex === null ? '原始積木圖' : source.scriptIndex + 1}`
+        button.textContent = evidenceLocationLabel(source)
         button.addEventListener('click', () => focusProjectEvidence(source))
         item.append(button)
       }
@@ -1654,10 +1659,7 @@ const renderAnalysis = () => {
         const button = document.createElement('button')
         button.type = 'button'
         button.className = 'button secondary evidence-link'
-        button.textContent =
-          source.scriptIndex === null
-            ? `查看 ${source.targetName} 原始積木圖${source.blockId ? `（積木 ${source.blockId}）` : ''}`
-            : `查看 ${source.targetName} 的程式 ${source.scriptIndex + 1}${source.blockId ? `（積木 ${source.blockId}）` : ''}`
+        button.textContent = evidenceLocationLabel(source)
         button.addEventListener('click', () => {
           focusProjectEvidence(source)
         })
@@ -1688,10 +1690,7 @@ const renderAnalysis = () => {
           const button = document.createElement('button')
           button.type = 'button'
           button.className = 'button secondary evidence-link'
-          button.textContent =
-            source.scriptIndex === null
-              ? `查看 ${source.targetName} 原始積木圖${source.blockId ? `（積木 ${source.blockId}）` : ''}`
-              : `查看 ${source.targetName} 的程式 ${source.scriptIndex + 1}${source.blockId ? `（積木 ${source.blockId}）` : ''}`
+          button.textContent = evidenceLocationLabel(source)
           button.addEventListener('click', () => {
             focusProjectEvidence(source)
           })
@@ -1739,24 +1738,24 @@ const renderAnalysis = () => {
       const heading = document.createElement('summary')
       heading.textContent = `${target.kind === 'stage' ? '舞台' : '角色'}：${target.name}`
       const summary = document.createElement('p')
-      summary.textContent = `${target.scripts.length} 組程式 · ${target.procedures.length} 個自訂積木`
+      summary.textContent = `${target.scripts.length} 段程式${
+        target.procedures.length > 0 ? ` · ${target.procedures.length} 個自己做的積木` : ''
+      }`
       section.append(heading, summary)
       if (target.scripts.length > 0) {
         const list = document.createElement('ol')
-        target.scripts.forEach((script, index) => {
+        target.scripts.forEach((_, index) => {
           const item = document.createElement('li')
           item.id = `target-script-${targetIndex}-script-${index}`
           item.tabIndex = -1
-          item.textContent = `程式 ${index + 1}（${script.blocks.length} 個頂層積木）`
+          item.textContent = `程式 ${index + 1}`
           const scriptEvidence = currentProjectMap.evidence.filter(
             (entry) => entry.targetIndex === targetIndex && entry.scriptIndex === index,
           )
           if (scriptEvidence.length > 0) {
             const source = document.createElement('small')
-            source.textContent = `積木依據：${scriptEvidence
-              .slice(0, 8)
-              .map(({ blockId, opcode }) => `${blockId ?? 'IR'} ${opcode}`)
-              .join('、')}${scriptEvidence.length > 8 ? `；另有 ${scriptEvidence.length - 8} 個` : ''}`
+            const labels = scriptEvidence.slice(0, 6).map(({ studentLabel }) => studentLabel)
+            source.textContent = `這段程式：${labels.join('，')}${scriptEvidence.length > labels.length ? '，以及其他積木' : ''}`
             item.append(source)
           }
           list.append(item)
@@ -1778,7 +1777,7 @@ const renderAnalysis = () => {
           const rawItem = document.createElement('li')
           rawItem.id = `raw-block-${targetIndex}-${encodeURIComponent(source.blockId ?? source.id)}`
           rawItem.tabIndex = -1
-          rawItem.textContent = `原始積木 ${source.blockId ?? '未知 ID'}：${source.opcode}（尚未對應到可解讀腳本）`
+          rawItem.textContent = `第 ${rawEvidence.indexOf(source) + 1} 個積木目前無法解讀；它的效果需要在 Scratch 原始作品中確認。`
           rawList.append(rawItem)
         }
         section.append(rawList)
@@ -1932,7 +1931,9 @@ copyPrompt.addEventListener('click', () => {
         question,
       }),
     )
-    .then(() => setStatus(fileStatus, '已複製精簡 evidence packet（不含素材內容）；可以貼到 AI 對話。', 'ok'))
+    .then(() =>
+      setStatus(fileStatus, '已複製助教提示和匿名作品線索；貼到 AI 對話，就能取得一個提示和一個小步驟。', 'ok'),
+    )
     .catch((error) => {
       setStatus(fileStatus, error instanceof Error ? error.message : String(error), 'error')
     })
