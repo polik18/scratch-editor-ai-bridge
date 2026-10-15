@@ -115,7 +115,8 @@ const safeNumber = (input: CanonicalInput | undefined): string => {
 }
 
 const safeKeyName = (value: unknown): string => {
-  const key = String(value ?? '').toLocaleLowerCase()
+  if (typeof value !== 'string') return '指定按鍵'
+  const key = value.toLocaleLowerCase()
   if (key === 'space') return '空白鍵'
   if (key === 'up arrow') return '向上鍵'
   if (key === 'down arrow') return '向下鍵'
