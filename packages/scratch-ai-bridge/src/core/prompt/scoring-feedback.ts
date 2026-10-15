@@ -1,6 +1,11 @@
 import type { ProjectMap, ProjectScore } from '../analyzer'
 
-/** Build a student-facing Gemini prompt from the local score and anonymized evidence. */
+/**
+ * Build a student-facing Gemini prompt from the local score and anonymized evidence.
+ * @param score - Locally calculated rubric and evidence references.
+ * @param map - Project facts used to explain the score.
+ * @returns A student-focused prompt with an anonymized, bounded packet.
+ */
 export const createScoringFeedbackPrompt = (score: ProjectScore, map: ProjectMap): string => {
   const referenced = new Set(score.criteria.flatMap(({ evidenceIds }) => evidenceIds))
   const evidence = map.evidence
@@ -12,8 +17,18 @@ export const createScoringFeedbackPrompt = (score: ProjectScore, map: ProjectMap
       script: item.scriptIndex === null ? null : item.scriptIndex + 1,
       opcode: item.opcode,
     }))
-  const evidenceIds = new Map(map.evidence.filter(({ id }) => referenced.has(id)).slice(0, 48).map((item, index) => [item.id, `E${index + 1}`]))
-  const anonymousNames = new Map(map.evidence.map(({ targetName, targetIndex }) => [targetName, targetIndex === 0 ? '舞台' : `角色 ${targetIndex}`]))
+  const evidenceIds = new Map(
+    map.evidence
+      .filter(({ id }) => referenced.has(id))
+      .slice(0, 48)
+      .map((item, index) => [item.id, `E${index + 1}`]),
+  )
+  const anonymousNames = new Map(
+    map.evidence.map(({ targetName, targetIndex }) => [
+      targetName,
+      targetIndex === 0 ? '舞台' : `角色 ${targetIndex}`,
+    ]),
+  )
   const observations = map.facts.slice(0, 24).map((fact) => {
     let claim = fact.claim
     for (const [target, anonymous] of [...anonymousNames].sort(([a], [b]) => b.length - a.length))

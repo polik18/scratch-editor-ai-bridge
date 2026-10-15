@@ -1,5 +1,9 @@
 # Scratch AI Bridge implementation status
 
+## 2026-10-15 — CLI/agent/class-batch plan
+
+Added `docs/cli-agent-plan.md`: the CLI should itself analyze, score and produce student-friendly evidence-based feedback offline, while coding agents invoke it directly without manual copy/paste or a Gemini-specific integration. Scope also includes agent-authored Canonical IR validation/compilation to SB3, safe patching of existing SB3, JSON/JSONL/Markdown output, and anonymous whole-class batch reports. Plan only; CLI implementation has not started.
+
 ## 2026-10-15 — SB3-only scoring first implementation
 
 Implemented the first local scoring slice: `createProjectScore()` returns a repeatable `sb3-static-v1` 100-point result with six criterion scores, evidence IDs, import coverage, and static-analysis limits. The Analyze UI now shows the total and per-criterion evidence links. A separate copy action creates a Gemini coaching prompt that carries the fixed score and anonymized evidence; Gemini is instructed not to change the score or invent runtime/test results. No SB3, costume/sound bytes, or original sprite names are included in the copied packet. Unknown blocks are reported as a coverage limitation. This remains a provisional rule-based estimate: tests, lint/build, teacher calibration, and student usability review were not run in this task.

@@ -1590,11 +1590,13 @@ const renderAnalysis = () => {
       return item
     }),
   )
-  projectScoreLimits.replaceChildren(...projectScore.limits.map((limit) => {
-    const item = document.createElement('li')
-    item.textContent = limit
-    return item
-  }))
+  projectScoreLimits.replaceChildren(
+    ...projectScore.limits.map((limit) => {
+      const item = document.createElement('li')
+      item.textContent = limit
+      return item
+    }),
+  )
   stats.classList.remove('muted')
   stats.innerHTML = [
     ['角色', summary.sprites],
