@@ -225,6 +225,18 @@ const stopStudentAnimation = (message: string): void => {
 const AI_INSTRUCTION = createAuthoringInstruction()
 
 app.innerHTML = `
+  <a class="skip-link" href="#main-content">跳到主要內容</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand-lockup" href="https://polik18.github.io/" aria-label="回到 Polik Projects 專案總覽">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span><strong>Scratch AI Bridge</strong><small>POLIK PROJECTS · CLASSROOM TOOLS</small></span>
+      </a>
+      <nav aria-label="網站導覽">
+        <a class="home-link" href="https://polik18.github.io/">← Polik 專案總覽</a>
+      </nav>
+    </div>
+  </header>
   <div class="app-shell">
     <header class="topbar">
       <div>
@@ -240,7 +252,7 @@ app.innerHTML = `
       <button id="analyze-tab" class="tab" role="tab" aria-selected="false" aria-controls="analyze-panel" data-tab="analyze">請 AI 幫我檢查作品</button>
     </nav>
 
-    <div class="workspace">
+    <div class="workspace" id="main-content" tabindex="-1">
       <section id="generate-panel" class="panel-grid" role="tabpanel" aria-labelledby="generate-tab">
         <ol class="progress-steps" aria-label="製作進度">
           <li class="current"><span>1</span>描述作品</li>
