@@ -18,6 +18,15 @@ Automatic deployment runs only on pushes to `main` or `develop`; manual `workflo
 The Vite build uses relative asset URLs, so both user sites and project sites such as
 `https://USER.github.io/REPOSITORY/` are supported.
 
+## Student help page
+
+The dedicated student question page is published at
+[`https://polik18.github.io/scratch-editor-ai-bridge/student-help.html`](https://polik18.github.io/scratch-editor-ai-bridge/student-help.html).
+Teachers can share that URL directly. The page accepts an SB3 file, analyzes it in the browser, and copies a short,
+evidence-based question prompt for the student to paste into an AI service approved by the teacher. It does not show
+the score rubric or Scratch project generator, and it has no navigation back to the project home page. The deployment
+verifier checks this page and its same-site JavaScript/CSS assets after each Pages release.
+
 ## Current public deployment evidence
 
 The public Pages URL is `https://polik18.github.io/scratch-editor-ai-bridge/`. The feedback release was deployed by

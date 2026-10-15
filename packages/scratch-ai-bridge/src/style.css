@@ -459,6 +459,235 @@ h1 {
   color: var(--error);
   background: var(--error-bg);
 }
+.student-help-shell {
+  width: min(760px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: clamp(28px, 7vh, 72px) 0 28px;
+}
+.student-help-heading {
+  margin: 0 auto 28px;
+  text-align: center;
+}
+.student-help-mark {
+  display: inline-grid;
+  min-width: 76px;
+  min-height: 42px;
+  place-items: center;
+  padding: 0 13px;
+  border-radius: 14px;
+  color: #fff;
+  background: var(--forest);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+.student-help-eyebrow {
+  margin: 17px 0 4px;
+  color: var(--forest);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+.student-help-heading h1 {
+  margin: 0;
+  font-size: clamp(30px, 5vw, 42px);
+  line-height: 1.2;
+}
+.student-help-heading > p:last-child {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 17px;
+}
+.student-help-card {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+  margin: 16px 0;
+  padding: clamp(18px, 4vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgb(255 253 248 / 94%);
+  box-shadow: 0 12px 35px rgb(23 33 29 / 6%);
+}
+.student-help-step {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--forest-dark);
+  background: var(--mint);
+  font-weight: 900;
+}
+.student-help-content {
+  min-width: 0;
+}
+.student-help-content h2 {
+  margin: 3px 0 8px;
+  font-size: 22px;
+}
+.student-help-content > p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+.student-help-upload {
+  display: flex;
+  min-height: 170px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 22px;
+  border: 2px dashed #9bb8a9;
+  border-radius: 17px;
+  background: #f7fbf7;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+.student-help-upload:focus-within,
+.student-help-upload.is-dragging {
+  border-color: var(--forest);
+  background: var(--mint);
+}
+.student-help-upload[aria-busy='true'] {
+  cursor: progress;
+  opacity: 0.75;
+}
+.student-help-upload-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  color: white;
+  background: var(--forest);
+  font-size: 25px;
+  line-height: 1;
+}
+.student-help-upload strong {
+  color: var(--forest-dark);
+  font-size: 17px;
+}
+.student-help-upload span:last-of-type {
+  color: var(--muted);
+  font-size: 14px;
+}
+.student-help-status {
+  margin: 10px 0 0 !important;
+  border-radius: 10px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.student-help-status:empty {
+  display: none;
+}
+.student-help-status[data-kind='success'] {
+  color: var(--success);
+}
+.student-help-status[data-kind='error'] {
+  color: var(--error);
+}
+.student-help-summary {
+  color: var(--ink) !important;
+  font-size: 18px;
+  font-weight: 800;
+}
+.student-help-note {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f0efe9;
+  font-size: 14px;
+}
+.student-help-content > label {
+  display: block;
+  margin: 14px 0 7px;
+  font-weight: 750;
+}
+.student-help-privacy {
+  margin: 8px 0 0 !important;
+  font-size: 13px;
+}
+.student-help-content textarea {
+  display: block;
+  width: 100%;
+  min-height: 94px;
+  resize: vertical;
+  border: 1px solid #bbc7bf;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: white;
+  line-height: 1.6;
+}
+.student-help-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+.student-help-actions .button {
+  border-radius: 12px;
+  padding: 11px 17px;
+}
+.student-help-howto {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: #f0f7f1;
+}
+.student-help-howto ol {
+  margin: 8px 0 0;
+  padding-left: 22px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.student-help-fallback {
+  margin-top: 14px;
+}
+.student-help-fallback label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 14px;
+}
+.student-help-fallback textarea {
+  min-height: 190px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+.student-help-footer {
+  padding: 16px 0 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 14px;
+}
+@media (max-width: 560px) {
+  .student-help-shell {
+    width: min(100% - 22px, 760px);
+    padding-top: 24px;
+  }
+  .student-help-card {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 11px;
+    padding: 16px 13px;
+    border-radius: 17px;
+  }
+  .student-help-step {
+    width: 30px;
+    height: 30px;
+  }
+  .student-help-content h2 {
+    font-size: 19px;
+  }
+  .student-help-upload {
+    min-height: 150px;
+    padding: 16px 10px;
+  }
+}
 .repair-tools {
   margin-top: 12px;
   padding: 13px;

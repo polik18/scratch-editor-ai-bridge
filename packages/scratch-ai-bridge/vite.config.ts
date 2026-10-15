@@ -45,6 +45,7 @@ export default defineConfig(({ mode }) => {
         input: {
           app: fileURLToPath(new URL('./index.html', import.meta.url)),
           preview: fileURLToPath(new URL('./preview.html', import.meta.url)),
+          studentHelp: fileURLToPath(new URL('./student-help.html', import.meta.url)),
         },
       },
     },

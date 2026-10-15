@@ -47,6 +47,45 @@ const assets = await Promise.all(
   }),
 )
 
+const studentPageUrl = new URL('student-help.html', servedPage)
+const studentPageResponse = await fetchOk(studentPageUrl, 'Deployed student help page')
+const servedStudentPage = new URL(studentPageResponse.url)
+if (servedStudentPage.origin !== servedPage.origin || !servedStudentPage.pathname.startsWith(servedPage.pathname)) {
+  throw new Error(`Deployed student help page redirected outside the Pages site path: ${servedStudentPage}`)
+}
+const studentHtml = await studentPageResponse.text()
+if (!studentHtml.includes('<title>Scratch 學習小幫手</title>')) {
+  throw new Error(`Deployed student help page has an unexpected title: ${servedStudentPage}`)
+}
+if (!studentHtml.includes('<main id="student-help-app">')) {
+  throw new Error(`Deployed student help page has no app mount point: ${servedStudentPage}`)
+}
+const studentAssetPaths = [
+  ...new Set([...studentHtml.matchAll(/(?:src|href)="([^"?#]+\.(?:m?js|css))"/g)].map((match) => match[1])),
+]
+if (
+  !studentAssetPaths.some((asset) => asset.endsWith('.js')) ||
+  !studentAssetPaths.some((asset) => asset.endsWith('.css'))
+) {
+  throw new Error('Deployed student help page is missing its JavaScript bundle or stylesheet')
+}
+const studentAssets = await Promise.all(
+  studentAssetPaths.map(async (assetPath) => {
+    const assetUrl = new URL(assetPath, servedStudentPage)
+    if (assetUrl.origin !== servedPage.origin || !assetUrl.pathname.startsWith(servedPage.pathname)) {
+      throw new Error(`Deployed student help asset escapes the Pages site path: ${assetUrl}`)
+    }
+    const assetResponse = await fetchOk(assetUrl, 'Deployed student help asset')
+    const servedAsset = new URL(assetResponse.url)
+    if (servedAsset.origin !== servedPage.origin || !servedAsset.pathname.startsWith(servedPage.pathname)) {
+      throw new Error(`Deployed student help asset redirected outside the Pages site path: ${servedAsset}`)
+    }
+    const body = await assetResponse.arrayBuffer()
+    if (body.byteLength === 0) throw new Error(`Deployed student help asset is empty: ${assetUrl}`)
+    return { path: servedAsset.pathname, bytes: body.byteLength }
+  }),
+)
+
 const serviceWorkerUrl = new URL('service-worker.js', servedPage)
 if (serviceWorkerUrl.origin !== servedPage.origin || !serviceWorkerUrl.pathname.startsWith(servedPage.pathname)) {
   throw new Error(`Deployed service worker escapes the Pages site path: ${serviceWorkerUrl}`)
@@ -69,7 +108,13 @@ assets.push({ path: servedServiceWorker.pathname, bytes: serviceWorkerBytes.byte
 
 console.log(
   JSON.stringify(
-    { page: servedPage.href, status: response.status, title: 'AI × Scratch 作品轉換器', assets },
+    {
+      page: servedPage.href,
+      status: response.status,
+      title: 'AI × Scratch 作品轉換器',
+      assets,
+      studentHelp: { page: servedStudentPage.href, status: studentPageResponse.status, assets: studentAssets },
+    },
     null,
     2,
   ),
