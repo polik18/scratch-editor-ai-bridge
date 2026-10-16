@@ -2,7 +2,7 @@
 
 ## 2026-10-16 — 教師視角 Phase 2 學生線索導航第一輪
 
-學生解惑頁新增本機程式線索清單，以匿名「舞台／角色 A…」代號分組，顯示段落位置與白話積木標籤；每次最多顯示 40 筆，可逐批展開。複製給外部 AI 的 evidence packet/coverage 使用同一組角色代號。此次 package lint 與 production build/bundle budgets 通過；未執行測試或 browser smoke。尚未按問題排序、加入搜尋或真人學生驗收；未提交、推送或部署。
+學生解惑頁新增本機程式線索清單，以匿名「舞台／角色 A…」代號分組，顯示段落位置與白話積木標籤；每次最多顯示 40 筆，可逐批展開。複製給外部 AI 的 evidence packet/coverage 使用同一組角色代號。此次 package lint 與 production build/bundle budgets 通過；未執行測試或 browser smoke。程式已推送至功能分支（`6935a85497`、`8e8e13e36a`），未部署。尚未按問題排序、加入搜尋或真人學生驗收。
 
 ## 2026-10-16 — 教師視角 Phase 3 本機提示第一輪
 
