@@ -113,7 +113,9 @@ const csvCell = (value: string | number): string => {
 
 const summarize = (records: readonly BatchRecord[]) => {
   const scores = records
-    .flatMap((record) => (record.inspection ? [record.inspection.score.total] : []))
+    .flatMap((record) =>
+      record.inspection?.score.total === null || !record.inspection ? [] : [record.inspection.score.total],
+    )
     .sort((a, b) => a - b)
   const median = (() => {
     if (scores.length === 0) return null
@@ -126,7 +128,7 @@ const summarize = (records: readonly BatchRecord[]) => {
   return {
     format: 'scratch-ai-bridge/class-summary',
     version: 1,
-    rubricVersion: 'sb3-static-v1',
+    rubricVersion: 'sb3-static-v2',
     total: records.length,
     ok: records.filter(({ status }) => status === 'ok').length,
     partial: records.filter(({ status }) => status === 'partial').length,

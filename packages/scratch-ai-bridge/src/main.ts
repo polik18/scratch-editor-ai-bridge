@@ -345,11 +345,11 @@ app.innerHTML = `
           <div id="diagnostics" class="diagnostics"></div>
           <section aria-labelledby="project-map-title" class="project-map">
             <section class="project-score" aria-labelledby="project-score-title">
-              <h3 id="project-score-title">依 SB3 檔案估算作品分數</h3>
-              <p id="project-score-summary" class="muted">只分析檔案中可讀的程式結構；作品不會上傳。</p>
+              <h3 id="project-score-title">SB3 程式結構參考分</h3>
+              <p id="project-score-summary" class="muted">只分析檔案中看得到的程式結構，不代表作品品質或正式成績；作品不會上傳。</p>
               <ol id="project-score-criteria"></ol>
               <ul id="project-score-limits"></ul>
-              <button id="copy-scoring-prompt" class="button secondary" disabled>複製評分回饋提示給 Gemini</button>
+              <button id="copy-scoring-prompt" class="button secondary" disabled>複製參考分回饋提示給 Gemini</button>
             </section>
             <h3 id="project-map-title">作品目前看得出的行為</h3>
             <p id="project-map-coverage" class="muted">載入作品後顯示有積木依據的觀察與分析限制。</p>
@@ -1634,12 +1634,12 @@ const renderAnalysis = () => {
   if (!canonical || !analysis || !projectMap || !projectFeedback || !projectScore) return
   const currentProjectMap = projectMap
   const summary = analysis.summary
-  projectScoreSummary.textContent = `暫定作品分數：${projectScore.total}/${projectScore.max}（SB3 分析覆蓋 ${projectScore.coverage}%）。這不是學生能力分數，也不代表作品已執行。`
+  projectScoreSummary.textContent = `${projectScore.total === null ? '目前沒有足夠的可讀證據換算參考分' : `SB3 結構參考分：${projectScore.total}/${projectScore.max}`}（分析覆蓋 ${projectScore.coverage}%）。這不是正式成績，也不代表作品已執行。`
   projectScoreCriteria.replaceChildren(
     ...projectScore.criteria.map((criterion) => {
       const item = document.createElement('li')
       const heading = document.createElement('strong')
-      heading.textContent = `${criterion.title}：${criterion.score}/${criterion.points} 分`
+      heading.textContent = `${criterion.title}：${criterion.score === null ? '不適用' : `${criterion.score}/${criterion.points} 分`}`
       const detail = document.createElement('p')
       detail.textContent = criterion.explanation
       item.append(heading, detail)

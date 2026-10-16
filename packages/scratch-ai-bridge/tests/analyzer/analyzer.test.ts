@@ -6,6 +6,7 @@ import {
   createProjectScore,
 } from '../../src/core/analyzer'
 import { extractProjectBlockGraphs } from '../../src/core/graph'
+import moveAndSayExample from '../../src/core/ir/examples/02-green-flag-move-say.json'
 import broadcastExample from '../../src/core/ir/examples/04-broadcast-flow.json'
 import fullEntitiesExample from '../../src/core/ir/examples/05-full-entities.json'
 import type { CanonicalProject } from '../../src/core/ir/types'
@@ -132,6 +133,36 @@ describe('analysis IR', () => {
     expect(extensionMap.coverage.opaqueBlocks).toBeGreaterThan(0)
     expect(extensionScore.total).toBe(baseScore.total)
     expect(extensionScore.limits.some((item) => item.includes('未能完整辨識'))).toBe(true)
+  })
+
+  it('marks unused optional dimensions not applicable and normalizes over applicable weights', () => {
+    const project = moveAndSayExample as CanonicalProject
+    const analysis = analyzeCanonicalProject(project)
+    const map = createProjectMap(project, analysis)
+    const score = createProjectScore(project, analysis, map)
+
+    expect(score.rubric).toBe('sb3-static-v2')
+    expect(score.criteria.find(({ id }) => id === 'state')).toMatchObject({
+      score: null,
+      applicability: 'not-applicable',
+    })
+    expect(score.criteria.find(({ id }) => id === 'interaction')).toMatchObject({
+      score: null,
+      applicability: 'not-applicable',
+    })
+    expect(score.total).toBe(90)
+  })
+
+  it('withholds a total when the SB3 has no readable evidence', () => {
+    const project = structuredClone(moveAndSayExample as CanonicalProject)
+    const firstSprite = project.sprites[0]
+    firstSprite.scripts = []
+    const analysis = analyzeCanonicalProject(project)
+    const map = createProjectMap(project, analysis)
+    const score = createProjectScore(project, analysis, map)
+
+    expect(score.total).toBeNull()
+    expect(score.limits).toContain('目前沒有足夠的積木證據可供評分。')
   })
 
   it('recognizes registry event hats and gives a located next step for a detached known script', () => {

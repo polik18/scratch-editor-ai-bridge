@@ -5,7 +5,8 @@ export interface ProjectScoreCriterion {
   readonly id: string
   readonly title: string
   readonly points: number
-  readonly score: number
+  readonly score: number | null
+  readonly applicability: 'applicable' | 'not-applicable'
   readonly explanation: string
   readonly evidenceIds: readonly string[]
 }
@@ -13,8 +14,8 @@ export interface ProjectScoreCriterion {
 export interface ProjectScore {
   readonly format: 'scratch-ai-bridge/project-score'
   readonly version: 1
-  readonly rubric: 'sb3-static-v1'
-  readonly total: number
+  readonly rubric: 'sb3-static-v2'
+  readonly total: number | null
   readonly max: 100
   readonly coverage: number
   readonly criteria: readonly ProjectScoreCriterion[]
@@ -45,7 +46,7 @@ const criterionEvidence = (map: ProjectMap, opcodes: readonly string[]): string[
 }
 
 /**
- * Create a reproducible, SB3-only formative score. It evaluates visible code structure,
+ * Create a reproducible, SB3-only structural reference score. It evaluates visible code structure,
  * never runtime behavior, learner ability, aesthetics, or block counts as quality.
  * @param project - Canonical projection of the uploaded SB3.
  * @param analysis - Static analyzer findings for the project.
@@ -122,6 +123,7 @@ export const createProjectScore = (
       title: '作品結構與可辨識的行為',
       points: 25,
       score: structureScore,
+      applicability: 'applicable',
       explanation: `${triggeredScripts.length}/${scripts.length} 組腳本有事件入口；${activeScripts.length} 組腳本包含入口後的指令。`,
       evidenceIds: criterionEvidence(
         map,
@@ -133,6 +135,7 @@ export const createProjectScore = (
       title: '程式邏輯與流程',
       points: 25,
       score: logicScore,
+      applicability: 'applicable',
       explanation: `${activeScripts.length} 組腳本形成指令流程；${controlOpcodes.length} 個可辨識的控制流程積木。`,
       evidenceIds: criterionEvidence(map, controlOpcodes),
     },
@@ -140,10 +143,11 @@ export const createProjectScore = (
       id: 'state',
       title: '變數、清單與狀態運用',
       points: 15,
-      score: dataScore,
+      score: dataOpcodes.length === 0 ? null : dataScore,
+      applicability: dataOpcodes.length === 0 ? 'not-applicable' : 'applicable',
       explanation:
         dataOpcodes.length === 0
-          ? '作品沒有使用變數或清單；此面向不因未使用資料積木而扣分。'
+          ? '作品沒有使用變數或清單；此項不適用，不加分也不扣分。'
           : `作品中有 ${dataOpcodes.length} 個資料相關積木；已檢查可辨識的變數診斷。`,
       evidenceIds: criterionEvidence(map, dataOpcodes),
     },
@@ -151,10 +155,11 @@ export const createProjectScore = (
       id: 'interaction',
       title: '角色互動與回饋設計',
       points: 15,
-      score: interactionScore,
+      score: interactionOpcodes.length === 0 ? null : interactionScore,
+      applicability: interactionOpcodes.length === 0 ? 'not-applicable' : 'applicable',
       explanation:
         interactionOpcodes.length === 0
-          ? '作品沒有可辨識的互動積木；不因作品採非互動形式而扣分。'
+          ? '作品沒有可辨識的互動積木；此項不適用，不加分也不扣分。'
           : `找到 ${interactionOpcodes.length} 個互動或事件積木，並檢查其腳本是否接續指令。`,
       evidenceIds: criterionEvidence(map, interactionOpcodes),
     },
@@ -163,6 +168,7 @@ export const createProjectScore = (
       title: '靜態完整性與錯誤風險',
       points: 15,
       score: integrityScore,
+      applicability: 'applicable',
       explanation: `${integrityIssues.length} 項可由分析確認的警告；${map.coverage.malformedGraphIssues} 項積木圖結構問題。`,
       evidenceIds: map.evidence.slice(0, 12).map(({ id }) => id),
     },
@@ -171,6 +177,7 @@ export const createProjectScore = (
       title: '腳本可讀性與組織',
       points: 5,
       score: organizationScore,
+      applicability: 'applicable',
       explanation: `${activeScripts.length}/${scripts.length} 組腳本有事件入口及後續指令。`,
       evidenceIds: criterionEvidence(
         map,
@@ -179,7 +186,7 @@ export const createProjectScore = (
     },
   ]
   const limits = [
-    '這是依 SB3 可讀結構計算的暫定作品分數，並非學生能力或學習成效分數。',
+    '這是依 SB3 可讀結構計算的暫定參考分，並非正式成績、作品整體品質或學生能力分數。',
     '本機沒有執行作品；分數不代表作品實際運作穩定，也不評創意、美感或作者理解程度。',
     ...(map.coverage.opaqueBlocks > 0
       ? [`${map.coverage.opaqueBlocks} 個積木未能完整辨識；Bridge 無法判讀的內容不當作學生錯誤。`]
@@ -189,11 +196,18 @@ export const createProjectScore = (
       : []),
     ...(!readableEvidence ? ['目前沒有足夠的積木證據可供評分。'] : []),
   ]
-  const total = readableEvidence ? criteria.reduce((sum, criterion) => sum + criterion.score, 0) : 0
+  const applicableCriteria = criteria.filter(
+    (criterion): criterion is ProjectScoreCriterion & { score: number } => criterion.score !== null,
+  )
+  const applicablePoints = applicableCriteria.reduce((sum, criterion) => sum + criterion.points, 0)
+  const total =
+    readableEvidence && applicablePoints >= 50
+      ? clamp((applicableCriteria.reduce((sum, criterion) => sum + criterion.score, 0) / applicablePoints) * 100, 100)
+      : null
   return {
     format: 'scratch-ai-bridge/project-score',
     version: 1,
-    rubric: 'sb3-static-v1',
+    rubric: 'sb3-static-v2',
     total,
     max: 100,
     coverage: clamp(structuralCoverage, 100),

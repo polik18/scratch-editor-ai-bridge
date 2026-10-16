@@ -3,6 +3,8 @@
 日期：2026-10-15
 狀態：核心實作第一版已完成，正進行真實作品誤報修正與外部品質驗收。2026-10-16 完成事件帽積木辨識、合法 EFFECT 大小寫容錯、未知擴充入口降級為資訊提示、具體積木證據定位，以及學生 AI 提示詞修訂；Bridge 全套 442 項測試、lint/Prettier、production build/bundle budget 和 Chromium/Firefox/WebKit browser smoke 通過。SB3-only 100 分規準尚未經教師校準，學生可用性測試與原生 Safari 新增定位互動驗收仍未完成，因此不能宣稱正式評分品質或全案發布門檻已通過。
 
+2026-10-16 補充：`sb3-static-v2` 開始把沒有使用的資料/互動面向標為 N/A，不再視為滿分；總分按適用面向換算，無足夠 evidence 時不顯示。評分 UI/CLI/Gemini 提示已統一稱為 SB3 結構參考分。此為工程第一輪，不代表 rubric 已完成教師校準；詳見 `docs/teacher-review-improvement-plan.md`。
+
 ## 1. 產品目標
 
 學生上傳 `.sb3` 後，Bridge 應能：

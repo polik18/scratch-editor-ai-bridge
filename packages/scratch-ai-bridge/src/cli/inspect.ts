@@ -13,21 +13,22 @@ export interface CliInspection {
   readonly format: 'scratch-ai-bridge/inspection'
   readonly version: 1
   readonly analyzerVersion: 1
-  readonly rubricVersion: 'sb3-static-v1'
+  readonly rubricVersion: 'sb3-static-v2'
   readonly analysisMode: 'static-raw-sb3'
   readonly runtimeVerified: false
   readonly fileId: string
   readonly status: 'ok' | 'partial'
   readonly summary: ReturnType<typeof analyzeCanonicalProject>['summary']
   readonly score: {
-    readonly total: number
+    readonly total: number | null
     readonly max: number
     readonly coverage: number
     readonly criteria: readonly {
       readonly id: string
       readonly title: string
       readonly points: number
-      readonly score: number
+      readonly score: number | null
+      readonly applicability: 'applicable' | 'not-applicable'
       readonly explanation: string
       readonly evidenceIds: readonly string[]
     }[]
@@ -197,7 +198,7 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
     format: 'scratch-ai-bridge/inspection',
     version: 1,
     analyzerVersion: 1,
-    rubricVersion: 'sb3-static-v1',
+    rubricVersion: 'sb3-static-v2',
     analysisMode: 'static-raw-sb3',
     runtimeVerified: false,
     fileId: createHash('sha256').update(bytes).digest('hex'),
@@ -263,7 +264,7 @@ export const inspectionToMarkdown = (inspection: CliInspection): string => {
     '# Scratch 作品靜態分析',
     '',
     `狀態：${inspection.status === 'ok' ? '可讀取' : '部分可讀，請查看限制'}`,
-    `初步分數：${inspection.score.total}/${inspection.score.max}（${inspection.rubricVersion}）`,
+    `SB3 結構參考分：${inspection.score.total === null ? '資料不足，暫不換算' : `${inspection.score.total}/${inspection.score.max}`}（${inspection.rubricVersion}；分析覆蓋 ${inspection.score.coverage}%）`,
     `角色數：${inspection.summary.sprites}；積木數：${inspection.summary.blocks}；腳本數：${inspection.summary.scripts}`,
     `回饋顯示 ${inspection.feedback.items.length} 項；另省略 ${inspection.feedback.omittedItems} 項重複或較次要觀察。證據省略 ${inspection.omittedEvidence} 項。`,
     '',
@@ -271,7 +272,7 @@ export const inspectionToMarkdown = (inspection: CliInspection): string => {
     '',
     ...inspection.score.criteria.map(
       (item) =>
-        `- ${item.title}：${item.score}/${item.points}。${item.explanation} 證據：${item.evidenceIds.join(', ') || '無'}`,
+        `- ${item.title}：${item.score === null ? '不適用' : `${item.score}/${item.points}`}。${item.explanation} 證據：${item.evidenceIds.join(', ') || '無'}`,
     ),
     '',
     '## 可以試試的下一步',

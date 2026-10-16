@@ -23,7 +23,7 @@
 4. 用四份真實班級作品及合成壓力集驗收。
 5. 再獨立規劃 agent 寫作功能（IR validate/compile/roundtrip/patch）與教師評分校準；這些不阻擋前四項交付。
 
-本計畫沿用既有 `sb3-static-v1` rubric 和 analyzer/feedback 核心；CLI 不另建評分規則，不呼叫模型，不要求 Gemini API key。
+本計畫沿用既有 `sb3-static-v2` rubric 和 analyzer/feedback 核心；CLI 不另建評分規則，不呼叫模型，不要求 Gemini API key。
 
 ## 2. 根因與設計決策
 
@@ -54,7 +54,7 @@ scratch-ai-bridge batch <directory> --out <new-directory> [--recursive] [--manif
 
 開發階段先提供 workspace-local executable/npm script；獨立安裝或發布方式另外決策，不把尚未定案的 npm 發布流程當作 CLI MVP 的前置條件。
 
-`inspect` 是唯一必要的單檔入口，輸出分析摘要、`sb3-static-v1` 總分與各項明細、證據、coverage、建設性回饋、限制和錯誤狀態。JSON 至少包含：
+`inspect` 是唯一必要的單檔入口，輸出分析摘要、`sb3-static-v2` 結構參考分與各項明細、證據、coverage、建設性回饋、限制和錯誤狀態。未使用面向標示為 N/A，不直接給滿分；總分依適用面向換算。JSON 至少包含：
 
 - `format`、`version`、`analyzerVersion`、`rubricVersion`
 - `fileId`（內容 SHA-256，不輸出本機絕對路徑）及 `status`（`ok`、`partial`、`failed`）
@@ -152,7 +152,7 @@ stdout 只輸出結果 JSON/JSONL；進度和可操作錯誤寫到 stderr。Exit
 - SB3、manifest 和檔名都是不可信輸入；沿用 archive 邊界、路徑正規化、檔案數/大小/解壓上限，不執行 archive 內程式碼或 extension。
 - 所有處理在本機；預設不網路、不 AI、不輸出素材 bytes。stdout 僅供機器協定，私人 debug 不得混入。
 - 不將學生姓名/學號當作預設輸出識別；班級摘要使用匿名 ID。單份報告只輸出產生教學回饋必需的欄位。
-- `sb3-static-v1` 是結構估分，不衡量創意、美感、理解力、玩法手感或 FPS，不得單獨作正式成績。
+- `sb3-static-v2` 是結構參考分，不衡量創意、美感、理解力、玩法手感或 FPS，不得單獨作正式成績；未經教師校準前不可當作正式成績。
 - CLI 分析即使成功，也不等同 Scratch 執行驗證；runtime、感測器硬體和線上服務均標示 unavailable/not verified。
 
 ## 6. 首個可交付版本定義
