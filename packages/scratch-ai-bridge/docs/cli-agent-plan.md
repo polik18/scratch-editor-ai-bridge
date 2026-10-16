@@ -1,138 +1,168 @@
-# Scratch AI Bridge CLI 與整班批次回饋計畫
+# Scratch AI Bridge CLI 與班級批次分析執行計畫
 
-日期：2026-10-15
+更新：2026-10-16
 
-狀態：計畫完成，尚未實作 CLI。
+狀態：Phase 0–2 首版已實作；Phase 3 真實樣本已試跑，partial 原因與容量上限仍待驗收。
 
-## 1. 目標
+### 目前進度（2026-10-16）
 
-讓同一套 Scratch AI Bridge 能在瀏覽器以外執行。老師可用終端機批次分析整班 `.sb3`；CLI 自己完成匯入、作品摘要、SB3-only 100 分估分和有證據的建設性回饋。Agent 也能在同一個對話/流程裡直接呼叫 CLI，將自然語言作品需求轉成 Canonical IR、驗證/修正、編譯 `.sb3`，或局部修改原作品。不需人工複製 JSON 到 Gemini。
+- Node 靜態 inspection、`inspect`、目錄 `batch`、JSONL/Markdown/CSV/班級摘要已實作；不載入 VM/Canvas/extensions。
+- 使用者提供的四份作品實跑為 1 `ok`、3 `partial`、0 `failed`；recognized/opaque/malformed coverage 列於各作品報告。三份 partial 尚未逐項判定哪些是預期 extension/opaque blocks、哪些是可修正 importer 問題。
+- 初版限制回饋最多 60 項、證據最多 240 項；報告另有省略數及私用來源對照表。
+- Node/TypeScript check、4 個 CLI 測試和 CLI ESLint/Prettier 通過；全 package/browser/build、跨平台和 30/100/500 壓力驗收未完成。
 
-CLI 的評分/分析/編譯不依賴模型 API key 或網路。若使用者透過 AI agent 提出自然語言作品需求，語言理解和 Canonical IR 草稿由目前的 agent/模型完成；Bridge CLI 接手 schema/semantic validation、compile、round-trip 驗證與 SB3 輸出。CLI 不綁定 Gemini，也不把模型呼叫藏在背景。
+## 1. 目標與優先順序
 
-主要使用情境：
+先讓老師與 coding agent 能在本機使用同一套 SB3 靜態分析、評分和回饋，再擴充整班批次。作品不會上傳，也不會在 CLI 中啟動 Scratch 專案、硬體或 extension。
+
+交付順序：
+
+1. 建立 Node 可用的靜態 SB3 inspection pipeline。
+2. 提供單檔 `inspect` CLI，輸出版本化 JSON 和 Markdown。
+3. 提供容錯的 `batch` CLI，支援目錄掃描、匿名代碼和班級摘要。
+4. 用四份真實班級作品及合成壓力集驗收。
+5. 再獨立規劃 agent 寫作功能（IR validate/compile/roundtrip/patch）與教師評分校準；這些不阻擋前四項交付。
+
+本計畫沿用既有 `sb3-static-v1` rubric 和 analyzer/feedback 核心；CLI 不另建評分規則，不呼叫模型，不要求 Gemini API key。
+
+## 2. 根因與設計決策
+
+先前工作只新增計畫文件，沒有 CLI 入口、命令或執行驗收。原範圍把本機分析、全班批次、IR 編譯和 SB3 patch 綁在同一案，Node/瀏覽器相依性也尚未驗證。
+
+Bridge 的 `decompileSb3WithBlockGraphs()` 會載入 Scratch VM；bitmap 匯入需要瀏覽器 Canvas。CLI 不應呼叫這條 UI/VM 匯入路徑。改以靜態路徑直接讀取 SB3 中的 `project.json` 和原始 block graph，將結果明確標成靜態分析，並保留 opaque blocks/extensions 的 coverage 限制。
+
+### 靜態 inspection pipeline
+
+Node CLI adapter 讀取檔案為 `Uint8Array`，依序呼叫或封裝下列既有模組：
+
+1. `importLosslessSb3()`：重用 ZIP 安全邊界，取得原始 `projectJson`、entries 與 archive warnings。
+2. `projectJsonToCanonicalWithReport()`：直接從原始 project JSON 建立 Canonical projection 和 block mappings；不經 Scratch VM、不解碼圖像、不執行 extension。
+3. `extractProjectBlockGraphs()`：保留 VM/Canonical 未建模的原始積木與 coverage。
+4. `analyzeCanonicalProject()`、`createProjectMap()`、`createProjectScore()`、`createProjectFeedback()`：使用既有分析、證據、評分和回饋規則。
+5. CLI formatter：輸出 schema-versioned JSON 或 Markdown；不包含原始 SB3、素材 bytes 或完整 `project.json`。
+
+此路徑與 VM 正規化結果可能不同，尤其是舊格式、malformed graphs、自訂積木和 extension。結果須標示 `analysisMode: "static-raw-sb3"`、`runtimeVerified: false`，列出 recognized/opaque/malformed coverage；不能暗示作品已執行。遇到無法轉為 Canonical 的區塊時，原始 graph 仍須保留於 coverage/evidence 索引，不得當成學生錯誤。
+
+## 3. 命令與輸出合約
+
+### 第一版命令
 
 ```text
-scratch-ai-bridge batch ./班級作品 \
-  --manifest ./students.csv \
-  --format jsonl \
-  --out ./reports
+scratch-ai-bridge inspect <file.sb3> [--format json|markdown]
+scratch-ai-bridge batch <directory> --out <new-directory> [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
 ```
 
-每份作品產生一份機器可讀 JSON 和學生可讀的 Markdown 回饋；另產生班級摘要與 CSV 成績表。老師可用匿名學生代碼對照檔案，避免把姓名寫進輸出。
+開發階段先提供 workspace-local executable/npm script；獨立安裝或發布方式另外決策，不把尚未定案的 npm 發布流程當作 CLI MVP 的前置條件。
 
-## 2. 設計原則
+`inspect` 是唯一必要的單檔入口，輸出分析摘要、`sb3-static-v1` 總分與各項明細、證據、coverage、建設性回饋、限制和錯誤狀態。JSON 至少包含：
 
-- **共用產品核心**：CLI 直接呼叫既有 SB3 匯入、Analysis IR、Project Map、score 與 feedback 模組；不得另寫一套評分規則。
-- **CLI 自己能交付結果**：即使沒有 AI agent，仍可輸出每位學生的分數明細、證據、分析限制和建設性回饋。模型只能是老師另外選用的後續協助。
-- **Agent-friendly protocol**：stdout 僅輸出具版本欄位的 JSON 或 JSON Lines；進度、診斷日誌寫入 stderr。每個建議附 evidence ID 和可追溯位置。
-- **離線優先和本機處理**：SB3 不上傳；不含模型金鑰、不自動呼叫外部服務。需複製/輸出外部 AI 提示時，由使用者明確選擇單份作品。
-- **整批容錯**：單一作品失敗不停止其餘檔案；每筆明確標記成功/部分可讀/失敗，最終摘要列成功數、部分可讀數、失敗數。
-- **匿名預設**：報告以 manifest 中的匿名 ID 為主；不把學生姓名、原始角色名、資產、引用文字或原始 SB3 寫入彙總檔/AI prompt。教師可選擇本機私有對照表，但不列入匿名報告。
-- **估分需可解釋**：固定 rubric 版本和分數計算器；報告 score coverage、每項分數、分數依據、限制。不能從 SB3 推斷的測試歷程、理解程度、創意、美感不給分。
+- `format`、`version`、`analyzerVersion`、`rubricVersion`
+- `fileId`（內容 SHA-256，不輸出本機絕對路徑）及 `status`（`ok`、`partial`、`failed`）
+- `summary`、`score`、`coverage`、`feedback`、`evidence`、`limitations`
+- `analysisMode: "static-raw-sb3"`、`runtimeVerified: false`
 
-## 3. 建議架構
+stdout 只輸出結果 JSON/JSONL；進度和可操作錯誤寫到 stderr。Exit code：`0` 全部成功、`1` 批次含 partial/failed 檔案、`2` 命令列或 manifest 錯誤、`3` 無法恢復的內部錯誤、`130` 使用者中止。錯誤 JSON 不含 stack trace 或本機絕對路徑。
 
-```text
-Terminal / coding agent
-        │ argv + files / stdin
-        ▼
-CLI adapter (parse args, batch, file IO, protocol)
-        │
-        ├── SB3 import adapter (Node runtime; no UI/renderer)
-        ├── shared analyzer → Project Map / static feedback
-        ├── shared score engine → sb3-static-v1 score
-        ├── shared Canonical validator/compiler → SB3 authoring/editing
-        └── report formatter → JSON, JSONL, Markdown, CSV
-```
+### Batch 首版行為
 
-CLI adapter 不可匯入 `main.ts` 或 DOM UI。核心分析模組保持純資料轉換；Node 專用檔案讀取、路徑解析、stdin/stdout 與批次排程留在 adapter。既有 decompiler 有 Scratch VM、bitmap renderer 和 browser 輔助路徑；Phase 0 先確認 Node 端可安全載入 VM、哪些輸入需要 DOM/Canvas，並分清楚「純靜態分析」和「VM 正規化」兩條路徑。批次分析不需要 renderer、預覽畫面或音訊。
+- 預設掃描指定目錄第一層 `.sb3`，不跟隨 symlink；`--recursive` 才遞迴。
+- 未提供 manifest 時，使用穩定的匿名檔案代碼；有 manifest 時驗證欄位、重複 ID 和相對路徑，預設不把原始檔名/姓名放進班級彙總。
+- 預設 `--jobs 1`；允許的最大並行先限制為 2。每份作品互相隔離，單檔錯誤不終止整批。
+- 輸出目錄必須不存在；拒絕將輸出放在輸入目錄內。先寫暫存輸出，完整結束後再 rename 成正式結果。
+- 另寫 `PRIVATE-teacher-source-map.csv` 對照匿名代碼與相對檔名，讓老師可辨認作品；此檔含學生識別資訊，需明確標示不得分享，班級摘要與個別回饋不帶來源檔名。
+- 每份作品產生一筆 JSONL 結果和一份 Markdown；批次完成後產生 `class-summary.json` 與 CSV。摘要提供分數分布、criterion 分布、常見靜態診斷、coverage/partial 數與失敗清單，不產生預設排名。
+- 批次本機執行，不存取網路、不呼叫 AI。報告不包含原始 project JSON、積木 ID、素材 bytes；敏感文字欄位採允許清單輸出，不能確認匿名化時就省略。
+- `ProjectMap` 現有 evidence ID 可能編入 Scratch 原始 block ID；CLI formatter 必須將它映射為輸出專用、穩定的 evidence ID，並將角色名稱改成「舞台／角色 N」。不可只靠刪除 project JSON 就宣稱已匿名化。
 
-建議初期只提供單一安裝入口（`scratch-ai-bridge` executable）；在 workspace repo 內開發，發布/安裝方式另依 repo 的 package 發行策略決定。CLI 與 web 必須共用 rubric 版本和回饋規則。
+## 4. 階段、實作項目與驗收門檻
 
-## 4. CLI 指令與輸出合約
+### Phase 0 — 靜態 Node pipeline
 
-### 單份操作
+**實作**
 
-- `analyze <file.sb3>`：回傳專案摘要、積木理解覆蓋、確定診斷、限制與 evidence IDs。
-- `score <file.sb3>`：回傳 100 分總分、六項規準得分/配分、解釋、證據、覆蓋率與暫定分數說明。
-- `feedback <file.sb3>`：本機規則產生正向觀察、一項優先改進、學生能懂的下一步/問題；每一項都附 evidence ID。這是可直接使用的回饋，不要求 Gemini 幫忙潤飾。
-- `inspect <file.sb3>`：一次輸出 analyze、score 和 feedback 的版本化 JSON envelope；這是 agent 建議使用的主入口。
-- `validate-ir <file.json|->`：檢查 agent 產生/修改的 Canonical IR，輸出 schema 與語意 issue JSON Pointer，保持現有 repair feedback vocabulary。
-- `compile-ir <file.json|-> --out <project.sb3>`：通過 validator 後編譯 Scratch 專案；拒絕無效 IR，不靜默丟掉未知欄位。
-- `roundtrip <file.json|-> --out <project.sb3>`：編譯後經 Scratch VM 重新載入，輸出成功狀態與可比對摘要；清楚區分可編譯、VM 可載入和原始需求功能完成度。
-- `patch <source.sb3> <patch.json> --out <edited.sb3>`：套用現有保留式 block-graph patch，只變更指定積木並保留其他未知 extension/原始 archive 資料；patch 無法安全定位時拒絕寫檔。
+- 建立不匯入 `main.ts`、DOM UI、Scratch renderer、audio engine 的 inspection service。
+- 用 archive parser、raw project JSON、raw block graphs 產生 Canonical projection、AnalysisIR、ProjectMap、score 和 feedback。
+- 素材不解碼、不複製到輸出；保留 archive checksum/asset issue 的現有資訊。
+- 對 unknown opcode、malformed graph、自訂 procedure、bitmap 和 extensions 回報 coverage/limitation；禁止執行學生 extension。
 
-`--format json` 適合 agent；`--format markdown` 適合直接給學生/教師閱讀。JSON 至少有 `format`、`version`、`rubricVersion`、`fileId`、`status`、`score`、`coverage`、`summary`、`feedback`、`evidence`、`limitations`。格式需以 schema/version 管理，避免 agent 綁定不穩定欄位。
+**驗收**
 
-### 整班批次
+- 在 Node 24（repo `.nvmrc`）直接執行，不安裝 DOM shim；純 SVG 與含 PNG 的 SB3 均可產生靜態結果。
+- 使用同一批 SB3 對照 web 靜態分析輸出的 summary/score/evidence。因 VM 正規化造成差異時，逐欄說明並保持靜態輸出可信，不要求錯誤地與 VM archive 完全相同。
+- 損壞 ZIP、超出 archive limits、缺少 `project.json`、malformed block graph 都得到明確結果，程序不崩潰。
 
-- `batch <directory>` 預設只讀指定目錄第一層 `.sb3`，不追蹤 symlink；遞迴需明確 `--recursive`。
-- 支援 CSV/JSON manifest，把匿名 `studentId` 對應本機相對檔案路徑；manifest 欄位驗證失敗需在開始處理前報錯。
-- 每份作品各輸出一筆 JSONL 和個別 Markdown；`class-summary.json`/CSV 彙整分數分布、中位數、各面向分數分布、常見靜態診斷、待人工看檔數及失敗清單。
-- `--jobs N` 控制並行度；預設低並行以限制記憶體。單檔採用現有 archive 大小/壓縮比限制；批次另設檔案數、總輸出大小與取消處理上限。
-- 預設輸出目錄新建且不覆寫；若使用者要求覆寫，先檢查輸出路徑不在輸入作品資料夾內。寫檔採暫存檔再 rename，避免中斷留下看似完整的報告。
-- 單檔損壞或 unsupported opcode 不影響整批；輸出 `partial` 加 coverage 限制，不能直接把 Bridge 不認識的積木扣成學生錯誤。
-- 統計班級分數只報告全體摘要；需避免把排名/名次做預設輸出，個人化報告各自獨立。
+### Phase 1 — 單檔 inspect CLI
 
-### Agent 呼叫合約與寫作流程
+**實作**
 
-- 分析/批次：Agent 執行 `inspect` 或 `batch --format jsonl`，可用 stdin 傳 manifest，stdout 僅有結果資料。
-- 新作品：Agent 將使用者自然語言需求在目前對話中轉成 Canonical IR，透過 stdin 呼叫 `validate-ir`；若有 issue，讀 JSON Pointer/修正建議後重新送入；成功後呼叫 `roundtrip` 寫出 `.sb3`。過程由 agent tool call 串接，不需學生/老師手動貼 prompt 或搬運 JSON。
-- 修改作品：Agent 先 `inspect` 原 SB3，向使用者確認修改範圍後呼叫 `patch`；CLI 回報改動積木和保留內容的摘要，產生新的輸出檔，不覆寫來源檔。
-- 若 agent 用 MCP/tool wrapper，wrapper 只將 tool arguments 傳給 CLI 並回傳 envelope；核心邏輯只維護一份，沒有 provider-specific Gemini adapter。
-- 單檔錯誤不把 stack trace 寫入 JSON stdout；stderr 顯示人類可讀診斷，輸出 envelope 內用安全錯誤代碼。
-- 建議 exit codes：`0` 全數完成、`1` 批次有單檔錯誤/部分讀取、`2` CLI 用法或 manifest 錯誤、`3` 無法恢復的內部錯誤、`130` 使用者中止。
-- agent 可直接將 `feedback` 給使用者；若 agent 想重述，提示合約要求保留 evidence ID、分數與限制，不可聲稱測試過或更改評分。
-- 不要求 MCP。先把 CLI JSON/JSONL 穩定化；若未來需要工具協定，可薄包一層 MCP server 並呼叫同一 CLI/core。
+- 增加 CLI parser、help/version、路徑處理、stdout/stderr protocol、穩定 exit codes。
+- 支援 `inspect` JSON/Markdown；預設 JSON，UTF-8 路徑及含空白路徑可用。
+- 添加輸出 schema/version 與 allowlist formatter，不暴露原始 archive/學生內容。
+- 為 evidence 建立輸出 ID 映射；逐字訊息、變數/清單值、廣播名稱、角色原名、檔名和絕對路徑預設不輸出，若教學回饋需要其中欄位，先定義明確的安全欄位與匿名化規則。
+- 大型作品輸出需有回饋/evidence 上限，並回報省略數；每個被保留的 evidence reference 必須仍能在輸出中找到。
 
-## 5. 階段與驗收
+**驗收**
 
-### Phase 0 — Node 執行環境/依賴邊界
+- 一個向量作品、一個 bitmap 作品、一個含 opaque extension 的作品都能輸出可 parse 的 JSON。
+- `stdout` 可直接 pipe 給 `jq`；日誌只在 `stderr`。
+- 測試含空格、中文檔名、無效輸入、超限 archive、缺檔；錯誤 code/message 符合合約。
+- CLI 顯示 static-only；沒有任何輸出聲稱 runtime/FPS 已驗證。
 
-- 確認 Node LTS/`.nvmrc`、VM 初始化、ZIP/PNG/SVG/Sound 處理是否依賴 DOM/Canvas/Audio。
-- 為 CLI 明確標示不產生視覺預覽、不執行 extension 硬體、不聲稱 runtime verified。
-- 用 fixture 確認同一 `.sb3` 在 CLI 與 web 的 Canonical/evidence/score 結果相同；如 Node VM 不可用，定義純靜態輸入路徑及較低 coverage 狀態。
+### Phase 2 — 班級 batch
 
-### Phase 1 — 單檔 CLI
+**實作**
 
-- 跨平台 executable、help/version、路徑和 stdin 支援；stdout 純 JSON，stderr 日誌，穩定 exit codes。
-- 單份 `.sb3` 可產出 `inspect` envelope 和 Markdown；中間錯誤不暴露 stack/path 私密資訊。
-- Windows/macOS/Linux smoke，測含空白/Unicode 路徑、無效 ZIP、超大/壓縮炸彈邊界、未知積木和 bitmap archive。
+- 加入目錄掃描、匿名 file ID、CSV/JSON manifest、逐檔容錯、jobs 上限、JSONL/Markdown/班級摘要/CSV。
+- 保護輸出路徑、拒絕覆寫、採原子輸出；中斷時不留下看似完成的摘要。
+- 先不做快取/續跑；只有大量實測顯示必要時，再另立階段設計 checkpoint/resume。
 
-### Phase 2 — Agent 寫作與保留式修改
+**驗收**
 
-- `validate-ir`/`compile-ir`/`roundtrip`/`patch` 具穩定 JSON input/output；支援 stdin/stdout pipe，不要求暫存明文作品資料。
-- 以 Gemini Platformer IR、正常 Canonical fixture、schema/semantic 失敗修正案例、保留未知 extension 的 `.sb3` patch 回歸。
-- 編譯產物能由 Scratch VM 載入；報告只宣稱通過的技術階段，不把編譯成功說成需求全部實作。
-- agent 能用單一 tool workflow 產出新 `.sb3`，並將錯誤定位/修正回圈串起來，不需人工複製貼上。
+- 目錄混放有效、損壞、unsupported/partial `.sb3`；各檔結果狀態正確，失敗不影響其他作品。
+- 重跑同一輸入時拒絕覆寫舊報告；symlink/遞迴行為符合指定參數。
+- manifest 缺欄、重複 ID、路徑逃逸在任何作品開始分析前就報錯。
+- jobs=1 和 jobs=2 的逐檔內容一致；並行不超過設定值。
 
-### Phase 3 — 本機教學回饋
+### Phase 3 — 四份真實作品試跑與批次穩定性
 
-- 規則回饋由 Bridge 自己產生，不依賴外部 AI；必須能由證據 ID 定位到 target/script/block。
-- 最少一項作品優點、一項高價值下一步和一個引導問題；找不到可靠依據時坦白說資料不足。
-- 輸出直接給學生閱讀的 Markdown 和給 agent 使用的 JSON；敏感字串/素材不預設進輸出。
+**輸入樣本**
 
-### Phase 4 — 整班批次
+使用者提供的四份比賽作品位於 `~/Desktop/貓咪盃比賽/`。檔名可能被改成含組別/參賽者資訊的名稱，執行時以 `.sb3` 掃描結果確認，不依賴舊 basename。檢查過的樣本包含 PNG、WAV 與以下 extensions：`videoSensing`、`text2speech`、`faceSensing`、`handpose2scratch`、`facemesh2scratch`、`music`。Extension 只記錄/標示，不載入執行。
 
-- 目錄掃描/manifest、匿名學生 ID、並行上限、逐檔容錯、checkpoint/resume、每份報告和班級摘要/CSV。
-- 中途停止後可安全續跑且不重複/覆寫其他班級資料；以作品 SHA-256、analyzer/rubric version 做快取 key，快取只存在使用者指定的本機資料夾。
-- 30/100/500 檔案壓力樣本記憶體/時間指標；任意單檔錯誤不會丟失其他結果。
+**驗收**
 
-### Phase 5 — 評分校準與教師試用
+- 四份作品一批完成，逐檔列出 `ok`/`partial`/`failed`、target/block 數、recognized/opaque coverage、score、回饋數與限制。
+- 每個回饋 evidence ID 可對回報告內 evidence；score 可由同版 rubric 重算。
+- 對每份 partial/failed 追查具體原因並修正可修的 importer/mapper 問題；真正 unsupported 的內容要保留限制，不用猜測補齊。
+- 原始作品不變，輸出只寫入明確指定的新目錄。
+- 再用 30/100/500 個 fixture 做時間與記憶體量測，據此設定支援上限；沒有數據前不宣稱可穩定處理任意班級規模。
 
-- 先以匿名、多類型 Scratch 專案由教師盲評，涵蓋遊戲、故事、動畫、藝術、不同作品規模和 opaque extensions。
-- 報告 Bridge 分數與教師分數的面向分歧，不以單一平均遮蓋偏差；調整前先找出規則誤判來源。
-- 未通過校準前輸出必須標為「依 SB3 靜態結構估分」，教師可停用數字分數而保留證據回饋。
+### Phase 4 — 教師試用與評分校準
 
-## 6. 主要風險與邊界
+- 教師盲評多類型匿名作品（遊戲、故事、動畫、藝術與含 extensions 作品），逐項比較 rubric 分數與教師判斷。
+- 報告各 criterion 的偏差和 coverage 對分數信心的影響；未經校準時明確標「依 SB3 靜態結構估分」，允許停用總分而保留證據回饋。
+- 實際確認學生版 Markdown 可讀、回饋不把 extension/unsupported opcode 誤判為學生錯誤。
 
-- Scratch VM 對 Node/瀏覽器環境的依賴可能使某些 SB3 只能做 Raw Archive/graph 靜態分析；輸出需清楚區分 Canonicalized 與 raw-only。
-- 目前 `sb3-static-v1` 是啟發式初版，不是經教師驗證的正式評量工具。整班試用前需校準及回報不確定性，不能把 batch 排名或自動分數直接作唯一學期成績。
-- 學生姓名/學號可能藏在檔名、角色名、廣播名、文字積木及 metadata；匿名報告需以允許清單輸出欄位，不能只刪除可見姓名欄。
-- `.sb3` 是 ZIP/JSON/素材不可信輸入；沿用 archive 防護，限制輸入數量、展開大小、單檔執行時間、並行度及輸出路徑，且不得執行 student extension 或 arbitrary code。
-- 若未來加入 LLM 版本，預設每份個別 opt-in；整班批次禁止自動外傳學生作品/回饋包。
+### Phase 5 — Agent 寫作/修改工具（另案）
 
-## 7. 本階段邊界
+在 inspect/batch 穩定後才加入 `validate-ir`、`compile-ir`、`roundtrip`、`patch`。每個命令分開驗收 JSON stdin/stdout、錯誤定位、Scratch VM 載入與未知資料保留；未經使用者要求，不將其納入批次分析 MVP。
 
-這份計畫描述 CLI/agent/batch 方向；目前已部署的 web 評分功能不因 CLI 計畫改變。本文件本身不表示 CLI 已存在、已發布或已支援整班批次。
+## 5. 資安、隱私與品質界線
+
+- SB3、manifest 和檔名都是不可信輸入；沿用 archive 邊界、路徑正規化、檔案數/大小/解壓上限，不執行 archive 內程式碼或 extension。
+- 所有處理在本機；預設不網路、不 AI、不輸出素材 bytes。stdout 僅供機器協定，私人 debug 不得混入。
+- 不將學生姓名/學號當作預設輸出識別；班級摘要使用匿名 ID。單份報告只輸出產生教學回饋必需的欄位。
+- `sb3-static-v1` 是結構估分，不衡量創意、美感、理解力、玩法手感或 FPS，不得單獨作正式成績。
+- CLI 分析即使成功，也不等同 Scratch 執行驗證；runtime、感測器硬體和線上服務均標示 unavailable/not verified。
+
+## 6. 首個可交付版本定義
+
+只有以下條件都通過，才稱為「CLI 批次分析可用」：
+
+1. Node 靜態 pipeline 與 `inspect` 命令已實作並有回歸驗收。
+2. `batch` 能處理混合成功/失敗輸入並產生 JSONL、個別回饋、摘要及 CSV。
+3. 上述四份真實作品有逐檔結果，輸入原檔未被修改。
+4. Windows/macOS/Linux 的路徑、stdout/stderr、exit code smoke 通過，並有實測容量界線。
+5. docs、CLI `--help`、輸出 schema 與實際行為一致。
+
+本文件是執行計畫，並不代表 CLI 已存在或批次已完成。

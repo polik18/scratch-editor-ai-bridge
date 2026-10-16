@@ -82,7 +82,23 @@ npm test --workspace=@scratch/scratch-ai-bridge
 npm run lint --workspace=@scratch/scratch-ai-bridge
 npm run build --workspace=@scratch/scratch-ai-bridge
 npm run test:browser --workspace=@scratch/scratch-ai-bridge
+npm run cli --workspace=@scratch/scratch-ai-bridge -- --help
 ```
+
+The local CLI has `inspect <file.sb3>` and `batch <directory> --out <new-directory>` commands. It reads SB3
+structure only; it does not run project scripts, Scratch VM, hardware, or extensions. Batch output is written to a
+new directory and uses anonymous student IDs unless a validated manifest is supplied. See
+[`docs/cli-agent-plan.md`](docs/cli-agent-plan.md) for the output contract and current implementation status.
+
+Examples:
+
+```sh
+npm run cli --workspace=@scratch/scratch-ai-bridge -- inspect ./作品.sb3 --format markdown
+npm run cli --workspace=@scratch/scratch-ai-bridge -- batch ./班級作品 --out ./班級分析結果 --jobs 1
+```
+
+The batch report directory includes `PRIVATE-teacher-source-map.csv`, which maps anonymous IDs to input filenames.
+Keep this file private; do not share it with student reports.
 
 Use the exact Node version in the repository `.nvmrc`. The dependency build is required after a clean install because
 the official Scratch workspaces resolve several packages through their generated `dist/` entry points.

@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc --noEmit && vite build && node scripts/copy-renderer-sandbox-assets.mjs && node scripts/generate-service-worker.mjs && node scripts/check-bundle-budget.mjs",
+    "cli": "tsx src/cli/main.ts",
     "bench": "node -e \"require('node:fs').mkdirSync('test-results',{recursive:true})\" && vitest bench --run tests/performance --outputJson=test-results/performance.json && node scripts/check-performance-budget.mjs test-results/performance.json",
     "audit:reachability": "node scripts/check-audit-reachability.mjs",
     "clean": "rimraf dist coverage",
@@ -37,6 +38,9 @@
     "jszip": "3.10.2",
     "scratch-audio": "2.0.268"
   },
+  "bin": {
+    "scratch-ai-bridge": "scripts/scratch-ai-bridge.mjs"
+  },
   "devDependencies": {
     "ajv": "8.20.0",
     "eslint": "9.39.5",
@@ -45,6 +49,7 @@
     "prettier": "3.9.9",
     "rimraf": "6.1.2",
     "scratch-parser": "6.0.1",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
     "vite": "npm:rolldown-vite@7.3.1",
     "vitest": "4.1.11"

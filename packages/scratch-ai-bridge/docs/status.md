@@ -1,8 +1,12 @@
 # Scratch AI Bridge implementation status
 
-## 2026-10-15 — CLI/agent/class-batch plan
+## 2026-10-16 — CLI static inspect 與 batch MVP
 
-Added `docs/cli-agent-plan.md`: the CLI should itself analyze, score and produce student-friendly evidence-based feedback offline, while coding agents invoke it directly without manual copy/paste or a Gemini-specific integration. Scope also includes agent-authored Canonical IR validation/compilation to SB3, safe patching of existing SB3, JSON/JSONL/Markdown output, and anonymous whole-class batch reports. Plan only; CLI implementation has not started.
+新增 workspace-local `scratch-ai-bridge inspect` / `batch`：Node 靜態路徑直接使用 lossless SB3 archive、project JSON、raw block graph、Canonical projection 及既有 analyzer/score/feedback，不載入 Scratch VM、Canvas 或 extensions。輸出版本化 JSON/Markdown、逐檔容錯 batch、class summary、CSV 和權限受限的 private teacher source map；回饋/evidence 有數量上限，輸出 evidence IDs 去識別，預設隱去角色名與對話文字。四份使用者比賽作品實跑：1 ok、3 partial、0 failed；分數 83–100，opaque blocks 分別 89/67/0/78，malformed graph issues 2/0/0/20。這些為 `sb3-static-v1` 結構估分，partial 原因需逐檔追查，不是執行結果。TypeScript check、5 個 CLI unit tests、CLI ESLint/Prettier 通過。完整 package/browser/build gates、四份 partial 的原因分析、跨平台與容量壓力仍待後續。報告位於使用者 Desktop 指定資料夾；原始 SB3 未修改。
+
+## 2026-10-16 — CLI 執行計畫重整
+
+根因盤點確認：2026-10-15 只提交 CLI 規格文件，沒有 CLI entry point；原計畫將分析、全班批次、IR 編譯與 SB3 patch 綁成大案，且未先驗證 Node/Canvas/VM 邊界。`docs/cli-agent-plan.md` 已重排為可交付階段；IR 寫作/patch 移到後續另案。
 
 ## 2026-10-15 — SB3-only scoring first implementation
 
