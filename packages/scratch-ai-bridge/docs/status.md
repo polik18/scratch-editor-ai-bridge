@@ -1,5 +1,13 @@
 # Scratch AI Bridge implementation status
 
+## 2026-10-16 — 教師視角 Phase 2 學生線索導航第一輪
+
+學生解惑頁新增本機程式線索清單，以匿名「舞台／角色 A…」代號分組，顯示段落位置與白話積木標籤；每次最多顯示 40 筆，可逐批展開。複製給外部 AI 的 evidence packet/coverage 使用同一組角色代號。此次 package lint 與 production build/bundle budgets 通過；未執行測試或 browser smoke。尚未按問題排序、加入搜尋或真人學生驗收；未提交、推送或部署。
+
+## 2026-10-16 — 教師視角 Phase 3 本機提示第一輪
+
+學生輸入問題時，頁面依位置、按鍵、碰撞、分數或聲音關鍵詞，從已分析的 Project Map 找一個相符的已識別積木，顯示一個白話定位步驟；沒有相符證據時說明不能判斷並建議找老師。提示不會執行作品、不改寫積木，也不把未知 extension 解讀成已知行為。此規則提示尚未有單元/瀏覽器測試、教師校準或學生可用性實測。
+
 ## 2026-10-16 — SB3 結構參考分 v2 第一輪
 
 開始落實教師視角計畫 Phase 1：`sb3-static-v2` 將未使用的變數/清單與互動面向標為 N/A，按適用配分換算；沒有足夠可讀 evidence 時不顯示總分。主 UI、CLI JSON/Markdown 與 Gemini 評分提示改稱「SB3 結構參考分」，明確排除正式成績、作品整體品質及 runtime 判斷。新增最小「綠旗移動並說話」不因缺少資料/互動面向拿滿分的回歸，以及無 evidence 不計總分測試。Bridge tests 446/446、TypeScript production build/bundle budgets、lint/Prettier、Chromium smoke 通過。GitHub run `38914081250` 的 Build 與 Bridge 套件工作均通過；checks 頁仍有一項總結工作進行中。分數描述/權重仍未經教師校準。

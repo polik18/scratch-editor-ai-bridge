@@ -44,8 +44,17 @@ export interface EvidencePacketV1 {
 
 export const EVIDENCE_PACKET_MAX_CHARS = 24_000
 
-const targetLabel = (targetIndex: number | undefined): string =>
-  targetIndex === undefined ? '作品' : targetIndex === 0 ? '舞台' : `第 ${targetIndex} 個角色`
+const targetLabel = (targetIndex: number | undefined): string => {
+  if (targetIndex === undefined) return '作品'
+  if (targetIndex === 0) return '舞台'
+  let suffix = ''
+  let value = targetIndex - 1
+  do {
+    suffix = String.fromCharCode(65 + (value % 26)) + suffix
+    value = Math.floor(value / 26) - 1
+  } while (value >= 0)
+  return `角色 ${suffix}`
+}
 
 const locationLabel = (targetIndex: number | undefined, scriptIndex: number | undefined): string => {
   const target = targetLabel(targetIndex)
@@ -115,7 +124,7 @@ export const createEvidencePacket = (
     opaqueBlocks: projectMap.coverage.opaqueBlocks,
     malformedGraphIssues: projectMap.coverage.malformedGraphIssues,
     scripts: projectMap.coverage.scripts.map(({ targetName, ...script }) => ({
-      target: targetName === targetNames[0] ? '舞台' : `第 ${Math.max(1, targetNames.indexOf(targetName))} 個角色`,
+      target: targetLabel(targetNames.indexOf(targetName)),
       ...script,
     })),
     extensions: projectMap.coverage.extensions.map(({ extensionName, recognizedBlocks, opaqueBlocks, runtime }) => ({

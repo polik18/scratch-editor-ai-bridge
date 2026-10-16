@@ -662,6 +662,56 @@ h1 {
   font-size: 18px;
   font-weight: 800;
 }
+.student-help-map {
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid #c8d9cc;
+  border-radius: 14px;
+  background: #f5faf5;
+}
+.student-help-map h3 {
+  margin: 0 0 5px;
+  color: var(--forest-dark);
+  font-size: 17px;
+}
+.student-help-map > p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.student-help-map-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.student-help-map-list li {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  line-height: 1.5;
+}
+.student-help-map-list strong {
+  color: var(--forest-dark);
+  font-size: 14px;
+}
+.student-help-map-list span {
+  font-size: 14px;
+}
+.student-help-map-more {
+  margin-top: 10px;
+  border: 0;
+  padding: 8px 0;
+  color: var(--forest-dark);
+  background: transparent;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
 .student-help-note {
   padding: 10px 12px;
   border-radius: 10px;
@@ -687,6 +737,20 @@ h1 {
   padding: 12px 14px;
   color: var(--ink);
   background: white;
+  line-height: 1.6;
+}
+.student-help-first-hint {
+  margin-top: 12px;
+  padding: 13px 15px;
+  border-left: 4px solid var(--forest);
+  border-radius: 9px;
+  background: #f0f7f1;
+}
+.student-help-first-hint strong {
+  color: var(--forest-dark);
+}
+.student-help-first-hint p {
+  margin: 5px 0 0;
   line-height: 1.6;
 }
 .student-help-actions {
