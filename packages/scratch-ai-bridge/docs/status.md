@@ -1,5 +1,9 @@
 # Scratch AI Bridge implementation status
 
+## 2026-10-16 — 教師改善計畫與候選 CI lint 根因
+
+新增 `docs/teacher-review-improvement-plan.md`，將教師視角改善拆成 8 階段：CI 修復、SB3 結構參考分校準、學生 evidence 定位、一步一試解惑、班級批次隱私、extension 教學文字、教師/學生實測與受控發布。首階段重現候選 CI Bridge 工作失敗：本機 444/444 tests、AI Bridge dependency build、benchmark 及 Chromium/Firefox/WebKit browser smoke 通過；`npm run lint` 原先因 `docs/extension-teacher-review.md` Prettier 格式不符失敗。已格式化該表與新計畫，lint 通過。這是 CI 失敗的高可信原因，仍需推送後 CI 成功確認。未改評分公式，教師盲評與學生試用仍待完成。
+
 ## 2026-10-16 — 擴充積木 Phase 0 首輪盤點
 
 對四份匿名化本機 SB3 以 raw `project.json` 統計 extension opcode 與 procedure graph：S0001 有 text2speech/videoSensing 7/18 blocks，並發現一個自製積木 prototype argument ID/default 數不一致；S0002 有 faceSensing/text2speech/videoSensing 3/50/2 blocks；S0003 無 extension/opaque；S0004 有 facemesh2scratch/handpose2scratch/music 4/10/13 blocks，另有 3 個非 block graph entries。這證實 `partial` 混合了不同原因，procedure 核心積木亦被誤算為未辨識。已把 `procedures_*` 與 `argument_reporter_*` 結構 opcode 納入 raw coverage 認列並排除於 AI capability 缺漏提示；未知 extension 仍保留 opaque。未跑測試或 CLI 回歸；需依工作流程後續驗證。樣本未複製進 repo。詳細計畫與匿名盤點見 `docs/extension-analysis-plan.md`。
