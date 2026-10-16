@@ -83,8 +83,6 @@ const redactQuotedContent = (value: string): string =>
 
 const localizedDiagnostic = (code: string): string | undefined => {
   const messages: Record<string, string> = {
-    'block-graph-invalid-procedure-definition':
-      'Bridge 無法完整解讀一個自製積木的定義資料；請在 Scratch 中檢查該積木的參數設定。',
     'block-graph-invalid-argument-reporter':
       'Bridge 找到一個自製積木的參數積木，但無法確認它對應哪個輸入；請檢查積木定義和參數名稱。',
     'extension-runtime-disabled': '作品使用相機或感測器 extension；CLI 不會啟動這些功能，請在原 Scratch 環境確認。',
@@ -92,6 +90,7 @@ const localizedDiagnostic = (code: string): string | undefined => {
       '作品使用額外的 Scratch extension；CLI 只分析積木結構，無法確認裝置或瀏覽器中的實際行為。',
     'extension-data-egress': '作品使用語音積木；輸入文字可能送到 Scratch 語音服務，請避免放入姓名、地址等個人資料。',
     'detached-script': '有一段程式沒有事件積木（例如綠旗或按鍵），一般情況下可能不會自動開始。',
+    'unclassified-script-entry': '這段程式從目前無法辨認的積木開始；Bridge 無法判斷它是不是擴充功能的事件積木。',
     'receiver-no-sender': '找到一段等待角色訊息的程式，但作品中沒有找到明顯的同名發送訊息。',
   }
   return messages[code]
@@ -243,6 +242,8 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
             'extension-runtime-unverified': '在 Scratch 原環境執行作品，確認 extension 的行為符合你的設計。',
             'extension-data-egress': '確認文字不含個人資料，再在 Scratch 中測試語音功能。',
             'detached-script': '檢查這段程式是否應接上綠旗、按鍵或其他事件積木。',
+            'unclassified-script-entry':
+              '請在原 Scratch 環境確認這段程式是否由擴充功能事件積木啟動；目前不需要因這項提示修改作品。',
             'receiver-no-sender': '檢查發送訊息和接收訊息使用的名稱是否一致。',
           }
           return (code ? nextSteps[code] : undefined) ?? redact(item.nextStep, code)
@@ -279,11 +280,21 @@ export const inspectionToMarkdown = (inspection: CliInspection): string => {
       (item) => `- **${item.title}**：${item.message} ${item.nextStep}（${item.evidenceIds.join(', ') || '無證據'}）`,
     ),
     '',
+    '## 擴充積木判讀',
+    '',
+    ...(inspection.coverage.extensions.length > 0
+      ? inspection.coverage.extensions.map(
+          (item) =>
+            `- ${item.extensionName}：辨認 ${item.recognizedBlocks} 個、暫時看不懂 ${item.opaqueBlocks} 個；${item.runtime === 'unavailable-extension' ? '此環境未啟動所需裝置或擴充' : item.runtime === 'unverified-extension' ? '只做靜態判讀，未確認實際執行' : item.runtime === 'verified-extension' ? '有本機執行支援，但本次仍未執行作品' : 'Scratch 內建功能'}。`,
+        )
+      : ['- 沒有偵測到擴充積木。']),
+    '- Bridge 暫時看不懂的擴充積木不等於學生程式錯誤，也不會因此扣分。',
+    '',
     '## 證據索引',
     '',
     ...inspection.evidence.map(
       (item) =>
-        `- ${item.id}：${item.target}${item.script === null ? '' : `，第 ${item.script} 段程式`}：${item.label}（${item.opcode}）`,
+        `- ${item.id}：${item.target}${item.script === null ? '' : `，第 ${item.script} 段程式`}：${item.label}`,
     ),
     '',
     '## 分析限制',

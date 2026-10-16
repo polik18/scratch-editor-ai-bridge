@@ -1569,14 +1569,46 @@ const filterTargetScriptList = (): void => {
 const focusProjectEvidence = (source: ProjectEvidence): void => {
   const disclosure = targetScriptList.closest('details')
   if (disclosure) disclosure.open = true
-  const evidenceTarget =
-    source.scriptIndex === null && source.blockId
-      ? document.getElementById(`raw-block-${source.targetIndex}-${encodeURIComponent(source.blockId)}`)
-      : source.scriptIndex === null
-        ? targetScriptList.querySelector<HTMLElement>(`[data-target-index="${source.targetIndex}"] summary`)
-        : document.getElementById(`target-script-${source.targetIndex}-script-${source.scriptIndex}`)
-  const targetSection = evidenceTarget?.closest('details')
-  if (targetSection) targetSection.open = true
+  let evidenceTarget: HTMLElement | null = null
+  if (source.scriptIndex === null && source.blockId) {
+    evidenceTarget = document.getElementById(`raw-block-${source.targetIndex}-${encodeURIComponent(source.blockId)}`)
+  } else if (source.scriptIndex === null) {
+    evidenceTarget = targetScriptList.querySelector<HTMLElement>(
+      `[data-target-index="${source.targetIndex}"] summary`,
+    )
+  } else {
+    const scriptElement = document.getElementById(`target-script-${source.targetIndex}-script-${source.scriptIndex}`)
+    const evidenceDetails = scriptElement?.querySelector<HTMLDetailsElement>('.script-evidence-details')
+    if (scriptElement && evidenceDetails && projectMap) {
+      evidenceDetails.open = true
+      if (evidenceDetails.dataset.loaded !== 'true') {
+        const evidenceList = document.createElement('ol')
+        evidenceList.setAttribute('aria-label', '這段程式的積木線索')
+        projectMap.evidence
+          .filter((item) => item.targetIndex === source.targetIndex && item.scriptIndex === source.scriptIndex)
+          .forEach((item, index) => {
+            const row = document.createElement('li')
+            row.id = `project-evidence-${item.targetIndex}-${encodeURIComponent(item.id)}`
+            row.tabIndex = -1
+            row.textContent = `第 ${index + 1} 個積木：${item.studentLabel}`
+            evidenceList.append(row)
+          })
+        evidenceDetails.append(evidenceList)
+        evidenceDetails.dataset.loaded = 'true'
+      }
+      evidenceTarget = document.getElementById(
+        `project-evidence-${source.targetIndex}-${encodeURIComponent(source.id)}`,
+      )
+    }
+    evidenceTarget ??= scriptElement
+  }
+  let parent = evidenceTarget?.parentElement
+  while (parent) {
+    if (parent instanceof HTMLDetailsElement) parent.open = true
+    parent = parent.parentElement
+  }
+  targetScriptList.querySelectorAll('.evidence-focus').forEach((item) => item.classList.remove('evidence-focus'))
+  evidenceTarget?.classList.add('evidence-focus')
   evidenceTarget?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   evidenceTarget?.focus()
 }
@@ -1584,7 +1616,7 @@ const focusProjectEvidence = (source: ProjectEvidence): void => {
 const evidenceLocationLabel = (source: ProjectEvidence): string =>
   source.scriptIndex === null
     ? `查看「${source.targetName}」中尚未解讀的積木`
-    : `查看「${source.targetName}」的第 ${source.scriptIndex + 1} 段程式`
+    : `定位「${source.targetName}」第 ${source.scriptIndex + 1} 段的「${source.studentLabel}」`
 
 targetScriptFilter.addEventListener('input', filterTargetScriptList)
 
@@ -1665,7 +1697,12 @@ const renderAnalysis = () => {
     diagnostic.append(code, message)
     diagnostics.replaceChildren(diagnostic)
   }
-  projectMapCoverage.textContent = `保留 ${projectMap.coverage.importedBlocks} 個原始積木；其中 ${projectMap.coverage.recognizedBlocks} 個可辨識、${projectMap.coverage.opaqueBlocks} 個目前無法完整解讀。回編/執行驗證：尚未執行。`
+  const extensionSummary = projectMap.coverage.extensions.length
+    ? ` 擴充積木：${projectMap.coverage.extensions
+        .map((item) => `${item.extensionName} ${item.recognizedBlocks} 個已辨認、${item.opaqueBlocks} 個尚不理解`)
+        .join('；')}。不理解的擴充積木不代表作品錯誤，也不會因此扣分。`
+    : ''
+  projectMapCoverage.textContent = `保留 ${projectMap.coverage.importedBlocks} 個原始積木；其中 ${projectMap.coverage.recognizedBlocks} 個可辨識、${projectMap.coverage.opaqueBlocks} 個目前無法完整解讀。${extensionSummary} 回編/執行驗證：尚未執行。`
   projectMapFacts.replaceChildren(
     ...projectMap.facts.slice(0, 30).map((fact) => {
       const item = document.createElement('li')
@@ -1774,6 +1811,13 @@ const renderAnalysis = () => {
             const labels = scriptEvidence.slice(0, 6).map(({ studentLabel }) => studentLabel)
             source.textContent = `這段程式：${labels.join('，')}${scriptEvidence.length > labels.length ? '，以及其他積木' : ''}`
             item.append(source)
+
+            const evidenceDetails = document.createElement('details')
+            evidenceDetails.className = 'script-evidence-details'
+            const evidenceSummary = document.createElement('summary')
+            evidenceSummary.textContent = `查看積木線索（${scriptEvidence.length} 個）`
+            evidenceDetails.append(evidenceSummary)
+            item.append(evidenceDetails)
           }
           list.append(item)
         })

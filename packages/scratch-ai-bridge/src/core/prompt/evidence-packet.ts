@@ -16,10 +16,7 @@ export interface EvidencePacketV1 {
     id: string
     target: string
     script: number | null
-    blockId?: string
-    opcode: string
     blockLabel: string
-    path: string
   }[]
   readonly limitations: readonly string[]
   readonly coverage: {
@@ -29,6 +26,12 @@ export interface EvidencePacketV1 {
       recognizedBlocks: number
       opaqueBlocks: number
       malformedGraphIssues: number
+      runtime: string
+    }[]
+    extensions: readonly {
+      extensionName: string
+      recognizedBlocks: number
+      opaqueBlocks: number
       runtime: string
     }[]
     roundTrip: ProjectMap['coverage']['roundTrip']
@@ -54,7 +57,10 @@ const studentSafeClaim = (
   source: ProjectMap['evidence'][number] | undefined,
 ): string => {
   const location = locationLabel(source?.targetIndex, fact.scriptIndex)
-  if (fact.kind === 'limitation') return `${location}有目前無法讀懂的積木，所以不能確定它們的作用。`
+  if (fact.kind === 'limitation') {
+    const count = fact.evidence.length
+    return `${location}有 ${count} 個積木目前無法讀懂，所以不能確定它們的作用。`
+  }
   const blockLabel = source?.studentLabel
   if (!blockLabel) return `${location}有一段程式可以再檢查。`
   if (fact.kind === 'trigger') return `${location}的開始方式是${blockLabel.replace(/^當/, '')}。`
@@ -97,18 +103,26 @@ export const createEvidencePacket = (
       id,
       target: targetLabel(item.targetIndex),
       script: item.scriptIndex === null ? null : item.scriptIndex + 1,
-      opcode: item.opcode,
       blockLabel: item.studentLabel,
-      path: item.path.replaceAll(/\/targets\/\d+\/blocks\/[^/]+/g, '/targets/INDEX/blocks/BLOCK'),
     }))
   const evidenceIds = new Map([...allEvidence.values()].map(({ item, id }) => [item.id, id]))
   const sourceEvidence = new Map([...allEvidence.values()].map(({ item }) => [item.id, item]))
   const targetNames = analysis.targets.map(({ name }) => name)
   const coverage = {
-    ...projectMap.coverage,
+    roundTrip: projectMap.coverage.roundTrip,
+    importedBlocks: projectMap.coverage.importedBlocks,
+    recognizedBlocks: projectMap.coverage.recognizedBlocks,
+    opaqueBlocks: projectMap.coverage.opaqueBlocks,
+    malformedGraphIssues: projectMap.coverage.malformedGraphIssues,
     scripts: projectMap.coverage.scripts.map(({ targetName, ...script }) => ({
       target: targetName === targetNames[0] ? '舞台' : `第 ${Math.max(1, targetNames.indexOf(targetName))} 個角色`,
       ...script,
+    })),
+    extensions: projectMap.coverage.extensions.map(({ extensionName, recognizedBlocks, opaqueBlocks, runtime }) => ({
+      extensionName,
+      recognizedBlocks,
+      opaqueBlocks,
+      runtime,
     })),
   }
   let observations = facts.map((fact, index) => ({

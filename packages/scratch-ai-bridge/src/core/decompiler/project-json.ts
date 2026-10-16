@@ -493,14 +493,19 @@ const inspectProcedureNormalization = (targets: readonly RawScratchTarget[]): Pr
         argumentNames.every((value) => typeof value === 'string' && value.length > 0),
       )
       if (!metadataValid) {
+        const mismatchSummary =
+          argumentIds && argumentNames && argumentDefaults
+            ? `找到 ${argumentIds.length} 個參數 ID、${argumentNames.length} 個參數名稱、${argumentDefaults.length} 個預設值${markers.length !== argumentIds.length ? `，但積木名稱只有 ${markers.length} 個參數位置` : ''}。`
+            : undefined
         items.push({
           targetName: target.name,
           definitionId,
           ...(proccode ? { proccode } : {}),
           code: 'invalid-procedure-metadata',
           outcome: 'skipped',
-          message:
-            'Procedure metadata is incomplete or inconsistent; the procedure cannot be represented in Canonical IR.',
+          message: mismatchSummary
+            ? `自製積木的參數資料數量不一致。${mismatchSummary} Bridge 保留原始資料，但無法安全轉成可編輯的自製積木。`
+            : '自製積木定義或參數資料格式不完整。Bridge 保留原始資料，但無法安全轉成可編輯的自製積木。',
         })
         continue
       }

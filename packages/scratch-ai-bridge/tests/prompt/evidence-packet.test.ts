@@ -35,7 +35,19 @@ describe('minimal evidence packet', () => {
     expect(prompt).not.toContain('<svg')
   })
 
-  it('does not export raw Scratch block IDs in evidence paths', () => {
+  it('requires specific student directions while forbidding guesses and technical evidence IDs', () => {
+    const project = platformerCore as CanonicalProject
+    const analysis = analyzeCanonicalProject(project)
+    const prompt = createAnalysisPrompt({ analysis, canonical: project, question: '主角為什麼一開始就在右邊？' })
+
+    expect(prompt).toContain('積木上看得到的文字或數字')
+    expect(prompt).toContain('說明要觀察什麼結果')
+    expect(prompt).toContain('不可猜測根本原因、數字')
+    expect(prompt).toContain('未知或擴充積木要合併成一句白話限制')
+    expect(prompt).toContain('也不要提「證據編號」')
+  })
+
+  it('does not export raw Scratch block IDs, opcode names, or JSON paths', () => {
     const project = platformerCore as CanonicalProject
     const analysis = analyzeCanonicalProject(project)
     const rawGraphs = [
@@ -51,6 +63,8 @@ describe('minimal evidence packet', () => {
     const serialized = JSON.stringify(createEvidencePacket(analysis, map))
 
     expect(serialized).not.toContain('student-name-private-block-id')
-    expect(serialized).toContain('thirdparty_sensor_read')
+    expect(serialized).not.toContain('thirdparty_sensor_read')
+    expect(serialized).not.toContain('/targets/')
+    expect(serialized).toContain('目前無法讀懂')
   })
 })

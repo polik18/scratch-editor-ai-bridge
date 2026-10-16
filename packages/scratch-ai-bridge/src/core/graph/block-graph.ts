@@ -1,5 +1,17 @@
 import { getBlockCapability } from '../capabilities'
 
+const caseInsensitiveRawEnumFields = new Set(['looks_changeeffectby:EFFECT', 'looks_seteffectto:EFFECT'])
+
+const isAllowedRawFieldValue = (
+  opcode: string,
+  fieldName: string,
+  value: string,
+  values: readonly string[],
+): boolean =>
+  values.includes(value) ||
+  (caseInsensitiveRawEnumFields.has(`${opcode}:${fieldName}`) &&
+    values.some((allowed) => allowed.toLocaleLowerCase('en-US') === value.toLocaleLowerCase('en-US')))
+
 /** A Scratch block record with its upstream fields retained verbatim. */
 export interface ScratchBlockGraphNode {
   opcode: string
@@ -295,7 +307,7 @@ export const validateScratchBlockGraph = (graph: ScratchBlockGraph): BlockGraphI
           })
           continue
         }
-        if (field.values && !field.values.includes(fieldValue[0])) {
+        if (field.values && !isAllowedRawFieldValue(block.opcode, fieldName, fieldValue[0], field.values)) {
           issues.push({
             code: 'invalid-field-value',
             blockId: id,
@@ -447,11 +459,17 @@ export const validateScratchBlockGraph = (graph: ScratchBlockGraph): BlockGraphI
         proccode.length === 0 ||
         !validArguments
       ) {
+        const countMismatch =
+          argumentIds && argumentNames && argumentDefaults
+            ? `目前有 ${argumentIds.length} 個參數 ID、${argumentNames.length} 個參數名稱、${argumentDefaults.length} 個預設值。`
+            : undefined
         issues.push({
           code: 'invalid-procedure-definition',
           blockId: id,
           relatedId: prototypeIds[0],
-          message: `Procedure definition ${id} must own one valid prototype with consistent argument metadata`,
+          message: countMismatch
+            ? `自製積木的參數資料數量不一致。${countMismatch}`
+            : `自製積木定義缺少有效的參數原型，或參數資料格式不完整。`,
         })
       } else {
         const definitions = procedureDefinitions.get(proccode) ?? {

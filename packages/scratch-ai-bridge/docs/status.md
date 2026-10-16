@@ -1,5 +1,39 @@
 # Scratch AI Bridge implementation status
 
+## 2026-10-16 — 擴充積木 Phase 0 首輪盤點
+
+對四份匿名化本機 SB3 以 raw `project.json` 統計 extension opcode 與 procedure graph：S0001 有 text2speech/videoSensing 7/18 blocks，並發現一個自製積木 prototype argument ID/default 數不一致；S0002 有 faceSensing/text2speech/videoSensing 3/50/2 blocks；S0003 無 extension/opaque；S0004 有 facemesh2scratch/handpose2scratch/music 4/10/13 blocks，另有 3 個非 block graph entries。這證實 `partial` 混合了不同原因，procedure 核心積木亦被誤算為未辨識。已把 `procedures_*` 與 `argument_reporter_*` 結構 opcode 納入 raw coverage 認列並排除於 AI capability 缺漏提示；未知 extension 仍保留 opaque。未跑測試或 CLI 回歸；需依工作流程後續驗證。樣本未複製進 repo。詳細計畫與匿名盤點見 `docs/extension-analysis-plan.md`。
+
+## 2026-10-16 — 官方擴充積木靜態標籤初始切片
+
+新增 Scratch VM 15.2.0 來源的 10 個樣本常見官方 extension opcode 標籤（Face Sensing、Music、Text to Speech、Video Sensing），Project Map 可將積木意圖寫成學生看得懂的 evidence，並與 unknown opaque 分開。當時版本尚未記錄 block type/argument schema；也不讀取作品實際輸入值、不執行相機/語音/音樂/硬體、不涵蓋完整官方 extension opcode；第三方 handpose/mesh opcode 仍未知。未跑測試、CLI 回歸或 runtime smoke，故修改尚未驗證，Phase 1/2 未完成。詳見 `docs/extension-analysis-plan.md`。
+
+## 2026-10-16 — 官方 extension catalog 欄位補齊一小段
+
+同一批 10 個 opcode 已增加 block type、argument 名稱/型別、menu 與預設值；`text2speech_setLanguage` 標記動態預設，不猜當前語系。另列出 repo 內 Scratch VM 15.2.0 的四個來源檔。Video Sensing menu 欄位保留 VM metadata 的 number argument type 與實際字串預設值差異。這只完成樣本子集的 metadata，尚無逐 block 輸入值擷取、menu 選項清單、第三方 extension 解讀或 runtime 支援；未跑測試、CLI 重分析或 runtime smoke，不能視為完成或驗收。
+
+## 2026-10-16 — Extension 靜態 evidence、分層 coverage 與驗收
+
+已完成本輪可由 repo 自動驗證的實作：Project Map 讀取樣本 catalog 積木的 raw inputs，輸出白話參數摘要；文字轉語音內容遮蔽。Coverage 新增逐 extension recognized/opaque/runtime 分類；Web 和 CLI Markdown 顯示白話統計，unknown extension 不公開 opcode；CLI JSON 保留機器欄位。AI evidence packet 移除原始 opcode、block ID、JSON path，保留可讀積木摘要和 evidence ID。未知 extension opaque 與 runtime warning 不直接扣分，已加測試。
+
+procedure mismatch 診斷會指出 argument ID/name/default 數量（例如 1/1/2），raw graph 保留，學生回饋不顯示 block ID。新增 `docs/extension-support-matrix.md`，列出四個樣本官方 extension、未知 handpose/mesh、自製積木處理與 runtime 限制。四份匿名 SB3 CLI 重跑：三份 opaque=0，第四份識別 Music 13 blocks、保留 14 個未知 pose/mesh blocks，另記 3 個 graph issues；未執行任何作品或 extension。
+
+驗證：全套 Bridge 444/444 tests、lint/Prettier、TypeScript production build/bundle budget、performance benchmark 與 Chromium 153、Firefox 155、WebKit 26.6 browser smoke 通過。原生 Safari smoke 嘗試執行但系統未啟用 Remote Automation，沒有改動 Safari 設定。
+
+新增 `docs/extension-teacher-review.md` 作為待填的真人審閱表。尚未完成教師審閱、學生試用、相機/語音外部 runtime、Linux PSS 或正式 Pages 發布；未提交/推送。
+
+## 2026-10-16 — 真實作品誤報、回饋定位與教學提示第一輪修正
+
+修正原始 Scratch `looks_changeeffectby` / `looks_seteffectto` 合法大寫 enum 誤報；事件 hats 改由 capability registry 判斷；未知擴充積木開頭改列資訊而非「缺少事件帽」警告。回饋證據連結現在可展開角色與腳本，定位、高亮單一中文積木摘要；學生 AI 提示要求引用可見位置/積木內容，提供一步檢查與要觀察的結果，證據不足或有 opaque blocks 時禁止猜測或列技術 ID。四份真實 SB3 重跑後 effect field warnings 由 17 降至 0，結果 1 ok／3 partial／0 failed、平均暫定分 92.25；未執行作品 runtime。
+
+驗證：Bridge 442/442 tests、ESLint/Prettier、TypeScript production build/bundle budget、Chromium/Firefox/Playwright WebKit full browser smoke 通過。browser smoke 首次發現證據列的祖先 `<details>` 未全部展開，修正後聚焦/高亮斷言通過。原生 Safari smoke 未執行。評分現況另暴露大量 detached-script 低信心提示使 integrity 分數飽和為 0，移除 17 個誤報仍未反映在總分；暫不在未經教師校準時調整權重。下一步為確認 warning 可信度與分數信心呈現、原生 Safari UI 定位驗收、教師盲評及學生可用性；本輪未 commit/push/deploy。
+
+## 2026-10-16 — 四份真實作品 CLI 再分析與具名回饋
+
+重新批次分析使用者提供的四份 SB3：1 `ok`、3 `partial`、0 `failed`；匿名代碼和私人來源檔名由 CLI source map 對照。根據 CLI JSON、原始 Scratch block graph 與角色清單整理四份具名學生回饋及老師索引，保存在本機 Desktop `貓咪盃再分析_20261016/學生回饋/`；學生原始作品及姓名未納入 repo。報告中的分數均為 `sb3-static-v1` 暫定估分，未經教師校準且沒有執行作品。
+
+本次發現 CLI 預設 Markdown 尚不適合直接發學生：重複輸出 opaque/內部 evidence 說明、篇幅過長且大量省略；部分診斷 evidence 只能連到腳本第一個可識別積木。需新增以教師分析資料為源的 student report mode，做摘要/去重/精確定位/適齡回饋，並在 teacher review 和學生測試後再宣稱品質通過。
+
 ## 2026-10-16 — CLI static inspect 與 batch MVP
 
 新增 workspace-local `scratch-ai-bridge inspect` / `batch`：Node 靜態路徑直接使用 lossless SB3 archive、project JSON、raw block graph、Canonical projection 及既有 analyzer/score/feedback，不載入 Scratch VM、Canvas 或 extensions。輸出版本化 JSON/Markdown、逐檔容錯 batch、class summary、CSV 和權限受限的 private teacher source map；回饋/evidence 有數量上限，輸出 evidence IDs 去識別，預設隱去角色名與對話文字。四份使用者比賽作品實跑：1 ok、3 partial、0 failed；分數 83–100，opaque blocks 分別 89/67/0/78，malformed graph issues 2/0/0/20。這些為 `sb3-static-v1` 結構估分，partial 原因需逐檔追查，不是執行結果。TypeScript check、5 個 CLI unit tests、CLI ESLint/Prettier 通過。完整 package/browser/build gates、四份 partial 的原因分析、跨平台與容量壓力仍待後續。報告位於使用者 Desktop 指定資料夾；原始 SB3 未修改。

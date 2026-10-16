@@ -69,15 +69,25 @@ export const createProjectFeedback = (analysis: AnalysisIR, map: ProjectMap): Pr
       return true
     })
     if (related.length === 0) continue
+    const firstBlock =
+      diagnostic.code === 'detached-script'
+        ? related.find(({ path }) => path.endsWith(`/scripts/${(diagnostic.script ?? 1) - 1}/blocks/0`))
+        : undefined
     items.push({
       id: `diagnostic:${diagnostic.code}:${encodeURIComponent(diagnostic.target ?? '')}:${diagnostic.script ?? 0}`,
       kind: 'likely-behavior',
       severity: 'warning',
       confidence: 'limited',
-      title: '建議確認',
-      message: diagnostic.message,
-      nextStep: '在 Scratch 中執行作品，或檢查相關角色的事件與程式，再確認是否符合你的設計。',
-      evidenceIds: related.slice(0, 8).map(({ id }) => id),
+      title: diagnostic.code === 'detached-script' ? '這段程式可能少了開始積木' : '建議確認',
+      message:
+        firstBlock && diagnostic.code === 'detached-script'
+          ? `這段程式一開始是「${firstBlock.studentLabel}」，前面沒有綠旗或按鍵等開始積木，所以按綠旗時可能不會自行啟動。`
+          : diagnostic.message,
+      nextStep:
+        diagnostic.code === 'detached-script'
+          ? '如果你希望它按綠旗就開始，先接上「當綠旗被點擊」，再按綠旗測試；若這是自製積木或刻意保留的積木，先不要更動。'
+          : '在 Scratch 中執行作品，或檢查相關角色的事件與程式，再確認是否符合你的設計。',
+      evidenceIds: firstBlock ? [firstBlock.id] : related.slice(0, 8).map(({ id }) => id),
     })
   }
 

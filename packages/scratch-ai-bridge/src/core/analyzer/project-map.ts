@@ -1,4 +1,5 @@
-import { CANONICAL_OPCODES } from '../capabilities'
+import { CANONICAL_OPCODES, CORE_PROCEDURE_GRAPH_OPCODES } from '../capabilities'
+import { getScratchExtensionBlockDescription, SCRATCH_EXTENSION_CATALOG } from '../extensions/catalog'
 import type { CanonicalBlockMappingEntry, ScratchTargetBlockGraph } from '../graph'
 import type { CanonicalBlock, CanonicalInput, CanonicalProject } from '../ir/types'
 import type { AnalysisIR } from './analyzer'
@@ -34,6 +35,14 @@ export interface ProjectScriptCoverage {
   readonly runtime: 'core' | 'verified-extension' | 'unverified-extension' | 'unavailable-extension'
 }
 
+export interface ProjectExtensionCoverage {
+  readonly extensionId: string
+  readonly extensionName: string
+  readonly recognizedBlocks: number
+  readonly opaqueBlocks: number
+  readonly runtime: ProjectScriptCoverage['runtime']
+}
+
 export interface ProjectMap {
   readonly format: 'scratch-ai-bridge/project-map'
   readonly version: 1
@@ -42,6 +51,7 @@ export interface ProjectMap {
   readonly evidence: readonly ProjectEvidence[]
   readonly coverage: {
     readonly scripts: readonly ProjectScriptCoverage[]
+    readonly extensions: readonly ProjectExtensionCoverage[]
     readonly roundTrip: 'not-run'
     readonly importedBlocks: number
     readonly recognizedBlocks: number
@@ -50,7 +60,10 @@ export interface ProjectMap {
   }
 }
 
-const knownOpcodes = new Set<string>(CANONICAL_OPCODES)
+// Procedure graph blocks are modeled through CanonicalProcedure rather than as
+// ordinary script blocks, so count them as recognized in raw coverage too.
+const knownOpcodes = new Set<string>([...CANONICAL_OPCODES, ...CORE_PROCEDURE_GRAPH_OPCODES])
+const recognizedOpcodes = new Set<string>([...knownOpcodes, ...SCRATCH_EXTENSION_CATALOG.map(({ opcode }) => opcode)])
 const CORE_PREFIXES = [
   'argument',
   'colour',
@@ -124,6 +137,97 @@ const safeKeyName = (value: unknown): string => {
   if (key === 'right arrow') return '向右鍵'
   if (key === 'any') return '任意按鍵'
   return /^[a-z0-9]$/.test(key) ? `${key} 鍵` : '指定按鍵'
+}
+
+const extensionArgumentNames: Readonly<Record<string, string>> = {
+  PART: '部位',
+  DRUM: '鼓聲',
+  BEATS: '拍數',
+  NOTE: '音高',
+  INSTRUMENT: '樂器',
+  WORDS: '朗讀文字',
+  VOICE: '聲音',
+  LANGUAGE: '語言',
+  ATTRIBUTE: '感測內容',
+  SUBJECT: '感測對象',
+  VIDEO_STATE: '攝影機狀態',
+  TRANSPARENCY: '透明度',
+}
+
+const rawInputValue = (
+  block: ScratchTargetBlockGraph['blocks'][string],
+  inputName: string,
+  blocks: ScratchTargetBlockGraph['blocks'],
+): unknown => {
+  const descriptor = block.inputs?.[inputName]
+  if (!Array.isArray(descriptor)) return undefined
+  const active = descriptor[1] as unknown
+  const fallback = descriptor[2] as unknown
+  const resolve = (value: unknown, seen = new Set<string>()): unknown => {
+    if (Array.isArray(value)) {
+      if (typeof value[0] === 'number') {
+        const kind = value[0]
+        if (kind === 12) return { variable: String(value[1] ?? '') }
+        if (kind === 13) return { list: String(value[1] ?? '') }
+        if (kind === 11) return { broadcast: String(value[1] ?? '') }
+        return value[1]
+      }
+      return undefined
+    }
+    if (typeof value !== 'string' || seen.has(value)) return undefined
+    if (!Object.hasOwn(blocks, value)) return undefined
+    const nested = blocks[value]
+    seen.add(value)
+    const field = nested.fields?.[inputName]
+    if (Array.isArray(field)) return field[0]
+    return undefined
+  }
+  const value = resolve(active)
+  return value === undefined || value === null || value === '' ? resolve(fallback) : value
+}
+
+const extensionArgumentSummary = (
+  block: ScratchTargetBlockGraph['blocks'][string],
+  blocks: ScratchTargetBlockGraph['blocks'],
+  opcode: string,
+): string => {
+  const description = getScratchExtensionBlockDescription(opcode)
+  if (!description) return ''
+  const parts = description.arguments.map(({ name, type }) => {
+    const label = extensionArgumentNames[name] ?? '設定值'
+    const value = rawInputValue(block, name, blocks)
+    if (value === undefined) return `${label}未提供`
+    if (typeof value === 'object' && value !== null && 'variable' in value) return `${label}由變數提供`
+    if (typeof value === 'object' && value !== null && 'list' in value) return `${label}由清單提供`
+    if (typeof value === 'object' && value !== null && 'broadcast' in value) return `${label}由訊息提供`
+    if (type === 'string') return `${label}已設定（文字內容隱去）`
+    if (typeof value === 'number' && Number.isFinite(value)) return `${label}為 ${value}`
+    if (typeof value === 'string' && value.length <= 48) return `${label}為「${value}」`
+    return `${label}已設定`
+  })
+  return parts.length > 0 ? `（${parts.join('；')}）` : ''
+}
+
+const studentSafeGraphIssue = (issue: ScratchTargetBlockGraph['issues'][number]): string => {
+  if (issue.code === 'invalid-procedure-definition' && issue.message.startsWith('自製積木')) return issue.message
+  switch (issue.code) {
+    case 'invalid-procedure-definition':
+      return '自製積木的參數資料不完整或數量不一致。'
+    case 'invalid-procedure-call-arguments':
+      return '呼叫自製積木時提供的參數，和它的定義對不上。'
+    case 'unresolved-procedure-call':
+      return '找不到這個自製積木對應的定義。'
+    case 'invalid-argument-reporter':
+      return '自製積木中的參數名稱無法對應到定義。'
+    case 'missing-block':
+      return '這段程式連到一個找不到的積木資料。'
+    case 'missing-parent':
+    case 'parent-mismatch':
+    case 'multiple-parents':
+      return '積木之間的連接資料不一致。'
+    default:
+      return '積木的連接或欄位資料格式不完整。'
+  }
 }
 
 const xPositionHint = (input: CanonicalInput | undefined): string => {
@@ -371,7 +475,7 @@ export const createProjectMap = (
         ? rawEntries.filter(([id]) => scriptRawIds.has(id) || rawScriptByBlockId.get(id) === scriptIndex)
         : allBlocks.map(({ path, block }) => [path, block] as const)
       const rawNodes = scriptRawEntries.map(([, node]) => node)
-      const recognized = rawNodes.filter(({ opcode }) => knownOpcodes.has(opcode)).length
+      const recognized = rawNodes.filter(({ opcode }) => recognizedOpcodes.has(opcode)).length
       const opaque = rawNodes.length - recognized
       const runtime = rawNodes.reduce<ProjectScriptCoverage['runtime']>((current, block) => {
         const detected = extensionRuntime(block.opcode)
@@ -390,7 +494,7 @@ export const createProjectMap = (
         runtime,
       })
       if (opaque > 0) {
-        const unknownEntry = scriptRawEntries.find(([, node]) => !knownOpcodes.has(node.opcode))
+        const unknownEntry = scriptRawEntries.find(([, node]) => !recognizedOpcodes.has(node.opcode))
         const source = unknownEntry?.[0]
         const unknown = unknownEntry?.[1]
         const rawEvidence = source
@@ -432,6 +536,8 @@ export const createProjectMap = (
         evidence.some((entry) => entry.blockId === blockId)
       )
         continue
+      const extensionDescription = getScratchExtensionBlockDescription(block.opcode)
+      const argumentSummary = extensionArgumentSummary(block, graph.blocks, block.opcode)
       const source: ProjectEvidence = {
         id: `evidence:${targetId}:${encodeURIComponent(blockId)}`,
         targetId,
@@ -440,18 +546,31 @@ export const createProjectMap = (
         scriptIndex: null,
         blockId,
         opcode: block.opcode,
-        studentLabel: '目前無法解讀的擴充積木',
+        studentLabel: extensionDescription
+          ? `${extensionDescription.studentLabel}${argumentSummary}`
+          : '目前無法解讀的擴充積木',
         path: `/targets/${graph.targetIndex}/blocks/${pointerPart(blockId)}`,
       }
       evidence.push(source)
-      facts.push({
-        id: `fact:${targetId}:opaque:${encodeURIComponent(blockId)}`,
-        kind: 'limitation',
-        targetName: graph.targetName,
-        claim: `原始積木圖保留了一個目前未識別的「${block.opcode}」積木，Bridge 無法判定它的行為。`,
-        evidence: [source],
-        confidence: 'limited',
-      })
+      if (extensionDescription) {
+        facts.push({
+          id: `fact:${targetId}:extension:${encodeURIComponent(blockId)}`,
+          kind: 'action',
+          targetName: graph.targetName,
+          claim: `角色「${graph.targetName}」使用了「${extensionDescription.extensionName}」擴充的「${source.studentLabel}」積木。`,
+          evidence: [source],
+          confidence: 'high',
+        })
+      } else {
+        facts.push({
+          id: `fact:${targetId}:opaque:${encodeURIComponent(blockId)}`,
+          kind: 'limitation',
+          targetName: graph.targetName,
+          claim: `角色「${graph.targetName}」有一個來自額外擴充、Bridge 暫時看不懂作用的積木。`,
+          evidence: [source],
+          confidence: 'limited',
+        })
+      }
     }
     for (const issue of graph.issues) {
       const existing = evidence.find((entry) => entry.blockId === issue.blockId)
@@ -476,7 +595,7 @@ export const createProjectMap = (
         id: `fact:${targetId}:graph-issue:${encodeURIComponent(issue.code)}:${encodeURIComponent(issue.blockId)}`,
         kind: 'limitation',
         targetName: graph.targetName,
-        claim: `原始積木 ${issue.blockId} 有結構問題：${issue.message}`,
+        claim: `角色「${graph.targetName}」有一個積木的資料需要確認：${studentSafeGraphIssue(issue)}`,
         evidence: [source],
         confidence: 'limited',
       })
@@ -510,8 +629,31 @@ export const createProjectMap = (
     Object.values(graph.blocks).filter(({ shadow }) => shadow !== true),
   )
   const importedBlocks = allRawNodes.length
-  recognizedBlocks = allRawNodes.filter(({ opcode }) => knownOpcodes.has(opcode)).length
+  recognizedBlocks = allRawNodes.filter(({ opcode }) => recognizedOpcodes.has(opcode)).length
   opaqueBlocks = importedBlocks - recognizedBlocks
+  const extensionCounts = new Map<string, ProjectExtensionCoverage>()
+  for (const node of allRawNodes) {
+    const prefix = node.opcode.includes('_') ? node.opcode.slice(0, node.opcode.indexOf('_')) : ''
+    if (!prefix || CORE_PREFIXES.includes(prefix)) continue
+    const description = getScratchExtensionBlockDescription(node.opcode)
+    const existing = extensionCounts.get(prefix)
+    const detectedRuntime = extensionRuntime(node.opcode)
+    const runtime =
+      detectedRuntime === 'unavailable-extension' || existing?.runtime === 'unavailable-extension'
+        ? 'unavailable-extension'
+        : detectedRuntime === 'unverified-extension' || existing?.runtime === 'unverified-extension'
+          ? 'unverified-extension'
+          : detectedRuntime === 'verified-extension' || existing?.runtime === 'verified-extension'
+            ? 'verified-extension'
+            : 'core'
+    extensionCounts.set(prefix, {
+      extensionId: prefix,
+      extensionName: description?.extensionName ?? '未辨識的擴充',
+      recognizedBlocks: (existing?.recognizedBlocks ?? 0) + (description ? 1 : 0),
+      opaqueBlocks: (existing?.opaqueBlocks ?? 0) + (description ? 0 : 1),
+      runtime,
+    })
+  }
   return {
     format: 'scratch-ai-bridge/project-map',
     version: 1,
@@ -520,6 +662,9 @@ export const createProjectMap = (
     evidence,
     coverage: {
       scripts: scriptsCoverage,
+      extensions: [...extensionCounts.values()].sort((left, right) =>
+        left.extensionId.localeCompare(right.extensionId),
+      ),
       roundTrip: 'not-run',
       importedBlocks,
       recognizedBlocks,

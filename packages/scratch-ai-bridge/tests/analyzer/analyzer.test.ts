@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { analyzeCanonicalProject, createProjectMap } from '../../src/core/analyzer'
+import {
+  analyzeCanonicalProject,
+  createProjectFeedback,
+  createProjectMap,
+  createProjectScore,
+} from '../../src/core/analyzer'
 import { extractProjectBlockGraphs } from '../../src/core/graph'
 import broadcastExample from '../../src/core/ir/examples/04-broadcast-flow.json'
 import fullEntitiesExample from '../../src/core/ir/examples/05-full-entities.json'
@@ -41,10 +46,12 @@ describe('analysis IR', () => {
         evidence: [expect.objectContaining({ blockId: 'green', opcode: 'event_whenflagclicked' })],
       }),
     )
-    expect(result.facts.some(({ claim }) => claim.includes('目前未識別'))).toBe(true)
+    expect(result.facts.some(({ claim }) => claim.includes('來自額外擴充、Bridge 暫時看不懂作用'))).toBe(true)
     expect(result.evidence).toContainEqual(
       expect.objectContaining({ blockId: 'unknown', opcode: 'thirdparty_sensor_read', scriptIndex: null }),
     )
+    expect(result.facts.map(({ claim }) => claim).join(' ')).not.toContain('unknown')
+    expect(result.facts.some(({ claim }) => claim.includes('積木的資料需要確認'))).toBe(true)
     expect(result.coverage).toMatchObject({
       roundTrip: 'not-run',
       importedBlocks: 2,
@@ -56,6 +63,42 @@ describe('analysis IR', () => {
     )
   })
 
+  it('summarizes known extension inputs while keeping free text private', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    const rawGraphs = [
+      {
+        targetIndex: 0,
+        targetName: 'Stage',
+        isStage: true,
+        blocks: {
+          camera: {
+            opcode: 'videoSensing_videoToggle',
+            inputs: { VIDEO_STATE: [1, 'camera-state', 'camera-state'] },
+          },
+          'camera-state': { opcode: 'videoSensing_menu_VIDEO_STATE', fields: { VIDEO_STATE: ['on'] }, shadow: true },
+          speech: {
+            opcode: 'text2speech_speakAndWait',
+            inputs: { WORDS: [1, [10, 'student-private-name']] },
+          },
+        },
+        issues: [],
+      },
+    ]
+
+    const map = createProjectMap(project, analyzeCanonicalProject(project, rawGraphs), rawGraphs)
+    const camera = map.evidence.find(({ blockId }) => blockId === 'camera')
+    const speech = map.evidence.find(({ blockId }) => blockId === 'speech')
+
+    expect(camera?.studentLabel).toContain('攝影機狀態為「on」')
+    expect(speech?.studentLabel).toContain('朗讀文字已設定（文字內容隱去）')
+    expect(JSON.stringify(map)).not.toContain('student-private-name')
+    expect(map.coverage.extensions).toEqual([
+      expect.objectContaining({ extensionId: 'text2speech', recognizedBlocks: 1, opaqueBlocks: 0 }),
+      expect.objectContaining({ extensionId: 'videoSensing', recognizedBlocks: 1, opaqueBlocks: 0 }),
+    ])
+    expect(map.coverage.extensions.map(({ extensionName }) => extensionName)).not.toContain('thirdparty_sensor_read')
+  })
+
   it('summarizes scripts and broadcast dependencies', () => {
     const result = analyzeCanonicalProject(broadcastExample as CanonicalProject)
     expect(result.summary.scripts).toBe(2)
@@ -65,6 +108,77 @@ describe('analysis IR', () => {
       senders: ['Stage#1'],
       receivers: ['Stage#2'],
     })
+  })
+
+  it('does not lower the score just because an extension opcode is opaque', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    const baseAnalysis = analyzeCanonicalProject(project)
+    const baseMap = createProjectMap(project, baseAnalysis)
+    const baseScore = createProjectScore(project, baseAnalysis, baseMap)
+    project.extensions = ['vendor']
+    project.stage.scripts[0].blocks.push({ opcode: 'vendor_sensor_read' })
+    const extensionAnalysis = analyzeCanonicalProject(project)
+    const extensionMap = createProjectMap(project, extensionAnalysis, [
+      {
+        targetIndex: 0,
+        targetName: project.stage.name,
+        isStage: true,
+        blocks: { vendor: { opcode: 'vendor_sensor_read' } },
+        issues: [],
+      },
+    ])
+    const extensionScore = createProjectScore(project, extensionAnalysis, extensionMap)
+
+    expect(extensionMap.coverage.opaqueBlocks).toBeGreaterThan(0)
+    expect(extensionScore.total).toBe(baseScore.total)
+    expect(extensionScore.limits.some((item) => item.includes('未能完整辨識'))).toBe(true)
+  })
+
+  it('recognizes registry event hats and gives a located next step for a detached known script', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    project.stage.scripts = [
+      {
+        blocks: [
+          { opcode: 'event_whentouchingobject', fields: { TOUCHINGOBJECTMENU: '_edge_' } },
+          { opcode: 'motion_movesteps', inputs: { STEPS: { type: 'literal', value: 10 } } },
+        ],
+      },
+      {
+        blocks: [
+          { opcode: 'looks_say', inputs: { MESSAGE: { type: 'literal', value: 'Hello' } } },
+          { opcode: 'motion_movesteps', inputs: { STEPS: { type: 'literal', value: 10 } } },
+        ],
+      },
+    ]
+
+    const analysis = analyzeCanonicalProject(project)
+    const detached = analysis.diagnostics.find(({ code }) => code === 'detached-script')
+    const map = createProjectMap(project, analysis)
+    const feedback = createProjectFeedback(analysis, map)
+    const actionable = feedback.items.find(({ id }) => id.includes('detached-script'))
+    const firstBlock = map.evidence.find(
+      ({ targetName, scriptIndex, path }) =>
+        targetName === project.stage.name && scriptIndex === 1 && path.endsWith('/scripts/1/blocks/0'),
+    )
+
+    expect(analysis.diagnostics.some(({ code, script }) => code === 'detached-script' && script === 1)).toBe(false)
+    expect(detached).toMatchObject({ severity: 'warning', target: project.stage.name, script: 2 })
+    expect(actionable?.title).toBe('這段程式可能少了開始積木')
+    expect(actionable?.message).toContain('顯示對話')
+    expect(actionable?.nextStep).toContain('當綠旗被點擊')
+    expect(actionable?.evidenceIds).toEqual([firstBlock?.id])
+  })
+
+  it('does not call an unrecognized extension script entry a missing event hat', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    project.stage.scripts = [{ blocks: [{ opcode: 'vendor_when_ready' }, { opcode: 'motion_movesteps' }] }]
+
+    const diagnostic = analyzeCanonicalProject(project).diagnostics.find(
+      ({ code }) => code === 'unclassified-script-entry',
+    )
+
+    expect(diagnostic).toMatchObject({ severity: 'info', target: project.stage.name, script: 1 })
+    expect(analyzeCanonicalProject(project).diagnostics.some(({ code }) => code === 'detached-script')).toBe(false)
   })
 
   it('warns for offline cloud variables without changing their declarations', () => {

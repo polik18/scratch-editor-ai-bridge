@@ -1124,6 +1124,24 @@ pre {
 .evidence-link {
   margin: 2px 6px 4px 0;
 }
+.script-evidence-details {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.script-evidence-details ol {
+  padding-inline-start: 24px;
+}
+.script-evidence-details li {
+  margin-block: 4px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.evidence-focus {
+  outline: 3px solid var(--orange);
+  outline-offset: 2px;
+  background: var(--warning-bg);
+}
 .license-notice {
   margin-top: 28px;
   padding: 16px 18px;

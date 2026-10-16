@@ -37,6 +37,6 @@ export const createAnalysisPrompt = ({
   const answerRules =
     mode === 'teacher'
       ? '只根據 evidence packet 回答，區分觀察、推論、建議與無法判斷。不得宣稱作品已執行或測得 FPS。'
-      : '只根據 evidence packet 回答。用國小生看得懂的繁體中文，不用英文 opcode、JSON 路徑、block ID 或 evidence ID。不要列出觀察／推論／建議等技術標題。只輸出兩段：「提示：」一句話；「試試看：」一個步驟，最後問一個簡單問題。總長不超過 90 個中文字。沒有數值證據時要明說目前無法確定，不可猜數字、指定要改成什麼，或重寫作品。不得宣稱作品已執行或測得 FPS。'
+      : '只根據 evidence packet 回答。用國小生看得懂的繁體中文，不用英文 opcode、JSON 路徑、block ID 或 evidence ID，也不要提「證據編號」。不要列出觀察／推論／建議等技術標題。只輸出兩段：「提示：」和「試試看：」。有相關證據時，提示要說明第幾個角色／哪段程式、積木上看得到的文字或數字，以及它和學生問題的關係；不能只說「去檢查程式」。試試看只給一個可完成的步驟，說明要觀察什麼結果，最後問一個簡單問題。沒有相關證據時，直接說目前資料無法確定原因，請學生指出某段程式或補充實際看到的現象；不可猜測根本原因、數字或要求學生盲目改值。未知或擴充積木要合併成一句白話限制，不列出 opcode、路徑或重複清單。總長不超過 160 個中文字。不得宣稱作品已執行或測得 FPS。'
   return `${modeInstruction}\n\n${answerRules}\n\nEvidence packet（最多 ${EVIDENCE_PACKET_MAX_CHARS} 字元）：\n${JSON.stringify(packet, null, 2)}`
 }

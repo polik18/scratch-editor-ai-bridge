@@ -1,7 +1,7 @@
 # 學生 Scratch 作品理解與有價值回饋改善計畫
 
 日期：2026-10-15
-狀態：核心實作已完成第一版；自動驗證正在收尾。P0 修正循環、結構證據地圖、需求自述 envelope、精簡 evidence packet、回饋定位 UI 與人工校準門檻均已實作。SB3-only 100 分規準已有第一版本機計算器、明細 UI 和 Gemini 回饋提示；尚未執行測試或教師校準，因此尚不能宣稱評分品質或發布門檻已通過。
+狀態：核心實作第一版已完成，正進行真實作品誤報修正與外部品質驗收。2026-10-16 完成事件帽積木辨識、合法 EFFECT 大小寫容錯、未知擴充入口降級為資訊提示、具體積木證據定位，以及學生 AI 提示詞修訂；Bridge 全套 442 項測試、lint/Prettier、production build/bundle budget 和 Chromium/Firefox/WebKit browser smoke 通過。SB3-only 100 分規準尚未經教師校準，學生可用性測試與原生 Safari 新增定位互動驗收仍未完成，因此不能宣稱正式評分品質或全案發布門檻已通過。
 
 ## 1. 產品目標
 
@@ -48,7 +48,7 @@ Bridge 的分數只代表 SB3 檔案可見的作品完成度與程式結構品�
 - 新增 `createProjectScore()`，輸出固定 rubric 版本、六項配分、總分、分析覆蓋率、限制及證據 ID；目前由本機規則計算，Gemini 不參與計分。
 - 匯入分析畫面新增分數明細和可跳轉證據；unknown/opaque 積木只影響覆蓋率/信心提示，不直接列為學生錯誤。
 - 新增可複製 Gemini 提示，只帶評分、匿名角色序號、opcode 與有依據的作品觀察，不帶素材、原角色名稱或 SB3 原始資料。
-- 尚未執行測試、lint 或 build；評分規則也未經教師校準。首版公式屬明確可重現的靜態 heuristics，須以匿名多類型作品人工 review 後才能作正式評量使用。
+- 首版公式屬明確可重現的靜態規則，雖已通過後續程式建置與定向測試，仍未經教師校準。須以匿名多類型作品人工 review 後才能作正式評量使用。
 
 ## 2. 現況與證據
 
@@ -226,6 +226,7 @@ Gemini 2D Platformer 修正循環已找到具體的提示合約衝突候選：Ca
 - `analysis-evidence-v2`: stable target/block evidence IDs + backward-compatible Analysis IR v2。
 - `import-coverage-report`: per-script recognized/preserved/unavailable/malformed counts，Canonical failure 與分析分離。
 - `extension-catalog`: 由鎖定版 VM 建出 opcode/fields/input/default/runtime coverage matrix。
+- `extension-analysis-plan.md`: 擴充與 legacy 自製積木的分階段改善、coverage/runtime 分層、安全界線及驗收條件。
 - `project-map-v1`: events → scripts → variables/broadcasts/procedures 的可追溯摘要。
 - `diagnostic-confidence`: rule registry + evidence + confidence + false-positive fixtures，重新校準 forever/detached warnings。
 - `feedback-packet-v1`: 移除素材資料與無關 Canonical JSON 的最小提示格式。
@@ -244,8 +245,25 @@ Gemini 2D Platformer 修正循環已找到具體的提示合約衝突候選：Ca
 - Phase B：新增 Project Map v1，列出可由 IR 看見的事件、動作、變數、廣播、opaque opcode、graph issue 和匯入覆蓋數；事實附原始 block ID/IR 路徑。round-trip 欄位明確維持 `not-run`。此版尚非完整 Scratch 行為語意模型，沒有把角色用途、遊戲玩法或因果關係當成已證實事實。
 - Phase C：新增靜態形成性回饋，將 `forever-reinitialize` 降成設計問題；無 evidence 的警告不輸出為回饋項目。信心使用 high/limited 類別，不呈現未校準的百分比。發布 precision 門檻尚無人評數據。
 - Phase D：新增 `scratch-ai-bridge/ai-response` v1 需求覆蓋 envelope、JSON Pointer 驗證及精簡 evidence packet。舊 Canonical IR v1 仍可使用；AI 覆蓋狀態在畫面標為「AI 自述」，不作 runtime 證明。packet 上限 24,000 字元、不帶素材 bytes、原始角色名稱或 Scratch block IDs；學生姓名/角色名以匿名序號輸出，原始使用者問題仍會由使用者主動複製。學生模式現在只帶入安全的中文積木摘要和數值輸入，保留教師用 evidence IDs 供模型核對，但明確禁止出現在學生回答。
-- Phase E：新增證據連結、原始未知積木定位、角色/腳本搜尋與摺疊、匿名回饋匯出。學生可見程式清單改用積木中文摘要，不顯示 opcode 或原始 block ID；學生提示限制為兩段、90 字內、一次一個檢查步驟，證據不足時禁止猜測修正值。另新增獨立 `student-help.html` 分享入口，只提供 SB3 上傳、結構分析與學生提問提示；它不顯示成績、Scratch 生成器或首頁導覽。學生仍需將複製的匿名提示貼到老師允許使用的 AI；真實學生試用仍待進行。
+- Phase E：新增證據連結、原始未知積木定位、角色/腳本搜尋與摺疊、匿名回饋匯出。學生可見程式清單改用積木中文摘要，不顯示 opcode 或原始 block ID；學生提示限制為兩段、160 字內、一次一個可觀察步驟，要求引用畫面可見積木文字/數字並禁止無證據猜測，未知積木合併為白話限制。另新增獨立 `student-help.html` 分享入口，只提供 SB3 上傳、結構分析與學生提問提示；它不顯示成績、Scratch 生成器或首頁導覽。學生仍需將複製的匿名提示貼到老師允許使用的 AI；真實學生試用仍待進行。
 - Phase F：新增嚴格評閱資料解析、品質門檻計算及 `npm run feedback:review -- <reviews.json> [report.json]`。範本會故意回報未達標；目前 20 案都未經教師評閱，門檻未通過。
+
+**2026-10-16 執行紀錄**
+
+- P0 誤報修正：Scratch 原始 block graph 的 `looks_changeeffectby`/`looks_seteffectto` 欄位接受 Scratch 實際使用的大寫 enum，同時保留來源值；事件帽由 capability registry 決定，不再漏判 `event_whentouchingobject`；未知擴充積木開頭改為資訊提示，不冒稱缺少事件帽。對確定的普通積木開頭腳本，回饋指出第一個積木並提供有條件的檢查步驟。
+- P1 回饋定位：點選回饋證據會展開角色、腳本與積木線索，聚焦並高亮具體中文積木摘要；增加瀏覽器斷言。首次瀏覽器測試揭露父層 `<details>` 未展開，已修正為展開全部祖先並由 Chromium smoke 通過。
+- 學生 AI 提示：從 90 字放寬至 160 字，要求明確指出角色/腳本位置、積木上的文字或數字、一步檢查及預期觀察；不足以判定時要求坦白未知；未知積木不得列 opcode、路徑或重複證據清單。
+- 定向驗證：定向 57 項測試先行通過，完整 Bridge 套件 38 個測試檔、442 項全數通過；ESLint/Prettier、TypeScript 與 production build 通過；bundle budget 通過；Chromium、Firefox、Playwright WebKit browser smoke 全流程通過，包含 evidence 定位、高亮、SB3 匯入及 VM 預覽。原生 Safari smoke 未執行。Vite 仍提示 VM/render chunk 大於 500 kB，但總量低於 repo 設定預算。
+- 四份真實 SB3 再分析（輸出留在本機桌面，未納入 repo）：1 份 `ok`、3 份 `partial`，無 `failed`；樣本平均分 92.25。大寫特效欄位誤報由 17 項降至 0；事件帽假警告亦消失。發現現行 integrity 分數按 warning 數逐項扣分會被大量低信心 detached 提示壓到 0，且修正 17 項誤報後總分仍因下限飽和沒有變化。評分公式先不在未經教師校準下任意改權重；列為下一個 P0/P4：分離「已確認結構錯誤」和「待確認提醒」，重新設計同類提示累積扣分、可信度呈現及低覆蓋作品的分數解讀，並用真實/合成案例做回歸。
+- 尚未完成：原生 Safari 新增定位互動驗收、學生可用性研究、教師盲評與評分規準校準、真實 Gemini 問答/修正流程。程式 smoke 和合成測試不能代替這些外部驗收。
+
+**2026-10-16 四份比賽作品再分析**
+
+- 使用 CLI 對使用者重新提供的四份 `.sb3` 批次分析：1 `ok`、3 `partial`、0 `failed`；匿名代碼 S0001–S0004 對應姓名由本機 `PRIVATE-teacher-source-map.csv` 管理，不把姓名或作品放入 repo。原始作品均未修改。
+- 逐案靜態結果：A 90/100、93% coverage、27 sprites/239 scripts；B 96/100、86% coverage、13 sprites/60 scripts；C 100/100、100% coverage、15 sprites/81 scripts；D 83/100、94% coverage、54 sprites/233 scripts。以上均是未經教師校準的 `sb3-static-v1` 暫定分數，不代表 Scratch 已執行或比賽成績。
+- 根據原始 block graph 製作四份具名的本機回饋與教師索引，輸出在 Desktop `貓咪盃再分析_20261016/學生回饋/`，不放進公開 repo。例：B 的 `Sprite1` 第 6 段以定位積木開始且缺事件入口；C 的樂器廣播會觸發對應角色播放聲音；D 的「總導演」第 5 段是未接事件帽的頂層變數/廣播指令堆疊；A 的自製積木 prototype 有 1 個 argument ID 但 2 個 defaults。建議以條件語氣區分「可能未接」與「刻意草稿」，不把靜態提示當成已確認 runtime bug。
+- CLI 預設 Markdown 仍不適合作學生回饋：60 項上限內混有大量重複 opaque-block/內部 evidence 文字，長作品省略數百項；部分回饋 evidence 只落在腳本第一塊而非實際問題位置。本次先以 CLI JSON 和原始 SB3 作 teacher analysis，再另行編寫短篇、具名、可採取下一步的學生版。後續 CLI 工作需增加 student report mode、manifest 顯示名、診斷去重/分組、限制優先排序、精確 block 定位及適齡驗收。
+- 真人老師需先審閱姓名與作品配對、文字適齡及私用來源對照表後再分發。這次輸出不是盲評，沒有教師/學生校準；全案仍未完成。
 
 外部驗收項目：真實 Gemini 修正往返、教師依 `docs/feedback-corpus-review.md` 盲評至少 20 案（其中 5 案雙人覆核）、達成精準度/證據/有用度門檻、Chromium/Firefox/WebKit/Safari 的新增 UI smoke、實際學生試用。上述工作需真實模型、教師或學生參與；程式建置或合成測試不能代替。
 

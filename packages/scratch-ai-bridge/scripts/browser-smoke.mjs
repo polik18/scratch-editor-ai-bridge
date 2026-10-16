@@ -4605,7 +4605,10 @@ try {
   const evidenceButton = page.locator('#project-map-facts .evidence-link').first()
   if ((await evidenceButton.count()) === 0) throw new Error('Project map does not expose navigable block evidence')
   await evidenceButton.click()
-  await page.waitForFunction(() => document.activeElement?.id.startsWith('target-script-'))
+  await page.waitForFunction(() => document.activeElement?.id.startsWith('project-evidence-'))
+  if ((await page.locator('.script-evidence-details[open] .evidence-focus').count()) !== 1) {
+    throw new Error('Project evidence navigation did not reveal and highlight the specific block label')
+  }
   if (await page.locator('#download-original-sb3').isDisabled()) {
     throw new Error('Lossless source archive download was not enabled after analysis')
   }

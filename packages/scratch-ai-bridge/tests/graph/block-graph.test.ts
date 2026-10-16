@@ -476,6 +476,36 @@ describe('generic Scratch block graph', () => {
     ])
   })
 
+  it('accepts case-normalized Scratch graphic-effect fields without rewriting raw values', () => {
+    const graph = copyScratchBlockGraph({
+      ghost: {
+        opcode: 'looks_changeeffectby',
+        parent: null,
+        next: null,
+        inputs: { CHANGE: [1, [4, 10]] },
+        fields: { EFFECT: ['GHOST'] },
+      },
+      pixelate: {
+        opcode: 'looks_seteffectto',
+        parent: null,
+        next: null,
+        inputs: { VALUE: [1, [4, 25]] },
+        fields: { EFFECT: ['PIXELATE', null] },
+      },
+      color: {
+        opcode: 'looks_seteffectto',
+        parent: null,
+        next: null,
+        inputs: { VALUE: [1, [4, 25]] },
+        fields: { EFFECT: ['COLOR'] },
+      },
+    })
+    const before = structuredClone(graph)
+
+    expect(validateScratchBlockGraph(graph)).toEqual([])
+    expect(graph).toEqual(before)
+  })
+
   it('rejects malformed serialized field tuples on known blocks', () => {
     const graph = copyScratchBlockGraph({
       key: {

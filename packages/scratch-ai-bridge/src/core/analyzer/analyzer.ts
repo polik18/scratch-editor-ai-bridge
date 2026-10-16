@@ -6,7 +6,7 @@ import {
   SCRATCH_CORE_OPCODE_PREFIXES,
   VERIFIED_SCRATCH_EXTENSION_IDS,
 } from '../../scratch/extensions'
-import { CANONICAL_OPCODES } from '../capabilities'
+import { CANONICAL_OPCODES, CORE_PROCEDURE_GRAPH_OPCODES, getBlockCapability } from '../capabilities'
 import type { ScratchTargetBlockGraph } from '../graph'
 import type { CanonicalBlock, CanonicalProject, CanonicalScript } from '../ir/types'
 
@@ -81,17 +81,8 @@ export interface AnalysisIR {
   diagnostics: AnalysisDiagnostic[]
 }
 
-const HAT_OPCODES = new Set([
-  'event_whenflagclicked',
-  'event_whenbroadcastreceived',
-  'event_whenkeypressed',
-  'event_whenthisspriteclicked',
-  'event_whenstageclicked',
-  'event_whengreaterthan',
-  'event_whenbackdropswitchesto',
-  'control_start_as_clone',
-  'procedures_definition',
-])
+const isScriptEntryBlock = (opcode: string): boolean =>
+  getBlockCapability(opcode)?.shape === 'hat' || opcode === 'procedures_definition'
 
 const visitBlock = (
   block: CanonicalBlock,
@@ -210,13 +201,16 @@ const analyzeScript = (
   for (const block of script.blocks) inspect(block, false, new Set())
 
   const first = script.blocks.at(0)
-  if (first && !HAT_OPCODES.has(first.opcode)) {
+  if (first && !isScriptEntryBlock(first.opcode)) {
+    const isKnown = CANONICAL_OPCODES.includes(first.opcode as (typeof CANONICAL_OPCODES)[number])
     diagnostics.push({
-      severity: 'warning',
-      code: 'detached-script',
+      severity: isKnown ? 'warning' : 'info',
+      code: isKnown ? 'detached-script' : 'unclassified-script-entry',
       target: targetName,
       script: index,
-      message: `腳本從「${first.opcode}」開始，沒有事件帽積木；一般執行時可能不會自動啟動。`,
+      message: isKnown
+        ? `腳本從「${first.opcode}」開始，前面沒有可辨認的事件積木；如果這段應自行開始，請確認是否少了開始事件。`
+        : '這段程式從目前無法辨認的積木開始；Bridge 無法判斷它是不是擴充功能的事件積木。',
     })
   }
   if (variableInitializationsInForever.length > 0) {
@@ -514,14 +508,14 @@ export const analyzeCanonicalProject = (
   }
 
   if (rawBlockGraphs.length > 0) {
-    const canonicalOpcodes = new Set<string>(CANONICAL_OPCODES)
+    const modeledOpcodes = new Set<string>([...CANONICAL_OPCODES, ...CORE_PROCEDURE_GRAPH_OPCODES])
     const rawBlockCount = rawBlockGraphs.reduce((count, target) => count + Object.keys(target.blocks).length, 0)
     const unmodeledOpcodes = new Set(
       rawBlockGraphs.flatMap((target) =>
         Object.values(target.blocks)
           .filter((block) => block.shadow !== true)
           .map((block) => block.opcode)
-          .filter((opcode) => !canonicalOpcodes.has(opcode)),
+          .filter((opcode) => !modeledOpcodes.has(opcode)),
       ),
     )
 

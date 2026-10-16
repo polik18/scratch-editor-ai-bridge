@@ -833,6 +833,7 @@ export const CORE_PROCEDURE_GRAPH_OPCODES = [
   'argument_reporter_string_number',
   'procedures_call',
   'procedures_definition',
+  'procedures_prototype',
 ] as const
 
 export const isKnownOpcode = (opcode: string): opcode is KnownOpcode =>
