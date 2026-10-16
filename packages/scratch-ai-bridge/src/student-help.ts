@@ -152,7 +152,7 @@ const renderProjectMap = (map: NonNullable<typeof currentMap>): void => {
     const heading = document.createElement('strong')
     heading.textContent = group.script === null ? group.target : `${group.target}・第 ${group.script + 1} 段程式`
     const labels = document.createElement('span')
-    labels.textContent = group.labels.slice(0, 5).join('、')
+    labels.textContent = group.labels.join('、')
     item.append(heading, labels)
     projectMapList.append(item)
   }
