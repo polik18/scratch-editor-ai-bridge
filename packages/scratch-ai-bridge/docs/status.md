@@ -20,7 +20,7 @@ procedure mismatch 診斷會指出 argument ID/name/default 數量（例如 1/1/
 
 驗證：全套 Bridge 444/444 tests、lint/Prettier、TypeScript production build/bundle budget、performance benchmark 與 Chromium 153、Firefox 155、WebKit 26.6 browser smoke 通過。原生 Safari smoke 嘗試執行但系統未啟用 Remote Automation，沒有改動 Safari 設定。
 
-新增 `docs/extension-teacher-review.md` 作為待填的真人審閱表。尚未完成教師審閱、學生試用、相機/語音外部 runtime、Linux PSS 或正式 Pages 發布；未提交/推送。
+新增 `docs/extension-teacher-review.md` 作為待填的真人審閱表。尚未完成教師審閱、學生試用、相機/語音外部 runtime、Linux PSS 或正式 Pages 發布。工程 commit `9a217397182ebba2b002aac30910623619e3d399` 已推送至功能分支；GitHub CI run `38901756290` 尚在 Build Packages，Pages 未更新。
 
 ## 2026-10-16 — 真實作品誤報、回饋定位與教學提示第一輪修正
 
