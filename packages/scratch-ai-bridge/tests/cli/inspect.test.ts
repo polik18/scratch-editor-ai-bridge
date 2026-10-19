@@ -49,7 +49,7 @@ describe('static CLI inspection', () => {
 
     expect(result.diagnostics.some(({ code }) => code === 'detached-script')).toBe(true)
     expect(studentReport).toContain('檢查這段程式怎麼開始')
-    expect(studentReport).toContain('角色 A・第 1 段程式')
+    expect(studentReport).toContain('角色 A（Scratch 角色清單第 1 個）・第 1 段程式')
     expect(studentReport).toContain('移動 10 步')
     expect(studentReport).toContain('當綠旗被點擊')
     expect(studentReport).not.toContain('detached-script')

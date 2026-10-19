@@ -320,7 +320,7 @@ const studentTargetLabel = (target: string | undefined): string | undefined => {
     letters = String.fromCharCode(65 + (value % 26)) + letters
     value = Math.floor(value / 26) - 1
   } while (value >= 0)
-  return `角色 ${letters}`
+  return `角色 ${letters}（Scratch 角色清單第 ${Number(match[1])} 個）`
 }
 
 /**

@@ -371,7 +371,10 @@ try {
   })
   await studentHelpPage.locator('#student-project-summary').waitFor({ state: 'visible' })
   const studentMap = await studentHelpPage.locator('#student-project-map').innerText()
-  if (!studentMap.includes('角色 A・第 1 段程式') || !studentMap.includes('定位到 x：120、y：0')) {
+  if (
+    !studentMap.includes('角色 A（Scratch 角色清單第 1 個）・第 1 段程式') ||
+    !studentMap.includes('定位到 x：120、y：0')
+  ) {
     throw new Error(
       `${browserName} student help page did not show the aliased script and position block: ${studentMap}`,
     )
@@ -381,7 +384,10 @@ try {
   await studentHelpPage.locator('#student-expected').fill('我想讓主角從舞台左邊開始')
   await studentHelpPage.locator('#student-actual').fill('按綠旗後，主角出現在右邊')
   const firstHintText = await studentHelpPage.locator('#student-first-hint').innerText()
-  if (!firstHintText.includes('角色 A・第 1 段程式') || !firstHintText.includes('定位到 x：120')) {
+  if (
+    !firstHintText.includes('角色 A（Scratch 角色清單第 1 個）・第 1 段程式') ||
+    !firstHintText.includes('定位到 x：120')
+  ) {
     throw new Error(`${browserName} student help page did not ground its first hint in the position evidence`)
   }
   await studentHelpPage.locator('#student-copy-prompt').click()

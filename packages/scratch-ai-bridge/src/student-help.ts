@@ -139,7 +139,7 @@ const targetAlias = (targetIndex: number): string => {
     suffix = String.fromCharCode(65 + (value % 26)) + suffix
     value = Math.floor(value / 26) - 1
   } while (value >= 0)
-  return `角色 ${suffix}`
+  return `角色 ${suffix}（Scratch 角色清單第 ${targetIndex} 個）`
 }
 
 const renderProjectMap = (map: NonNullable<typeof currentMap>): void => {
