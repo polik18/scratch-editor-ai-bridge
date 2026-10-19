@@ -167,6 +167,43 @@ const createNearLimitArchive = async (aggregateUncompressedBytes) => {
   return { archive, aggregateUncompressedBytes }
 }
 
+const createStudentPositionFixture = async () => {
+  const zip = await JSZip.loadAsync(await readFile(officialSvgFixturePath))
+  const projectFile = zip.file('project.json')
+  if (!projectFile) throw new Error('Official SB3 fixture has no project.json')
+  const project = JSON.parse(await projectFile.async('string'))
+  const player = project.targets.find((target) => !target.isStage)
+  if (!player) throw new Error('Official SB3 fixture has no sprite target')
+  player.name = 'Player'
+  player.blocks = {
+    'student-help-green-flag': {
+      opcode: 'event_whenflagclicked',
+      next: 'student-help-position',
+      parent: null,
+      inputs: {},
+      fields: {},
+      shadow: false,
+      topLevel: true,
+      x: 80,
+      y: 80,
+    },
+    'student-help-position': {
+      opcode: 'motion_gotoxy',
+      next: null,
+      parent: 'student-help-green-flag',
+      inputs: {
+        X: [1, [4, '120']],
+        Y: [1, [4, '0']],
+      },
+      fields: {},
+      shadow: false,
+      topLevel: false,
+    },
+  }
+  zip.file('project.json', JSON.stringify(project))
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
+}
+
 let originUnavailable = false
 let offlineOriginRequestCount = 0
 const server = createServer((request, response) => {
@@ -227,6 +264,7 @@ let page
 let svgTestPage
 let strictCspSvgPage
 let stageFixturePage
+let studentHelpPage
 const failures = []
 try {
   browser = await browserType.launch({
@@ -303,6 +341,57 @@ try {
   )
 
   await page.goto(`http://127.0.0.1:${address.port}${sitePrefix}`, { waitUntil: 'networkidle' })
+
+  studentHelpPage = await browser.newPage()
+  await studentHelpPage.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value) => {
+          globalThis.__studentHelpClipboard = value
+        },
+      },
+    })
+  })
+  studentHelpPage.on('pageerror', (error) => failures.push(`student help page error: ${error.message}`))
+  await studentHelpPage.goto(`http://127.0.0.1:${address.port}${sitePrefix}student-help.html`, {
+    waitUntil: 'networkidle',
+  })
+  if (
+    (await studentHelpPage.locator('body').innerText()).includes('SB3 結構參考分') ||
+    (await studentHelpPage.locator('a[href="./"]').count()) > 0 ||
+    (await studentHelpPage.locator('#student-build').count()) > 0
+  ) {
+    throw new Error(`${browserName} student help page exposed a score, project generator, or home link`)
+  }
+  await studentHelpPage.locator('#student-sb3-file').setInputFiles({
+    name: 'student-position.sb3',
+    mimeType: 'application/zip',
+    buffer: await createStudentPositionFixture(),
+  })
+  await studentHelpPage.locator('#student-project-summary').waitFor({ state: 'visible' })
+  const studentMap = await studentHelpPage.locator('#student-project-map').innerText()
+  if (!studentMap.includes('角色 A・第 1 段程式') || !studentMap.includes('定位到 x：120、y：0')) {
+    throw new Error(
+      `${browserName} student help page did not show the aliased script and position block: ${studentMap}`,
+    )
+  }
+  await studentHelpPage.locator('#student-question').fill('主角一開始為什麼在右邊？')
+  const firstHintText = await studentHelpPage.locator('#student-first-hint').innerText()
+  if (!firstHintText.includes('角色 A・第 1 段程式') || !firstHintText.includes('定位到 x：120')) {
+    throw new Error(`${browserName} student help page did not ground its first hint in the position evidence`)
+  }
+  await studentHelpPage.locator('#student-copy-prompt').click()
+  const studentPrompt = await studentHelpPage.evaluate(() => globalThis.__studentHelpClipboard)
+  if (
+    typeof studentPrompt !== 'string' ||
+    !studentPrompt.includes('角色 A') ||
+    !studentPrompt.includes('定位到 x：120') ||
+    /"[FE]\d+"/.test(studentPrompt) ||
+    studentPrompt.includes('evidenceIds')
+  ) {
+    throw new Error(`${browserName} student help copied prompt had missing readable evidence or internal IDs`)
+  }
 
   const licenseFooter = page.locator('footer.license-notice')
   const sourceOffer = licenseFooter.getByRole('link', { name: '取得本網站對應源碼（GitHub）' })
@@ -5158,6 +5247,7 @@ try {
   await strictCspSvgPage?.close()
   await svgTestPage?.close()
   await stageFixturePage?.close()
+  await studentHelpPage?.close()
   await browser?.close()
   await new Promise((resolveClosed, rejectClosed) => {
     server.close((error) => (error ? rejectClosed(error) : resolveClosed()))
