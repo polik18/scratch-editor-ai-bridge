@@ -38,7 +38,11 @@ describe('batch CLI core', () => {
     expect(sourceMap).toContain('studentId,relativeFile')
     expect(sourceMap).toContain('S0001,one.sb3')
     expect(results.trim().split('\n')).toHaveLength(2)
-    await expect(readFile(join(output, 'S0001.md'), 'utf8')).resolves.toContain('Scratch 作品靜態分析')
+    await expect(readFile(join(output, 'S0001.md'), 'utf8')).resolves.toContain('Scratch 教師檢視報告')
+    const studentReport = await readFile(join(output, 'S0001-student.md'), 'utf8')
+    expect(studentReport).toContain('給學生看的作品小提醒')
+    expect(studentReport).not.toContain('SB3 結構參考分')
+    expect(studentReport).not.toMatch(/[EF]\d+/)
     await expect(
       runBatch({ inputDirectory: input, outputDirectory: output, recursive: false, jobs: 1 }),
     ).rejects.toThrow('output-exists')

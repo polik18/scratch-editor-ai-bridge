@@ -18,6 +18,7 @@ export interface CliInspection {
   readonly runtimeVerified: false
   readonly fileId: string
   readonly status: 'ok' | 'partial'
+  readonly partialReasons: readonly string[]
   readonly summary: ReturnType<typeof analyzeCanonicalProject>['summary']
   readonly score: {
     readonly total: number | null
@@ -187,6 +188,15 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
     archive.warnings.length > 0 ||
     projectMap.coverage.opaqueBlocks > 0 ||
     projectMap.coverage.malformedGraphIssues > 0
+  const partialReasons = [
+    ...(projectMap.coverage.opaqueBlocks > 0
+      ? [`有 ${projectMap.coverage.opaqueBlocks} 個積木目前無法完整解讀`]
+      : []),
+    ...(projectMap.coverage.malformedGraphIssues > 0
+      ? [`有 ${projectMap.coverage.malformedGraphIssues} 項積木結構資料需要確認`]
+      : []),
+    ...(archive.warnings.length > 0 ? ['SB3 封裝有需要確認的資料'] : []),
+  ]
   const limitations = [
     '這是從 SB3 結構產生的靜態分析；沒有執行作品，不能推論實際玩法、手感或 FPS。',
     'Scratch extensions 與硬體沒有在 CLI 中載入或執行。',
@@ -203,6 +213,7 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
     runtimeVerified: false,
     fileId: createHash('sha256').update(bytes).digest('hex'),
     status: partial ? 'partial' : 'ok',
+    partialReasons,
     summary: analysis.summary,
     score: {
       total: projectScore.total,
@@ -259,9 +270,127 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
   }
 }
 
+const studentIssueText = (
+  code: string,
+  diagnosticMessage: string,
+): { title: string; message: string; nextStep: string } | undefined => {
+  const messages: Record<string, { title: string; message: string; nextStep: string }> = {
+    'detached-script': {
+      title: '檢查這段程式怎麼開始',
+      message: '這一段沒有接著綠旗或按鍵等開始積木；也可能是你故意留下的草稿。',
+      nextStep: '如果希望它按綠旗就開始，接上「當綠旗被點擊」後再試一次。',
+    },
+    'block-graph-invalid-procedure-definition': {
+      title: '請一起檢查自製積木',
+      message: '這個角色的自製積木輸入資料數量對不起來，工具無法確認每個輸入要接到哪裡。',
+      nextStep: '打開這個角色的「我的積木」，確認積木上的每個輸入都有對應設定；不確定時請老師陪你看。',
+    },
+    'block-graph-invalid-argument-reporter': {
+      title: '請一起檢查自製積木',
+      message: '工具找到一個自製積木的輸入，但目前無法確認它對應哪個參數。',
+      nextStep: '打開這個角色的「我的積木」，檢查參數名稱是否和積木定義相同；不確定時請老師陪你看。',
+    },
+    'block-graph-invalid-node-property': {
+      title: '有幾塊積木資料需要確認',
+      message: '工具讀到一小部分積木資料不完整；這不一定代表你的遊戲邏輯錯了。',
+      nextStep: '在 Scratch 打開相關角色，檢查積木是否接好；若作品能正常使用，可先請老師確認這項提醒。',
+    },
+  }
+  const issue = messages[code]
+  if (code === 'block-graph-invalid-procedure-definition') {
+    const counts = /有 (\d+) 個參數 ID、(\d+) 個參數名稱、(\d+) 個預設值/.exec(diagnosticMessage)
+    if (counts) {
+      return {
+        ...issue,
+        message: `工具讀到 ${counts[2]} 個輸入名稱和 ${counts[3]} 個預設值，數量不一樣，所以無法確認每個輸入要接到哪裡。`,
+      }
+    }
+  }
+  return issue
+}
+
+const studentTargetLabel = (target: string | undefined): string | undefined => {
+  if (!target || target === '舞台') return target
+  const match = /^角色 (\d+)$/.exec(target)
+  if (!match) return target
+  let value = Number(match[1]) - 1
+  if (!Number.isInteger(value) || value < 0) return target
+  let letters = ''
+  do {
+    letters = String.fromCharCode(65 + (value % 26)) + letters
+    value = Math.floor(value / 26) - 1
+  } while (value >= 0)
+  return `角色 ${letters}`
+}
+
+/**
+ * Render a short, student-facing note without scores or internal evidence identifiers.
+ * @param inspection Static SB3 analysis.
+ * @returns A small Markdown report suitable for a teacher to share with one student.
+ */
+export const inspectionToStudentMarkdown = (inspection: CliInspection): string => {
+  const seenIssues = new Set<string>()
+  const checks = inspection.diagnostics.flatMap((diagnostic) => {
+    const issue = studentIssueText(diagnostic.code, diagnostic.message)
+    if (!issue || diagnostic.severity !== 'warning' || seenIssues.has(diagnostic.code)) return []
+    seenIssues.add(diagnostic.code)
+    const source = inspection.evidence.find(
+      (item) => item.target === diagnostic.target && item.script === (diagnostic.script ?? null),
+    )
+    const location = [
+      studentTargetLabel(diagnostic.target),
+      diagnostic.script === undefined ? undefined : `第 ${diagnostic.script} 段程式`,
+    ]
+      .filter((item): item is string => Boolean(item))
+      .join('・')
+    return [{ ...issue, source, location }]
+  })
+  const notes = checks.slice(0, 3).map(({ title, message, nextStep, source, location }) => {
+    const sourceTarget = studentTargetLabel(source?.target)
+    const where =
+      location ||
+      (sourceTarget
+        ? `${sourceTarget}${source?.script === null ? '' : `・第 ${source?.script} 段程式`}`
+        : '作品中的相關程式')
+    const block = source?.label ? ` 找找看「${source.label}」這個積木。` : ''
+    return `### ${title}\n\n${where}：${message}${block}\n\n**可以試試：**${nextStep}`
+  })
+  if (notes.length === 0) {
+    const startBlock = inspection.evidence.find(({ opcode }) => opcode === 'event_whenflagclicked')
+    if (startBlock) {
+      const target = studentTargetLabel(startBlock.target) ?? startBlock.target
+      const where = `${target}${startBlock.script === null ? '' : `・第 ${startBlock.script} 段程式`}`
+      notes.push(
+        `### 從一段程式開始觀察\n\n我看到${where}有「當綠旗被點擊」積木。\n\n**可以試試：**在 Scratch 找到這段程式，按一次綠旗，記下角色先做了什麼，再想想這和你原本想要的效果一不一樣。`,
+      )
+    }
+  }
+  const unknownCount = inspection.coverage.opaqueBlocks
+  const extensionNote =
+    unknownCount > 0
+      ? `### 工具目前看不懂的積木\n\n有 ${unknownCount} 個額外積木目前無法完整解讀。這不代表你寫錯，也不需要只因為這項提醒就刪掉積木；可以在 Scratch 裡請老師陪你確認。`
+      : undefined
+  const runtimeNote =
+    inspection.coverage.extensions.length > 0
+      ? '這個報告沒有啟動作品中的擴充功能或裝置。若問題和攝影機、語音或音樂有關，請在 Scratch 裡實際測試並找老師確認。'
+      : undefined
+  const content = [...notes, ...(extensionNote ? [extensionNote] : []), ...(runtimeNote ? [runtimeNote] : [])].join(
+    '\n\n',
+  )
+  return [
+    '# 給學生看的作品小提醒',
+    '',
+    '下面只整理少數可以回到 Scratch 檢查的線索。它不是成績，也沒有實際執行你的作品。',
+    '',
+    content || '目前沒有找到需要優先檢查的結構提醒。可以選一段程式，想想它什麼時候開始、會讓角色做什麼。',
+    '',
+    '如果這和你原本想做的不同，請告訴老師「我原本想看到什麼」和「我實際看到什麼」，再一起測試。',
+  ].join('\n')
+}
+
 export const inspectionToMarkdown = (inspection: CliInspection): string => {
   const lines = [
-    '# Scratch 作品靜態分析',
+    '# Scratch 教師檢視報告（靜態分析）',
     '',
     `狀態：${inspection.status === 'ok' ? '可讀取' : '部分可讀，請查看限制'}`,
     `SB3 結構參考分：${inspection.score.total === null ? '資料不足，暫不換算' : `${inspection.score.total}/${inspection.score.max}`}（${inspection.rubricVersion}；分析覆蓋 ${inspection.score.coverage}%）`,

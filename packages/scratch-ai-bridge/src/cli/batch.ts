@@ -1,6 +1,6 @@
 import { readdir, readFile, lstat, mkdir, rename, rm, writeFile, realpath } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
-import { inspectSb3Bytes, inspectionToMarkdown, type CliInspection } from './inspect'
+import { inspectSb3Bytes, inspectionToMarkdown, inspectionToStudentMarkdown, type CliInspection } from './inspect'
 
 interface ManifestRow {
   readonly studentId: string
@@ -146,6 +146,7 @@ const summarize = (records: readonly BatchRecord[]) => {
       studentId,
       status,
       ...(inspection ? { score: inspection.score.total, coverage: inspection.score.coverage } : {}),
+      ...(inspection?.partialReasons.length ? { partialReasons: inspection.partialReasons } : {}),
       ...(error ? { error: error.code } : {}),
     })),
     limitations: [
@@ -266,6 +267,13 @@ export const runBatch = async (options: {
         ? inspectionToMarkdown(record.inspection)
         : `# Scratch 作品分析\n\n分析失敗：${record.error?.message ?? '無法解析作品。'}\n`
       await writeFile(join(temporaryDirectory, `${filename}.md`), markdown, { encoding: 'utf8', mode: 0o600 })
+      if (record.inspection) {
+        await writeFile(
+          join(temporaryDirectory, `${filename}-student.md`),
+          inspectionToStudentMarkdown(record.inspection),
+          { encoding: 'utf8', mode: 0o600 },
+        )
+      }
     }
     await writeFile(join(temporaryDirectory, 'class-summary.json'), `${JSON.stringify(summary, null, 2)}\n`, {
       encoding: 'utf8',

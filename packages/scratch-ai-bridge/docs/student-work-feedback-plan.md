@@ -267,6 +267,10 @@ Gemini 2D Platformer 修正循環已找到具體的提示合約衝突候選：Ca
 - CLI 預設 Markdown 仍不適合作學生回饋：60 項上限內混有大量重複 opaque-block/內部 evidence 文字，長作品省略數百項；部分回饋 evidence 只落在腳本第一塊而非實際問題位置。本次先以 CLI JSON 和原始 SB3 作 teacher analysis，再另行編寫短篇、具名、可採取下一步的學生版。後續 CLI 工作需增加 student report mode、manifest 顯示名、診斷去重/分組、限制優先排序、精確 block 定位及適齡驗收。
 - 真人老師需先審閱姓名與作品配對、文字適齡及私用來源對照表後再分發。這次輸出不是盲評，沒有教師/學生校準；全案仍未完成。
 
+**2026-10-19 工程跟進**：學生頁加入可選「我原本想看到／我實際看到」欄位，複製提示會帶入兩者；Chromium/Firefox/WebKit smoke 已驗證。CLI 現在另外產生 `*-student.md`，將舊 `.md` 標為教師檢視報告；學生版隱去分數、F/E 證據代碼及 opcode，並將多個重複 detached-script 提示去重成一個白話檢查步驟。partial summary 增加具體結構/opaque 原因。以當前分支重跑四份真實 SB3 為 2 `ok`、2 `partial`、0 `failed`；混入壞 ZIP 時 2/2/1，正常檔仍有報告。兩份 partial 的結構原因已辨認，未知 extensions 仍保留限制、不猜功能。30/100/500 fixture 複本壓測已完成，但不代表大型異質班級作品容量。上述輸出留在權限受限的本機桌面，未放進 repo。新增 CLI 定向測試 6/6 通過；本輪完整 Bridge 測試與 build 尚待結束前重跑。
+
+尚未完成：CLI 上的學生用語真人評估、分數誤報/低信心 warning 對分項分數影響的校準、真人教師盲評和 5 人學生試用、擴充積木教師核准、原生 Safari Remote Automation smoke、真實 Gemini 對話往返，以及通過上述門檻後的正式部署。不得以自動化測試替代真人驗收。
+
 外部驗收項目：真實 Gemini 修正往返、教師依 `docs/feedback-corpus-review.md` 盲評至少 20 案（其中 5 案雙人覆核）、達成精準度/證據/有用度門檻、Chromium/Firefox/WebKit/Safari 的新增 UI smoke、實際學生試用。上述工作需真實模型、教師或學生參與；程式建置或合成測試不能代替。
 
 2026-10-15 本輪驗證：Bridge 單元測試 36 個檔案、432 項通過；ESLint/Prettier 與 production build/bundle budget 通過。Chromium、Firefox、Playwright WebKit 全流程 smoke 通過；包含 platformer 修正循環、匯入、離線 reload、evidence 點選定位。Native Safari smoke 因 Safari Remote Automation 尚未啟用而未執行。匿名教師 review CLI 對未完成範本回報 blockers；真正教師評閱、真實 Gemini 修正往返及學生試用仍待外部人員完成，因此 Phase A/F 與正式品質發布門檻未通過。

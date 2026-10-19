@@ -1,5 +1,11 @@
 # Scratch AI Bridge implementation status
 
+## 2026-10-19 — 學生問題補充欄與 CLI 學生版報告
+
+學生解惑頁新增可選的「我原本想看到什麼／我實際看到什麼」欄位，學生複製提示時會一併帶上這兩項內容；沒有自動送出，也未增加分數或生成 Scratch 程式。瀏覽器 smoke 驗證三引擎都保留兩項文字於複製提示。CLI 新增 `*-student.md`，使用白話、角色字母別名及 Scratch 可定位的段落位置，無分數、F/E evidence 編號、opcode；舊 `.md` 明確標為教師檢視報告。班級摘要現在對 partial 檔案列出結構資料/opaque 積木原因。
+
+驗證：完整套件 447/447 通過；lint、Prettier、production build 與 bundle budgets 通過。學生頁完整 smoke Chromium、Firefox、WebKit 通過，原生 Safari Remote Automation 尚未啟用。30/100/500 檔數壓測使用同一個約 3 KB fixture 複本，均成功；500 檔 jobs=1/2 結果完全一致，耗時約 0.75/0.83 秒、最高 RSS 約 137 MB。四份真實作品重跑 2 ok/2 partial/0 failed；partial 原因為 2 項自製積木圖結構不一致，另一份有 14 個 opaque extension 積木及 3 項圖結構問題。混入一份壞 ZIP 後 2 ok/2 partial/1 failed，讀取失敗沒有中斷其他檔案。最新學生版報告已在 Desktop 權限 0700 資料夾重產，每份檔案權限 0600；原始作品未修改。教師盲評與學生適齡性測試仍未驗收；未部署。
+
 ## 2026-10-19 — 教師視角計畫工程階段收尾
 
 完成學生解惑頁的跨瀏覽器 smoke 覆蓋：由官方 SB3 fixture 建立含「Player 綠旗 → 定位到 x=120、y=0」的合成作品，驗證 Chromium、Firefox、WebKit 均顯示一致的匿名角色/腳本位置與本機提示；複製給 AI 的內容保留白話證據且不含 F/E 內部 ID，頁面不顯示成績、作品生成器或首頁連結。全套 Bridge 測試 446/446 通過，package lint、production build 與 bundle budgets 通過；benchmark 各項在預算內（4 MiB SB3 匯入平均 57.1 ms/250 ms、2000 blocks 編譯平均 8.0 ms/75 ms）。原生 Safari smoke 已嘗試，但 WebDriver Remote Automation 未啟用，依測試指示需在 Safari Settings > Developer 開啟後重跑。教師計畫與驗收文件已更新。這些是工程及合成 fixture 驗證，不是學生可用性或教師盲評結果；Phase 6 真人驗收仍未完成，故 Phase 7 正式課堂部署門檻未通過。Commits `d3c6dd7239`、`1cfcceffdf` 已推送；兩者 CI（`39190174045`、`39190336679`）均全部成功。未部署 Pages。

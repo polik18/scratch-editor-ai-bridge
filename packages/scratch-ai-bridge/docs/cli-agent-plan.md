@@ -1,15 +1,16 @@
 # Scratch AI Bridge CLI 與班級批次分析執行計畫
 
-更新：2026-10-16
+更新：2026-10-19
 
-狀態：Phase 0–2 首版已實作；Phase 3 真實樣本已試跑，partial 原因與容量上限仍待驗收。
+狀態：Phase 0–2 的核心切片已實作；四份真實作品、混合損壞檔容錯與 30/100/500 檔數壓測已驗收。教師校準、跨平台/大型異質作品容量、真人閱讀學生回饋仍待完成。
 
-### 目前進度（2026-10-16）
+### 目前進度（2026-10-19）
 
-- Node 靜態 inspection、`inspect`、目錄 `batch`、JSONL/Markdown/CSV/班級摘要已實作；不載入 VM/Canvas/extensions。
-- 使用者提供的四份作品實跑為 1 `ok`、3 `partial`、0 `failed`；recognized/opaque/malformed coverage 列於各作品報告。三份 partial 尚未逐項判定哪些是預期 extension/opaque blocks、哪些是可修正 importer 問題。
+- Node 靜態 inspection、`inspect`、目錄 `batch`、JSONL/教師 Markdown/學生 Markdown/CSV/班級摘要已實作；不載入 VM/Canvas/extensions。教師摘要保留分數與 evidence 索引；`*-student.md` 不輸出分數或內部 evidence ID，只列最多三項白話定位與步驟。班級摘要對 partial 結果附匿名、去識別的原因。
+- 四份真實作品最新結果為 2 `ok`、2 `partial`、0 `failed`；兩份 partial 原因是自製積木圖結構不一致（2 項）及 opaque blocks（14 個）加圖結構問題（3 項），不是檔案讀取失敗。私用姓名對照只留在本機 0700 資料夾。
 - 初版限制回饋最多 60 項、證據最多 240 項；報告另有省略數及私用來源對照表。
-- Node/TypeScript check、4 個 CLI 測試和 CLI ESLint/Prettier 通過；全 package/browser/build、跨平台和 30/100/500 壓力驗收未完成。
+- 以 3 KB 單一 fixture 複製壓測 30/100/500 檔均成功；500 檔 jobs=1/2 的 JSONL/摘要一致，序列約 0.75 秒、最高 RSS 約 137 MB。混合四份真實檔及一個壞 ZIP 為 2 ok/2 partial/1 failed，單一失敗不影響其他分析；這不代表異質大型專案的班級容量已驗收。
+- Bridge 447 tests、lint、build/bundle budget、benchmark 及三瀏覽器 smoke 已通過；原生 Safari Remote Automation 與真人教師/學生驗收未通過或未執行。CI run `39190336679` 成功；後續 run `39191556581` 因未登入 GitHub CLI 且公開 API rate limit 耗盡，終態仍未確認。
 
 ## 1. 目標與優先順序
 

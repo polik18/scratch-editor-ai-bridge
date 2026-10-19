@@ -69,8 +69,15 @@ app.innerHTML = `
         <h2 id="question-title">你想問什麼？</h2>
         <label for="student-question">用自己的話寫下問題</label>
         <textarea id="student-question" rows="3" maxlength="500" placeholder="例如：為什麼主角一開始就在右邊？"></textarea>
+        <details class="student-help-context">
+          <summary>補充作品原本和實際的樣子（可不填）</summary>
+          <label for="student-expected">我原本想看到什麼？</label>
+          <textarea id="student-expected" rows="2" maxlength="200" placeholder="例如：主角應該從舞台左邊開始"></textarea>
+          <label for="student-actual">我實際看到什麼？</label>
+          <textarea id="student-actual" rows="2" maxlength="200" placeholder="例如：按綠旗後，主角出現在右邊"></textarea>
+        </details>
         <div id="student-first-hint" class="student-help-first-hint" aria-live="polite" hidden></div>
-        <p class="student-help-privacy">不要寫姓名、班級或其他個人資料。按複製後，作品線索會放進提示；只有你把提示貼到 AI 並送出時，AI 才會收到。</p>
+        <p class="student-help-privacy">不要寫姓名、班級或其他個人資料。按複製後，問題和你填寫的補充資料會放進提示；只有你把提示貼到 AI 並送出時，AI 才會收到。</p>
         <div class="student-help-actions">
           <button id="student-copy-prompt" class="button primary" type="button" disabled>複製問題和作品線索</button>
         </div>
@@ -109,6 +116,8 @@ const projectMapList = requireElement<HTMLUListElement>('#student-project-map')
 const projectMapMore = requireElement<HTMLButtonElement>('#student-map-more')
 const questionCard = requireElement<HTMLElement>('#student-question-card')
 const questionInput = requireElement<HTMLTextAreaElement>('#student-question')
+const expectedInput = requireElement<HTMLTextAreaElement>('#student-expected')
+const actualInput = requireElement<HTMLTextAreaElement>('#student-actual')
 const firstHint = requireElement<HTMLElement>('#student-first-hint')
 const copyButton = requireElement<HTMLButtonElement>('#student-copy-prompt')
 const copyStatus = requireElement<HTMLElement>('#student-copy-status')
@@ -229,6 +238,8 @@ const readProject = async (file: File): Promise<void> => {
   currentAnalysis = null
   currentMap = null
   projectMapLimit = 40
+  expectedInput.value = ''
+  actualInput.value = ''
   projectResult.hidden = true
   questionCard.hidden = true
   copyButton.disabled = true
@@ -307,11 +318,16 @@ questionInput.addEventListener('input', () => {
 
 const copyAnalysisPrompt = async (): Promise<void> => {
   if (!currentProject || !currentAnalysis || !currentMap) return
+  const studentQuestion = [
+    `學生問題：${questionInput.value.trim()}`,
+    ...(expectedInput.value.trim() ? [`原本想看到：${expectedInput.value.trim()}`] : []),
+    ...(actualInput.value.trim() ? [`實際看到：${actualInput.value.trim()}`] : []),
+  ].join('\n')
   const prompt = createAnalysisPrompt({
     analysis: currentAnalysis,
     canonical: currentProject,
     projectMap: currentMap,
-    question: questionInput.value.trim(),
+    question: studentQuestion,
     mode: 'student',
     hintLevel: 2,
   })

@@ -723,6 +723,27 @@ h1 {
   margin: 14px 0 7px;
   font-weight: 750;
 }
+.student-help-context {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #d3ddd5;
+  border-radius: 12px;
+  background: #fbfcfa;
+}
+.student-help-context summary {
+  color: var(--forest-dark);
+  font-weight: 750;
+  cursor: pointer;
+}
+.student-help-context label {
+  display: block;
+  margin: 12px 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.student-help-context textarea {
+  min-height: 58px;
+}
 .student-help-privacy {
   margin: 8px 0 0 !important;
   font-size: 13px;

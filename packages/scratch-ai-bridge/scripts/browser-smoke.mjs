@@ -377,6 +377,9 @@ try {
     )
   }
   await studentHelpPage.locator('#student-question').fill('主角一開始為什麼在右邊？')
+  await studentHelpPage.locator('.student-help-context summary').click()
+  await studentHelpPage.locator('#student-expected').fill('我想讓主角從舞台左邊開始')
+  await studentHelpPage.locator('#student-actual').fill('按綠旗後，主角出現在右邊')
   const firstHintText = await studentHelpPage.locator('#student-first-hint').innerText()
   if (!firstHintText.includes('角色 A・第 1 段程式') || !firstHintText.includes('定位到 x：120')) {
     throw new Error(`${browserName} student help page did not ground its first hint in the position evidence`)
@@ -387,6 +390,8 @@ try {
     typeof studentPrompt !== 'string' ||
     !studentPrompt.includes('角色 A') ||
     !studentPrompt.includes('定位到 x：120') ||
+    !studentPrompt.includes('我想讓主角從舞台左邊開始') ||
+    !studentPrompt.includes('按綠旗後，主角出現在右邊') ||
     /"[FE]\d+"/.test(studentPrompt) ||
     studentPrompt.includes('evidenceIds')
   ) {
