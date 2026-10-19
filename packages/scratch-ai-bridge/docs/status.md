@@ -1,8 +1,8 @@
 # Scratch AI Bridge implementation status
 
-## 2026-10-19 — 使用者豁免真人驗收，進入工程發布
+## 2026-10-19 — 工程發布完成；真人驗收依使用者決定豁免
 
-使用者明確表示真人部分可略過。教師盲評、五位學生可用性測試、extension 白話審閱記為「豁免／未執行」，不宣稱通過、教師校準或學生適齡性已驗證。豁免只解除真人驗收的發布阻擋，不豁免自動 CI、託管 Safari、部署及上線網址檢查。功能分支 `84972cc9ea` 已通過其 CI；下一步依正式 Pages 工作流程發布並核對實際部署 SHA 與學生頁。
+使用者明確表示真人部分可略過。教師盲評、五位學生可用性測試、extension 白話審閱記為「豁免／未執行」，不宣稱通過、教師校準或學生適齡性已驗證。豁免只解除真人驗收的發布阻擋；自動 CI、託管 Safari、部署及上線網址檢查均已通過。Pages run `39204549043` 成功部署 source SHA `dbb5529723d6216d767a74b30c0830fb5dcf1fe2`；主分支 CI run `39204549072` 成功。部署驗證器確認首頁、學生解惑頁、同路徑 JS/CSS 與 service worker 均 HTTP 200；新學生頁欄位文字已在公開 bundle 找到。正式網址為 `https://polik18.github.io/scratch-editor-ai-bridge/`，學生網址為 `https://polik18.github.io/scratch-editor-ai-bridge/student-help.html`。工程發布完成，教學真人驗收仍維持豁免/未驗證。
 
 ## 2026-10-19 — 學生問題補充欄與 CLI 學生版報告
 

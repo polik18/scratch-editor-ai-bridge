@@ -34,6 +34,13 @@ run `38668384921` for `main` at source SHA `4caeb86bf1558269431818eab0148b7a2e13
 `github-pages` deployment status records the same environment URL. The authenticated Pages settings API reports
 `build_type: workflow`, source `main`/`/`, and the expected URL; nullable `status` is not a failure signal for Actions mode.
 
+The 2026-10-19 teacher-feedback engineering release was deployed by Pages run `39204549043` from source SHA
+`dbb5529723d6216d767a74b30c0830fb5dcf1fe2`. Build, hosted native Safari, and deploy jobs passed. Main CI run
+`39204549072` also passed. The post-deploy verifier returned HTTP 200 for the app, dedicated student help page, every
+same-path JavaScript/CSS asset, and the service worker. The deployed student bundle contains the optional expected-versus-
+actual observation fields and Scratch sprite-list position hint. Human teacher/student review was waived by the user and
+remains unperformed; this release does not claim teacher calibration or student usability validation.
+
 Candidate SHA `78065675c6a55742a371f7c605dcff0f4dc67eb7` passed PR CI run `38634729619` and push CI run `38634727505`
 (12/12 jobs each), plus Pages run `38634729574` (production build, native Safari, Chromium/Firefox/WebKit release smoke,
 and Linux PSS). Deployment was skipped because the run came from the draft PR branch. PR #1 remains open/draft, so the
@@ -44,10 +51,10 @@ they were not submitting a contribution to Scratch Foundation.
 
 One direct check on 2026-10-14 returned HTTP 404, but a later deployed-page smoke passed three consecutive checks: each
 received HTTP 200 and downloaded the app JavaScript and stylesheet (about 4.38 MB total). The earlier unauthenticated Pages
-settings API 404 was an authentication limitation, not evidence that Pages was disabled. The live site is currently
-available, but still serves the October 3 deployment; it does not contain the current local worktree. A new post-deployment
-workflow check now verifies the app title, mount point, same-site JavaScript/CSS assets, and the offline service worker to
-catch a deployment that reports success while the URL or worker is unavailable.
+settings API 404 was an authentication limitation, not evidence that Pages was disabled. At the time of this 2026-10-14
+check, the live site still served the October 3 deployment. That stale-deployment condition was resolved by the 2026-10-19
+release recorded above. The post-deployment workflow checks the app title, mount point, same-site JavaScript/CSS assets,
+and offline service worker to catch a deployment that reports success while the URL or worker is unavailable.
 
 The Pages verifier was rerun at 2026-10-14 11:35 UTC after the earlier conflicting response: the entrypoint returned HTTP 200
 on two direct requests and in `verify-deployed-pages.mjs`; the title, app mount, 4,372,597-byte JavaScript bundle, and
