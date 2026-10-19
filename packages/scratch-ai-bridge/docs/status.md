@@ -2,7 +2,7 @@
 
 ## 2026-10-19 — 教師視角計畫工程階段收尾
 
-完成學生解惑頁的跨瀏覽器 smoke 覆蓋：由官方 SB3 fixture 建立含「Player 綠旗 → 定位到 x=120、y=0」的合成作品，驗證 Chromium、Firefox、WebKit 均顯示一致的匿名角色/腳本位置與本機提示；複製給 AI 的內容保留白話證據且不含 F/E 內部 ID，頁面不顯示成績、作品生成器或首頁連結。全套 Bridge 測試 446/446 通過，package lint、production build 與 bundle budgets 通過；benchmark 各項在預算內（4 MiB SB3 匯入平均 57.1 ms/250 ms、2000 blocks 編譯平均 8.0 ms/75 ms）。原生 Safari smoke 已嘗試，但 WebDriver Remote Automation 未啟用，依測試指示需在 Safari Settings > Developer 開啟後重跑。教師計畫與驗收文件已更新。這些是工程及合成 fixture 驗證，不是學生可用性或教師盲評結果；Phase 6 真人驗收仍未完成，故 Phase 7 正式課堂部署門檻未通過。Commit `d3c6dd7239` 已推送；CI run `39190174045` Build Packages 仍執行中。
+完成學生解惑頁的跨瀏覽器 smoke 覆蓋：由官方 SB3 fixture 建立含「Player 綠旗 → 定位到 x=120、y=0」的合成作品，驗證 Chromium、Firefox、WebKit 均顯示一致的匿名角色/腳本位置與本機提示；複製給 AI 的內容保留白話證據且不含 F/E 內部 ID，頁面不顯示成績、作品生成器或首頁連結。全套 Bridge 測試 446/446 通過，package lint、production build 與 bundle budgets 通過；benchmark 各項在預算內（4 MiB SB3 匯入平均 57.1 ms/250 ms、2000 blocks 編譯平均 8.0 ms/75 ms）。原生 Safari smoke 已嘗試，但 WebDriver Remote Automation 未啟用，依測試指示需在 Safari Settings > Developer 開啟後重跑。教師計畫與驗收文件已更新。這些是工程及合成 fixture 驗證，不是學生可用性或教師盲評結果；Phase 6 真人驗收仍未完成，故 Phase 7 正式課堂部署門檻未通過。Commits `d3c6dd7239`、`1cfcceffdf` 已推送；兩者 CI（`39190174045`、`39190336679`）均全部成功。未部署 Pages。
 
 ## 2026-10-19 — 學生提示隱去內部證據代碼
 
