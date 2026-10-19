@@ -4,7 +4,7 @@
 
 學生解惑頁新增可選的「我原本想看到什麼／我實際看到什麼」欄位，學生複製提示時會一併帶上這兩項內容；沒有自動送出，也未增加分數或生成 Scratch 程式。Chromium、Firefox、WebKit smoke 驗證三引擎都保留兩項文字於複製提示，並顯示角色清單順序，讓匿名角色別名可以對回 Scratch。CLI 新增 `*-student.md`，使用白話、角色字母別名、角色清單順序及可定位的程式段落，無分數、F/E evidence 編號、opcode；舊 `.md` 明確標為教師檢視報告。班級摘要現在對 partial 檔案列出結構資料/opaque 積木原因。
 
-驗證：完整套件 447/447 通過；lint、Prettier、production build 與 bundle budgets 通過。學生頁完整 smoke Chromium、Firefox、WebKit 通過，原生 Safari Remote Automation 尚未啟用。30/100/500 檔數壓測使用同一個約 3 KB fixture 複本，均成功；500 檔 jobs=1/2 結果完全一致，耗時約 0.75/0.83 秒、最高 RSS 約 137 MB。四份真實作品重跑 2 ok/2 partial/0 failed；partial 原因為 2 項自製積木圖結構不一致，另一份有 14 個 opaque extension 積木及 3 項圖結構問題。最新版學生報告在 `Desktop/貓咪盃比賽_教師改善驗收_20261019_v4/`，資料夾權限 0700、每份檔案 0600；原始作品未修改。教師盲評與學生適齡性測試仍未驗收；未部署。
+驗證：完整套件 447/447 通過；lint、Prettier、production build 與 bundle budgets 通過。學生頁完整 smoke Chromium、Firefox、WebKit 通過，原生 Safari Remote Automation 尚未啟用。功能提交 `9f46a9a41b` 的 CI `39193245344` 成功，角色清單順序修正提交 `80900c0588` 的 CI `39194774661` 成功，狀態文件提交 `11ee9e1805` 的 CI `39194493157` 成功。30/100/500 檔數壓測使用同一個約 3 KB fixture 複本，均成功；500 檔 jobs=1/2 結果完全一致，耗時約 0.75/0.83 秒、最高 RSS 約 137 MB。四份真實作品重跑 2 ok/2 partial/0 failed；partial 原因為 2 項自製積木圖結構不一致，另一份有 14 個 opaque extension 積木及 3 項圖結構問題。最新版學生報告在 `Desktop/貓咪盃比賽_教師改善驗收_20261019_v4/`，資料夾權限 0700、每份檔案 0600；原始作品未修改。教師盲評與學生適齡性測試仍未驗收；未部署。
 
 ## 2026-10-19 — 教師視角計畫工程階段收尾
 
