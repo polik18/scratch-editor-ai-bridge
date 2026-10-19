@@ -5,6 +5,10 @@ This checklist applies to the GitHub Pages deployment configured by
 the production bundle budget, enforces the performance benchmark ceilings, runs exact-cap Chromium/Firefox/WebKit smoke,
 stores benchmark and browser JSON evidence, then uploads and deploys the Pages artifact on `develop` or `main`.
 
+The user waived live teacher review, student usability sessions, and teacher review of extension wording on 2026-10-19.
+Record these as **waived / not performed**, never as passed. Automated CI, hosted Safari, and deployed-site checks remain
+required. A local Safari administrator setting is not required when the hosted macOS Safari job passes.
+
 ## Before deployment
 
 - [ ] Confirm the intended source branch and commit SHA; Pages deployment is limited to `main` and `develop`, including manual dispatch.
@@ -22,10 +26,9 @@ stores benchmark and browser JSON evidence, then uploads and deploys the Pages a
       `combinedAudioEffects` applies PITCH 120 and PAN -100 in one fixture and reports a 2× source rate with left/right
       gains of 1/0 in all three engines. Require `offlineReload` to show a controlled nested Pages path and a usable app
       after offline reload in Chromium, Firefox, and WebKit; the WebKit artifact records origin-unavailable simulation.
-- [ ] Run `npm run test:browser:safari` on macOS with Safari Settings → Developer → Allow Remote Automation enabled;
-      this opens the production build in native Safari, imports the official default SB3 fixture, and checks the Canonical
-      analysis result. The Pages workflow also runs this on a macOS-hosted runner and requires it before deployment.
-      Playwright WebKit alone does not satisfy this Safari-specific gate.
+- [ ] Confirm the Pages workflow's native Safari job passed on its macOS-hosted runner; local Safari Remote Automation is
+      waived for this release and is not a substitute for the hosted job. Playwright WebKit alone does not satisfy this
+      Safari-specific gate.
 - [ ] Review the npm production audit and source-map reachability artifact. The Pages build blocks any vulnerable installed
       package path that is present in mapped production sources; workspace findings without a mapped vulnerable path still
       require documented owner triage and must not be described as a clean audit. Confirm the artifact's
