@@ -10,7 +10,7 @@
 - 四份真實作品最新結果為 2 `ok`、2 `partial`、0 `failed`；兩份 partial 原因是自製積木圖結構不一致（2 項）及 opaque blocks（14 個）加圖結構問題（3 項），不是檔案讀取失敗。私用姓名對照只留在本機 0700 資料夾。
 - 初版限制回饋最多 60 項、證據最多 240 項；報告另有省略數及私用來源對照表。
 - 以 3 KB 單一 fixture 複製壓測 30/100/500 檔均成功；500 檔 jobs=1/2 的 JSONL/摘要一致，序列約 0.75 秒、最高 RSS 約 137 MB。混合四份真實檔及一個壞 ZIP 為 2 ok/2 partial/1 failed，單一失敗不影響其他分析；這不代表異質大型專案的班級容量已驗收。
-- Bridge 447 tests、lint、build/bundle budget、benchmark 及三瀏覽器 smoke 已通過；原生 Safari Remote Automation 與真人教師/學生驗收未通過或未執行。CI run `39190336679` 成功；後續 run `39191556581` 因未登入 GitHub CLI 且公開 API rate limit 耗盡，終態仍未確認。
+- Bridge 447 tests、lint、build/bundle budget、benchmark 及三瀏覽器 smoke 已通過；原生 Safari Remote Automation 與真人教師/學生驗收未通過或未執行。CI runs `39190336679`、`39191556581`、`39193245344` 成功。Safari WebDriver 尚待管理者啟用 Remote Automation。
 
 ## 1. 目標與優先順序
 

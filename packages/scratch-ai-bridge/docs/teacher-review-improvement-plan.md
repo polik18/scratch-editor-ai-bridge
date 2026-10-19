@@ -15,7 +15,7 @@
 - `sb3-static-v2` 是依 SB3 結構固定計算的 100 分制，資料/互動面向未使用時標示不適用並從分母排除，尚未經教師校準。它不會執行作品，也不能衡量創意、手感、作者理解或學習歷程。
 - 擴充積木目前只對照樣本常見的 10 個官方 opcode；未知第三方 extension 會保留並標示限制，不應被當成學生錯誤或扣分依據。
 - 教師審閱表及 5 人學生可用性測試腳本已存在，尚未取得真人實測結果；不得將合成 fixture 或自動化 smoke 寫成教學驗收。
-- 2026-10-19 本機 Bridge 測試 446/446、lint、build/bundle budgets、benchmark 及 Chromium/Firefox/WebKit browser smoke 通過。Bench 最慢項目為 4 MiB SB3 匯入平均 57.1 ms，低於 250 ms 預算；2000 blocks 編譯平均 8.0 ms，低於 75 ms 預算。CI runs `39190174045`、`39190336679` 通過；後續文件紀錄提交 `56e9011e9c` 的 CI `39191556581` 推送後顯示執行中，但 GitHub 未認證 API rate limit 耗盡，尚未取得終態。原生 Safari smoke 因 WebDriver Remote Automation 未啟用而未能執行；須在 Safari Settings > Developer 開啟後重跑。
+- 2026-10-19 本機 Bridge 測試 447/447、lint、build/bundle budgets、benchmark 及 Chromium/Firefox/WebKit browser smoke 通過。Bench 最慢項目為 4 MiB SB3 匯入平均 57.1 ms，低於 250 ms 預算；2000 blocks 編譯平均 8.0 ms，低於 75 ms 預算。CI runs `39190174045`、`39190336679`、`39191556581` 及本輪功能提交 `9f46a9a41b` 對應的 `39193245344` 均成功。Safari WebDriver 仍因尚未啟用 Remote Automation 而未驗；官方 `safaridriver --enable` 在本機要求管理員密碼，需由管理者啟用後重跑。
 
 ## 執行階段
 
