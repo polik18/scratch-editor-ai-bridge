@@ -6,14 +6,11 @@ export interface EvidencePacketV1 {
   readonly question: string
   readonly summary: AnalysisIR['summary']
   readonly observations: readonly {
-    id: string
     kind: string
     claim: string
     confidence: string
-    evidenceIds: string[]
   }[]
   readonly evidence: readonly {
-    id: string
     target: string
     script: number | null
     blockLabel: string
@@ -89,7 +86,7 @@ export const createEvidencePacket = (
   projectMap: ProjectMap,
   question = '',
 ): EvidencePacketV1 => {
-  const allEvidence = new Map(projectMap.evidence.map((item, index) => [item.id, { item, id: `E${index + 1}` }]))
+  const allEvidence = new Map(projectMap.evidence.map((item) => [item.id, item]))
   const regularFacts = projectMap.facts.filter(({ kind }) => kind !== 'limitation').slice(0, 36)
   const limitationFacts = projectMap.facts.filter(({ kind }) => kind === 'limitation')
   const facts = [
@@ -106,16 +103,14 @@ export const createEvidencePacket = (
   ]
   const referencedIds = new Set(facts.flatMap((fact) => fact.evidence.map(({ id }) => id)))
   const evidence = [...allEvidence.values()]
-    .filter(({ item }) => referencedIds.has(item.id))
+    .filter((item) => referencedIds.has(item.id))
     .slice(0, 80)
-    .map(({ item, id }) => ({
-      id,
+    .map((item) => ({
       target: targetLabel(item.targetIndex),
       script: item.scriptIndex === null ? null : item.scriptIndex + 1,
       blockLabel: item.studentLabel,
     }))
-  const evidenceIds = new Map([...allEvidence.values()].map(({ item, id }) => [item.id, id]))
-  const sourceEvidence = new Map([...allEvidence.values()].map(({ item }) => [item.id, item]))
+  const sourceEvidence = allEvidence
   const targetNames = analysis.targets.map(({ name }) => name)
   const coverage = {
     roundTrip: projectMap.coverage.roundTrip,
@@ -134,15 +129,10 @@ export const createEvidencePacket = (
       runtime,
     })),
   }
-  let observations = facts.map((fact, index) => ({
-    id: `F${index + 1}`,
+  let observations = facts.map((fact) => ({
     kind: fact.kind,
     claim: studentSafeClaim(fact, sourceEvidence.get(fact.evidence[0]?.id)),
     confidence: fact.confidence,
-    evidenceIds: fact.evidence.flatMap(({ id }) => {
-      const evidenceId = evidenceIds.get(id)
-      return evidenceId ? [evidenceId] : []
-    }),
   }))
   const createPacket = (): EvidencePacketV1 => ({
     format: 'scratch-ai-bridge/evidence-packet',

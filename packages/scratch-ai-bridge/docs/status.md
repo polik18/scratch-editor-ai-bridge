@@ -1,5 +1,9 @@
 # Scratch AI Bridge implementation status
 
+## 2026-10-19 — 學生提示隱去內部證據代碼
+
+學生專用 Evidence packet 不再輸出 `F1`/`E1` 式觀察及 evidence ID 欄位，保留匿名角色別名、程式段落、白話積木摘要與限制；既有提示規則要求 AI 以學生看得到的文字作依據，移除 ID 欄位可避免模型照抄難懂代碼。更新現有 packet 測試斷言及教師計畫。Bridge lint/Prettier、TypeScript production build 與 bundle budgets 通過；未執行 tests/browser smoke。尚未提交、推送或部署。
+
 ## 2026-10-16 — 教師視角 Phase 2 學生線索導航第一輪
 
 學生解惑頁新增本機程式線索清單，以匿名「舞台／角色 A…」代號分組，顯示段落位置與白話積木標籤；每次最多顯示 40 筆，可逐批展開。複製給外部 AI 的 evidence packet/coverage 使用同一組角色代號。此次 package lint 與 production build/bundle budgets 通過；未執行測試或 browser smoke。程式已推送至功能分支（`6935a85497`、`8e8e13e36a`），未部署。尚未按問題排序、加入搜尋或真人學生驗收。

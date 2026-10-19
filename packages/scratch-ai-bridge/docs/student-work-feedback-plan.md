@@ -246,7 +246,7 @@ Gemini 2D Platformer 修正循環已找到具體的提示合約衝突候選：Ca
 - Phase A：建立 20 個合成案例索引、隱私/教師評閱規範與匿名回饋資料範本。真實學生作品未納入 corpus；案例目前全部是待評閱狀態。
 - Phase B：新增 Project Map v1，列出可由 IR 看見的事件、動作、變數、廣播、opaque opcode、graph issue 和匯入覆蓋數；事實附原始 block ID/IR 路徑。round-trip 欄位明確維持 `not-run`。此版尚非完整 Scratch 行為語意模型，沒有把角色用途、遊戲玩法或因果關係當成已證實事實。
 - Phase C：新增靜態形成性回饋，將 `forever-reinitialize` 降成設計問題；無 evidence 的警告不輸出為回饋項目。信心使用 high/limited 類別，不呈現未校準的百分比。發布 precision 門檻尚無人評數據。
-- Phase D：新增 `scratch-ai-bridge/ai-response` v1 需求覆蓋 envelope、JSON Pointer 驗證及精簡 evidence packet。舊 Canonical IR v1 仍可使用；AI 覆蓋狀態在畫面標為「AI 自述」，不作 runtime 證明。packet 上限 24,000 字元、不帶素材 bytes、原始角色名稱或 Scratch block IDs；學生姓名/角色名以匿名序號輸出，原始使用者問題仍會由使用者主動複製。學生模式現在只帶入安全的中文積木摘要和數值輸入，保留教師用 evidence IDs 供模型核對，但明確禁止出現在學生回答。
+- Phase D：新增 `scratch-ai-bridge/ai-response` v1 需求覆蓋 envelope、JSON Pointer 驗證及精簡 evidence packet。舊 Canonical IR v1 仍可使用；AI 覆蓋狀態在畫面標為「AI 自述」，不作 runtime 證明。packet 上限 24,000 字元、不帶素材 bytes、原始角色名稱或 Scratch block IDs；學生姓名/角色名以匿名序號輸出，原始使用者問題仍會由使用者主動複製。學生模式只帶入安全中文積木摘要和數值輸入，不包含 F/E 內部證據代碼，讓回答使用學生看得懂的位置與積木文字作為依據。
 - Phase E：新增證據連結、原始未知積木定位、角色/腳本搜尋與摺疊、匿名回饋匯出。學生可見程式清單改用積木中文摘要，不顯示 opcode 或原始 block ID；學生提示限制為兩段、160 字內、一次一個可觀察步驟，要求引用畫面可見積木文字/數字並禁止無證據猜測，未知積木合併為白話限制。另新增獨立 `student-help.html` 分享入口，只提供 SB3 上傳、結構分析與學生提問提示；它不顯示成績、Scratch 生成器或首頁導覽。學生仍需將複製的匿名提示貼到老師允許使用的 AI；真實學生試用仍待進行。
 - Phase F：新增嚴格評閱資料解析、品質門檻計算及 `npm run feedback:review -- <reviews.json> [report.json]`。範本會故意回報未達標；目前 20 案都未經教師評閱，門檻未通過。
 

@@ -6,7 +6,7 @@ import { createAnalysisPrompt } from '../../src/core/prompt'
 import { createEvidencePacket, EVIDENCE_PACKET_MAX_CHARS } from '../../src/core/prompt/evidence-packet'
 
 describe('minimal evidence packet', () => {
-  it('omits project names and asset bytes while retaining evidence IDs and limits', () => {
+  it('omits project names, asset bytes, and internal evidence IDs while retaining locations and limits', () => {
     const project = structuredClone(platformerCore as CanonicalProject)
     project.name = 'student-name-private-project'
     const analysis = analyzeCanonicalProject(project)
@@ -18,7 +18,11 @@ describe('minimal evidence packet', () => {
     expect(serialized).not.toContain('student-name-private-project')
     expect(serialized).not.toContain('<svg')
     expect(serialized).not.toContain('data:image')
-    expect(serialized).toContain('evidenceIds')
+    expect(serialized).not.toContain('evidenceIds')
+    expect(serialized).not.toMatch(/"[FE]\d+"/)
+    expect(packet.observations.every((observation) => !('id' in observation))).toBe(true)
+    expect(packet.evidence.every((item) => !('id' in item))).toBe(true)
+    expect(serialized).toContain('角色 A')
     expect(serialized.length).toBeLessThanOrEqual(EVIDENCE_PACKET_MAX_CHARS)
   })
 
