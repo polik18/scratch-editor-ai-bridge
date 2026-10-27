@@ -1,4 +1,52 @@
 {
-  "projectPath": "/Users/huangjianzhe/experiments/test-project.sb3",
-  "lastModified": "2026-10-27T06:41:03.762Z"
+  "projectPath": null,
+  "lastModified": "2026-10-27T15:06:43.709Z",
+  "projectJson": {
+    "targets": [
+      {
+        "id": "2BS2S0fBmT-E,R#U-,E1",
+        "name": "Stage",
+        "isStage": true,
+        "variables": {},
+        "lists": {},
+        "broadcasts": {},
+        "blocks": {},
+        "comments": {},
+        "currentCostume": 0,
+        "costumes": [
+          {
+            "assetId": "cd21514d0531fdffb22204e0ec5ed84a",
+            "name": "backdrop1",
+            "md5ext": "cd21514d0531fdffb22204e0ec5ed84a.svg",
+            "dataFormat": "svg",
+            "rotationCenterX": 240,
+            "rotationCenterY": 180,
+            "bitmapResolution": 1
+          }
+        ],
+        "sounds": [],
+        "volume": 100,
+        "layerOrder": 0,
+        "tempo": 60,
+        "videoTransparency": 0,
+        "videoState": "on",
+        "textToSpeechLanguage": null,
+        "visible": true,
+        "size": 100,
+        "direction": 90,
+        "draggable": false,
+        "rotationStyle": "normal",
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "monitors": [],
+    "extensions": [],
+    "meta": {
+      "semver": "3.0.0",
+      "vm": "0.2.0",
+      "agent": "scratch-session/0.1.0",
+      "name": "--name"
+    }
+  }
 }
