@@ -8,6 +8,7 @@
   "scripts": {
     "build": "tsc --noEmit && vite build && node scripts/copy-renderer-sandbox-assets.mjs && node scripts/generate-service-worker.mjs && node scripts/check-bundle-budget.mjs",
     "cli": "tsx src/cli/main.ts",
+    "session": "tsx src/cli/session-cli.ts",
     "bench": "node -e \"require('node:fs').mkdirSync('test-results',{recursive:true})\" && vitest bench --run tests/performance --outputJson=test-results/performance.json && node scripts/check-performance-budget.mjs test-results/performance.json",
     "audit:reachability": "node scripts/check-audit-reachability.mjs",
     "clean": "rimraf dist coverage",
