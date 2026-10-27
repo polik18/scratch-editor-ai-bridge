@@ -17,21 +17,26 @@ await session.addSprite('Player1');
 // Player1 腳本：當綠旗被點擊
 const flagId = await session.addBlock('Player1', 'event_whenflagclicked');
 
-// 初始化變數
+// 初始化變數 - 先建立變數，再使用正確格式
+const healthVarId = await session.addVariable('Player1', 'health', 100);
+const energyVarId = await session.addVariable('Player1', 'energy', 100);
+const xVelVarId = await session.addVariable('Player1', 'x velocity', 0);
+const yVelVarId = await session.addVariable('Player1', 'y velocity', 0);
+
 await session.addBlock('Player1', 'data_setvariableto', {
-  fields: { VARIABLE: { type: 'variable', value: 'health' }, VALUE: { type: 'literal', value: 100 } },
+  fields: { VARIABLE: ['health', healthVarId], VALUE: { type: 'literal', value: 100 } },
   parent: flagId,
 });
 await session.addBlock('Player1', 'data_setvariableto', {
-  fields: { VARIABLE: { type: 'variable', value: 'energy' }, VALUE: { type: 'literal', value: 100 } },
+  fields: { VARIABLE: ['energy', energyVarId], VALUE: { type: 'literal', value: 100 } },
   parent: flagId,
 });
 await session.addBlock('Player1', 'data_setvariableto', {
-  fields: { VARIABLE: { type: 'variable', value: 'x velocity' }, VALUE: { type: 'literal', value: 0 } },
+  fields: { VARIABLE: ['x velocity', xVelVarId], VALUE: { type: 'literal', value: 0 } },
   parent: flagId,
 });
 await session.addBlock('Player1', 'data_setvariableto', {
-  fields: { VARIABLE: { type: 'variable', value: 'y velocity' }, VALUE: { type: 'literal', value: 0 } },
+  fields: { VARIABLE: ['y velocity', yVelVarId], VALUE: { type: 'literal', value: 0 } },
   parent: flagId,
 });
 
@@ -75,12 +80,15 @@ await session.addSprite('Player2');
 const player2FlagId = await session.addBlock('Player2', 'event_whenflagclicked');
 
 // 初始化變數
+const p2HealthVarId = await session.addVariable('Player2', 'health', 70);
+const p2EnergyVarId = await session.addVariable('Player2', 'energy', 100);
+
 await session.addBlock('Player2', 'data_setvariableto', {
-  fields: { VARIABLE: { type: 'variable', value: 'health' }, VALUE: { type: 'literal', value: 70 } },
+  fields: { VARIABLE: ['health', p2HealthVarId], VALUE: { type: 'literal', value: 70 } },
   parent: player2FlagId,
 });
 await session.addBlock('Player2', 'data_setvariableto', {
-  fields: { VARIABLE: { type: 'variable', value: 'energy' }, VALUE: { type: 'literal', value: 100 } },
+  fields: { VARIABLE: ['energy', p2EnergyVarId], VALUE: { type: 'literal', value: 100 } },
   parent: player2FlagId,
 });
 
@@ -106,12 +114,15 @@ await session.addSprite('GameManager');
 const managerFlagId = await session.addBlock('GameManager', 'event_whenflagclicked');
 
 // 遊戲初始化
+const winnerVarId = await session.addVariable('GameManager', 'winner', '');
+const roundVarId = await session.addVariable('GameManager', 'round', 1);
+
 await session.addBlock('GameManager', 'data_setvariableto', {
-  fields: { VARIABLE: { type: 'variable', value: 'winner' }, VALUE: { type: 'literal', value: '' } },
+  fields: { VARIABLE: ['winner', winnerVarId], VALUE: { type: 'literal', value: '' } },
   parent: managerFlagId,
 });
 await session.addBlock('GameManager', 'data_setvariableto', {
-  fields: { VARIABLE: { type: 'variable', value: 'round' }, VALUE: { type: 'literal', value: 1 } },
+  fields: { VARIABLE: ['round', roundVarId], VALUE: { type: 'literal', value: 1 } },
   parent: managerFlagId,
 });
 
@@ -142,7 +153,7 @@ const health1ForeverId = await session.addBlock('HealthBar1', 'control_forever',
   parent: health1FlagId,
 });
 await session.addBlock('HealthBar1', 'looks_sayfor', {
-  inputs: { MESSAGE: { type: 'reporter', value: 'health' }, SECONDS: { type: 'literal', value: 0.5 } },
+  inputs: { MESSAGE: { type: 'literal', value: 'health' }, SECONDS: { type: 'literal', value: 0.5 } },
   parent: health1ForeverId,
 });
 
