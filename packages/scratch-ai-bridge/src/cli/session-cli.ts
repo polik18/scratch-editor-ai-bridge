@@ -6,7 +6,11 @@
  *   npx tsx src/cli/session-cli.ts load <file.sb3>
  *   npx tsx src/cli/session-cli.ts save [file.sb3]
  *   npx tsx src/cli/session-cli.ts info
- *   npx tsx src/cli/session-cli.ts inspect
+ *   npx tsx src/cli/session-cli.ts inspect [--detail=default|project|targets|blocks|assets|capabilities]
+ *   npx tsx src/cli/session-cli.ts plan --patch=<patch.json>
+ *   npx tsx src/cli/session-cli.ts apply --patch=<patch.json> --out=<output.sb3>
+ *   npx tsx src/cli/session-cli.ts undo
+ *   npx tsx src/cli/session-cli.ts diff
  *   npx tsx src/cli/session-cli.ts ls
  *   npx tsx src/cli/session-cli.ts add-sprite <name> [--x N] [--y N] [--direction N] [--visible] [--draggable]
  *   npx tsx src/cli/session-cli.ts rm-sprite <name>
@@ -161,9 +165,49 @@ const commands: Record<string, CommandHandler> = {
     console.log(`Targets:   ${info.targetCount} (${info.targets.join(', ')})`);
   },
 
-  async inspect() {
+  async plan(argv) {
     const sess = await loadSession();
-    const result = sess.inspect();
+    const patchArg = argv.find(a => a.startsWith('--patch='));
+    const patchPath = patchArg ? patchArg.replace('--patch=', '') : null;
+    if (!patchPath) {
+      console.error('Error: --patch=<path> required');
+      process.exit(1);
+    }
+    const patch = JSON.parse(await fs.promises.readFile(patchPath, 'utf-8'));
+    const result = sess.plan(patch);
+    console.log(JSON.stringify(result, null, 2));
+  },
+
+  async apply(argv) {
+    const sess = await loadSession();
+    const patchArg = argv.find(a => a.startsWith('--patch='));
+    const outputPathArg = argv.find(a => a.startsWith('--out='));
+    const patchPath = patchArg ? patchArg.replace('--patch=', '') : null;
+    const outputPath = outputPathArg ? outputPathArg.replace('--out=', '') : null;
+    if (!patchPath || !outputPath) {
+      console.error('Error: --patch=<path> and --out=<path> required');
+      process.exit(1);
+    }
+    const patch = JSON.parse(await fs.promises.readFile(patchPath, 'utf-8'));
+    const result = await sess.apply(patch, outputPath);
+    console.log(JSON.stringify(result, null, 2));
+  },
+
+  async undo() {
+    const sess = await loadSession();
+    const result = sess.undo();
+    console.log(JSON.stringify(result, null, 2));
+  },
+
+  async diff() {
+    const sess = await loadSession();
+    const result = sess.diff();
+    console.log(JSON.stringify(result, null, 2));
+  },
+  async inspect(argv) {
+    const sess = await loadSession();
+    const detail = argv.find(a => a.startsWith('--detail='))?.replace('--detail=', '') || 'default';
+    const result = sess.inspect(detail);
     console.log(JSON.stringify(result, null, 2));
   },
 

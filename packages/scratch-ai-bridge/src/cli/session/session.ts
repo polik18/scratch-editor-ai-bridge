@@ -65,6 +65,9 @@ export class ScratchSession {
   /** True if the in-memory state differs from what's on disk. */
   private dirty = false;
 
+  /** ZIP entries from loaded .sb3 (md5ext → JSZipObject). null for new projects. */
+  private zipEntries: Map<string, { async: (type: string) => Promise<Uint8Array> }> | null = null;
+
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
   private targets(): Record<string, unknown>[] {
@@ -136,6 +139,7 @@ export class ScratchSession {
       },
     };
     this.projectPath = null;
+    this.zipEntries = null; // new project, no ZIP entries
     this.dirty = false;
   }
 
@@ -147,7 +151,9 @@ export class ScratchSession {
   async loadSb3(sb3Path: string): Promise<void> {
     const resolved = path.resolve(sb3Path);
     const buf = await fs.promises.readFile(resolved);
-    this.project = await this._loadProjectJsonFromSb3(buf);
+    const result = await this._loadSb3WithEntries(buf);
+    this.project = result.project;
+    this.zipEntries = result.zipEntries;
     this.projectPath = resolved;
     this.dirty = false;
   }
@@ -159,6 +165,7 @@ export class ScratchSession {
   loadProjectJson(json: Record<string, unknown>): void {
     this.project = json;
     this.projectPath = null;
+    this.zipEntries = null;
     this.dirty = false;
   }
 
@@ -184,6 +191,17 @@ export class ScratchSession {
      const projectJson = JSON.stringify(this.project);
      zip.file('project.json', new TextEncoder().encode(projectJson));
 
+     // Retain original ZIP entries (costumes, sounds, etc.)
+     if (this.zipEntries) {
+       for (const [name, entry] of this.zipEntries) {
+         // Skip project.json — we just overwrote it
+         if (name === 'project.json') continue;
+         // Re-add entry preserving its original content
+         const c = await (entry as any).async('uint8array');
+         zip.file(name, c);
+       }
+     }
+
      const blob = await zip.generateAsync({
        type: 'blob',
        compression: 'DEFLATE',
@@ -196,14 +214,32 @@ export class ScratchSession {
      return resolved;
    }
 
-  // ─── Internal SB3 → project.json loader ──────────────────────────────────
+  // ─── Internal SB3 → project.json + ZIP entries loader ────────────────────
 
-  private async _loadProjectJsonFromSb3(buf: Buffer | Uint8Array): Promise<Record<string, unknown>> {
+  private async _loadSb3WithEntries(buf: Buffer | Uint8Array): Promise<{ project: Record<string, unknown>; zipEntries: Map<string, { async: (type: string) => Promise<Uint8Array> }> }> {
     const { default: JSZip } = await import('jszip');
     const zip = await JSZip.loadAsync(buf instanceof Buffer ? buf : Buffer.from(buf));
     const jsonStr = await zip.file('project.json')?.async('string');
     if (!jsonStr) throw new Error('SB3 archive is missing project.json');
-    return JSON.parse(jsonStr);
+
+    const project = JSON.parse(jsonStr);
+    const zipEntries = new Map<string, { async: (type: string) => Promise<Uint8Array> }>();
+
+    // Extract all ZIP entries (excluding project.json which we just parsed)
+    for (const [name, entry] of Object.entries(zip.files)) {
+      if (name === 'project.json') continue;
+      zipEntries.set(name, entry);
+    }
+
+    return { project, zipEntries };
+  }
+
+  /**
+   * @deprecated Use _loadSb3WithEntries instead. Kept for compatibility.
+   */
+  private async _loadProjectJsonFromSb3(buf: Buffer | Uint8Array): Promise<Record<string, unknown>> {
+    const result = await this._loadSb3WithEntries(buf);
+    return result.project;
   }
 
   // ─── Project info ─────────────────────────────────────────────────────────
