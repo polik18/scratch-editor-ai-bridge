@@ -24,15 +24,15 @@ await session.addBlock('Player1', 'data_setvariableto', {
 });
 await session.addBlock('Player1', 'data_setvariableto', {
   fields: { VARIABLE: { type: 'variable', value: 'energy' }, VALUE: { type: 'literal', value: 100 } },
-  parent: null,
+  parent: flagId,
 });
 await session.addBlock('Player1', 'data_setvariableto', {
   fields: { VARIABLE: { type: 'variable', value: 'x velocity' }, VALUE: { type: 'literal', value: 0 } },
-  parent: null,
+  parent: flagId,
 });
 await session.addBlock('Player1', 'data_setvariableto', {
   fields: { VARIABLE: { type: 'variable', value: 'y velocity' }, VALUE: { type: 'literal', value: 0 } },
-  parent: null,
+  parent: flagId,
 });
 
 // 永久迴圈：物理與控制
@@ -46,6 +46,7 @@ await session.addBlock('Player1', 'control_if', {
 });
 await session.addBlock('Player1', 'motion_movesteps', {
   inputs: { STEPS: { type: 'literal', value: 5 } },
+  parent: foreverId,
 });
 
 // 跳躍邏輯
@@ -54,6 +55,7 @@ await session.addBlock('Player1', 'control_if_else', {
 });
 await session.addBlock('Player1', 'motion_gotoxy', {
   inputs: { X: { type: 'literal', value: 0 }, Y: { type: 'literal', value: 0 } },
+  parent: foreverId,
 });
 
 // 攻擊邏輯
@@ -79,7 +81,7 @@ await session.addBlock('Player2', 'data_setvariableto', {
 });
 await session.addBlock('Player2', 'data_setvariableto', {
   fields: { VARIABLE: { type: 'variable', value: 'energy' }, VALUE: { type: 'literal', value: 100 } },
-  parent: null,
+  parent: player2FlagId,
 });
 
 // 永久迴圈：物理與控制
@@ -110,7 +112,7 @@ await session.addBlock('GameManager', 'data_setvariableto', {
 });
 await session.addBlock('GameManager', 'data_setvariableto', {
   fields: { VARIABLE: { type: 'variable', value: 'round' }, VALUE: { type: 'literal', value: 1 } },
-  parent: null,
+  parent: managerFlagId,
 });
 
 // 檢查遊戲結束
