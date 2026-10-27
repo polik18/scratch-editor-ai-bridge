@@ -40,7 +40,8 @@
     "scratch-audio": "2.0.268"
   },
   "bin": {
-    "scratch-ai-bridge": "scripts/scratch-ai-bridge.mjs"
+    "scratch-ai-bridge": "scripts/scratch-ai-bridge.mjs",
+    "scratch-session": "scripts/scratch-session.mjs"
   },
   "devDependencies": {
     "ajv": "8.20.0",

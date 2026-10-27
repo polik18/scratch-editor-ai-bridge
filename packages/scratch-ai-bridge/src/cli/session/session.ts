@@ -33,6 +33,7 @@ export interface SessionInfo {
   isDirty: boolean;
   targetCount: number;
   targets: string[];
+  name?: string;
 }
 
 export interface TargetSummary {
@@ -136,6 +137,8 @@ export class ScratchSession {
         semver: '3.0.0',
         vm: '0.2.0',
         agent: 'scratch-session/0.1.0',
+        // @ts-ignore - name is a string, TypeScript infers {} for meta
+        name: _name,
       },
     };
     this.projectPath = null;

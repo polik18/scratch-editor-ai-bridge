@@ -412,6 +412,44 @@ const commands: Record<string, CommandHandler> = {
     console.log('✓ Project compiles without errors.');
     console.log('  (Preview screenshot: run with --preview flag after browser integration)');
   },
+
+  // ── NLP Parse ────────────────────────────────────────────────────────────
+
+  async nlpParse(argv) {
+    const prompt = argv[0];
+    const omlxEndpoint = process.env.OMLX_ENDPOINT || argv[1];
+    const apiKey = process.env.OMLX_API_KEY || argv[2];
+
+    if (!prompt) {
+      console.error('Usage: scratch-session nlp-parse "<prompt>" [omlx_endpoint] [api_key]');
+      process.exit(1);
+    }
+
+    const { parseNaturalLanguage } = await import('../nlp/parser.js');
+    const result = await parseNaturalLanguage(prompt, omlxEndpoint, apiKey);
+
+    console.log('Summary: ' + result.summary);
+    console.log('Confidence: ' + (result.confidence * 100).toFixed(0) + '%');
+    console.log('Commands:');
+    result.commands.forEach((cmd, i) => {
+      console.log('  ' + (i + 1) + '. ' + cmd.type + ' → ' + cmd.opcode);
+      if (cmd.inputs) {
+        console.log('     Inputs: ' + JSON.stringify(cmd.inputs));
+      }
+    });
+  },
+
+  // ── Preview Screenshot ───────────────────────────────────────────────────
+
+  async previewScreenshot(argv) {
+    const outputPath = argv[0];
+    const sess = await loadSession();
+    
+    const { previewScreenshot } = await import('../preview/automation.js');
+    const filePath = await previewScreenshot(sess, outputPath);
+    
+    console.log('✓ Screenshot saved to ' + filePath);
+  },
 };
 
 // ─── Main ────────────────────────────────────────────────────────────────────
