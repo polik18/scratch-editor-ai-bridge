@@ -158,16 +158,11 @@ console.log('\nCompiling project...');
 const sb3 = await session.compile();
 console.log('✓ Project compiled:', sb3.length, 'bytes');
 
-// 保存專案
-fs.writeFileSync('star-collector.sb3', sb3);
-console.log('✓ Project saved: star-collector.sb3');
-
-// 預覽截圖
-console.log('\nPreviewing project...');
-const previewPath = await previewScreenshot(session, '/tmp/star-collector-preview.png');
-console.log('✓ Preview saved:', previewPath);
+// 輸出到 Downloads 資料夾
+import * as path from 'path';
+const downloadsPath = path.join(process.env.HOME, 'Downloads', 'star-collector.sb3');
+fs.writeFileSync(downloadsPath, sb3);
+console.log('✓ Project saved to:', downloadsPath);
 
 console.log('\n=== Star Collector Created Successfully ===');
-console.log('Files:');
-console.log('  - star-collector.sb3');
-console.log('  - /tmp/star-collector-preview.png');
+console.log('Output:', downloadsPath);
