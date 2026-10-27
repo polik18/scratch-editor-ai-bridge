@@ -422,7 +422,7 @@ export class ScratchSession {
     opcode: string,
     opts: {
       fields?: Record<string, [string, string | null]>;
-      inputs?: Record<string, CanonicalInputRef>;
+      inputs?: Record<string, CanonicalInputRef | { type: 'literal'; value: number | string } | { type: 'variable'; name: string }>;
       parent?: string | null;
       next?: string | null;
       shadow?: boolean;
@@ -438,11 +438,87 @@ export class ScratchSession {
       shadow = false,
     } = opts;
 
+    // Convert inputs to CanonicalInputRef format
+    const convertedInputs: Record<string, CanonicalInputRef> = {};
+    for (const [inputName, inputValue] of Object.entries(inputs)) {
+      if (typeof inputValue === 'object' && inputValue !== null) {
+        if ('block' in inputValue && 'shadow' in inputValue) {
+          // Already in CanonicalInputRef format
+          convertedInputs[inputName] = inputValue as CanonicalInputRef;
+        } else if (inputValue.type === 'literal' && 'value' in inputValue) {
+          // Literal value - create a reporter block
+          const reporterId = uid();
+          const shadowId = reporterId + '_shadow';
+          const reporterBlock: Record<string, unknown> = {
+            id: reporterId,
+            opcode: 'math_number',
+            fields: { NUM: [String(inputValue.value), null] },
+            inputs: {},
+            topLevel: true,
+            parent: null,
+            next: null,
+            shadow: false,
+          };
+          const shadowBlock: Record<string, unknown> = {
+            id: shadowId,
+            opcode: 'math_number',
+            fields: { NUM: [String(inputValue.value), null] },
+            inputs: {},
+            topLevel: true,
+            parent: null,
+            next: null,
+            shadow: true,
+          };
+          const blocks = (t['blocks'] as Record<string, Record<string, unknown>>) ?? {};
+          blocks[reporterId] = reporterBlock;
+          blocks[shadowId] = shadowBlock;
+          t['blocks'] = blocks;
+          convertedInputs[inputName] = { block: reporterId, shadow: shadowId };
+        } else if (inputValue.type === 'variable' && 'name' in inputValue) {
+          // Variable - create a variable reporter block
+          const varId = this.addVariable(targetName, String(inputValue.name));
+          const reporterId = uid();
+          const shadowId = reporterId + '_shadow';
+          const reporterBlock: Record<string, unknown> = {
+            id: reporterId,
+            opcode: 'data_variable',
+            fields: { VARIABLE: ['variableName', varId] },
+            inputs: {},
+            topLevel: true,
+            parent: null,
+            next: null,
+            shadow: false,
+          };
+          const shadowBlock: Record<string, unknown> = {
+            id: shadowId,
+            opcode: 'data_variable',
+            fields: { VARIABLE: ['variableName', varId] },
+            inputs: {},
+            topLevel: true,
+            parent: null,
+            next: null,
+            shadow: true,
+          };
+          const blocks = (t['blocks'] as Record<string, Record<string, unknown>>) ?? {};
+          blocks[reporterId] = reporterBlock;
+          blocks[shadowId] = shadowBlock;
+          t['blocks'] = blocks;
+          convertedInputs[inputName] = { block: reporterId, shadow: shadowId };
+        } else {
+          // Unknown format, use as-is (will fail validation)
+          convertedInputs[inputName] = inputValue as CanonicalInputRef;
+        }
+      } else {
+        // Not an object, use as-is (will fail validation)
+        convertedInputs[inputName] = inputValue as CanonicalInputRef;
+      }
+    }
+
     const block: Record<string, unknown> = {
       id,
       opcode,
       fields: { ...fields },
-      inputs: { ...inputs },
+      inputs: { ...convertedInputs },
       topLevel: parent === null,
       parent,
       next,
@@ -591,24 +667,37 @@ export class ScratchSession {
   // ─── Compile ─────────────────────────────────────────────────────────────
 
   /**
-   /** Compile the current Scratch project JSON to SB3 bytes. */
-   async compile(): Promise<Uint8Array> {
-     if (!this.project) throw new Error('No project loaded.');
-     const { default: JSZip } = await import('jszip');
-     const zip = new JSZip();
+   * Compile the current Scratch project JSON to SB3 bytes.
+   * Validates the project structure before compilation.
+   * @throws {Error} If validation fails
+   */
+  async compile(): Promise<Uint8Array> {
+    if (!this.project) throw new Error('No project loaded.');
 
-     // Add project.json (UTF-8 bytes)
-     const projectJson = JSON.stringify(this.project);
-     zip.file('project.json', new TextEncoder().encode(projectJson));
+    // Validate project structure
+    const { validateSB3 } = await import('./validator.js');
+    const result = validateSB3(this.project as any);
 
-     // Generate async blob then convert to Uint8Array
-     const blob = await zip.generateAsync({
-       type: 'blob',
-       compression: 'DEFLATE',
-       compressionOptions: { level: 6 },
-     });
-     return new Uint8Array(await blob.arrayBuffer());
-   }
+    if (!result.valid) {
+      const errorSummary = result.errors.join('\n  ');
+      throw new Error(`SB3 validation failed:\n  ${errorSummary}`);
+    }
+
+    const { default: JSZip } = await import('jszip');
+    const zip = new JSZip();
+
+    // Add project.json (UTF-8 bytes)
+    const projectJson = JSON.stringify(this.project);
+    zip.file('project.json', new TextEncoder().encode(projectJson));
+
+    // Generate async blob then convert to Uint8Array
+    const blob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 },
+    });
+    return new Uint8Array(await blob.arrayBuffer());
+  }
 
   // ─── Hat wiring ──────────────────────────────────────────────────────────
 
