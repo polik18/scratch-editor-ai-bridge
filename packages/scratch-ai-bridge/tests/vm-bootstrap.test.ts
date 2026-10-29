@@ -3,8 +3,8 @@ import { initializeScratchVM } from '../src/bootstrap/vm-bootstrap'
 import { getTargets } from '../src/scratch/vm'
 
 describe('Scratch VM bootstrap', () => {
-  it('initializes the official Scratch VM runtime behind the adapter', () => {
-    const vm = initializeScratchVM()
+  it('initializes the official Scratch VM runtime behind the adapter', async () => {
+    const vm = await initializeScratchVM()
 
     expect(getTargets(vm)).toEqual([])
 
