@@ -383,7 +383,7 @@ const validateSb3Archive = (input: ArrayBuffer | ArrayBufferView): void => {
  * Create a fresh official Scratch VM instance.
  * @returns An opaque handle to the initialized VM.
  */
-export const createVM = (): ScratchVMHandle => {
+export const createVM = async (): Promise<ScratchVMHandle> => {
   const vm = new ScratchVM() as unknown as ScratchVMInternal
   const loadExtensionURL = vm.extensionManager.loadExtensionURL.bind(vm.extensionManager)
 
@@ -395,8 +395,8 @@ export const createVM = (): ScratchVMHandle => {
       ? loadExtensionURL(extensionURL)
       : Promise.resolve()
 
-  vm.attachStorage(createOfflineScratchStorage())
-  return vm
+  vm.attachStorage(await createOfflineScratchStorage())
+  return vm as ScratchVMHandle
 }
 
 /**
@@ -411,7 +411,7 @@ export const createPreviewVM = async (
   const originalFetch = globalThis.fetch
   if (wrapFetch) globalThis.fetch = wrapFetch(originalFetch.bind(globalThis))
   try {
-    const vm = asInternalVM(createVM())
+    const vm = asInternalVM(await createVM())
     const { default: ScratchAudio } = await import('scratch-audio')
     const audioEngine = new ScratchAudio()
     const decodeSoundPlayer = audioEngine.decodeSoundPlayer.bind(audioEngine)
@@ -476,7 +476,7 @@ const attachBitmapAdapter = (vm: ScratchVMHandle): Promise<void> => {
  * @returns The VM containing the loaded project.
  */
 export const loadSb3 = async (file: Sb3Input, vm?: ScratchVMHandle): Promise<ScratchVMHandle> => {
-  const targetVM = vm ?? createVM()
+  const targetVM = vm ?? await createVM()
 
   try {
     const input = await normalizeSb3Input(file)
@@ -486,7 +486,12 @@ export const loadSb3 = async (file: Sb3Input, vm?: ScratchVMHandle): Promise<Scr
     return targetVM
   } catch (error) {
     if (!vm) {
-      targetVM.quit()
+      try {
+        const resolvedVM = await targetVM
+        resolvedVM.quit()
+      } catch {
+        // Ignore quit errors during cleanup
+      }
     }
     throw error
   }
@@ -677,14 +682,19 @@ export const loadProjectJson = async (
   project: ScratchProjectJson,
   vm?: ScratchVMHandle,
 ): Promise<ScratchVMHandle> => {
-  const targetVM = vm ?? createVM()
+  const targetVM = vm ?? await createVM()
 
   try {
     await loadParsedProject(asInternalVM(targetVM), JSON.stringify(project))
     return targetVM
   } catch (error) {
     if (!vm) {
-      targetVM.quit()
+      try {
+        const resolvedVM = await targetVM
+        resolvedVM.quit()
+      } catch {
+        // Ignore quit errors during cleanup
+      }
     }
     throw error
   }

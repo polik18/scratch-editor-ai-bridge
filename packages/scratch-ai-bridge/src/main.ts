@@ -84,7 +84,7 @@ const app = document.querySelector<HTMLElement>('#app')
 if (!app) throw new Error('Scratch AI Bridge app root was not found')
 
 // Fail early if the official VM cannot initialize in this browser/build.
-const bootstrapVm = initializeScratchVM()
+const bootstrapVm = await initializeScratchVM()
 window.addEventListener('pagehide', () => bootstrapVm.quit(), { once: true })
 const studentStageCanvas = document.createElement('canvas')
 studentStageCanvas.width = 480
@@ -2127,4 +2127,152 @@ downloadBlockMapping.addEventListener('click', () => {
     },
     'canonical-block-mapping.json',
   )
+})
+
+const main = async (): Promise<void> => {
+  // Fail early if the official VM cannot initialize in this browser/build.
+  const bootstrapVm = await initializeScratchVM()
+  window.addEventListener('pagehide', () => bootstrapVm.quit(), { once: true })
+  const studentStageCanvas = document.createElement('canvas')
+  studentStageCanvas.width = 480
+  studentStageCanvas.height = 360
+  studentStageCanvas.className = 'student-preview-canvas'
+  studentStageCanvas.setAttribute('aria-label', 'Scratch 靜態舞台預覽（積木尚未執行）')
+  studentStageCanvas.hidden = true
+  let studentPreviewGeneration = 0
+  let studentPreviewRenderQueue: Promise<void> = Promise.resolve()
+  interface ActiveStudentAnimation {
+    frame: HTMLIFrameElement
+    token: string
+    consentDialogs: Map<HTMLDialogElement, () => void>
+    finish(message: string): void
+    onLoaded(): void
+    onReady(): void
+    onHardwareMessage(message: Record<string, unknown>): void
+  }
+  let activeStudentAnimation: ActiveStudentAnimation | null = null
+  let speechConsentPromptQueue: Promise<void> = Promise.resolve()
+
+  window.addEventListener('message', (event: MessageEvent<unknown>) => {
+    const active = activeStudentAnimation
+    if (!active || event.origin !== 'null' || typeof event.data !== 'object' || event.data === null) return
+    const message = event.data as {
+      type?: unknown
+      detail?: unknown
+      token?: unknown
+      requestId?: unknown
+      text?: unknown
+      service?: unknown
+      language?: unknown
+    }
+    if (message.token !== active.token) return
+    if (typeof message.type === 'string' && message.type.startsWith('hardware-')) {
+      if (event.source === active.frame.contentWindow) active.onHardwareMessage(message)
+      return
+    }
+    if (message.type === 'extension-egress-consent-request') {
+      const service = message.service
+      const maxLength = service === 'speech' ? 128 : service === 'translation' ? 1024 : 0
+      if (
+        event.source !== active.frame.contentWindow ||
+        typeof message.requestId !== 'string' ||
+        typeof message.text !== 'string' ||
+        maxLength === 0 ||
+        message.text.length > maxLength ||
+        (service === 'translation' && typeof message.language !== 'string')
+      )
+        return
+      const requestId = message.requestId
+      const speechText = message.text
+      const targetLanguage = typeof message.language === 'string' ? message.language : ''
+      speechConsentPromptQueue = speechConsentPromptQueue
+        .catch(() => undefined)
+        .then(
+          () =>
+            new Promise<void>((finishPrompt) => {
+              if (activeStudentAnimation !== active) {
+                active.frame.contentWindow?.postMessage(
+                  {
+                    type: 'tts-consent-response',
+                    token: active.token,
+                    requestId,
+                    allowed: false,
+                  },
+                  '*',
+                )
+                finishPrompt()
+                return
+              }
+              const dialog = document.createElement('dialog')
+              dialog.setAttribute('aria-labelledby', 'speech-consent-title')
+              const title = document.createElement('h2')
+              title.id = 'speech-consent-title'
+              title.textContent = service === 'speech' ? '允許 Scratch 文字轉語音？' : '允許 Scratch 翻譯文字？'
+              const description = document.createElement('p')
+              description.textContent =
+                service === 'speech'
+                  ? '這次執行會把以下文字傳送到 Scratch 合成服務產生語音：'
+                  : `這次執行會把以下文字傳送到 Scratch 翻譯服務（目標語言：${targetLanguage}）：`
+              const quote = document.createElement('blockquote')
+              quote.textContent = speechText
+              const actions = document.createElement('div')
+              actions.className = 'student-preview-actions'
+              const deny = document.createElement('button')
+              deny.type = 'button'
+              deny.className = 'button secondary'
+              deny.textContent = '拒絕'
+              const allow = document.createElement('button')
+              allow.type = 'button'
+              allow.className = 'button primary'
+              allow.textContent = '只允許這次'
+              actions.append(deny, allow)
+              dialog.append(title, description, quote, actions)
+              document.body.append(dialog)
+              const settle = (allowed: boolean): void => {
+                if (dialog.open) dialog.close()
+                dialog.remove()
+                active.consentDialogs.delete(dialog)
+                if (activeStudentAnimation === active)
+                  active.frame.contentWindow?.postMessage(
+                    {
+                      type: 'tts-consent-response',
+                      token: active.token,
+                      requestId,
+                      allowed,
+                    },
+                    '*',
+                  )
+                finishPrompt()
+              }
+              active.consentDialogs.set(dialog, () => settle(false))
+              deny.addEventListener('click', () => settle(false), { once: true })
+              allow.addEventListener('click', () => settle(true), { once: true })
+              dialog.addEventListener('cancel', (cancelEvent) => {
+                cancelEvent.preventDefault()
+                settle(false)
+              })
+              dialog.showModal()
+            }),
+        )
+      return
+    }
+    if (message.type === 'loaded') active.onLoaded()
+    else if (message.type === 'ready') active.onReady()
+    else if (message.type === 'stopped') active.finish('動畫預覽已停止；舞台靜態畫面已恢復。')
+    else if (message.type === 'error') {
+      const detail = typeof message.detail === 'string' ? `：${message.detail}` : ''
+      active.finish(`動畫預覽載入失敗${detail}`)
+    }
+  })
+
+  const stopStudentAnimation = (message: string): void => {
+    activeStudentAnimation?.finish(message)
+  }
+
+  const AI_INSTRUCTION = createAuthoringInstruction()
+}
+
+main().catch((error) => {
+  console.error('Scratch AI Bridge initialization failed:', error)
+  document.body.innerHTML = `<div style="padding:20px"><h1>初始化失敗</h1><p>Scratch AI Bridge 無法初始化。請檢查瀏覽器控制台錯誤。</p><details><summary>詳細錯誤</summary><pre>${error instanceof Error ? error.stack : String(error)}</pre></details></div>`
 })

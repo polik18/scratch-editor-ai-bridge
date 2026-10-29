@@ -116,8 +116,8 @@ const decodeAssetData = (data: string, dataFormat: string): Uint8Array => {
   return decodeBase64(data)
 }
 
-const createAssetRegistry = () => {
-  const storage = createOfflineScratchStorage()
+const createAssetRegistry = async () => {
+  const storage = await createOfflineScratchStorage()
   const assets = new Map<string, Uint8Array>()
 
   const add = (kind: 'costume' | 'sound', dataFormat: string, data: Uint8Array): string => {
@@ -137,7 +137,7 @@ const createAssetRegistry = () => {
   return { add, assets }
 }
 
-type AssetRegistry = ReturnType<typeof createAssetRegistry>
+type AssetRegistry = Awaited<ReturnType<typeof createAssetRegistry>>
 
 const compileCostume = (
   costume: CanonicalCostume,
@@ -229,14 +229,14 @@ const createTargetSymbols = (target: CanonicalTargetBase, targetKey: string): Ta
   lists: new Map(target.lists.map((list) => [list.name, stableId('list', `${targetKey}:${list.name}`)])),
 })
 
-const compileTarget = (
+const compileTarget = async (
   target: CanonicalTargetBase,
   isStage: boolean,
   targetIndex: number,
   projectName: string,
   symbols: SymbolTable,
   registry: AssetRegistry,
-): ScratchTargetJson => {
+): Promise<ScratchTargetJson> => {
   const targetKey = isStage ? 'stage' : `sprite:${target.name}`
   const local = createTargetSymbols(target, targetKey)
   let blockSequence = 0
@@ -446,12 +446,12 @@ const compileMonitors = (project: CanonicalProject): CanonicalMonitor[] =>
     return { ...monitor, id: symbolId }
   })
 
-const buildScratchProjectBundle = (project: CanonicalProject): ScratchProjectBundle => {
+const buildScratchProjectBundle = async (project: CanonicalProject): Promise<ScratchProjectBundle> => {
   const symbols = createSymbolTable(project)
-  const registry = createAssetRegistry()
-  const stage = compileTarget(project.stage, true, 0, project.name, symbols, registry)
-  const sprites = project.sprites.map((sprite, index) =>
-    compileTarget(sprite, false, index + 1, project.name, symbols, registry),
+  const registry = await createAssetRegistry()
+  const stage = await compileTarget(project.stage, true, 0, project.name, symbols, registry)
+  const sprites = await Promise.all(
+    project.sprites.map((sprite, index) => compileTarget(sprite, false, index + 1, project.name, symbols, registry)),
   )
 
   // A sprite may introduce a broadcast that was not declared at the top level. Refresh the
@@ -473,13 +473,30 @@ const buildScratchProjectBundle = (project: CanonicalProject): ScratchProjectBun
   return { project: scratchProject, assets: registry.assets }
 }
 
-export const buildScratchProjectJson = (project: CanonicalProject): ScratchProjectJson =>
-  buildScratchProjectBundle(project).project
+export const buildScratchProjectJson = async (project: CanonicalProject): Promise<ScratchProjectJson> =>
+  (await buildScratchProjectBundle(project)).project
 
-export const buildScratchProjectArchive = async (project: CanonicalProject): Promise<Uint8Array> => {
-  const bundle = buildScratchProjectBundle(project)
+/**
+ * Build a Scratch project archive from a Canonical Project.
+ * Optionally retain original ZIP entries (costumes, sounds, etc.) from the source SB3.
+ */
+export const buildScratchProjectArchive = async (
+  project: CanonicalProject,
+  opts?: { retainOriginalEntries?: Map<string, Uint8Array> },
+): Promise<Uint8Array> => {
+  const bundle = await buildScratchProjectBundle(project)
   const archive = new JSZip()
   archive.file('project.json', new TextEncoder().encode(JSON.stringify(bundle.project)))
   for (const [filename, data] of bundle.assets) archive.file(filename, data)
+  // Retain original ZIP entries if provided
+  if (opts?.retainOriginalEntries) {
+    for (const [filename, data] of opts.retainOriginalEntries) {
+      // Skip project.json — we just overwrote it
+      if (filename === 'project.json') continue
+      // Skip assets that were already generated (we prefer the new version)
+      if (bundle.assets.has(filename)) continue
+      archive.file(filename, data)
+    }
+  }
   return archive.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
 }

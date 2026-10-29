@@ -1,0 +1,105 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "簡易平台遊戲",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {
+          "name": "分數",
+          "value": 0
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "platform-day",
+          "dataFormat": "png"
+        }
+      ],
+      "sounds": [],
+      "scripts": [],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "generic-character",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "generic-character",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "fields": {},
+                "inputs": {}
+              },
+              {
+                "opcode": "control_wait",
+                "fields": {},
+                "inputs": {
+                  "DURATION": {
+                    "type": "literal",
+                    "value": 1
+                  }
+                },
+                "shadow": false,
+                "next": {
+                  "opcode": "control_wait",
+                  "fields": {},
+                  "inputs": {
+                    "DURATION": {
+                      "type": "literal",
+                      "value": 1
+                    }
+                  },
+                  "shadow": false,
+                  "next": null
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      }
+    ],
+    "broadcasts": [
+      {
+        "name": "start"
+      }
+    ]
+  },
+  "requirementCoverage": [
+    {
+      "id": "R1",
+      "requirement": "主角是 generic-character 角色",
+      "status": "implemented-structure",
+      "evidencePointers": ["/sprites/0/name"]
+    },
+    {
+      "id": "R2",
+      "requirement": "按下綠旗後主角等待 2 秒",
+      "status": "implemented-structure",
+      "evidencePointers": ["/sprites/0/scripts/0/blocks/1", "/sprites/0/scripts/0/blocks/2"]
+    }
+  ]
+}

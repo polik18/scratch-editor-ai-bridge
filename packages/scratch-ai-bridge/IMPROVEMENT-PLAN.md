@@ -4,6 +4,8 @@
 **版本**: 1.0.0  
 **問題來源**: 使用 scratch-editor-ai-bridge 建立平台遊戲時遇到的障礙
 
+> **診斷已更新（2026-10-28）**：本文件以下把 `addBlock()` 的 `inputs` 格式列為主要根因，且把舊版程式變更標為已完成；這不足以解釋實際失敗樣本，也不可視為目前根因或驗收依據。`cyber-duel.sb3` 與 `star-collector.sb3` 的 ZIP 缺少所有 costume 資產，block fields／inputs 仍有應屬 Canonical draft 的 wrapper，且腳本沒有 `next` 連線。經確認低階 `scratch-session` compiler 只封裝 `project.json`，未經官方 Scratch VM round-trip。請以[新版 SB3 產生成功率改善計畫](docs/sb3-generation-reliability-plan.md)及[CLI agent 編輯計畫](docs/cli-agent-editing-plan.md)為準；此舊計畫保留作歷史記錄。
+
 ---
 
 ## 問題摘要

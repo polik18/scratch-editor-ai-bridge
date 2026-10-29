@@ -1,5 +1,3 @@
-import { ScratchStorage } from '@scratch/scratch-storage'
-
 /**
  * Create storage for local SB3 assets without starting Scratch Storage's fetch worker.
  *
@@ -9,13 +7,15 @@ import { ScratchStorage } from '@scratch/scratch-storage'
  * incompatible with GitHub Pages project subpaths.
  * @returns Scratch storage configured for archive-local assets.
  */
-export const createOfflineScratchStorage = (): ScratchStorage => {
+export const createOfflineScratchStorage = async (): Promise<any> => {
   const hadOwnWorker = Object.prototype.hasOwnProperty.call(globalThis, 'Worker')
   const originalWorker = globalThis.Worker
   Reflect.set(globalThis, 'Worker', undefined)
 
   try {
-    return new ScratchStorage()
+    // 使用動態 import 以支援 webpack 打包的 CommonJS
+    const scratchStorageModule = await import('@scratch/scratch-storage')
+    return new scratchStorageModule.ScratchStorage()
   } finally {
     if (hadOwnWorker) Reflect.set(globalThis, 'Worker', originalWorker)
     else Reflect.deleteProperty(globalThis, 'Worker')

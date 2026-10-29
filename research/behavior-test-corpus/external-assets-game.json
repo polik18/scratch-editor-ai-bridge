@@ -1,0 +1,18 @@
+{
+  "gameId": "external-assets-game",
+  "title": "External Assets Game",
+  "version": "1.0",
+  "inputs": {
+    "keyboard": [
+      {"key": "a", "duration": 100}
+    ]
+  },
+  "expectedOutputs": {
+    "effects": [
+      {"type": "sound", "name": "sound1", "triggered": true},
+      {"type": "visual", "name": "costume1", "triggered": true}
+    ]
+  },
+  "edgeCases": [],
+  "failureScenarios": []
+}

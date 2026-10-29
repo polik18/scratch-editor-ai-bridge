@@ -1,0 +1,41 @@
+{
+  "id": "f-003",
+  "source": "truncated-output",
+  "format": "scratch-ai-bridge/canonical-ir",
+  "parse": {
+    "status": "warning",
+    "details": "JSON 解析成功 (截斷部分已補全)"
+  },
+  "normalize": {
+    "status": "warning",
+    "details": "正規化格式成功"
+  },
+  "schema": {
+    "status": "error",
+    "details": "Schema 驗證需擴充"
+  },
+  "semantic": {
+    "status": "error",
+    "details": "語意驗證需擴充"
+  },
+  "vm_compile": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "vm_reload": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "preview": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "error_code": "TRUNCATED_OUTPUT",
+  "error_message": "AI 回覆因 token 限制被截斷，導致 JSON 不完整",
+  "error_location": "/meta/truncation",
+  "fix_prompt": "增加 token 限制或使用多輪對話分段輸出；若已截斷，補全缺失的括號與欄位",
+  "original_response": "{\"format\":\"scratch-ai-bridge/canonical-ir\",\"version\":1,\"project\":{\"stage\":{\"name\":\"Stage\",\"variables\":{},\"costumes\":[{\"name\":\"Costume1\",\"md5\":\"abc123\",\"rotationCenterX\":480,\"rotationCenterY\":360}]},\"sprites\":[{\"name\":\"Sprite1\",\"variables\":{},\"costumes\":[{\"name\":\"Costume1\",\"md5\":\"def456\",\"rotationCenterX\":48,\"rotationCenterY\":48}],\"currentCostumeIndex\":0,\"visible\":true,\"x\":0,\"y\":0,\"size\":100,\"rotation\":90,\"direction\":90,\"draggable\":false,\"rotationStyle\":\"all around\"}]}}",
+  "truncation_point": "第 47 行 (預期 60 行，實際輸出 47 行)",
+  "missing_closing_braces": 2,
+  "completion_hint": "補上 ] (sprites[0].costumes), } (sprites[0]), ] (sprites), } (project)"
+}

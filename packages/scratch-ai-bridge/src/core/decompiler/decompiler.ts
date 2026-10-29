@@ -40,7 +40,7 @@ const loadProjectVm = async (
   input: Sb3Input,
   projectJson: Record<string, unknown>,
 ): Promise<{ vm: ScratchVMHandle; cleanupRenderer: () => void }> => {
-  const vm = createVM()
+  const vm = await createVM()
   let cleanupRenderer: () => void = () => undefined
   try {
     if (projectHasBitmapCostume(projectJson) && typeof document !== 'undefined') {
@@ -65,7 +65,7 @@ const createVmSafeProject = async (
   const targets: unknown[] = projectJson.targets
   const entryByName = new Map(source.entries.map((entry) => [entry.name, entry]))
   const addedEntries: RawSb3ArchiveEntry[] = []
-  const storage = createOfflineScratchStorage()
+  const storage = await createOfflineScratchStorage()
   let fallbackIndex = 0
 
   for (const [targetIndex, rawTarget] of targets.entries()) {
@@ -161,15 +161,15 @@ const toBase64 = (bytes: Uint8Array): string => {
   return globalThis.btoa(binary)
 }
 
-const retainAssetData = (
+const retainAssetData = async (
   canonical: CanonicalProject,
   projectJson: Record<string, unknown>,
   entries: readonly { name: string; bytes: Uint8Array }[],
-): void => {
+): Promise<void> => {
   const targets = Array.isArray(projectJson.targets) ? projectJson.targets : []
   const entryByName = new Map(entries.map((entry) => [entry.name, entry.bytes]))
   const canonicalTargets = [canonical.stage, ...canonical.sprites]
-  const storage = createOfflineScratchStorage()
+  const storage = await createOfflineScratchStorage()
   for (const rawTarget of targets) {
     if (typeof rawTarget !== 'object' || rawTarget === null || Array.isArray(rawTarget)) continue
     const target = rawTarget as Record<string, unknown>
@@ -304,7 +304,7 @@ export const decompileSb3 = async (
   try {
     const canonical = projectJsonToCanonical(getProjectJson(vm), projectName)
     retainProjectMetadata(canonical, projectJsonToCanonical(archive.projectJson, projectName))
-    retainAssetData(canonical, archive.projectJson, archive.entries)
+    await retainAssetData(canonical, archive.projectJson, archive.entries)
     return canonical
   } finally {
     vm.quit()
@@ -330,7 +330,7 @@ export const decompileSb3WithBlockGraphs = async (
     const vmProject = projectJsonToCanonicalWithReport(getProjectJson(vm), projectName)
     const canonical = vmProject.canonical
     retainProjectMetadata(canonical, projectJsonToCanonical(archive.projectJson, projectName))
-    retainAssetData(canonical, archive.projectJson, archive.entries)
+    await retainAssetData(canonical, archive.projectJson, archive.entries)
     return {
       canonical,
       canonicalBlockMappings: vmProject.canonicalBlockMappings,

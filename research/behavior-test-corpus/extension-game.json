@@ -1,0 +1,17 @@
+{
+  "gameId": "extension-game",
+  "title": "Extension Game",
+  "version": "1.0",
+  "inputs": {
+    "keyboard": [
+      {"key": "e", "duration": 100}
+    ]
+  },
+  "expectedOutputs": {
+    "effects": [
+      {"type": "extension", "name": "music", "triggered": true}
+    ]
+  },
+  "edgeCases": [],
+  "failureScenarios": []
+}

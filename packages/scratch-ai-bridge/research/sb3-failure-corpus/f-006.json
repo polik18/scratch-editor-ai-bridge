@@ -1,0 +1,53 @@
+{
+  "id": "f-006",
+  "source": "undefined-variables",
+  "format": "scratch-ai-bridge/canonical-ir",
+  "parse": {
+    "status": "success",
+    "details": "JSON 解析成功"
+  },
+  "normalize": {
+    "status": "success",
+    "details": "正規化格式成功"
+  },
+  "schema": {
+    "status": "success",
+    "details": "Schema 驗證成功"
+  },
+  "semantic": {
+    "status": "error",
+    "details": "變數 'score' 未宣告即使用於 'change score by 1' 與 'set score to 0'"
+  },
+  "vm_compile": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "vm_reload": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "preview": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "error_code": "UNDEFINED_VARIABLE",
+  "error_message": "變數 'score' 未宣告即使用",
+  "error_location": "/sprites/0/scripts",
+  "fix_prompt": "在 stage 或 sprites[0].variables 中新增 'score' 變數",
+  "undefined_variables": [
+    {
+      "name": "score",
+      "used_in": [
+        {
+          "block": "change score by 1",
+          "location": "sprites/0/scripts/0"
+        },
+        {
+          "block": "set score to 0",
+          "location": "sprites/0/scripts/1"
+        }
+      ],
+      "declaration_hint": "在 stage.variables 或 sprites[0].variables 中新增 {\"score\": 0}"
+    }
+  ]
+}

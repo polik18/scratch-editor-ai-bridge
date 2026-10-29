@@ -1,0 +1,357 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "format": {
+      "type": "string",
+      "const": "scratch-ai-bridge/ai-response"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "project": {
+      "$ref": "#/$defs/CanonicalProject"
+    },
+    "requirementCoverage": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/RequirementCoverage"
+      }
+    }
+  },
+  "required": ["format", "version", "project"],
+  "$defs": {
+    "CanonicalProject": {
+      "type": "object",
+      "properties": {
+        "format": {
+          "type": "string",
+          "const": "scratch-ai-bridge/canonical-ir"
+        },
+        "version": {
+          "type": "integer",
+          "const": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "stage": {
+          "$ref": "#/$defs/CanonicalTarget"
+        },
+        "sprites": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalSprite"
+          }
+        },
+        "broadcasts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalBroadcast"
+          }
+        }
+      },
+      "required": ["format", "version", "name", "stage", "sprites", "broadcasts"]
+    },
+    "CanonicalTarget": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "stage"
+        },
+        "name": {
+          "type": "string"
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalVariable"
+          }
+        },
+        "lists": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalList"
+          }
+        },
+        "costumes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalCostume"
+          }
+        },
+        "sounds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalSound"
+          }
+        },
+        "scripts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalScript"
+          }
+        },
+        "procedures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalProcedure"
+          }
+        }
+      },
+      "required": ["kind", "name", "variables", "lists", "costumes", "sounds", "scripts", "procedures"]
+    },
+    "CanonicalSprite": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "sprite"
+        },
+        "name": {
+          "type": "string"
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalVariable"
+          }
+        },
+        "lists": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalList"
+          }
+        },
+        "costumes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalCostume"
+          }
+        },
+        "sounds": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalSound"
+          }
+        },
+        "scripts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalScript"
+          }
+        },
+        "procedures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalProcedure"
+          }
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "direction": {
+          "type": "number"
+        },
+        "size": {
+          "type": "number"
+        },
+        "visible": {
+          "type": "boolean"
+        },
+        "draggable": {
+          "type": "boolean"
+        },
+        "rotationStyle": {
+          "type": "string",
+          "enum": ["all around", "left-right", "don't rotate"]
+        }
+      },
+      "required": ["kind", "name", "variables", "lists", "costumes", "sounds", "scripts", "procedures", "x", "y", "direction", "size", "visible", "draggable", "rotationStyle"]
+    },
+    "CanonicalVariable": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "value": {
+          "type": "number"
+        },
+        "isPersistent": {
+          "type": "boolean"
+        }
+      },
+      "required": ["name", "value"]
+    },
+    "CanonicalList": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array"
+        }
+      },
+      "required": ["name", "items"]
+    },
+    "CanonicalCostume": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "dataFormat": {
+          "type": "string",
+          "enum": ["svg", "png", "jpg", "jpeg", "bmp"]
+        },
+        "assetId": {
+          "type": "string"
+        },
+        "rotationCenterX": {
+          "type": "number"
+        },
+        "rotationCenterY": {
+          "type": "number"
+        }
+      },
+      "required": ["name", "dataFormat"]
+    },
+    "CanonicalSound": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "dataFormat": {
+          "type": "string",
+          "enum": ["wav", "mp3", "ogg"]
+        },
+        "assetId": {
+          "type": "string"
+        },
+        "sampleCount": {
+          "type": "integer"
+        }
+      },
+      "required": ["name", "dataFormat"]
+    },
+    "CanonicalScript": {
+      "type": "object",
+      "properties": {
+        "blocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalBlock"
+          }
+        }
+      },
+      "required": ["blocks"]
+    },
+    "CanonicalBlock": {
+      "type": "object",
+      "properties": {
+        "opcode": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/CanonicalInput"
+          }
+        },
+        "shadow": {
+          "type": "boolean"
+        },
+        "next": {
+          "$ref": "#/$defs/CanonicalBlock"
+        }
+      },
+      "required": ["opcode", "fields", "inputs"]
+    },
+    "CanonicalInput": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["literal", "variable", "list", "broadcast", "block", "stack"]
+        },
+        "value": {
+          "type": "any"
+        },
+        "block": {
+          "$ref": "#/$defs/CanonicalBlock"
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalBlock"
+          }
+        }
+      },
+      "required": ["type"]
+    },
+    "CanonicalProcedure": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "argumentNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "code": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CanonicalBlock"
+          }
+        }
+      },
+      "required": ["name", "code"]
+    },
+    "CanonicalBroadcast": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": ["name"]
+    },
+    "RequirementCoverage": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "requirement": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["implemented-structure", "approximated", "not-implemented", "runtime-unavailable", "not-verifiable-from-ir"]
+        },
+        "evidencePointers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["id", "requirement", "status"]
+    }
+  }
+}

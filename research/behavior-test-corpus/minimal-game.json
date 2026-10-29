@@ -1,0 +1,17 @@
+{
+  "gameId": "minimal-game",
+  "title": "Minimal Game",
+  "version": "1.0",
+  "inputs": {
+    "keyboard": [
+      {"key": "space", "duration": 100}
+    ]
+  },
+  "expectedOutputs": {
+    "variables": [
+      {"name": "Score", "initialValue": 0, "expectedValue": 1, "condition": "equals"}
+    ]
+  },
+  "edgeCases": [],
+  "failureScenarios": []
+}

@@ -1,0 +1,50 @@
+{
+  "id": "f-002",
+  "source": "markdown-wrapped-response",
+  "format": "scratch-ai-bridge/canonical-ir",
+  "parse": {
+    "status": "✅",
+    "details": "JSON 解析成功 (Markdown code fence 提取後)"
+  },
+  "normalize": {
+    "status": "✅",
+    "details": "正規化格式成功"
+  },
+  "schema": {
+    "status": "⚠️",
+    "details": "Schema 驗證需擴充"
+  },
+  "semantic": {
+    "status": "⚠️",
+    "details": "語意驗證需擴充"
+  },
+  "vm_compile": {
+    "status": "❌",
+    "details": "待測試"
+  },
+  "vm_reload": {
+    "status": "❌",
+    "details": "待測試"
+  },
+  "preview": {
+    "status": "❌",
+    "details": "待測試"
+  },
+  "error_code": "MARKDOWN_WRAPPED_JSON",
+  "error_message": "AI 回覆包含 Markdown code fence (\\`\\`\\`json ... \\`\\`\\`)，需先提取 JSON 內容",
+  "error_location": "/meta/origin",
+  "fix_prompt": "移除 Markdown code fence (\\`\\`\\`json ... \\`\\`\\`)，直接輸出純 JSON",
+  "original_response": "```json\n{\n  \"format\": \"scratch-ai-bridge/canonical-ir\",\n  \"version\": 1,\n  \"project\": {\n    \"stage\": {\n      \"name\": \"Stage\",\n      \"variables\": {},\n      \"costumes\": []\n    },\n    \"sprites\": []\n  }\n}\n```",
+  "extracted_json": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "project": {
+      "stage": {
+        "name": "Stage",
+        "variables": {},
+        "costumes": []
+      },
+      "sprites": []
+    }
+  }
+}

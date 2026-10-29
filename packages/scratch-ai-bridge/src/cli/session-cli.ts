@@ -33,6 +33,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { ScratchSession, type AddSpriteOptions } from './session/session.js';
+import { generateGameFromDesign } from './game-cli.js';
+import { verifyEndToEnd, generateVerificationReport } from './verification.js';
 
 // ─── Session state file ──────────────────────────────────────────────────────
 
@@ -125,6 +127,25 @@ const commands: Record<string, CommandHandler> = {
     await saveSession(sess);
     console.log(`✓ New project "${name}" created.`);
     console.log(`  Session state saved to ${sessionFilePath()}`);
+  },
+
+  async newGame(argv) {
+    const designArg = argv.find(a => a.startsWith('--design='));
+    if (!designArg) {
+      throw new Error('Usage: new-game --design=<design-file.md> [--output=<dir>]');
+    }
+    const designPath = designArg.replace('--design=', '');
+    
+    const outputArg = argv.find(a => a.startsWith('--output='));
+    const outputDir = outputArg ? outputArg.replace('--output=', '.') : '.';
+    
+    const outputPath = await generateGameFromDesign(designPath, outputDir);
+    console.log(`✓ Game created: ${outputPath}`);
+    
+    // Load the new project
+    const sess = new ScratchSession();
+    await sess.loadSb3(outputPath);
+    await saveSession(sess, outputPath);
   },
 
   async load(argv) {
@@ -388,31 +409,58 @@ const commands: Record<string, CommandHandler> = {
   async compile(argv) {
     const outputPath = argv[0];
     const sess = await loadSession();
+    
+    // Get raw archive bytes for verification
+    const archive = await sess.compile();
+    
+    // Perform end-to-end verification
+    const { verifyEndToEnd, generateVerificationReport } = await import('./verification.js');
+    const result = await verifyEndToEnd(archive);
+    
+    if (result.status === 'fail') {
+      console.error('❌ Compilation verification failed:');
+      console.error(generateVerificationReport(result));
+      process.exit(1);
+    }
+    
     if (outputPath) {
       const saved = await sess.saveSb3(outputPath);
       console.log(`✓ Compiled and saved to "${saved}"`);
+      console.log(`✓ Verification passed: ${result.diagnostics.overall.gatesPassed}/${result.diagnostics.overall.gatesTotal} gates`);
     } else {
-      const buf = await sess.compile();
       const info = sess.info();
       const defaultPath = (info.path ?? 'output').replace(/\.sb3$/i, '') + '.compiled.sb3';
-      await fs.promises.writeFile(defaultPath, buf);
-      console.log(`✓ Compiled to "${defaultPath}" (${(buf.byteLength / 1024).toFixed(1)} KB)`);
+      await fs.promises.writeFile(defaultPath, archive);
+      console.log(`✓ Compiled to "${defaultPath}" (${(archive.byteLength / 1024).toFixed(1)} KB)`);
+      console.log(`✓ Verification passed: ${result.diagnostics.overall.gatesPassed}/${result.diagnostics.overall.gatesTotal} gates`);
     }
   },
-
   // ── Preview ──────────────────────────────────────────────────────────────
 
   async preview(argv) {
     const _outputPath = argv[0];
     const sess = await loadSession();
+    
+    // Get raw archive bytes for verification
+    const archive = await sess.compile();
+    
+    // Perform end-to-end verification
+    const { verifyEndToEnd, generateVerificationReport } = await import('./verification.js');
+    const result = await verifyEndToEnd(archive);
+    
+    if (result.status === 'fail') {
+      console.error('❌ Preview verification failed:');
+      console.error(generateVerificationReport(result));
+      process.exit(1);
+    }
+    
     console.log('⏳ Loading project into VM for preview...');
-    await sess.compile();
     // TODO: integrate with preview/main.ts for screenshot generation
     // Currently compile() validates the project — preview requires Playwright
-    console.log('✓ Project compiles without errors.');
+    console.log('✓ Project passes verification.');
+    console.log(`  Gates passed: ${result.diagnostics.overall.gatesPassed}/${result.diagnostics.overall.gatesTotal}`);
     console.log('  (Preview screenshot: run with --preview flag after browser integration)');
   },
-
   // ── NLP Parse ────────────────────────────────────────────────────────────
 
   async nlpParse(argv) {

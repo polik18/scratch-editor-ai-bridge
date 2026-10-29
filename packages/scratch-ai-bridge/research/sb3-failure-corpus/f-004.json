@@ -1,0 +1,55 @@
+{
+  "id": "f-004",
+  "source": "shorthand-fields",
+  "format": "scratch-ai-bridge/canonical-ir",
+  "parse": {
+    "status": "success",
+    "details": "JSON 解析成功"
+  },
+  "normalize": {
+    "status": "error",
+    "details": "缺少必要欄位：stage.variables、stage.costumes、sprites[].x、sprites[].y"
+  },
+  "schema": {
+    "status": "error",
+    "details": "Schema 驗證失敗"
+  },
+  "semantic": {
+    "status": "error",
+    "details": "語意驗證失敗"
+  },
+  "vm_compile": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "vm_reload": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "preview": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "error_code": "MISSING_REQUIRED_FIELDS",
+  "error_message": "缺少必要欄位 (stage.variables, stage.costumes, sprites[].x, sprites[].y, sprites[].currentCostumeIndex)",
+  "error_location": "/stage, /sprites/0",
+  "fix_prompt": "補上 stage.variables, stage.costumes, sprites[].x, sprites[].y, sprites[].currentCostumeIndex",
+  "sample": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "project": {
+      "stage": {
+        "name": "Stage"
+      },
+      "sprites": [
+        {
+          "name": "Sprite1"
+        }
+      ]
+    }
+  },
+  "missing_fields": {
+    "/stage": ["variables", "costumes"],
+    "/sprites/0": ["x", "y", "currentCostumeIndex", "costumes", "visible", "size", "rotation", "direction", "draggable", "rotationStyle"]
+  }
+}

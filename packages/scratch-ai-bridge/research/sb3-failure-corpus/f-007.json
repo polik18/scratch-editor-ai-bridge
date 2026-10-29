@@ -1,0 +1,53 @@
+{
+  "id": "f-007",
+  "source": "missing-assets",
+  "format": "scratch-ai-bridge/canonical-ir",
+  "parse": {
+    "status": "success",
+    "details": "JSON 解析成功"
+  },
+  "normalize": {
+    "status": "success",
+    "details": "正規化格式成功"
+  },
+  "schema": {
+    "status": "success",
+    "details": "Schema 驗證成功"
+  },
+  "semantic": {
+    "status": "success",
+    "details": "語意驗證成功"
+  },
+  "vm_compile": {
+    "status": "error",
+    "details": "VM 編譯失敗：costume 'costume1' md5 'abc123' 不存在於 archive"
+  },
+  "vm_reload": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "preview": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "error_code": "MISSING_ASSETS",
+  "error_message": "Costume 'costume1' md5 'abc123' 不存在於 archive",
+  "error_location": "/stage/costumes/0, /sprites/0/costumes/0",
+  "fix_prompt": "新增對應的 md5 'abc123' 與 'def456' 的 costume 檔案至 archive",
+  "missing_assets": [
+    {
+      "md5": "abc123",
+      "asset_type": "costume",
+      "file_name": "costume1.svg",
+      "referenced_by": "/stage/costumes/0, /sprites/0/costumes/0",
+      "suggested_fix": "提供 SVG 檔案或使用 Scratch 官方預設 costume"
+    },
+    {
+      "md5": "def456",
+      "asset_type": "sound",
+      "file_name": "sound1.wav",
+      "referenced_by": "/sprites/0/sounds/0",
+      "suggested_fix": "提供 WAV 檔案或移除聲音積木"
+    }
+  ]
+}

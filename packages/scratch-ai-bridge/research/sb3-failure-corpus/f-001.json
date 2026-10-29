@@ -1,0 +1,46 @@
+{
+  "id": "f-001",
+  "source": "gemini-platformer-shorthand",
+  "format": "scratch-ai-bridge/canonical-ir",
+  "parse": {
+    "passed": true,
+    "error_code": null,
+    "error_message": null
+  },
+  "normalize": {
+    "passed": true,
+    "error_code": null,
+    "error_message": null
+  },
+  "schema": {
+    "passed": false,
+    "error_code": "MISSING_REQUIRED_FIELDS",
+    "error_message": "Missing required fields: stage.variables, stage.costumes, sprites[].x, sprites[].y, sprites[].direction, sprites[].size, sprites[].visible, sprites[].draggable, sprites[].rotationStyle",
+    "error_location": "/stage, /sprites/0, /sprites/1, /sprites/2, /sprites/3"
+  },
+  "semantic": {
+    "passed": false,
+    "error_code": "MISSING_ASSETS",
+    "error_message": "Sprites missing required costumes and sounds",
+    "error_location": "/sprites/0, /sprites/1, /sprites/2, /sprites/3"
+  },
+  "vm_compile": {
+    "passed": false,
+    "error_code": "SB3_GENERATION_FAILED",
+    "error_message": "VM compilation failed due to missing assets",
+    "error_location": "compiler.ts:compileCanonicalProject()"
+  },
+  "vm_reload": {
+    "passed": false,
+    "error_code": "VM_LOAD_FAILED",
+    "error_message": "VM load failed due to invalid project structure",
+    "error_location": "vm.ts:loadSb3()"
+  },
+  "preview": {
+    "passed": false,
+    "error_code": "PREVIEW_FAILED",
+    "error_message": "Preview failed due to VM load failure",
+    "error_location": "preview.ts:preview()"
+  },
+  "fix_prompt": "補上 stage.variables, stage.costumes, sprites[].x, sprites[].y, sprites[].direction, sprites[].size, sprites[].visible, sprites[].draggable, sprites[].rotationStyle 等必要欄位"
+}

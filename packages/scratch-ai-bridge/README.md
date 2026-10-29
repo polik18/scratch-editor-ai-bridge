@@ -70,6 +70,13 @@ The full L1/L2/L3 completeness definition and staged implementation plan is in `
 The staged one-click AI error feedback loop and remaining precision work are tracked in `docs/ai-repair-feedback-plan.md`.
 Release gates and the documented Pages rollback procedure are in [`docs/release-checklist.md`](docs/release-checklist.md).
 
+## 功能標記
+
+- **Stable (穩定)**：功能已完整測試，可安全使用
+- **Experimental (實驗性)**：功能仍在實驗階段，可能有變更
+
+詳細功能矩陣請見 [`docs/function-matrix.md`](docs/function-matrix.md)。
+
 ## Commands
 
 From repository root:

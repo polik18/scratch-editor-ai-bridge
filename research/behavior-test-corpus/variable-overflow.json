@@ -1,0 +1,23 @@
+{
+  "gameId": "variable-overflow",
+  "title": "Variable Overflow",
+  "version": "1.0",
+  "inputs": {
+    "keyboard": [
+      {"key": "a", "duration": 100}
+    ]
+  },
+  "expectedOutputs": {
+    "variables": [
+      {"name": "Score", "initialValue": 0, "expectedValue": 100, "condition": "equals"}
+    ]
+  },
+  "edgeCases": [],
+  "failureScenarios": [
+    {
+      "description": "變數溢位",
+      "input": {"key": "a", "duration": 100},
+      "expectedError": "Variable overflow"
+    }
+  ]
+}

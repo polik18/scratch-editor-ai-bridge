@@ -13,6 +13,11 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { uid, uidTarget } from './uid.js';
 
+// ─── Scratch VM & Canonical Project ──────────────────────────────────────────
+// Use official Scratch VM round-trip for SB3 generation
+import { projectJsonToCanonical } from '../../core/decompiler/project-json.js';
+import { buildScratchProjectArchive } from '../../core/compiler/project-json.js';
+
 // ─── Local type aliases (avoids importing all scratch/vm internals) ──────────
 
 /** Canonical input reference (used in block inputs). */
@@ -66,7 +71,10 @@ export class ScratchSession {
   /** True if the in-memory state differs from what's on disk. */
   private dirty = false;
 
-  /** ZIP entries from loaded .sb3 (md5ext → JSZipObject). null for new projects. */
+/**
+   * ZIP entries from loaded .sb3 (md5ext → JSZipObject). null for new projects.
+   * Kept to preserve original assets (costumes, sounds, etc.) during compile.
+   */
   private zipEntries: Map<string, { async: (type: string) => Promise<Uint8Array> }> | null = null;
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -417,6 +425,14 @@ export class ScratchSession {
    * @param opts Fields and inputs for the block, plus parent/next placement
    * @returns The new block ID
    */
+  /**
+   * Add a block to a target's block graph.
+   * Automatically maintains graph reciprocity (parent/next links).
+   * @param targetName Target name
+   * @param opcode Block opcode
+   * @param opts Block properties
+   * @returns Block ID
+   */
   addBlock(
     targetName: string,
     opcode: string,
@@ -528,12 +544,36 @@ export class ScratchSession {
     const blocks = (t['blocks'] as Record<string, Record<string, unknown>>) ?? {};
     blocks[id] = block;
     t['blocks'] = blocks;
+
+    // Maintain graph reciprocity
+    if (parent !== null) {
+      const parentBlock = blocks[parent];
+      if (!parentBlock) throw new Error(`Parent block "${parent}" not found in "${targetName}".`);
+
+      const existingNext = parentBlock['next'] as string | null;
+      if (next !== null && existingNext !== null && next !== existingNext) {
+        throw new Error(`Parent block "${parent}" already points to "${existingNext}"; cannot insert before "${next}".`);
+      }
+
+      const followingBlockId = next ?? existingNext;
+      if (followingBlockId !== null && !blocks[followingBlockId]) {
+        throw new Error(`Next block "${followingBlockId}" not found in "${targetName}".`);
+      }
+
+      parentBlock['next'] = id;
+      block['next'] = followingBlockId;
+      if (followingBlockId !== null) blocks[followingBlockId]['parent'] = id;
+    } else if (next !== null) {
+      throw new Error('A top-level block cannot be inserted into another block sequence.');
+    }
+
     this.dirty = true;
     return id;
   }
 
   /**
    * Remove a block and all its descendants from a target.
+   * Automatically updates adjacent blocks' parent/next pointers.
    * @param targetName Target name
    * @param blockId Block ID to remove
    */
@@ -558,6 +598,32 @@ export class ScratchSession {
       }
     }
 
+    // Before removing, update adjacent blocks' pointers
+    const blockToRemove = blocks[blockId];
+    if (blockToRemove) {
+      const prevBlockId = blockToRemove['parent'] as string | null;
+      const nextBlockId = blockToRemove['next'] as string | null;
+
+      // Update previous block's next pointer
+      if (prevBlockId !== null && blocks[prevBlockId]) {
+        const prevBlock = blocks[prevBlockId];
+        // If the previous block's next is this block, update it to this block's next
+        if (prevBlock['next'] === blockId) {
+          prevBlock['next'] = nextBlockId;
+        }
+      }
+
+      // Update next block's parent pointer
+      if (nextBlockId !== null && blocks[nextBlockId]) {
+        const nextBlock = blocks[nextBlockId];
+        // If the next block's parent is this block, update it to this block's parent
+        if (nextBlock['parent'] === blockId) {
+          nextBlock['parent'] = blockToRemove['parent'] as string | null;
+        }
+      }
+    }
+
+    // Remove the blocks
     for (const id of toRemove) {
       delete blocks[id];
     }
@@ -668,35 +734,30 @@ export class ScratchSession {
 
   /**
    * Compile the current Scratch project JSON to SB3 bytes.
-   * Validates the project structure before compilation.
+   * Retains original ZIP entries (costumes, sounds, etc.) if available.
+   * Uses official Scratch VM round-trip (loadProject + saveProjectSb3) for
+   * asset completeness and graph reciprocity validation.
    * @throws {Error} If validation fails
    */
   async compile(): Promise<Uint8Array> {
     if (!this.project) throw new Error('No project loaded.');
 
-    // Validate project structure
-    const { validateSB3 } = await import('./validator.js');
-    const result = validateSB3(this.project as any);
+    // Convert Scratch project JSON to Canonical Project format
+    const canonicalProject = projectJsonToCanonical(this.project as Record<string, unknown>);
 
-    if (!result.valid) {
-      const errorSummary = result.errors.join('\n  ');
-      throw new Error(`SB3 validation failed:\n  ${errorSummary}`);
+    // Build the archive with original ZIP entries retained
+    let retainMap: Map<string, Uint8Array> | undefined;
+    if (this.zipEntries) {
+      retainMap = new Map<string, Uint8Array>();
+      for (const [filename, entry] of this.zipEntries) {
+        retainMap.set(filename, await entry.async('uint8array'));
+      }
+    } else {
+      retainMap = undefined;
     }
+    const archiveBytes = await buildScratchProjectArchive(canonicalProject, { retainOriginalEntries: retainMap });
 
-    const { default: JSZip } = await import('jszip');
-    const zip = new JSZip();
-
-    // Add project.json (UTF-8 bytes)
-    const projectJson = JSON.stringify(this.project);
-    zip.file('project.json', new TextEncoder().encode(projectJson));
-
-    // Generate async blob then convert to Uint8Array
-    const blob = await zip.generateAsync({
-      type: 'blob',
-      compression: 'DEFLATE',
-      compressionOptions: { level: 6 },
-    });
-    return new Uint8Array(await blob.arrayBuffer());
+    return archiveBytes;
   }
 
   // ─── Hat wiring ──────────────────────────────────────────────────────────
@@ -716,7 +777,14 @@ export class ScratchSession {
       (b) => b['opcode'] === hatOpcode && b['topLevel'] === true,
     );
     if (!hatBlock) throw new Error(`No top-level hat block with opcode "${hatOpcode}" found in "${targetName}".`);
+    const bodyBlock = blocks[bodyBlockId];
+    if (!bodyBlock) throw new Error(`Body block "${bodyBlockId}" not found in "${targetName}".`);
+    if (hatBlock['next'] !== null && hatBlock['next'] !== undefined && hatBlock['next'] !== bodyBlockId) {
+      throw new Error(`Hat block "${hatOpcode}" already has a body in "${targetName}".`);
+    }
     hatBlock['next'] = bodyBlockId;
+    bodyBlock['parent'] = hatBlock['id'];
+    bodyBlock['topLevel'] = false;
     this.dirty = true;
   }
 }

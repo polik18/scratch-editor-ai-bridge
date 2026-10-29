@@ -1,0 +1,55 @@
+{
+  "id": "minimal-game",
+  "title": "Minimal Game",
+  "type": "scratch",
+  "sprites": 1,
+  "blocks": 3,
+  "difficulty": "easy",
+  "version": "1.0",
+  "created": "2026-10-28T00:00:00Z",
+  "designDoc": "A minimal game with one sprite and one script",
+  "outputSb3": "output/minimal-game.sb3",
+  "outputJson": "output/minimal-game.json",
+  "spritesDef": [
+    {
+      "name": "Sprite1",
+      "x": 0,
+      "y": 0,
+      "direction": 90,
+      "visible": true,
+      "draggable": false
+    }
+  ],
+  "variables": [],
+  "lists": [],
+  "scripts": [
+    {
+      "target": "Sprite1",
+      "x": 100,
+      "y": 100,
+      "blocks": [
+        {
+          "id": "block1",
+          "opcode": "motion_movesteps",
+          "inputs": {
+            "STEPS": ["number", 10]
+          }
+        },
+        {
+          "id": "block2",
+          "opcode": "motion_turnright",
+          "inputs": {
+            "DEGREES": ["number", 15]
+          }
+        },
+        {
+          "id": "block3",
+          "opcode": "control_wait",
+          "inputs": {
+            "DURATION": ["number", 1]
+          }
+        }
+      ]
+    }
+  ]
+}

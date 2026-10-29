@@ -1,0 +1,19 @@
+{
+  "gameId": "missing-sprite",
+  "title": "Missing Sprite",
+  "version": "1.0",
+  "inputs": {
+    "keyboard": [
+      {"key": "space", "duration": 100}
+    ]
+  },
+  "expectedOutputs": {},
+  "edgeCases": [],
+  "failureScenarios": [
+    {
+      "description": "沒有角色時執行動作",
+      "input": {"key": "space", "duration": 100},
+      "expectedError": "No sprite found"
+    }
+  ]
+}

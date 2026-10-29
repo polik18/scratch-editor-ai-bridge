@@ -1,0 +1,36 @@
+{
+  "gameId": "platform-game",
+  "title": "Platform Game",
+  "version": "1.0",
+  "inputs": {
+    "keyboard": [
+      {"key": "ArrowRight", "duration": 500},
+      {"key": "Space", "duration": 100}
+    ]
+  },
+  "expectedOutputs": {
+    "sprites": [
+      {
+        "name": "Sprite1",
+        "position": {"x": 100, "y": 0},
+        "direction": 90,
+        "visible": true,
+        "costume": "costume1"
+      }
+    ]
+  },
+  "edgeCases": [
+    {
+      "description": "在平台邊緣跳躍",
+      "input": {"key": "Space", "duration": 100},
+      "expectedBehavior": "角色掉出平台"
+    }
+  ],
+  "failureScenarios": [
+    {
+      "description": "沒有角色時跳躍",
+      "input": {"key": "Space", "duration": 100},
+      "expectedError": "No sprite to jump"
+    }
+  ]
+}

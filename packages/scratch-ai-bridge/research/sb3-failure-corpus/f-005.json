@@ -1,0 +1,54 @@
+{
+  "id": "f-005",
+  "source": "unknown-blocks",
+  "format": "scratch-ai-bridge/canonical-ir",
+  "parse": {
+    "status": "success",
+    "details": "JSON 解析成功"
+  },
+  "normalize": {
+    "status": "success",
+    "details": "正規化格式成功"
+  },
+  "schema": {
+    "status": "success",
+    "details": "Schema 驗證成功"
+  },
+  "semantic": {
+    "status": "error",
+    "details": "包含未支援的積木：procedures_definition, data_listof, data_replaceitemoflist"
+  },
+  "vm_compile": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "vm_reload": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "preview": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "error_code": "UNSUPPORTED_BLOCKS",
+  "error_message": "包含未支援的積木類型",
+  "error_location": "/sprites/0/scripts",
+  "fix_prompt": "替換未支援積木為 equivalent Scratch 3.0 積木；或移除該功能",
+  "unsupported_blocks": [
+    {
+      "opcode": "procedures_definition",
+      "reason": "自定義積木定義需透過 procedures_defreturn 與 procedures_defnoreturn",
+      "fix": "拆分為 procedures_defreturn (有回傳值) 或 procedures_defnoreturn (無回傳值)"
+    },
+    {
+      "opcode": "data_listof",
+      "reason": "Scratch 3.0 無此積木，應使用 data_addtolist 與 data_replaceitemoflist",
+      "fix": "改用 data_addtolist (新增項目) 與 data_replaceitemoflist (替換項目)"
+    },
+    {
+      "opcode": "data_replaceitemoflist",
+      "reason": "Scratch 3.0 無此積木，應使用 data_replaceitemoflist",
+      "fix": "Scratch 3.0 使用 data_replaceitemoflist，但需確認參數格式正確"
+    }
+  ]
+}

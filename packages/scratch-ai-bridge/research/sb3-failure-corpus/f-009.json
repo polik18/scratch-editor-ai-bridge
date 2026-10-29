@@ -1,0 +1,63 @@
+{
+  "id": "f-009",
+  "source": "large-multi-sprite-game",
+  "format": "scratch-ai-bridge/canonical-ir",
+  "parse": {
+    "status": "success",
+    "details": "JSON 解析成功"
+  },
+  "normalize": {
+    "status": "success",
+    "details": "正規化格式成功"
+  },
+  "schema": {
+    "status": "success",
+    "details": "Schema 驗證成功"
+  },
+  "semantic": {
+    "status": "error",
+    "details": "Sprite 數量 15 超過 CLI 限制 (預設 5)；總 block 數 850 超過限制 (預設 200)"
+  },
+  "vm_compile": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "vm_reload": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "preview": {
+    "status": "error",
+    "details": "待測試"
+  },
+  "error_code": "SIZE_LIMIT_EXCEEDED",
+  "error_message": "Sprite 數量 15 超過 CLI 限制 (預設 5)；總 block 數 850 超過限制 (預設 200)",
+  "error_location": "/sprites, /sprites/*/scripts",
+  "fix_prompt": "拆分大型專案為多個小專案；或使用 web 界面而非 CLI 生成",
+  "metrics": {
+    "sprite_count": 15,
+    "sprite_limit": 5,
+    "total_blocks": 850,
+    "block_limit": 200,
+    "stage_variables": 12,
+    "sprite_variables": 45,
+    "total_scripts": 38
+  },
+  "suggested_split": [
+    {
+      "part": "game-core",
+      "sprites": ["player", "enemies", "projectiles"],
+      "blocks": 150
+    },
+    {
+      "part": "ui-and-scoring",
+      "sprites": ["score-board", "timer"],
+      "blocks": 80
+    },
+    {
+      "part": "sound-and-effects",
+      "sprites": ["background", "particles"],
+      "blocks": 120
+    }
+  ]
+}
