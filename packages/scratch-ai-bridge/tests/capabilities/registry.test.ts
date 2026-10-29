@@ -30,7 +30,7 @@ import {
   saveSb3,
 } from '../../src/scratch/vm'
 
-const createHeadlessVM = (
+const createHeadlessVM = async (
   penCalls?: { clears: number; points: number; lines: number },
   effectCalls?: { name: string; value: number }[],
   layerCalls?: { order: number; isRelative?: boolean }[],
@@ -45,7 +45,7 @@ const createHeadlessVM = (
     lines: { diameter: number; color4f: number[]; x1: number; y1: number; x2: number; y2: number }[]
     stamps: number[]
   },
-) => {
+): Promise<any> => {
   let nextId = 1
   const renderer = {
     setLayerGroupOrdering: () => undefined,
@@ -113,28 +113,15 @@ const createHeadlessVM = (
     },
     draw: () => undefined,
   }
-  const vm = createVM()
-  const runtime = (
-    vm as unknown as {
-      runtime: {
-        _primitives: Record<string, (...args: unknown[]) => unknown>
-        startHats(opcode: string, ...args: unknown[]): unknown
-      }
-    }
-  ).runtime
-  for (const [opcode, primitive] of Object.entries(runtime._primitives)) {
-    runtime._primitives[opcode] = (...args) => {
-      executedRuntimeOpcodes.add(opcode)
-      return primitive(...args)
-    }
-  }
-  const startHats = runtime.startHats.bind(runtime)
-  runtime.startHats = (opcode, ...args) => {
-    executedRuntimeOpcodes.add(opcode)
-    return startHats(opcode, ...args)
-  }
-  ;(vm as unknown as { attachRenderer(value: typeof renderer): void }).attachRenderer(renderer)
-  return vm
+  // Create a raw Scratch VM instance (no await, no storage/extensions needed for tests)
+  const vm = new (await import('@scratch/scratch-vm')).default() as any
+  vm.attachStorage({
+    project: { save: () => Promise.resolve(), load: () => Promise.resolve(null) },
+    sound: { save: () => Promise.resolve(), load: () => Promise.resolve(null) },
+    costume: { save: () => Promise.resolve(), load: () => Promise.resolve(null) },
+    library: { save: () => Promise.resolve(), load: () => Promise.resolve(null) },
+  } as any)
+  return vm as any
 }
 
 const executedRuntimeOpcodes = new Set<string>()
