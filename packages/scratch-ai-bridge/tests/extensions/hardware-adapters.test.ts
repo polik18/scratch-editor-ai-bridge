@@ -112,7 +112,7 @@ const waitFor = async (predicate: () => boolean): Promise<void> => {
 
 describe('built-in Scratch hardware extension adapter behavior', () => {
   it('starts WeDo 2.0 BLE notifications after Scratch Link pairing', async () => {
-    const vm = createVM() as VMWithPeripheralRegistry
+    const vm: VMWithPeripheralRegistry = await createVM() as VMWithPeripheralRegistry
     const socket = new MockScratchLinkSocket()
     vi.stubGlobal('window', globalThis)
     vm.configureScratchLinkSocketFactory((type) => {
@@ -163,7 +163,7 @@ describe('built-in Scratch hardware extension adapter behavior', () => {
   })
 
   it('executes WeDo motor power/direction blocks into exact Scratch Link firmware bytes', async () => {
-    const vm = createVM() as VMWithPeripheralRegistry
+    const vm: VMWithPeripheralRegistry = await createVM() as VMWithPeripheralRegistry
     const socket = new MockScratchLinkSocket()
     vi.stubGlobal('window', globalThis)
     vm.configureScratchLinkSocketFactory(() => socket)
@@ -231,7 +231,7 @@ describe('built-in Scratch hardware extension adapter behavior', () => {
   })
 
   it('routes WeDo distance and tilt notifications into registered VM reporters and hats', async () => {
-    const vm = createVM() as VMWithPeripheralRegistry
+    const vm: VMWithPeripheralRegistry = await createVM() as VMWithPeripheralRegistry
     const socket = new MockScratchLinkSocket()
     vi.stubGlobal('window', globalThis)
     vm.configureScratchLinkSocketFactory(() => socket)
@@ -302,7 +302,7 @@ describe('built-in Scratch hardware extension adapter behavior', () => {
   })
 
   it('pairs over Scratch Link BT and sends an EV3 tone command', async () => {
-    const vm = createVM() as VMWithPeripheralRegistry
+    const vm: VMWithPeripheralRegistry = await createVM() as VMWithPeripheralRegistry
     const socket = new MockScratchLinkSocket()
     vi.stubGlobal('window', globalThis)
     vm.configureScratchLinkSocketFactory((type) => {
@@ -399,7 +399,7 @@ describe('built-in Scratch hardware extension adapter behavior', () => {
   })
 
   it('completes GDX Go Direct initialization over the Scratch Link BLE adapter', async () => {
-    const vm = createVM() as VMWithPeripheralRegistry
+    const vm: VMWithPeripheralRegistry = await createVM() as VMWithPeripheralRegistry
     const socket = new MockScratchLinkSocket()
     vi.stubGlobal('window', globalThis)
     vm.configureScratchLinkSocketFactory((type) => {
@@ -560,7 +560,7 @@ describe('built-in Scratch hardware extension adapter behavior', () => {
   })
 
   it('discovers Boost hubs with the manufacturer-data filter and subscribes after pairing', async () => {
-    const vm = createVM() as VMWithPeripheralRegistry
+    const vm: VMWithPeripheralRegistry = await createVM() as VMWithPeripheralRegistry
     const socket = new MockScratchLinkSocket()
     vi.stubGlobal('window', globalThis)
     vm.configureScratchLinkSocketFactory((type) => {
@@ -598,7 +598,7 @@ describe('built-in Scratch hardware extension adapter behavior', () => {
   })
 
   it('executes Boost motor power/direction blocks into exact LEGO Wireless Protocol bytes', async () => {
-    const vm = createVM() as VMWithPeripheralRegistry
+    const vm: VMWithPeripheralRegistry = await createVM() as VMWithPeripheralRegistry
     const socket = new MockScratchLinkSocket()
     vi.stubGlobal('window', globalThis)
     vm.configureScratchLinkSocketFactory(() => socket)
@@ -708,7 +708,7 @@ describe('built-in Scratch hardware extension adapter behavior', () => {
   })
 
   it('scans, connects, reads sensor notifications, and writes LED commands over Scratch Link BLE', async () => {
-    const vm = createVM() as VMWithPeripheralRegistry
+    const vm: VMWithPeripheralRegistry = await createVM() as VMWithPeripheralRegistry
     const socket = new MockScratchLinkSocket()
     vi.stubGlobal('window', globalThis)
     vm.configureScratchLinkSocketFactory((type) => {
@@ -799,7 +799,7 @@ describe('built-in Scratch hardware extension adapter behavior', () => {
   })
 
   it('decodes sensor reports and emits bounded display commands through the local adapter', async () => {
-    const vm = createVM() as VMWithPeripheralRegistry
+    const vm: VMWithPeripheralRegistry = await createVM() as VMWithPeripheralRegistry
     vi.stubGlobal('window', globalThis)
     let peripheral: MicroBitPeripheral | undefined
 

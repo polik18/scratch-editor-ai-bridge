@@ -137,8 +137,8 @@ describe('Scratch project JSON decompiler', () => {
     }
   })
 
-  it('decompiles valid blocks when legacy array metadata appears in the block map', () => {
-    const scratchProject = buildScratchProjectJson(structuredClone(example) as CanonicalProject)
+  it('decompiles valid blocks when legacy array metadata appears in the block map', async () => {
+    const scratchProject = await buildScratchProjectJson(structuredClone(example) as CanonicalProject)
     const rawBlocks = scratchProject.targets[0].blocks as unknown as Record<string, unknown>
     rawBlocks.legacyProcedureMetadata = [13, 'legacy procedure', 'prototype-id', 2562, 85]
 
@@ -148,8 +148,8 @@ describe('Scratch project JSON decompiler', () => {
     )
   })
 
-  it('assigns a compilable fallback name to a Scratch costume with a blank name', () => {
-    const scratchProject = buildScratchProjectJson(structuredClone(example) as CanonicalProject)
+  it('assigns a compilable fallback name to a Scratch costume with a blank name', async () => {
+    const scratchProject = await buildScratchProjectJson(structuredClone(example) as CanonicalProject)
     scratchProject.targets[0].costumes[0].name = ''
 
     const imported = projectJsonToCanonicalWithReport(scratchProject)
@@ -283,8 +283,8 @@ describe('Scratch project JSON decompiler', () => {
     }
   })
 
-  it('preserves nested JSON metadata values during import', () => {
-    const scratch = buildScratchProjectJson(example as CanonicalProject)
+  it('preserves nested JSON metadata values during import', async () => {
+    const scratch = await buildScratchProjectJson(example as CanonicalProject)
     scratch.meta = JSON.parse(
       '{"semver":"3.0.0","nested":{"enabled":true,"labels":["one",null,{"key":4}]},"__proto__":{"safe":true}}',
     ) as typeof scratch.meta
@@ -296,8 +296,8 @@ describe('Scratch project JSON decompiler', () => {
     expect(canonical.meta?.__proto__).toEqual({ safe: true })
   })
 
-  it('fails explicitly when imported metadata exceeds the safe nesting limit', () => {
-    const scratch = buildScratchProjectJson(example as CanonicalProject)
+  it('fails explicitly when imported metadata exceeds the safe nesting limit', async () => {
+    const scratch = await buildScratchProjectJson(example as CanonicalProject)
     const meta: Record<string, unknown> = {}
     let current = meta
     for (let level = 0; level < 140; level += 1) {
@@ -312,8 +312,8 @@ describe('Scratch project JSON decompiler', () => {
     )
   })
 
-  it('rejects imported block graphs beyond the safe nesting limit', () => {
-    const scratch = buildScratchProjectJson(example as CanonicalProject)
+  it('rejects imported block graphs beyond the safe nesting limit', async () => {
+    const scratch = await buildScratchProjectJson(example as CanonicalProject)
     const stage = scratch.targets.find((target) => target.isStage)
     if (!stage) throw new Error('fixture has no stage')
     const blocks: Record<string, unknown> = {}
@@ -343,9 +343,9 @@ describe('Scratch project JSON decompiler', () => {
     )
   })
 
-  it('restores script order, variables and nested stack structure', () => {
+  it('restores script order, variables and nested stack structure', async () => {
     const source = example as CanonicalProject
-    const scratch = buildScratchProjectJson(source)
+    const scratch = await buildScratchProjectJson(source)
     const roundTrip = projectJsonToCanonical(scratch, source.name)
 
     expect(roundTrip.stage.variables[0].name).toBe('score')
@@ -361,9 +361,9 @@ describe('Scratch project JSON decompiler', () => {
     expect(repeatInputs.SUBSTACK.type).toBe('stack')
   })
 
-  it('restores platform menu shadows as AI-facing literal inputs', () => {
+  it('restores platform menu shadows as AI-facing literal inputs', async () => {
     const source = platformer as CanonicalProject
-    const roundTrip = projectJsonToCanonical(buildScratchProjectJson(source), source.name)
+    const roundTrip = projectJsonToCanonical(await buildScratchProjectJson(source), source.name)
     const player = roundTrip.sprites.find((sprite) => sprite.name === 'Player')
     expect(player).toBeDefined()
     if (!player) return
@@ -454,7 +454,7 @@ describe('Scratch project JSON decompiler', () => {
       ],
     })
 
-    const scratch = buildScratchProjectJson(source)
+    const scratch = await buildScratchProjectJson(source)
     const blocks = scratch.targets[0].blocks
     expect(validateScratchBlockGraph(blocks)).toEqual([])
     const definition = Object.values(blocks).find(({ opcode }) => opcode === 'procedures_definition')
@@ -516,7 +516,7 @@ describe('Scratch project JSON decompiler', () => {
     )
   })
 
-  it('round-trips seeded procedure names, parameter kinds, defaults, and warp flags', () => {
+  it('round-trips seeded procedure names, parameter kinds, defaults, and warp flags', async () => {
     let state = 0x0c0b10c5
     const nextRandom = () => {
       state = (Math.imul(state, 1_664_525) + 1_013_904_223) >>> 0
@@ -545,7 +545,7 @@ describe('Scratch project JSON decompiler', () => {
         body: [],
       }))
 
-      const roundTrip = projectJsonToCanonical(buildScratchProjectJson(source), source.name)
+      const roundTrip = projectJsonToCanonical(await buildScratchProjectJson(source), source.name)
       expect(roundTrip.stage.procedures, `seed ${sample}`).toEqual(source.stage.procedures)
     }
   })
@@ -1110,7 +1110,7 @@ describe('Scratch project JSON decompiler', () => {
       },
     ]
 
-    const scratchProject = buildScratchProjectJson(source)
+    const scratchProject = await buildScratchProjectJson(source)
     const call = Object.values(scratchProject.targets[0].blocks).find(({ opcode }) => opcode === 'procedures_call')
     expect(call).toBeDefined()
     if (!call) return
@@ -1175,7 +1175,7 @@ describe('Scratch project JSON decompiler', () => {
       archiveNormalized.vm.quit()
     }
 
-    const vm = createVM()
+    const vm: any = await createVM()
     const renderer = new Proxy(
       {},
       {
@@ -1267,7 +1267,7 @@ describe('Scratch project JSON decompiler', () => {
       },
     ]
 
-    const scratchProject = buildScratchProjectJson(source)
+    const scratchProject = await buildScratchProjectJson(source)
     const nestedCall = Object.values(scratchProject.targets[0].blocks).find(
       ({ opcode, inputs }) => opcode === 'procedures_call' && Object.keys(inputs).length === 2,
     )
@@ -1275,7 +1275,7 @@ describe('Scratch project JSON decompiler', () => {
     if (!nestedCall) return
     nestedCall.inputs = {}
 
-    const vm = createVM()
+    const vm: any = await createVM()
     const renderer = new Proxy(
       {},
       {
@@ -1396,7 +1396,7 @@ describe('Scratch project JSON decompiler', () => {
         },
       ]
 
-      const scratchProject = buildScratchProjectJson(source)
+      const scratchProject = await buildScratchProjectJson(source)
       const blocks = scratchProject.targets[0].blocks
       const recursiveCall = Object.values(blocks).find(
         ({ opcode, inputs }) =>
@@ -1426,7 +1426,7 @@ describe('Scratch project JSON decompiler', () => {
       if (!booleanArgument) return
       delete recursiveCall.inputs[booleanArgument]
 
-      const vm = createVM()
+      const vm: any = await createVM()
       const renderer = new Proxy(
         {},
         {
@@ -1546,7 +1546,7 @@ describe('Scratch project JSON decompiler', () => {
       },
     ]
 
-    const scratchProject = buildScratchProjectJson(source)
+    const scratchProject = await buildScratchProjectJson(source)
     const blocks = scratchProject.targets[0].blocks
     const recursiveCall = Object.values(blocks).find(
       ({ opcode, inputs }) =>
@@ -1576,7 +1576,7 @@ describe('Scratch project JSON decompiler', () => {
     if (!booleanArgument) return
     delete recursiveCall.inputs[booleanArgument]
 
-    const vm = createVM()
+    const vm: any = await createVM()
     const renderer = new Proxy(
       {},
       {
@@ -1773,7 +1773,7 @@ describe('Scratch project JSON decompiler', () => {
         },
       ]
 
-      const scratchProject = buildScratchProjectJson(source)
+      const scratchProject = await buildScratchProjectJson(source)
       const blocks = scratchProject.targets[0].blocks
       const prototype = Object.values(blocks).find(
         ({ opcode, mutation }) =>
@@ -1842,7 +1842,7 @@ describe('Scratch project JSON decompiler', () => {
         normalized.vm.quit()
       }
 
-      const vm = createVM()
+      const vm: any = await createVM()
       ;(vm as unknown as { attachRenderer(value: typeof renderer): void }).attachRenderer(renderer)
       try {
         await loadProjectJson(scratchProject as unknown as ScratchProjectJson, vm)
@@ -1887,7 +1887,7 @@ describe('Scratch project JSON decompiler', () => {
         body: [{ opcode: 'looks_say', inputs: { MESSAGE: { type: 'literal', value: 'legacy body' } } }],
       },
     ]
-    const scratch = buildScratchProjectJson(source)
+    const scratch = await buildScratchProjectJson(source)
     const blocks = scratch.targets[0].blocks
     const definition = Object.values(blocks).find(({ opcode }) => opcode === 'procedures_definition')
     expect(definition).toBeDefined()
@@ -2007,7 +2007,7 @@ describe('Scratch project JSON decompiler', () => {
       },
     ]
 
-    const scratch = buildScratchProjectJson(source)
+    const scratch = await buildScratchProjectJson(source)
     const blocks = scratch.targets[0].blocks
     const definition = Object.values(blocks).find(({ opcode }) => opcode === 'procedures_definition')
     expect(definition).toBeDefined()
@@ -2065,7 +2065,7 @@ describe('Scratch project JSON decompiler', () => {
       },
     )
     const executeAndAssert = async (project: typeof scratch): Promise<void> => {
-      const vm = createVM()
+      const vm: any = await createVM()
       ;(vm as unknown as { attachRenderer(value: typeof renderer): void }).attachRenderer(renderer)
       try {
         await loadProjectJson(project as unknown as ScratchProjectJson, vm)
@@ -2083,13 +2083,13 @@ describe('Scratch project JSON decompiler', () => {
     const modernReload = await decompileSb3WithBlockGraphs(modernSb3, source.name)
     expect(modernReload.rawBlockGraphs.every(({ issues }) => issues.length === 0)).toBe(true)
     expect(modernReload.canonical.stage.procedures).toEqual(source.stage.procedures)
-    await executeAndAssert(buildScratchProjectJson(modernReload.canonical))
+    await executeAndAssert(await buildScratchProjectJson(modernReload.canonical))
   })
 
   it.each([
     { property: 'argumentdefaults', value: '[]' },
     { property: 'warp', value: 'sometimes' },
-  ])('reports procedure definitions skipped when mutation $property is inconsistent', (invalidMetadata) => {
+  ])('reports procedure definitions skipped when mutation $property is inconsistent', async (invalidMetadata) => {
     const source = structuredClone(example) as CanonicalProject
     source.stage.procedures = [
       {
@@ -2099,7 +2099,7 @@ describe('Scratch project JSON decompiler', () => {
         body: [],
       },
     ]
-    const scratch = buildScratchProjectJson(source)
+    const scratch = await buildScratchProjectJson(source)
     const blocks = scratch.targets[0].blocks
     const definition = Object.values(blocks).find(({ opcode }) => opcode === 'procedures_definition')
     expect(definition).toBeDefined()
@@ -2122,7 +2122,7 @@ describe('Scratch project JSON decompiler', () => {
     })
   })
 
-  it('reports duplicate procedure argument names that cannot be represented in Canonical IR', () => {
+  it('reports duplicate procedure argument names that cannot be represented in Canonical IR', async () => {
     const source = structuredClone(example) as CanonicalProject
     source.stage.procedures = [
       {
@@ -2135,7 +2135,7 @@ describe('Scratch project JSON decompiler', () => {
         body: [],
       },
     ]
-    const scratch = buildScratchProjectJson(source)
+    const scratch = await buildScratchProjectJson(source)
     const blocks = scratch.targets[0].blocks
     const definition = Object.values(blocks).find(({ opcode }) => opcode === 'procedures_definition')
     expect(definition).toBeDefined()

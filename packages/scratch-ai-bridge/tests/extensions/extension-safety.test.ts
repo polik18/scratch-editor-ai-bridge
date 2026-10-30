@@ -5,6 +5,7 @@ import { decompileSb3WithBlockGraphs } from '../../src/core/decompiler/decompile
 import example from '../../src/core/ir/examples/03-repeat-score.json'
 import type { CanonicalProject } from '../../src/core/ir/types'
 import { createVM, getProjectJson, loadSb3 } from '../../src/scratch/vm'
+import type { ScratchVMHandle } from '../../src/scratch/vm'
 import { fixtureByName } from '../compatibility/fixture-matrix'
 
 describe('unknown Scratch extensions', () => {
@@ -20,7 +21,7 @@ describe('unknown Scratch extensions', () => {
       },
     ]
 
-    const vm = createVM()
+    const vm: ScratchVMHandle = await createVM()
     try {
       await loadSb3(await buildScratchProjectArchive(project), vm)
       const json = getProjectJson(vm) as {
@@ -46,7 +47,7 @@ describe('unknown Scratch extensions', () => {
       },
     ]
 
-    const vm = createVM()
+    const vm: ScratchVMHandle = await createVM()
     try {
       await loadSb3(await buildScratchProjectArchive(project), vm)
       const json = getProjectJson(vm) as {
@@ -63,7 +64,7 @@ describe('unknown Scratch extensions', () => {
   })
 
   it('loads the official Video Sensing fixture without enabling camera and preserves its blocks', async () => {
-    const vm = createVM()
+    const vm: ScratchVMHandle = await createVM()
     const runtime = (vm as unknown as { runtime: { ioDevices: { video: { enableVideo(): Promise<void> } } } }).runtime
     const enableVideo = runtime.ioDevices.video.enableVideo.bind(runtime.ioDevices.video)
     let cameraEnableCalls = 0
@@ -113,7 +114,7 @@ describe('unknown Scratch extensions', () => {
   })
 
   it('instantiates every extension module explicitly allowed by the local adapter', async () => {
-    const vm = createVM()
+    const vm: ScratchVMHandle = await createVM()
     const manager = (
       vm as unknown as {
         extensionManager: {

@@ -1,0 +1,86 @@
+{
+  "format": "scratch-ai-bridge/prompt-budget-baseline",
+  "version": 1,
+  "measurement": "character count plus rough mixed-language token estimate; provider tokenizers vary",
+  "sampleRequest": "幫我做一個好玩的遊戲，主角是住在深海的小魚。",
+  "sampleConfirmedBrief": "玩家操控小魚收集氧氣泡泡、躲避水母並救出海龜。每救到一隻海龜就解鎖新海域；氧氣耗盡時顯示結果並可立即重玩。畫面明亮、節奏逐漸加快。",
+  "genres": [
+    {
+      "genre": "auto",
+      "discussion": {
+        "characters": 585,
+        "estimatedTokens": 469
+      },
+      "production": {
+        "characters": 12444,
+        "estimatedTokens": 3972
+      }
+    },
+    {
+      "genre": "platformer",
+      "discussion": {
+        "characters": 585,
+        "estimatedTokens": 469
+      },
+      "production": {
+        "characters": 12421,
+        "estimatedTokens": 3955
+      }
+    },
+    {
+      "genre": "arcade",
+      "discussion": {
+        "characters": 585,
+        "estimatedTokens": 469
+      },
+      "production": {
+        "characters": 12419,
+        "estimatedTokens": 3953
+      }
+    },
+    {
+      "genre": "puzzle-story",
+      "discussion": {
+        "characters": 585,
+        "estimatedTokens": 469
+      },
+      "production": {
+        "characters": 12419,
+        "estimatedTokens": 3953
+      }
+    },
+    {
+      "genre": "rhythm",
+      "discussion": {
+        "characters": 585,
+        "estimatedTokens": 469
+      },
+      "production": {
+        "characters": 12419,
+        "estimatedTokens": 3953
+      }
+    },
+    {
+      "genre": "drawing",
+      "discussion": {
+        "characters": 585,
+        "estimatedTokens": 469
+      },
+      "production": {
+        "characters": 12419,
+        "estimatedTokens": 3953
+      }
+    },
+    {
+      "genre": "simulation",
+      "discussion": {
+        "characters": 585,
+        "estimatedTokens": 469
+      },
+      "production": {
+        "characters": 12417,
+        "estimatedTokens": 3951
+      }
+    }
+  ]
+}

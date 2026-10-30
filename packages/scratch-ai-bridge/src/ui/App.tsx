@@ -1,6 +1,5 @@
 import { createSession } from '../api/index.js';
 import { parseNaturalLanguage } from '../nlp/parser.js';
-import { previewScreenshot } from '../preview/automation.js';
 import './style.css';
 
 // ── UI Components ────────────────────────────────────────────────────────────
@@ -141,8 +140,27 @@ export function bindEvents(app: HTMLElement): void {
     setStatus('預覽中...', '⏳');
 
     try {
-      const filePath = await previewScreenshot(currentSession, '/tmp/preview.png');
-      await log(`預覽截圖：${filePath}`);
+      const { createVM, renderSb3Preview } = await import('../scratch/vm.js');
+      const vm = await createVM();
+      const canvas = document.createElement('canvas');
+      canvas.width = 480;
+      canvas.height = 360;
+      try {
+        await renderSb3Preview(await currentSession.compile(), vm, canvas);
+        const screenshot = await new Promise<Blob>((resolve, reject) => {
+          canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Could not create preview image'))), 'image/png');
+        });
+        const url = URL.createObjectURL(screenshot);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'ai-project-preview.png';
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 0);
+        await log('預覽截圖已下載：ai-project-preview.png');
+      } finally {
+        vm.quit();
+        canvas.remove();
+      }
       await setStatus('預覽完成', '✓');
     } catch (error) {
       await log(`預覽錯誤：${String(error)}`);

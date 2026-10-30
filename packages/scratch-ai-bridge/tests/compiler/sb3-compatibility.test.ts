@@ -14,6 +14,17 @@ import example05 from '../../src/core/ir/examples/05-full-entities.json'
 import example06 from '../../src/core/ir/examples/06-platformer-core.json'
 import type { CanonicalProject } from '../../src/core/ir/types'
 import { createVM, getProjectJson, runForTicks, saveSb3, type ScratchVMHandle } from '../../src/scratch'
+
+interface VMWithPeripheralRegistry extends ScratchVMHandle {
+  runtime: {
+    on(event: string, listener: (target: unknown, type: string, text: string) => void): void
+    stopAll(): void
+    handleProjectLoaded(): Promise<void>
+    targets: { id: string; isStage: boolean }[]
+  }
+  deserializeProject(project: Record<string, unknown>, zip: JSZip | null): Promise<void>
+  exportSprite(targetId: string, outputType: string): Promise<Uint8Array>
+}
 import cspScratchParser from '../../src/scratch/csp-scratch-parser'
 
 const parseOfficialProject = (input: Buffer): Promise<unknown> =>
@@ -34,7 +45,7 @@ const stringLeaves = (value: unknown): string[] => {
   return []
 }
 
-const executeSayTrace = (vm: ScratchVMHandle): string[] => {
+const executeSayTrace = (vm: VMWithPeripheralRegistry): string[] => {
   const maxSayEvents = 32
   const messages: string[] = []
   const runtime = (
@@ -189,7 +200,7 @@ describe('generated SB3 compatibility', () => {
       ).toEqual({ length: message.length, mismatchIndex: -1, actual: '', expected: '' })
     }
 
-    assertPayload(buildScratchProjectJson(project), 'compiled project JSON payload')
+    assertPayload(await buildScratchProjectJson(project), 'compiled project JSON payload')
     const sourceArchive = await buildScratchProjectArchive(project)
     const parsedSource = await new Promise<Record<string, unknown>>((resolve, reject) => {
       cspScratchParser(sourceArchive, false, (error, result) => {
@@ -201,11 +212,7 @@ describe('generated SB3 compatibility', () => {
     })
     assertPayload(parsedSource, 'production ZIP parser payload')
 
-    const vm = createVM() as ScratchVMHandle & {
-      deserializeProject(project: Record<string, unknown>, zip: JSZip | null): Promise<void>
-      exportSprite(targetId: string, outputType: string): Promise<Uint8Array>
-      runtime: { handleProjectLoaded(): Promise<void>; targets: { id: string; isStage: boolean }[] }
-    }
+    const vm: VMWithPeripheralRegistry = await createVM() as VMWithPeripheralRegistry
     try {
       const vmProject = structuredClone(parsedSource)
       for (const target of vmProject.targets as { costumes?: unknown[] }[]) target.costumes = []
@@ -529,8 +536,8 @@ describe('generated SB3 compatibility', () => {
           expect(stringLeaves(normalizedProject), `normalized ${sample}`).toContain(message)
         }
         if (runtimeComparable) {
-          expect(executeSayTrace(normalizedVm), `runtime trace seed ${sample}`).toEqual(
-            executeSayTrace(sourceCompilation.vm),
+          expect(executeSayTrace(normalizedVm as VMWithPeripheralRegistry), `runtime trace seed ${sample}`).toEqual(
+            executeSayTrace(sourceCompilation.vm as VMWithPeripheralRegistry),
           )
         }
       } finally {
@@ -620,8 +627,8 @@ describe('generated SB3 compatibility', () => {
 
         const expectedMessage = (operator === 'operator_gt' ? left > right : left < right) ? thenMessage : elseMessage
         const expectedTrace = Array.from({ length: repeatCount }, () => expectedMessage)
-        expect(executeSayTrace(sourceCompilation.vm), `source execution seed ${sample}`).toEqual(expectedTrace)
-        expect(executeSayTrace(normalizedVm), `normalized execution seed ${sample}`).toEqual(expectedTrace)
+        expect(executeSayTrace(sourceCompilation.vm as VMWithPeripheralRegistry), `source execution seed ${sample}`).toEqual(expectedTrace)
+        expect(executeSayTrace(normalizedVm as VMWithPeripheralRegistry), `normalized execution seed ${sample}`).toEqual(expectedTrace)
       } finally {
         sourceCompilation.vm.quit()
         normalizedVm?.quit()

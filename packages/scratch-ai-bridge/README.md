@@ -92,9 +92,12 @@ npm run test:browser --workspace=@scratch/scratch-ai-bridge
 npm run cli --workspace=@scratch/scratch-ai-bridge -- --help
 ```
 
-The local CLI has `inspect <file.sb3>` and `batch <directory> --out <new-directory>` commands. It reads SB3
-structure only; it does not run project scripts, Scratch VM, hardware, or extensions. Batch output is written to a
-new directory and uses anonymous student IDs unless a validated manifest is supplied. See
+The local CLI has `inspect`, `batch`, and `generate` commands. `generate` accepts Canonical IR JSON or the
+validated `spritesDef` GameDesign JSON form and writes a new SB3 through the official Scratch VM. It validates
+the archive, project JSON, block graph, referenced asset bytes/MD5, and a VM save/reload round-trip. Pass
+`--preview <stage.png>` to load the project in Scratch's browser renderer and capture its initial stage. Gameplay
+behavior remains `not-run` in generation reports; a successful compile does not claim that the game was played.
+Batch output is written to a new directory and uses anonymous student IDs unless a validated manifest is supplied. See
 [`docs/cli-agent-plan.md`](docs/cli-agent-plan.md) for the output contract and current implementation status.
 
 Examples:
@@ -102,7 +105,12 @@ Examples:
 ```sh
 npm run cli --workspace=@scratch/scratch-ai-bridge -- inspect ./作品.sb3 --format markdown
 npm run cli --workspace=@scratch/scratch-ai-bridge -- batch ./班級作品 --out ./班級分析結果 --jobs 1
+npm run cli --workspace=@scratch/scratch-ai-bridge -- generate ./遊戲設計.json --out ./新遊戲.sb3 --report ./新遊戲.report.json
+npm run session --workspace=@scratch/scratch-ai-bridge -- new-game --design=./遊戲設計.json --output=./build
 ```
+
+Existing output files are preserved by default. Pass `--force` to replace one intentionally. The `scratch-session`
+bin also accepts both `new-game` and its historical `newGame` spelling.
 
 The batch report directory includes `PRIVATE-teacher-source-map.csv`, which maps anonymous IDs to input filenames.
 Keep this file private; do not share it with student reports.

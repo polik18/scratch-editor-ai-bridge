@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildScratchProjectArchive } from '../../src/core/compiler/project-json'
 import example from '../../src/core/ir/examples/03-repeat-score.json'
 import type { CanonicalBlock, CanonicalProject } from '../../src/core/ir/types'
-import { createVM, getProjectJson, loadSb3, runForTicks } from '../../src/scratch/vm'
+import { createVM, getProjectJson, loadSb3, runForTicks, type ScratchVMHandle } from '../../src/scratch/vm'
 
 describe('built-in Scratch extension runtime behavior', () => {
   it('waits for Music note and drum beat durations without an audio device', async () => {
@@ -40,7 +40,7 @@ describe('built-in Scratch extension runtime behavior', () => {
       },
     ]
 
-    const vm = createVM()
+    const vm: ScratchVMHandle = await createVM()
     const runtime = vm as unknown as {
       start(): void
       greenFlag(): void
@@ -92,7 +92,7 @@ describe('built-in Scratch extension runtime behavior', () => {
       },
     ]
 
-    const vm = createVM()
+    const vm: ScratchVMHandle = await createVM()
     const runtime = vm as unknown as {
       start(): void
       greenFlag(): void
@@ -126,6 +126,7 @@ describe('built-in Scratch extension runtime behavior', () => {
       {
         blocks: [
           { opcode: 'event_whenflagclicked' },
+          { opcode: 'music_setInstrument', inputs: { INSTRUMENT: { type: 'literal', value: 1 } } },
           { opcode: 'music_setTempo', inputs: { TEMPO: { type: 'literal', value: 125 } } },
           { opcode: 'music_changeTempo', inputs: { TEMPO: { type: 'literal', value: 20 } } },
           {
@@ -142,7 +143,7 @@ describe('built-in Scratch extension runtime behavior', () => {
       },
     ]
 
-    const vm = createVM()
+    const vm: ScratchVMHandle = await createVM()
     try {
       await loadSb3(await buildScratchProjectArchive(project), vm)
       runForTicks(vm, 12)

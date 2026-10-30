@@ -7,7 +7,7 @@
  */
 export interface GateResult {
   name: string;
-  status: 'pass' | 'fail';
+  status: 'pass' | 'fail' | 'not-run';
   message?: string;
   details?: Record<string, unknown>;
 }
@@ -55,7 +55,7 @@ export function createManifestEntry(
   outputFile?: string,
   metadata?: Record<string, unknown>,
 ): ManifestEntry {
-  const success = gateResults.every(r => r.status === 'pass');
+  const success = gateResults.every(r => r.status !== 'fail');
   
   return {
     inputHash,

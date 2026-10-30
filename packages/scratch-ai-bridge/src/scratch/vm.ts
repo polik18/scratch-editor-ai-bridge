@@ -71,13 +71,31 @@ interface ScratchBlockContainerInternal {
   readonly _blocks: Record<string, ScratchBlock>
 }
 
+interface ScratchVariableInternal extends Omit<ScratchVariableSnapshot, 'value'> {
+  value: unknown
+  type: string
+  isCloud: boolean
+}
+
 interface ScratchTargetInternal extends ScratchTarget {
   readonly blocks: ScratchBlockContainerInternal
-  readonly variables: Record<string, ScratchVariableSnapshot>
+  readonly variables: Record<string, ScratchVariableInternal>
   readonly drawableID: number | null
   readonly draggable: boolean
-  readonly x: number
-  readonly y: number
+  x: number
+  y: number
+  direction: number
+  size: number
+  visible: boolean
+  currentCostume: number
+  volume: number
+  tempo: number
+  setXY(x: number, y: number, force?: boolean): void
+  setDirection(direction: number): void
+  setSize(size: number): void
+  setVisible(visible: boolean): void
+  setCostume(index: number): void
+  getCostumes(): readonly { readonly name: string }[]
   goToFront(): void
 }
 
@@ -460,7 +478,15 @@ export const resumePreviewAudio = (vm: ScratchVMHandle): void => {
 const attachBitmapAdapter = (vm: ScratchVMHandle): Promise<void> => {
   let adapterPromise = bitmapAdapterPromises.get(vm)
   if (!adapterPromise) {
-    adapterPromise = import('@scratch/scratch-svg-renderer').then(({ BitmapAdapter }) => {
+    adapterPromise = import('@scratch/scratch-svg-renderer').then((rendererModule) => {
+      // The workspace renderer is CommonJS and its interop shape differs
+      // between Node, Vite and the published browser bundle.
+      const moduleDefault = rendererModule.default as unknown as
+        { BitmapAdapter?: new () => Parameters<ScratchVMInternal['attachV2BitmapAdapter']>[0] } | undefined
+      const BitmapAdapter = rendererModule.BitmapAdapter ?? moduleDefault?.BitmapAdapter
+      if (typeof BitmapAdapter !== 'function') {
+        throw new Error('Scratch SVG renderer does not export a BitmapAdapter constructor')
+      }
       asInternalVM(vm).attachV2BitmapAdapter(new BitmapAdapter())
     })
     bitmapAdapterPromises.set(vm, adapterPromise)
@@ -475,14 +501,22 @@ const attachBitmapAdapter = (vm: ScratchVMHandle): Promise<void> => {
  * @param vm Optional existing VM to reuse.
  * @returns The VM containing the loaded project.
  */
-export const loadSb3 = async (file: Sb3Input, vm?: ScratchVMHandle): Promise<ScratchVMHandle> => {
-  const targetVM = vm ?? await createVM()
+export const loadSb3 = async (
+  file: Sb3Input,
+  vm?: ScratchVMHandle,
+  onProgress?: (stage: string) => void,
+): Promise<ScratchVMHandle> => {
+  const targetVM = vm ?? (await createVM())
 
   try {
     const input = await normalizeSb3Input(file)
+    onProgress?.('SB3 封裝已讀取。')
     validateSb3Archive(input)
+    onProgress?.('SB3 封裝驗證完成。')
     await attachBitmapAdapter(targetVM)
+    onProgress?.('Scratch 素材轉接器已就緒。')
     await loadParsedProject(asInternalVM(targetVM), input)
+    onProgress?.('Scratch 專案資料載入完成。')
     return targetVM
   } catch (error) {
     if (!vm) {
@@ -541,17 +575,28 @@ export const renderSb3Preview = async (
   file: Sb3Input,
   vm: ScratchVMHandle,
   canvas: HTMLCanvasElement,
+  onProgress?: (stage: string) => void,
 ): Promise<void> => {
   const internalVM = asInternalVM(vm)
   if (!internalVM.renderer) {
     const { default: ScratchRender } = await import('@scratch/scratch-render')
+    onProgress?.('舞台繪圖器已載入。')
     internalVM.attachRenderer(new ScratchRender(canvas))
   }
-  await loadSb3(file, vm)
+  onProgress?.('正在匯入 Scratch 專案資料。')
+  await loadSb3(file, vm, onProgress)
+  onProgress?.('專案資料匯入完成，正在繪製舞台。')
   const renderer = internalVM.renderer
   if (!renderer) throw new Error('Scratch renderer did not attach to the VM')
   renderer.draw()
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  await new Promise<void>((resolve) => {
+    const fallback = window.setTimeout(resolve, 100)
+    requestAnimationFrame(() => {
+      window.clearTimeout(fallback)
+      resolve()
+    })
+  })
+  onProgress?.('舞台首幀已繪製。')
   renderer.draw()
 }
 
@@ -682,7 +727,7 @@ export const loadProjectJson = async (
   project: ScratchProjectJson,
   vm?: ScratchVMHandle,
 ): Promise<ScratchVMHandle> => {
-  const targetVM = vm ?? await createVM()
+  const targetVM = vm ?? (await createVM())
 
   try {
     await loadParsedProject(asInternalVM(targetVM), JSON.stringify(project))
@@ -796,4 +841,159 @@ export const getVariable = (
   )
   const variable = target && Object.values(target.variables).find((candidate) => candidate.name === variableName)
   return variable ? Object.freeze({ id: variable.id, name: variable.name, value: variable.value }) : undefined
+}
+
+export interface ScratchRuntimeVariableUpdate {
+  readonly op: 'set-variable'
+  readonly targetName: string
+  readonly variableName: string
+  readonly value: string | number | boolean
+}
+
+export interface ScratchRuntimeTargetPropertyUpdate {
+  readonly op: 'set-target-property'
+  readonly targetName: string
+  readonly property: 'x' | 'y' | 'direction' | 'size' | 'visible' | 'currentCostume'
+  readonly value: string | number | boolean
+}
+
+export interface ScratchRuntimeStagePropertyUpdate {
+  readonly op: 'set-stage-property'
+  readonly property: 'tempo' | 'volume' | 'backdropIndex'
+  readonly value: number
+}
+
+export type ScratchRuntimePatchUpdate =
+  ScratchRuntimeVariableUpdate | ScratchRuntimeTargetPropertyUpdate | ScratchRuntimeStagePropertyUpdate
+
+export type ScratchRuntimePatchChange = ScratchRuntimePatchUpdate & {
+  readonly beforeValue: string | number | boolean
+}
+
+/**
+ * Atomically update existing, non-cloud scalar variables in a running preview VM.
+ * VM internals stay confined to this adapter and list/broadcast storage is excluded.
+ */
+export const setRuntimePatchValues = (
+  vm: ScratchVMHandle,
+  updates: readonly ScratchRuntimePatchUpdate[],
+): readonly ScratchRuntimePatchChange[] => {
+  if (updates.length < 1 || updates.length > 20) throw new Error('Runtime patch must contain 1–20 operations.')
+  const runtime = asInternalVM(vm).runtime
+  const seen = new Set<string>()
+  const prepared = updates.map((update) => {
+    let key: string
+    let beforeValue: string | number | boolean
+    let apply: (value: string | number | boolean) => void
+    if (update.op === 'set-variable') {
+      if (
+        (typeof update.value !== 'string' && typeof update.value !== 'number' && typeof update.value !== 'boolean') ||
+        (typeof update.value === 'number' &&
+          (!Number.isFinite(update.value) || Math.abs(update.value) > 1_000_000)) ||
+        (typeof update.value === 'string' && update.value.length > 512)
+      )
+        throw new Error(`Invalid value for ${update.targetName}/${update.variableName}.`)
+      key = `variable\u0000${update.targetName}\u0000${update.variableName}`
+      const targets = runtime.targets.filter((target) => target.isOriginal && target.getName() === update.targetName)
+      if (targets.length !== 1) throw new Error(`Could not resolve target ${update.targetName}.`)
+      const matches = Object.values(targets[0]!.variables).filter((variable) => variable.name === update.variableName)
+      if (matches.length !== 1)
+        throw new Error(`Could not resolve variable ${update.targetName}/${update.variableName}.`)
+      const variable = matches[0]!
+      if (variable.type !== '' || variable.isCloud)
+        throw new Error(
+          `Only existing non-cloud scalar variables can be changed (${update.targetName}/${update.variableName}).`,
+        )
+      if (
+        typeof variable.value !== 'string' &&
+        typeof variable.value !== 'number' &&
+        typeof variable.value !== 'boolean'
+      )
+        throw new Error(`Variable ${update.targetName}/${update.variableName} does not contain a scalar value.`)
+      beforeValue = variable.value
+      apply = (value) => {
+        variable.value = value
+      }
+    } else if (update.op === 'set-target-property') {
+      key = `target\u0000${update.targetName}\u0000${update.property}`
+      const matches = runtime.targets.filter(
+        (target) => target.isOriginal && !target.isStage && target.getName() === update.targetName,
+      )
+      if (matches.length !== 1) throw new Error(`Could not resolve unique sprite ${update.targetName}.`)
+      const target = matches[0]!
+      const property = update.property
+      const numberValue = typeof update.value === 'number' ? update.value : NaN
+      if (property === 'visible') {
+        if (typeof update.value !== 'boolean') throw new Error('visible must be a boolean.')
+        beforeValue = target.visible
+        apply = (value) => target.setVisible(value as boolean)
+      } else if (property === 'currentCostume') {
+        if (!Number.isSafeInteger(numberValue) || numberValue < 0 || numberValue >= target.getCostumes().length)
+          throw new Error('currentCostume is outside the costume range.')
+        beforeValue = target.currentCostume
+        apply = (value) => target.setCostume(value as number)
+      } else {
+        const limits =
+          property === 'x'
+            ? [-240, 240]
+            : property === 'y'
+              ? [-180, 180]
+              : property === 'size'
+                ? [1, 500]
+                : [-180, 180]
+        if (!Number.isFinite(numberValue) || numberValue < limits[0]! || numberValue > limits[1]!)
+          throw new Error(`${property} is outside the supported range.`)
+        beforeValue = target[property]
+        apply = (value) => {
+          if (property === 'x') target.setXY(value as number, target.y, true)
+          else if (property === 'y') target.setXY(target.x, value as number, true)
+          else if (property === 'direction') target.setDirection(value as number)
+          else if (asInternalVM(vm).renderer) target.setSize(value as number)
+          else target.size = value as number
+        }
+      }
+    } else {
+      key = `stage\u0000${update.property}`
+      const stages = runtime.targets.filter((target) => target.isOriginal && target.isStage)
+      if (stages.length !== 1) throw new Error('Could not resolve unique Stage target.')
+      const stage = stages[0]!
+      if (!Number.isFinite(update.value)) throw new Error(`${update.property} must be finite.`)
+      if (update.property === 'tempo') {
+        if (update.value < 20 || update.value > 500) throw new Error('tempo is outside the supported range.')
+        beforeValue = stage.tempo
+        apply = (value) => {
+          stage.tempo = value as number
+        }
+      } else if (update.property === 'volume') {
+        if (update.value < 0 || update.value > 100) throw new Error('volume is outside the supported range.')
+        beforeValue = stage.volume
+        apply = (value) => {
+          stage.volume = value as number
+        }
+      } else {
+        if (!Number.isSafeInteger(update.value) || update.value < 0 || update.value >= stage.getCostumes().length)
+          throw new Error('backdropIndex is outside the costume range.')
+        beforeValue = stage.currentCostume
+        apply = (value) => stage.setCostume(value as number)
+      }
+    }
+    if (seen.has(key)) throw new Error(`Duplicate runtime patch operation ${key}.`)
+    seen.add(key)
+    return { update, beforeValue, apply }
+  })
+
+  try {
+    for (const item of prepared) item.apply(item.update.value)
+  } catch (error) {
+    for (const item of prepared) item.apply(item.beforeValue)
+    throw error
+  }
+  return Object.freeze(
+    prepared.map(({ update, beforeValue }) =>
+      Object.freeze({
+        ...update,
+        beforeValue,
+      }),
+    ),
+  )
 }

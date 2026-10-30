@@ -1,0 +1,130 @@
+{
+  "format": "scratch-ai-bridge/project-fragment-budget",
+  "version": 1,
+  "measuredAt": "2026-10-30T14:54:45.133Z",
+  "method": {
+    "source": "research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.canonical.json",
+    "sample": "星港守衛：裂隙遠征",
+    "unit": "UTF-8 bytes and rough mixed-language token estimates",
+    "limitation": "Structural size comparison only. No provider tokenizer, model request, truncation event, quality score, or successful generation was measured.",
+    "fullProjectScope": "Canonical project JSON only; excludes any ai-response wrapper or natural-language explanation.",
+    "promptScope": "Compares this app production prompt with separate target prompts. Sum is reported because lower per-request size can still increase total repeated context."
+  },
+  "targetCount": 5,
+  "wholeProject": {
+    "canonicalJsonUtf8Bytes": 6779,
+    "prompt": {
+      "characters": 12431,
+      "estimatedTokens": 3960,
+      "utf8Bytes": 15135
+    }
+  },
+  "fragmented": {
+    "fragmentCount": 5,
+    "maxCanonicalTargetUtf8Bytes": 2392,
+    "maxEnvelopeOutputUtf8Bytes": 2529,
+    "totalEnvelopeOutputUtf8Bytes": 7332,
+    "maxPromptUtf8Bytes": 11059,
+    "totalPromptUtf8BytesAcrossSeparateRequests": 52762,
+    "sessionReuse": {
+      "assumption": "One AI conversation: first Stage prompt includes the full contract; later target prompts refer back to it.",
+      "maxPromptCharacters": 7598,
+      "totalPromptCharacters": 13848,
+      "totalPromptUtf8Bytes": 19270
+    },
+    "fragments": [
+      {
+        "fragmentId": "stage-1",
+        "targetKind": "stage",
+        "targetName": "Stage",
+        "prompt": {
+          "characters": 7598,
+          "estimatedTokens": 2200,
+          "utf8Bytes": 8568
+        },
+        "sessionReusePrompt": {
+          "characters": 7598,
+          "estimatedTokens": 2200,
+          "utf8Bytes": 8568
+        },
+        "canonicalPayloadUtf8Bytes": 774,
+        "fragmentEnvelopeUtf8Bytes": 1057
+      },
+      {
+        "fragmentId": "sprite-2",
+        "targetKind": "sprite",
+        "targetName": "巡防艇",
+        "prompt": {
+          "characters": 10063,
+          "estimatedTokens": 2821,
+          "utf8Bytes": 11047
+        },
+        "sessionReusePrompt": {
+          "characters": 1562,
+          "estimatedTokens": 740,
+          "utf8Bytes": 2674
+        },
+        "canonicalPayloadUtf8Bytes": 2392,
+        "fragmentEnvelopeUtf8Bytes": 2529
+      },
+      {
+        "fragmentId": "sprite-3",
+        "targetKind": "sprite",
+        "targetName": "裂隙掠奪者",
+        "prompt": {
+          "characters": 10067,
+          "estimatedTokens": 2825,
+          "utf8Bytes": 11059
+        },
+        "sessionReusePrompt": {
+          "characters": 1566,
+          "estimatedTokens": 744,
+          "utf8Bytes": 2686
+        },
+        "canonicalPayloadUtf8Bytes": 1436,
+        "fragmentEnvelopeUtf8Bytes": 1573
+      },
+      {
+        "fragmentId": "sprite-4",
+        "targetKind": "sprite",
+        "targetName": "脈衝彈",
+        "prompt": {
+          "characters": 10063,
+          "estimatedTokens": 2821,
+          "utf8Bytes": 11047
+        },
+        "sessionReusePrompt": {
+          "characters": 1562,
+          "estimatedTokens": 740,
+          "utf8Bytes": 2674
+        },
+        "canonicalPayloadUtf8Bytes": 1302,
+        "fragmentEnvelopeUtf8Bytes": 1439
+      },
+      {
+        "fragmentId": "sprite-5",
+        "targetKind": "sprite",
+        "targetName": "星核",
+        "prompt": {
+          "characters": 10061,
+          "estimatedTokens": 2819,
+          "utf8Bytes": 11041
+        },
+        "sessionReusePrompt": {
+          "characters": 1560,
+          "estimatedTokens": 738,
+          "utf8Bytes": 2668
+        },
+        "canonicalPayloadUtf8Bytes": 597,
+        "fragmentEnvelopeUtf8Bytes": 734
+      }
+    ]
+  },
+  "comparisons": {
+    "peakPromptCharacterReductionPercent": 19,
+    "totalPromptCharacterInflationPercent": 284.9,
+    "sessionReuseTotalPromptCharacterInflationPercent": 11.4,
+    "peakOutputUtf8ByteReductionPercent": 62.7,
+    "totalOutputUtf8ByteInflationPercent": 8.2
+  }
+}

@@ -130,6 +130,19 @@ const createDecodableWavFixture = () => {
   return { bytes: wav, sampleCount }
 }
 
+const stableCanonicalJson = (value) => {
+  if (Array.isArray(value)) return `[${value.map(stableCanonicalJson).join(',')}]`
+  if (value !== null && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableCanonicalJson(value[key])}`)
+      .join(',')}}`
+  }
+  return JSON.stringify(value)
+}
+
+const livePatchScriptSelector = (script) => createHash('sha256').update(stableCanonicalJson(script)).digest('hex')
+
 const createOverLimitArchive = async () => {
   const zip = new JSZip()
   zip.file('project.json', '{"targets":[]}', { compression: 'STORE', createFolders: false })
@@ -261,6 +274,7 @@ if (!address || typeof address === 'string') throw new Error('Could not determin
 
 let browser
 let page
+let livePreviewWatchdog
 let svgTestPage
 let strictCspSvgPage
 let stageFixturePage
@@ -1023,15 +1037,117 @@ try {
     )
   if (unlabeledTextareas.length > 0) throw new Error(`Unlabeled textareas: ${unlabeledTextareas.join(', ')}`)
   await page.locator('#project-request').fill('做一個可以收集金幣的平台遊戲')
-  await page.locator('#copy-instruction').click()
-  const studentInstruction = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  await page.locator('#copy-design-instruction').click()
+  const discussionInstruction = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
   if (
-    typeof studentInstruction !== 'string' ||
-    !studentInstruction.includes('作品需求：\n做一個可以收集金幣的平台遊戲') ||
-    !studentInstruction.includes('event_whenkeypressed')
+    typeof discussionInstruction !== 'string' ||
+    !discussionInstruction.includes('做一個可以收集金幣的平台遊戲') ||
+    !discussionInstruction.includes('核心循環') ||
+    discussionInstruction.includes('event_whenkeypressed')
   ) {
-    throw new Error('Student project request was not included in the copied AI instruction')
+    throw new Error('Compact game design prompt did not focus on mechanics without loading the full block catalog')
   }
+  await page.locator('#game-brief').fill('玩家控制小英雄跳過障礙收集金幣；每過一關障礙加快，碰撞後可立即重玩。')
+  await page.locator('#game-genre').selectOption('platformer')
+  await page.locator('#copy-build-instruction').click()
+  const productionInstruction = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  if (
+    typeof productionInstruction !== 'string' ||
+    !productionInstruction.includes('作品需求：\n做一個可以收集金幣的平台遊戲') ||
+    !productionInstruction.includes('玩家控制小英雄跳過障礙收集金幣') ||
+    !productionInstruction.includes('event_whenkeypressed')
+  ) {
+    throw new Error(
+      'Production prompt did not combine the original request, confirmed brief, and full authoring contract',
+    )
+  }
+
+  await page.locator('.fragment-workflow summary').click()
+  await page.locator('#fragment-kind').selectOption('stage')
+  await page.locator('#fragment-target-name').fill('深海救援')
+  await page.locator('#fragment-id').fill('stage-base')
+  await page.locator('#copy-fragment-prompt').click()
+  const fragmentInstruction = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  if (
+    typeof fragmentInstruction !== 'string' ||
+    !fragmentInstruction.includes('scratch-ai-bridge/project-fragment') ||
+    !fragmentInstruction.includes('只產生一個 target')
+  ) {
+    throw new Error('Per-target prompt did not request the compact fragment envelope')
+  }
+  const stageFragment = {
+    format: 'scratch-ai-bridge/project-fragment',
+    version: 1,
+    projectName: '深海救援',
+    fragmentId: 'stage-base',
+    target: {
+      kind: 'stage',
+      name: '深海救援',
+      variables: [],
+      lists: [],
+      costumes: [{ name: '海底', dataFormat: 'svg' }],
+      sounds: [],
+      scripts: [],
+      procedures: [],
+    },
+    broadcasts: [{ name: '救援完成' }],
+    extensions: [],
+  }
+  await page.locator('#fragment-editor').fill(JSON.stringify(stageFragment))
+  await page.locator('#add-fragment').click()
+  if (JSON.parse(await page.locator('#json-editor').inputValue()).stage.name !== '深海救援') {
+    throw new Error('Stage fragment was not assembled into the full project editor')
+  }
+  await page.locator('#fragment-kind').selectOption('sprite')
+  await page.locator('#fragment-target-name').fill('潛水員')
+  await page.locator('#fragment-id').fill('player-base')
+  await page.locator('#copy-fragment-prompt').click()
+  const reusedContractPrompt = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  if (
+    typeof reusedContractPrompt !== 'string' ||
+    !reusedContractPrompt.includes('沿用本 AI 對話前文') ||
+    reusedContractPrompt.includes('event_whenkeypressed')
+  ) {
+    throw new Error('Follow-up fragment prompt did not reuse the contract without repeating the opcode catalog')
+  }
+  await page.locator('#fragment-reuse-contract').uncheck()
+  await page.locator('#copy-fragment-prompt').click()
+  const standaloneFragmentPrompt = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  if (typeof standaloneFragmentPrompt !== 'string' || !standaloneFragmentPrompt.includes('event_whenkeypressed')) {
+    throw new Error('Standalone fragment prompt omitted its complete capability catalog')
+  }
+  await page.locator('#fragment-reuse-contract').check()
+  const spriteFragment = {
+    format: 'scratch-ai-bridge/project-fragment',
+    version: 1,
+    projectName: '深海救援',
+    fragmentId: 'player-base',
+    target: {
+      kind: 'sprite',
+      name: '潛水員',
+      variables: [],
+      lists: [],
+      costumes: [{ name: 'generic-character', dataFormat: 'svg' }],
+      sounds: [],
+      scripts: [],
+      procedures: [],
+      x: 0,
+      y: 0,
+      direction: 90,
+      size: 100,
+      visible: true,
+      draggable: false,
+      rotationStyle: 'all around',
+    },
+    broadcasts: [],
+    extensions: [],
+  }
+  await page.locator('#fragment-editor').fill(JSON.stringify(spriteFragment))
+  await page.locator('#add-fragment').click()
+  if (JSON.parse(await page.locator('#json-editor').inputValue()).sprites[0]?.name !== '潛水員') {
+    throw new Error('Sprite fragment was not merged into the assembled project')
+  }
+  await page.locator('#reset-fragments').click()
 
   const malformedAiResponse = '{"broken":'
   await page.locator('#json-editor').fill(malformedAiResponse)
@@ -2886,8 +3002,243 @@ try {
   if (!animatedStatus?.includes('動畫執行中')) {
     throw new Error(`Isolated animation preview failed to start: ${animatedStatus}`)
   }
+  const animationFrameHandle = await page.locator('#student-preview iframe.student-preview-animation').elementHandle()
+  if (!animationFrameHandle) throw new Error('Animated preview iframe is missing before live editing')
   const animatedCanvas = page.frameLocator('#student-preview iframe.student-preview-animation').locator('canvas')
   const beforeAnimationInput = await animatedCanvas.screenshot()
+  const previewToken = new URL(await animatedFrame.getAttribute('src')).searchParams.get('token')
+  if (!previewToken) throw new Error('Animated preview URL did not expose its task-scoped message token')
+  const rejectedMessage = await page.evaluate(
+    (token) =>
+      new Promise((resolve, reject) => {
+        const requestId = `invalid-shape-${crypto.randomUUID()}`
+        const timeout = setTimeout(() => {
+          window.removeEventListener('message', onMessage)
+          reject(new Error('Animated preview did not acknowledge an invalid runtime patch'))
+        }, 2_000)
+        const onMessage = (event) => {
+          if (event.data?.type !== 'runtime-patch-result' || event.data.requestId !== requestId) return
+          clearTimeout(timeout)
+          window.removeEventListener('message', onMessage)
+          resolve(event.data)
+        }
+        window.addEventListener('message', onMessage)
+        const frame = document.querySelector('#student-preview iframe.student-preview-animation')
+        frame.contentWindow.postMessage(
+          {
+            type: 'apply-runtime-patch',
+            token,
+            requestId,
+            baseRevision: 0,
+            revision: 1,
+            operations: [{ op: 'set-variable', target: 'Stage', name: 'score', value: 900, injected: true }],
+          },
+          '*',
+        )
+      }),
+    previewToken,
+  )
+  if (rejectedMessage.ok !== false || !rejectedMessage.error?.includes('shape is invalid')) {
+    throw new Error(`Animated preview accepted a malformed runtime patch: ${JSON.stringify(rejectedMessage)}`)
+  }
+  const adjustableVariable = await page
+    .locator('#json-editor')
+    .inputValue()
+    .then((source) => {
+      const project = JSON.parse(source)
+      for (const target of [project.stage, ...project.sprites]) {
+        const variable = target.variables.find((candidate) => candidate.cloud !== true)
+        if (variable) return { target: target.name, name: variable.name, value: variable.value }
+      }
+      return null
+    })
+  if (!adjustableVariable) throw new Error('Animated preview fixture has no adjustable non-cloud variable')
+  const liveProjectBefore = JSON.parse(await page.locator('#json-editor').inputValue())
+  const adjustableSprite = liveProjectBefore.sprites[0]
+  if (!adjustableSprite) throw new Error('Animated preview fixture has no sprite for target-property coverage')
+  const targetX = adjustableSprite.x <= 220 ? adjustableSprite.x + 20 : adjustableSprite.x - 20
+  const targetSize = Math.min(500, adjustableSprite.size + 15)
+  const stageTempo = Math.min(500, (liveProjectBefore.stage.tempo ?? 60) + 10)
+  const stageVolume = Math.max(0, (liveProjectBefore.stage.volume ?? 100) - 10)
+  const nextBackdrop = liveProjectBefore.stage.costumes.length
+    ? ((liveProjectBefore.stage.currentCostume ?? 0) + 1) % liveProjectBefore.stage.costumes.length
+    : null
+  const patchedValue =
+    typeof adjustableVariable.value === 'number'
+      ? adjustableVariable.value + 7
+      : typeof adjustableVariable.value === 'boolean'
+        ? !adjustableVariable.value
+        : `${adjustableVariable.value}-live-smoke`
+  const livePatch = {
+    format: 'scratch-ai-bridge/live-patch',
+    version: 1,
+    baseRevision: 0,
+    summary: 'browser smoke live edit',
+    operations: [
+      { op: 'set-variable', target: adjustableVariable.target, name: adjustableVariable.name, value: patchedValue },
+      { op: 'set-target-property', target: adjustableSprite.name, property: 'x', value: targetX },
+      { op: 'set-target-property', target: adjustableSprite.name, property: 'size', value: targetSize },
+      { op: 'set-stage-property', property: 'tempo', value: stageTempo },
+      { op: 'set-stage-property', property: 'volume', value: stageVolume },
+      ...(nextBackdrop === null
+        ? []
+        : [{ op: 'set-stage-property', property: 'backdropIndex', value: nextBackdrop }]),
+    ],
+  }
+  await page.locator('.student-live-patch summary').click()
+  const livePatchInput = page.locator('#live-patch-editor')
+  await livePatchInput.fill(JSON.stringify(livePatch))
+  await page.getByRole('button', { name: '檢查修改' }).click()
+  await page.getByText(/修改內容合法/).waitFor()
+  await page.getByRole('button', { name: '套用到執行中的遊戲' }).click()
+  await page.getByText(/已即時套用「browser smoke live edit」/).waitFor()
+  const patchedCanonical = JSON.parse(await page.locator('#json-editor').inputValue())
+  const patchedTarget = [patchedCanonical.stage, ...patchedCanonical.sprites].find(
+    (target) => target.name === adjustableVariable.target,
+  )
+  if (
+    patchedTarget?.variables.find((variable) => variable.name === adjustableVariable.name)?.value !== patchedValue
+  ) {
+    throw new Error('Live variable patch did not synchronize the Canonical editor')
+  }
+  const patchedSprite = patchedCanonical.sprites.find((sprite) => sprite.name === adjustableSprite.name)
+  if (patchedSprite?.x !== targetX || patchedSprite?.size !== targetSize) {
+    throw new Error('Live target-property patch did not synchronize the Canonical editor')
+  }
+  if (patchedCanonical.stage.tempo !== stageTempo || patchedCanonical.stage.volume !== stageVolume) {
+    throw new Error('Live Stage property patch did not synchronize the Canonical editor')
+  }
+  if (nextBackdrop !== null && patchedCanonical.stage.currentCostume !== nextBackdrop) {
+    throw new Error('Live backdrop patch did not synchronize the Canonical editor')
+  }
+  await page.getByRole('button', { name: '復原上次修改' }).click()
+  await page.getByText(/已復原「browser smoke live edit」/).waitFor()
+  const undoneCanonical = JSON.parse(await page.locator('#json-editor').inputValue())
+  const undoneTarget = [undoneCanonical.stage, ...undoneCanonical.sprites].find(
+    (target) => target.name === adjustableVariable.target,
+  )
+  if (
+    undoneTarget?.variables.find((variable) => variable.name === adjustableVariable.name)?.value !==
+    adjustableVariable.value
+  ) {
+    throw new Error('Live variable undo did not restore the Canonical editor')
+  }
+  const undoneSprite = undoneCanonical.sprites.find((sprite) => sprite.name === adjustableSprite.name)
+  if (undoneSprite?.x !== adjustableSprite.x || undoneSprite?.size !== adjustableSprite.size) {
+    throw new Error('Live target-property undo did not restore the Canonical editor')
+  }
+  if (
+    undoneCanonical.stage.tempo !== liveProjectBefore.stage.tempo ||
+    undoneCanonical.stage.volume !== liveProjectBefore.stage.volume ||
+    undoneCanonical.stage.currentCostume !== liveProjectBefore.stage.currentCostume
+  ) {
+    throw new Error('Live Stage-property undo did not restore the Canonical editor')
+  }
+  await page.getByRole('button', { name: '重做已復原修改' }).click()
+  await page.getByText(/已重做「browser smoke live edit」/).waitFor()
+  const redoneCanonical = JSON.parse(await page.locator('#json-editor').inputValue())
+  if (
+    redoneCanonical.sprites.find((sprite) => sprite.name === adjustableSprite.name)?.x !== targetX ||
+    redoneCanonical.stage.tempo !== stageTempo
+  ) {
+    throw new Error('Live runtime redo did not reapply target and Stage values')
+  }
+  await page.getByRole('button', { name: '復原上次修改' }).click()
+  await page.getByText(/已復原「browser smoke live edit」/).waitFor()
+  const structuralProject = JSON.parse(await page.locator('#json-editor').inputValue())
+  const structuralTarget = structuralProject.sprites.find((sprite) => sprite.name === adjustableSprite.name)
+  const structuralSelector = livePatchScriptSelector(structuralTarget.scripts[0])
+  const addedScript = {
+    blocks: [
+      { opcode: 'event_whenflagclicked' },
+      { opcode: 'looks_say', inputs: { MESSAGE: { type: 'literal', value: 'Live script patch loaded' } } },
+    ],
+  }
+  const structuralPatch = {
+    format: 'scratch-ai-bridge/live-patch',
+    version: 1,
+    baseRevision: 4,
+    summary: 'browser smoke script reload',
+    operations: [{ op: 'add-target-script', target: adjustableSprite.name, script: addedScript }],
+  }
+  await livePatchInput.fill(JSON.stringify(structuralPatch))
+  await page.getByRole('button', { name: '檢查修改' }).click()
+  await page.getByText(/修改內容合法/).waitFor()
+  if (!structuralSelector) throw new Error('Could not create a stable structural script selector')
+  await page.getByRole('button', { name: '套用到執行中的遊戲' }).click()
+  await page.waitForFunction(
+    () => {
+      const status = document.querySelector('.student-live-patch [role="status"]')
+      return (
+        status?.textContent?.includes('已套用「browser smoke script reload」') || status?.dataset.kind === 'error'
+      )
+    },
+    null,
+    { timeout: 50_000 },
+  )
+  const structuralStatus = await page.locator('.student-live-patch [role="status"]').textContent()
+  if (!structuralStatus?.includes('已套用「browser smoke script reload」')) {
+    throw new Error(`Structural patch did not reload successfully: ${structuralStatus}`)
+  }
+  const structurePatchedProject = JSON.parse(await page.locator('#json-editor').inputValue())
+  if (
+    structurePatchedProject.sprites.find((sprite) => sprite.name === adjustableSprite.name)?.scripts.length !==
+    structuralTarget.scripts.length + 1
+  ) {
+    throw new Error('Structural script patch did not update the Canonical editor')
+  }
+  await page.getByRole('button', { name: '復原上次修改' }).click()
+  await page.getByText(/已復原「browser smoke script reload」/).waitFor({ timeout: 60_000 })
+  const structureUndoneProject = JSON.parse(await page.locator('#json-editor').inputValue())
+  if (
+    structureUndoneProject.sprites.find((sprite) => sprite.name === adjustableSprite.name)?.scripts.length !==
+    structuralTarget.scripts.length
+  ) {
+    throw new Error('Structural script undo did not restore the previous project')
+  }
+  await page.getByRole('button', { name: '重做已復原修改' }).click()
+  await page.getByText(/已重做「browser smoke script reload」/).waitFor({ timeout: 60_000 })
+  const structureRedoneProject = JSON.parse(await page.locator('#json-editor').inputValue())
+  if (
+    structureRedoneProject.sprites.find((sprite) => sprite.name === adjustableSprite.name)?.scripts.length !==
+    structuralTarget.scripts.length + 1
+  ) {
+    throw new Error('Structural script redo did not restore the patched project')
+  }
+  await page.getByRole('button', { name: '復原上次修改' }).click()
+  await page.getByText(/已復原「browser smoke script reload」/).waitFor({ timeout: 60_000 })
+  const sameAnimationFrame = await page
+    .locator('#student-preview iframe.student-preview-animation')
+    .evaluate((frame, originalFrame) => frame === originalFrame, animationFrameHandle)
+  if (!sameAnimationFrame) throw new Error('Structural apply/undo/redo replaced the isolated animation iframe')
+  const invalidStructurePatch = {
+    format: 'scratch-ai-bridge/live-patch',
+    version: 1,
+    baseRevision: 8,
+    summary: 'browser smoke rejected script',
+    operations: [
+      {
+        op: 'add-target-script',
+        target: adjustableSprite.name,
+        script: { blocks: [{ opcode: 'unsupported_untrusted_opcode' }] },
+      },
+    ],
+  }
+  await livePatchInput.fill(JSON.stringify(invalidStructurePatch))
+  await page.getByRole('button', { name: '檢查修改' }).click()
+  await page.getByText(/修改內容合法/).waitFor()
+  await page.getByRole('button', { name: '套用到執行中的遊戲' }).click()
+  await page.locator('.student-live-patch [data-kind="error"]').waitFor()
+  if ((await page.locator('#student-preview iframe.student-preview-animation').count()) !== 1) {
+    throw new Error('A rejected structural patch stopped or replaced the current preview')
+  }
+  const afterRejectedStructure = JSON.parse(await page.locator('#json-editor').inputValue())
+  if (
+    afterRejectedStructure.sprites.find((sprite) => sprite.name === adjustableSprite.name)?.scripts.length !==
+    structuralTarget.scripts.length
+  ) {
+    throw new Error('A rejected structural patch changed the Canonical editor')
+  }
   await animatedCanvas.evaluate((canvas) => {
     const view = canvas.ownerDocument.defaultView
     if (!view) throw new Error('Animated preview canvas has no window')
@@ -3201,6 +3552,23 @@ try {
   }
   await page.locator('#student-preview .student-preview-actions button').filter({ hasText: '停止預覽' }).click()
   await edgeTriggeredFrame.waitFor({ state: 'detached' })
+
+  if (process.env.BROWSER_LIVE_EDIT_SOAK === '1') {
+    await clickStudentPreviewStart(page)
+    await page.waitForFunction(
+      () => document.querySelector('.student-preview-stage-status')?.textContent?.includes('動畫執行中'),
+      null,
+      { timeout: 10_000 },
+    )
+    await page.waitForFunction(
+      () =>
+        document.querySelector('.student-preview-stage-status')?.textContent?.includes('120 秒上限') === true &&
+        document.querySelector('#student-preview iframe.student-preview-animation') === null,
+      null,
+      { timeout: 135_000 },
+    )
+    livePreviewWatchdog = '120-second live preview watchdog stopped and removed the isolated frame'
+  }
 
   const archiveWithProjectJson = async (sourcePath, project) => {
     const zip = await JSZip.loadAsync(await readFile(sourcePath))
@@ -5138,6 +5506,7 @@ try {
     soundWaitPreview,
     combinedAudioEffects,
     offlineReload,
+    ...(livePreviewWatchdog === undefined ? {} : { livePreviewWatchdog }),
     malformedAssetPreviews: {
       sounds: malformedSoundPreviewCount,
       costumes: malformedCostumePreviewCount,
@@ -5249,6 +5618,8 @@ try {
     try {
       const violations = await page.evaluate(() => window.__cspViolations ?? [])
       if (violations.length > 0) failures.push(`CSP details: ${JSON.stringify(violations)}`)
+      const livePatchStatus = await page.locator('.student-live-patch [role="status"]').textContent().catch(() => null)
+      if (livePatchStatus) failures.push(`Live patch status: ${livePatchStatus}`)
     } catch {
       // Preserve the original browser failure if the page has already closed.
     }

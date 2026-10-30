@@ -9,8 +9,6 @@
  * Use `compile()` or `saveSb3()` to persist to disk.
  */
 
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 import { uid, uidTarget } from './uid.js';
 
 // ─── Scratch VM & Canonical Project ──────────────────────────────────────────
@@ -160,8 +158,9 @@ export class ScratchSession {
    * @param sb3Path Absolute or relative path to .sb3 file
    */
   async loadSb3(sb3Path: string): Promise<void> {
-    const resolved = path.resolve(sb3Path);
-    const buf = await fs.promises.readFile(resolved);
+    const [{ resolve }, fs] = await Promise.all([import('node:path'), import('node:fs/promises')]);
+    const resolved = resolve(sb3Path);
+    const buf = await fs.readFile(resolved);
     const result = await this._loadSb3WithEntries(buf);
     this.project = result.project;
     this.zipEntries = result.zipEntries;
@@ -192,7 +191,8 @@ export class ScratchSession {
    /** Save the current project to an .sb3 file using jszip. */
    async saveSb3(outputPath?: string): Promise<string> {
      if (!this.project) throw new Error('No project loaded. Use newProject() or loadSb3() first.');
-     const resolved = outputPath ? path.resolve(outputPath) : this.projectPath;
+     const [{ resolve }, fs] = await Promise.all([import('node:path'), import('node:fs/promises')]);
+     const resolved = outputPath ? resolve(outputPath) : this.projectPath;
      if (!resolved) throw new Error('No output path. Pass an explicit output path.');
 
      const { default: JSZip } = await import('jszip');
@@ -219,7 +219,7 @@ export class ScratchSession {
        compressionOptions: { level: 6 },
      });
      const buf = new Uint8Array(await blob.arrayBuffer());
-     await fs.promises.writeFile(resolved, buf);
+     await fs.writeFile(resolved, buf);
      this.projectPath = resolved;
      this.dirty = false;
      return resolved;
@@ -239,7 +239,13 @@ export class ScratchSession {
     // Extract all ZIP entries (excluding project.json which we just parsed)
     for (const [name, entry] of Object.entries(zip.files)) {
       if (name === 'project.json') continue;
-      zipEntries.set(name, entry);
+      // Wrap entry to provide the required async interface
+      zipEntries.set(name, {
+        async: (type: string) => {
+          // @ts-ignore - entry.async returns a promise
+          return entry.async(type) as Promise<Uint8Array>;
+        }
+      });
     }
 
     return { project, zipEntries };
@@ -248,6 +254,8 @@ export class ScratchSession {
   /**
    * @deprecated Use _loadSb3WithEntries instead. Kept for compatibility.
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // @ts-expect-error - _loadProjectJsonFromSb3 is kept for backward compatibility but not currently used
   private async _loadProjectJsonFromSb3(buf: Buffer | Uint8Array): Promise<Record<string, unknown>> {
     const result = await this._loadSb3WithEntries(buf);
     return result.project;
@@ -758,6 +766,54 @@ export class ScratchSession {
     const archiveBytes = await buildScratchProjectArchive(canonicalProject, { retainOriginalEntries: retainMap });
 
     return archiveBytes;
+  }
+
+  /**
+   * Plan a patch operation without applying it.
+   * @param patch The patch to plan
+   * @returns Planning result
+   */
+  plan(patch: Record<string, unknown>): Record<string, unknown> {
+    if (patch === null || typeof patch !== 'object' || Array.isArray(patch)) {
+      return { status: 'invalid', message: 'Patch must be a JSON object.' };
+    }
+    return {
+      status: 'unsupported',
+      message: 'Patch planning and operation validation are not implemented; no changes were made.',
+    };
+  }
+
+  /**
+   * Apply a patch and save to new SB3 file.
+   * @param patch The patch to apply
+   * @param outputPath Output SB3 path
+   * @returns Apply result
+   */
+  async apply(patch: Record<string, unknown>, _outputPath: string): Promise<Record<string, unknown>> {
+    const planResult = this.plan(patch);
+    throw new Error(String(planResult['message'] ?? 'Patch application is not implemented.'));
+  }
+
+  /**
+   * Undo the last operation.
+   * @returns Undo result
+   */
+  undo(): Record<string, unknown> {
+    return {
+      status: 'unsupported',
+      message: 'Undo history is not implemented; no changes were made.',
+    };
+  }
+
+  /**
+   * Show differences from original project.
+   * @returns Diff result
+   */
+  diff(): Record<string, unknown> {
+    return {
+      status: 'unsupported',
+      message: 'Project diff is not implemented; no comparison was performed.',
+    };
   }
 
   // ─── Hat wiring ──────────────────────────────────────────────────────────

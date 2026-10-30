@@ -1,150 +1,61 @@
 # Generator Contract
 
-本文件定義 Generator 的輸入/輸出格式與驗證要求。
+## CLI
 
-## 輸入格式
-
-Generator 正式生成入口接受 Canonical IR JSON。Compiler 會先驗證 IR，再透過官方 Scratch VM 編譯；需要多角色、素材及巢狀積木圖時，這是可靠輸入格式。
-
-```json
-{
-  "format": "scratch-ai-bridge/canonical-ir",
-  "version": 1,
-  "name": "My Scratch Game",
-  "stage": { "kind": "stage", "name": "Stage", "variables": [], "lists": [], "costumes": [], "sounds": [], "scripts": [], "procedures": [] },
-  "sprites": []
-}
+```sh
+scratch-ai-bridge generate <design.json> --out <new-file.sb3> [--report <report.json>] [--force]
 ```
 
-Generator 仍保留實驗性 `GameDesign` adapter，但它只消化內部 `spritesDef` 格式。舊版文件列出的 `sprites: SpriteDef[]` 會被拒絕，避免轉成空白作品卻回報成功。Markdown 目前不屬於可靠的生成格式。
+The command accepts either Canonical IR v1 JSON or the legacy GameDesign JSON with `spritesDef`. Markdown is
+rejected because the previous frontmatter reader did not describe scripts or assets. Existing output files are
+preserved unless `--force` is supplied. Output is written atomically after all generation gates pass.
 
-### 實驗性 `spritesDef` JSON
+The compatibility entry point `scratch-session new-game --design=<design.json> --output=<directory>` delegates to
+the same generator. The old `newGame` command spelling remains accepted.
 
-```typescript
-interface GameDesign {
-  id: string;
-  title: string;
-  type: string;
-  sprites: number;
-  blocks: number;
-  difficulty: string;
-  version: string;
-  created: string;
-  designDoc: string;
-  outputSb3: string;
-  outputJson: string;
-  spritesDef?: SpriteDef[];
-  variables?: VariableDef[];
-  lists?: ListDef[];
-  scripts?: ScriptDef[];
-}
+## GameDesign JSON
 
-interface SpriteDef {
-  name: string;
-  x?: number;
-  y?: number;
-  size?: number;
-  direction?: number;
-  visible?: boolean;
-  costumeName?: string;
-  costumes: CostumeDef[];
-  sounds: SoundDef[];
-}
+GameDesign must include a non-empty `title` and at least one `spritesDef` entry. `sprites` and `blocks`, when
+positive, are checked against the declared sprite count and the full nested block count. Variables and lists without
+a `sprite` are global Stage data; scoped entries must reference a declared sprite. Each script target must exist.
 
-interface CostumeDef {
-  name: string;
-  md5: string;
-  bitmapResolution?: number;
-  costumeCenterX?: number;
-  costumeCenterY?: number;
-  rotationCenterX?: number;
-  rotationCenterY?: number;
-}
+Block stacks may be written as arrays, and nested inputs are recursively converted. Primitive input values become
+Canonical literals. Explicit Canonical inputs support `literal`, `variable`, `list`, `broadcast`, `block`, and
+`stack`. Unknown fields and input types are rejected with a JSON path. Raw block `next`/`parent` graph wiring is not
+part of GameDesign; use Canonical IR when explicit block graph identities are required.
 
-interface SoundDef {
-  name: string;
-  md5: string;
-  sampleCount?: number;
-  rate?: number;
-  format?: string;
-}
-```
+## Verification gates
 
-需要保留正式的腳本及素材時，請使用 Canonical IR。
+Generation returns a JSON object with `format: "scratch-ai-bridge/generation"`, status, output path, manifest,
+diagnostics, and these gates:
 
-## 輸出格式
+- `design-input-validation`, `canonical-schema-validation`, `canonical-semantic-validation`
+- `scratch-vm-compile-save`
+- `archive-validation`, `project-json-validation`, `block-graph-validation`
+- `asset-presence-and-md5`
+- `scratch-vm-load`, `scratch-vm-save`, `scratch-vm-reload`
+- `atomic-output-write` when an output path is requested
+- `runtime-behavior`, which remains `not-run` until a deterministic gameplay scenario is run
+- `renderer-preview`, which passes when `--preview <stage.png>` captures the official Scratch stage; otherwise `not-run`
 
-Generator 輸出兩種格式：
+A successful result means generation and listed structural/VM gates passed. A renderer preview confirms the Scratch
+browser renderer loaded and captured the stage, but does not verify gameplay or Scratch website import. Asset bytes
+are checked against their `assetId` MD5; ZIP asset presence alone is not treated as semantic/runtime verification.
 
-### 1. SB3 (Scratch 3.0 Project)
-
-- Binary format: SB3 (ZIP with `project.json`)
-- Output path: `{outputDir}/{input-basename}.sb3`; 若目錄不存在會自動建立。
-
-### 2. Manifest JSON
-
-```typescript
-interface ManifestEntry {
-  inputHash: string;      // SHA-256 of input
-  toolVersion: string;    // Generator version
-  gateResults: GateResult[];
-  outputHash?: string;    // sha256:<64 lowercase hex characters>
-  failurePath?: string[]; // Gates that failed
-}
-
-interface GateResult {
-  name: string;
-  status: 'pass' | 'fail';
-  message?: string;
-}
-```
-
-## 驗證要求
-
-每次生成必須通過以下 gates：
-
-1. **archive-validation**: SB3 ZIP 結構正確
-2. **graph-validation**: Block graph reciprocity 正確
-3. **vm-load**: VM 能正確載入 SB3
-4. **vm-save**: VM 能正確儲存 SB3
-5. **vm-reload**: VM 能正確 reload SB3
-
-## 診斷格式
-
-失敗時必須輸出診斷訊息：
-
-```typescript
-interface Diagnostic {
-  type: 'error' | 'warning';
-  stage: string;
-  code: string;
-  message: string;
-  suggestion: string;
-  location?: {
-    target?: string;
-    index?: number;
-  };
-}
-```
-
-## Generator Contract API
+## API
 
 ```typescript
 export interface GeneratorOptions {
+  outputFile?: string;
   outputDir?: string;
-  manifest?: string;
-  continueOnError?: boolean;
+  reportPath?: string;
+  previewPath?: string;
+  force?: boolean;
 }
 
-export async function generateGame(
-  input: string,           // Path to design file
-  options?: GeneratorOptions
-): Promise<GeneratorResult>;
-
-export interface GeneratorResult {
-  success: boolean;
-  output?: string;         // Path to output SB3
-  manifest?: ManifestEntry;
-  diagnostics: Diagnostic[];
-}
+export async function generateGame(input: string, options?: GeneratorOptions): Promise<GeneratorResult>;
 ```
+
+CLI stdout contains only the versioned JSON result. CLI argument errors use exit code 2, generation failures use
+exit code 1, and verified generation uses exit code 0. Detailed diagnosis goes in the JSON result and optional
+report file.

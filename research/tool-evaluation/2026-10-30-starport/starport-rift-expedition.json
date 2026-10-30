@@ -1,0 +1,518 @@
+{
+  "id": "starport-rift-expedition",
+  "title": "星港守衛：裂隙遠征",
+  "type": "arcade-space-shooter",
+  "sprites": 5,
+  "blocks": 80,
+  "difficulty": "advanced",
+  "version": "1.0",
+  "created": "2026-10-30",
+  "designDoc": "完整遊戲規格見同目錄 README；玩家可移動射擊、敵機巡航、命中計分、生命歸零結束。",
+  "outputSb3": "starport-rift-expedition.sb3",
+  "outputJson": "",
+  "spritesDef": [
+    {
+      "name": "巡防艇",
+      "costumes": [
+        "巡防艇"
+      ],
+      "x": 0,
+      "y": -130,
+      "direction": 90
+    },
+    {
+      "name": "裂隙掠奪者",
+      "costumes": [
+        "敵機"
+      ],
+      "x": 130,
+      "y": 100,
+      "direction": -90
+    },
+    {
+      "name": "脈衝彈",
+      "costumes": [
+        "脈衝彈"
+      ],
+      "x": 0,
+      "y": -120,
+      "direction": 0,
+      "visible": false
+    },
+    {
+      "name": "星核",
+      "costumes": [
+        "星核"
+      ],
+      "x": -120,
+      "y": 40,
+      "direction": 0
+    },
+    {
+      "name": "爆炸特效",
+      "costumes": [
+        "爆炸"
+      ],
+      "x": 130,
+      "y": 100,
+      "direction": 0,
+      "visible": false
+    }
+  ],
+  "variables": [
+    {
+      "name": "分數",
+      "value": 0
+    },
+    {
+      "name": "護盾",
+      "value": 3
+    },
+    {
+      "name": "關卡",
+      "value": 1
+    },
+    {
+      "name": "敵機速度",
+      "value": 3
+    },
+    {
+      "name": "彈藥冷卻",
+      "value": 0
+    },
+    {
+      "name": "遊戲狀態",
+      "value": "待命"
+    }
+  ],
+  "lists": [
+    {
+      "name": "任務紀錄",
+      "values": [
+        "裂隙訊號已鎖定"
+      ]
+    }
+  ],
+  "scripts": [
+    {
+      "target": "巡防艇",
+      "x": 30,
+      "y": 30,
+      "blocks": [
+        {
+          "opcode": "event_whenflagclicked"
+        },
+        {
+          "opcode": "looks_show"
+        },
+        {
+          "opcode": "motion_gotoxy",
+          "inputs": {
+            "X": 0,
+            "Y": -130
+          }
+        },
+        {
+          "opcode": "data_setvariableto",
+          "fields": {
+            "VARIABLE": "遊戲狀態"
+          },
+          "inputs": {
+            "VALUE": "作戰中"
+          }
+        },
+        {
+          "opcode": "control_forever",
+          "inputs": {
+            "SUBSTACK": [
+              {
+                "opcode": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "sensing_keypressed",
+                      "fields": {
+                        "KEY_OPTION": "left arrow"
+                      }
+                    }
+                  },
+                  "SUBSTACK": [
+                    {
+                      "opcode": "motion_changexby",
+                      "inputs": {
+                        "DX": -7
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "opcode": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "sensing_keypressed",
+                      "fields": {
+                        "KEY_OPTION": "right arrow"
+                      }
+                    }
+                  },
+                  "SUBSTACK": [
+                    {
+                      "opcode": "motion_changexby",
+                      "inputs": {
+                        "DX": 7
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "opcode": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "sensing_keypressed",
+                      "fields": {
+                        "KEY_OPTION": "space"
+                      }
+                    }
+                  },
+                  "SUBSTACK": [
+                    {
+                      "opcode": "event_broadcast",
+                      "inputs": {
+                        "BROADCAST_INPUT": {
+                          "type": "broadcast",
+                          "name": "發射脈衝"
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_wait",
+                      "inputs": {
+                        "DURATION": 0.18
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "target": "脈衝彈",
+      "x": 320,
+      "y": 30,
+      "blocks": [
+        {
+          "opcode": "event_whenbroadcastreceived",
+          "fields": {
+            "BROADCAST_OPTION": "發射脈衝"
+          }
+        },
+        {
+          "opcode": "motion_goto",
+          "inputs": {
+            "TO": {
+              "type": "block",
+              "block": {
+                "opcode": "motion_xಯposition"
+              }
+            }
+          }
+        },
+        {
+          "opcode": "looks_show"
+        },
+        {
+          "opcode": "control_repeat",
+          "inputs": {
+            "TIMES": 22,
+            "SUBSTACK": [
+              {
+                "opcode": "motion_changeyby",
+                "inputs": {
+                  "DY": 13
+                }
+              },
+              {
+                "opcode": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "sensing_touchingobject",
+                      "fields": {
+                        "TOUCHINGOBJECTMENU": "裂隙掠奪者"
+                      }
+                    }
+                  },
+                  "SUBSTACK": [
+                    {
+                      "opcode": "event_broadcast",
+                      "inputs": {
+                        "BROADCAST_INPUT": {
+                          "type": "broadcast",
+                          "name": "命中敵機"
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_stop",
+                      "fields": {
+                        "STOP_OPTION": "this script"
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "opcode": "control_wait",
+                "inputs": {
+                  "DURATION": 0.03
+                }
+              }
+            ]
+          }
+        },
+        {
+          "opcode": "looks_hide"
+        }
+      ]
+    },
+    {
+      "target": "裂隙掠奪者",
+      "x": 30,
+      "y": 300,
+      "blocks": [
+        {
+          "opcode": "event_whenflagclicked"
+        },
+        {
+          "opcode": "looks_show"
+        },
+        {
+          "opcode": "control_forever",
+          "inputs": {
+            "SUBSTACK": [
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": -3
+                }
+              },
+              {
+                "opcode": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "operator_lt",
+                      "inputs": {
+                        "OPERAND1": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "motion_xposition"
+                          }
+                        },
+                        "OPERAND2": {
+                          "type": "literal",
+                          "value": -210
+                        }
+                      }
+                    }
+                  },
+                  "SUBSTACK": [
+                    {
+                      "opcode": "motion_setx",
+                      "inputs": {
+                        "X": 210
+                      }
+                    },
+                    {
+                      "opcode": "motion_changeyby",
+                      "inputs": {
+                        "DY": -18
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "opcode": "control_if",
+                "inputs": {
+                  "CONDITION": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "sensing_touchingobject",
+                      "fields": {
+                        "TOUCHINGOBJECTMENU": "巡防艇"
+                      }
+                    }
+                  },
+                  "SUBSTACK": [
+                    {
+                      "opcode": "event_broadcast",
+                      "inputs": {
+                        "BROADCAST_INPUT": {
+                          "type": "broadcast",
+                          "name": "玩家受擊"
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "motion_gotoxy",
+                      "inputs": {
+                        "X": 150,
+                        "Y": 140
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "opcode": "control_wait",
+                "inputs": {
+                  "DURATION": 0.04
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "target": "星核",
+      "x": 320,
+      "y": 300,
+      "blocks": [
+        {
+          "opcode": "event_whenflagclicked"
+        },
+        {
+          "opcode": "looks_show"
+        },
+        {
+          "opcode": "control_forever",
+          "inputs": {
+            "SUBSTACK": [
+              {
+                "opcode": "motion_turnright",
+                "inputs": {
+                  "DEGREES": 5
+                }
+              },
+              {
+                "opcode": "control_wait",
+                "inputs": {
+                  "DURATION": 0.08
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "target": "巡防艇",
+      "x": 600,
+      "y": 30,
+      "blocks": [
+        {
+          "opcode": "event_whenbroadcastreceived",
+          "fields": {
+            "BROADCAST_OPTION": "命中敵機"
+          }
+        },
+        {
+          "opcode": "data_changevariableby",
+          "fields": {
+            "VARIABLE": "分數"
+          },
+          "inputs": {
+            "VALUE": 10
+          }
+        },
+        {
+          "opcode": "looks_sayforsecs",
+          "inputs": {
+            "MESSAGE": "命中！+10",
+            "SECS": 0.7
+          }
+        }
+      ]
+    },
+    {
+      "target": "巡防艇",
+      "x": 600,
+      "y": 250,
+      "blocks": [
+        {
+          "opcode": "event_whenbroadcastreceived",
+          "fields": {
+            "BROADCAST_OPTION": "玩家受擊"
+          }
+        },
+        {
+          "opcode": "data_changevariableby",
+          "fields": {
+            "VARIABLE": "護盾"
+          },
+          "inputs": {
+            "VALUE": -1
+          }
+        },
+        {
+          "opcode": "control_if",
+          "inputs": {
+            "CONDITION": {
+              "type": "block",
+              "block": {
+                "opcode": "operator_equals",
+                "inputs": {
+                  "OPERAND1": {
+                    "type": "variable",
+                    "name": "護盾"
+                  },
+                  "OPERAND2": {
+                    "type": "literal",
+                    "value": 0
+                  }
+                }
+              }
+            },
+            "SUBSTACK": [
+              {
+                "opcode": "data_setvariableto",
+                "fields": {
+                  "VARIABLE": "遊戲狀態"
+                },
+                "inputs": {
+                  "VALUE": "任務失敗"
+                }
+              },
+              {
+                "opcode": "looks_say",
+                "inputs": {
+                  "MESSAGE": "護盾耗盡！按綠旗重新出發。"
+                }
+              },
+              {
+                "opcode": "control_stop",
+                "fields": {
+                  "STOP_OPTION": "all"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -8,10 +8,11 @@ const USAGE = `Scratch AI Bridge CLI ${VERSION}
 Usage:
   scratch-ai-bridge inspect <file.sb3> [--format json|markdown]
   scratch-ai-bridge batch <directory> --out <new-directory> [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
+  scratch-ai-bridge generate <design.json> --out <new-file.sb3> [--report <report.json>] [--preview <stage.png>] [--force]
   scratch-ai-bridge --help
   scratch-ai-bridge --version
 
-This CLI analyzes SB3 structure locally. It does not run Scratch projects or extensions.`
+"generate" accepts Canonical IR JSON or the documented GameDesign JSON shape. Pass --preview <stage.png> to run the browser renderer; gameplay behavior requires a separate deterministic smoke test.`
 
 const writeJson = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`)
@@ -140,6 +141,55 @@ if (command === '--help' || command === '-h' || command === '') {
           ? 2
           : 3
     }
+  }
+} else if (command === 'generate') {
+  const positionals: string[] = []
+  let outputFile: string | undefined
+  let reportPath: string | undefined
+  let previewPath: string | undefined
+  let force = false
+  let argumentError = false
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index]
+    if (argument === '--out' || argument === '--report' || argument === '--preview') {
+      const value = args[index + 1]
+      if (!value || value.startsWith('-')) {
+        argumentError = true
+        break
+      }
+      if (argument === '--out') outputFile = value
+      else if (argument === '--report') reportPath = value
+      else previewPath = value
+      index += 1
+    } else if (argument === '--force') force = true
+    else if (argument.startsWith('-')) {
+      argumentError = true
+      break
+    } else positionals.push(argument)
+  }
+
+  if (argumentError || positionals.length !== 1 || !outputFile) {
+    process.stderr.write(`${USAGE}\n`)
+    process.exitCode = 2
+  } else {
+    const { generateGame } = await import('./generator')
+    const originalConsoleLog = console.log
+    const originalConsoleWarn = console.warn
+    const originalStdoutWrite = process.stdout.write
+    console.log = (...values: unknown[]) => process.stderr.write(`${values.map(String).join(' ')}\n`)
+    console.warn = (...values: unknown[]) => process.stderr.write(`${values.map(String).join(' ')}\n`)
+    process.stdout.write = ((chunk: string | Uint8Array, ...args: unknown[]) =>
+      process.stderr.write(chunk as string, ...(args as []))) as typeof process.stdout.write
+    let result
+    try {
+      result = await generateGame(positionals[0]!, { outputFile, ...(reportPath ? { reportPath } : {}), ...(previewPath ? { previewPath } : {}), force })
+    } finally {
+      console.log = originalConsoleLog
+      console.warn = originalConsoleWarn
+      process.stdout.write = originalStdoutWrite
+    }
+    writeJson(result)
+    if (!result.success) process.exitCode = 1
   }
 } else {
   process.stderr.write(`${USAGE}\n`)

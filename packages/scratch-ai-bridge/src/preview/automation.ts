@@ -39,12 +39,12 @@ export async function previewScreenshot(
     await page.goto('data:text/html,<html><body></body></html>');
     
     // Inject Scratch VM and load project
-    await page.evaluate((sb3Base64) => {
+    await page.evaluate(() => {
       // This would load the actual preview UI in production
       // For now, we'll simulate the preview
       console.log('Loading project...');
       return { loaded: true };
-    }, sb3.toString('base64'));
+    });
     
     // Wait for project to initialize
     await page.waitForTimeout(2000);

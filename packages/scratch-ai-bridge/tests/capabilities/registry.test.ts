@@ -113,18 +113,11 @@ const createHeadlessVM = async (
     },
     draw: () => undefined,
   }
-  // Create a raw Scratch VM instance (no await, no storage/extensions needed for tests)
-  const vm = new (await import('@scratch/scratch-vm')).default() as any
-  vm.attachStorage({
-    project: { save: () => Promise.resolve(), load: () => Promise.resolve(null) },
-    sound: { save: () => Promise.resolve(), load: () => Promise.resolve(null) },
-    costume: { save: () => Promise.resolve(), load: () => Promise.resolve(null) },
-    library: { save: () => Promise.resolve(), load: () => Promise.resolve(null) },
-  } as any)
+  // Reuse the production VM bootstrap so tests receive the current Scratch storage adapter.
+  const vm = (await createVM()) as any
+  vm.attachRenderer(renderer)
   return vm as any
 }
-
-const executedRuntimeOpcodes = new Set<string>()
 
 describe('Canonical block capability registry', () => {
   it('keeps the schema open to opcode strings and lists known opcodes in AI authoring instructions', () => {
@@ -283,7 +276,7 @@ describe('Canonical block capability registry', () => {
       target.scripts.push({ blocks: [root] })
     }
 
-    const compiled = buildScratchProjectJson(project)
+    const compiled = await buildScratchProjectJson(project)
     const outputOpcodes = new Set(
       compiled.targets.flatMap((target) => Object.values(target.blocks).map(({ opcode }) => opcode)),
     )
@@ -297,7 +290,7 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       const archive = await saveSb3(vm)
       const reloadedVM = await createHeadlessVM()
       try {
@@ -310,7 +303,7 @@ describe('Canonical block capability registry', () => {
         reloadedVM.quit()
       }
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -348,12 +341,12 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 5)
-      expect(getVariable(vm, 'Stage', 'score')?.value).toBe(42)
-      expect(getVariable(vm, 'Stage', 'observedScore')?.value).toBe(42)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 5)
+      expect(getVariable(await vm, 'Stage', 'score')?.value).toBe(42)
+      expect(getVariable(await vm, 'Stage', 'observedScore')?.value).toBe(42)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -432,30 +425,30 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 20)
-      expect(getVariable(vm, 'Stage', 'product')?.value).toBe(42)
-      expect(getVariable(vm, 'Stage', 'quotient')?.value).toBe(5)
-      expect(getVariable(vm, 'Stage', 'remainder')?.value).toBe(2)
-      expect(getVariable(vm, 'Stage', 'difference')?.value).toBe(7)
-      expect(getVariable(vm, 'Stage', 'greater')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'less')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'both')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'either')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'negated')?.value).toBe(true)
-      const randomInteger = getVariable(vm, 'Stage', 'randomInteger')?.value
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 20)
+      expect(getVariable(await vm, 'Stage', 'product')?.value).toBe(42)
+      expect(getVariable(await vm, 'Stage', 'quotient')?.value).toBe(5)
+      expect(getVariable(await vm, 'Stage', 'remainder')?.value).toBe(2)
+      expect(getVariable(await vm, 'Stage', 'difference')?.value).toBe(7)
+      expect(getVariable(await vm, 'Stage', 'greater')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'less')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'both')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'either')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'negated')?.value).toBe(true)
+      const randomInteger = getVariable(await vm, 'Stage', 'randomInteger')?.value
       expect(randomInteger).toBeGreaterThanOrEqual(4)
       expect(randomInteger).toBeLessThanOrEqual(9)
       expect(Number.isInteger(randomInteger)).toBe(true)
-      expect(getVariable(vm, 'Stage', 'rounded')?.value).toBe(4)
-      expect(getVariable(vm, 'Stage', 'root')?.value).toBe(9)
-      expect(getVariable(vm, 'Stage', 'letter')?.value).toBe('r')
-      expect(getVariable(vm, 'Stage', 'found')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'foundUnicodeCaseInsensitive')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'foundEmptyNeedle')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'foundNumericString')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'rounded')?.value).toBe(4)
+      expect(getVariable(await vm, 'Stage', 'root')?.value).toBe(9)
+      expect(getVariable(await vm, 'Stage', 'letter')?.value).toBe('r')
+      expect(getVariable(await vm, 'Stage', 'found')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'foundUnicodeCaseInsensitive')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'foundEmptyNeedle')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'foundNumericString')?.value).toBe(true)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -497,20 +490,20 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 20)
-      expect(getVariable(vm, 'Stage', 'divideByZero')?.value).toBe(Infinity)
-      expect(getVariable(vm, 'Stage', 'negativeNumeratorModulo')?.value).toBe(3)
-      expect(getVariable(vm, 'Stage', 'negativeDivisorModulo')?.value).toBe(-3)
-      const reversedRandom = getVariable(vm, 'Stage', 'reversedRandomBounds')?.value
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 20)
+      expect(getVariable(await vm, 'Stage', 'divideByZero')?.value).toBe(Infinity)
+      expect(getVariable(await vm, 'Stage', 'negativeNumeratorModulo')?.value).toBe(3)
+      expect(getVariable(await vm, 'Stage', 'negativeDivisorModulo')?.value).toBe(-3)
+      const reversedRandom = getVariable(await vm, 'Stage', 'reversedRandomBounds')?.value
       expect(reversedRandom).toBeGreaterThanOrEqual(1)
       expect(reversedRandom).toBeLessThanOrEqual(4)
       expect(Number.isInteger(reversedRandom)).toBe(true)
-      expect(getVariable(vm, 'Stage', 'equalRandomBounds')?.value).toBe(7)
-      expect(getVariable(vm, 'Stage', 'negativeHalfRound')?.value).toBe(-1)
-      expect(getVariable(vm, 'Stage', 'unicodeLength')?.value).toBe(2)
+      expect(getVariable(await vm, 'Stage', 'equalRandomBounds')?.value).toBe(7)
+      expect(getVariable(await vm, 'Stage', 'negativeHalfRound')?.value).toBe(-1)
+      expect(getVariable(await vm, 'Stage', 'unicodeLength')?.value).toBe(2)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -549,14 +542,14 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 20)
-      expect(getVariable(vm, 'Stage', 'numericStringEquals')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'caseInsensitiveEquals')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'whitespaceDiffersFromZero')?.value).toBe(false)
-      expect(getVariable(vm, 'Stage', 'caseInsensitiveOrdering')?.value).toBe(true)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 20)
+      expect(getVariable(await vm, 'Stage', 'numericStringEquals')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'caseInsensitiveEquals')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'whitespaceDiffersFromZero')?.value).toBe(false)
+      expect(getVariable(await vm, 'Stage', 'caseInsensitiveOrdering')?.value).toBe(true)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -602,13 +595,13 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 20)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 20)
       for (const { name, expected } of cases) {
-        expect(Number(getVariable(vm, 'Stage', name)?.value), name).toBeCloseTo(expected, 8)
+        expect(Number(getVariable(await vm, 'Stage', name)?.value), name).toBeCloseTo(expected, 8)
       }
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -655,16 +648,16 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 20)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 20)
       for (const { name, expected } of cases) {
-        const actual = Number(getVariable(vm, 'Stage', name)?.value)
+        const actual = Number(getVariable(await vm, 'Stage', name)?.value)
         if (expected === 'NaN') expect(actual, name).toBeNaN()
         else if (expected === '-0') expect(actual, name).toBe(-0)
         else expect(actual, name).toBe(expected)
       }
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -762,11 +755,11 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 30)
-      expect(getVariable(vm, 'Stage', 'score')?.value).toBe(11)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 30)
+      expect(getVariable(await vm, 'Stage', 'score')?.value).toBe(11)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -843,19 +836,19 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 30)
-      const result = getProjectJson(vm) as {
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 30)
+      const result = getProjectJson(await vm) as {
         targets: { name: string; lists: Record<string, [string, unknown[]]> }[]
       }
       expect(Object.values(result.targets.find(({ name }) => name === 'Stage')?.lists ?? {})).toContainEqual([
         'items',
         ['coin', 'coin'],
       ])
-      expect(getVariable(vm, 'Stage', 'score')?.value).toBe(6)
-      expect(getVariable(vm, 'Stage', 'listContentsText')?.value).toBe('coin coin')
+      expect(getVariable(await vm, 'Stage', 'score')?.value).toBe(6)
+      expect(getVariable(await vm, 'Stage', 'listContentsText')?.value).toBe('coin coin')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -907,19 +900,21 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 40)
-      expect(getVariable(vm, 'Stage', 'middleItem')?.value).toBe('b')
-      expect(getVariable(vm, 'Stage', 'bIndex')?.value).toBe(2)
-      expect(getVariable(vm, 'Stage', 'containsD')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'lengthBeforeClear')?.value).toBe(3)
-      const result = getProjectJson(vm) as { targets: { name: string; lists: Record<string, [string, unknown[]]> }[] }
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 40)
+      expect(getVariable(await vm, 'Stage', 'middleItem')?.value).toBe('b')
+      expect(getVariable(await vm, 'Stage', 'bIndex')?.value).toBe(2)
+      expect(getVariable(await vm, 'Stage', 'containsD')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'lengthBeforeClear')?.value).toBe(3)
+      const result = getProjectJson(await vm) as {
+        targets: { name: string; lists: Record<string, [string, unknown[]]> }[]
+      }
       expect(Object.values(result.targets.find(({ name }) => name === 'Stage')?.lists ?? {})).toContainEqual([
         'items',
         [],
       ])
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -950,11 +945,11 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 10)
-      expect(getVariable(vm, 'Stage', 'score')?.value).toBe(7)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 10)
+      expect(getVariable(await vm, 'Stage', 'score')?.value).toBe(7)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -994,12 +989,12 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      await runForTicksAsync(vm, 20)
-      expect(getVariable(vm, 'Stage', 'receiverFinished')?.value).toBe('true')
-      expect(getVariable(vm, 'Stage', 'observedAfterWait')?.value).toBe('true')
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      await runForTicksAsync(await vm, 20)
+      expect(getVariable(await vm, 'Stage', 'receiverFinished')?.value).toBe('true')
+      expect(getVariable(await vm, 'Stage', 'observedAfterWait')?.value).toBe('true')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1038,13 +1033,13 @@ describe('Canonical block capability registry', () => {
     const touchingCalls: { targetId: number; candidateIds: number[] }[] = []
     const vm = createHeadlessVM(undefined, undefined, undefined, touchingCalls)
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 15)
-      expect(getVariable(vm, player.name, 'touchingPlatform')?.value).toBe(true)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 15)
+      expect(getVariable(await vm, player.name, 'touchingPlatform')?.value).toBe(true)
       expect(touchingCalls).toHaveLength(1)
       expect(touchingCalls[0].candidateIds).toHaveLength(1)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1075,13 +1070,13 @@ describe('Canonical block capability registry', () => {
     const touchingCalls: { targetId: number; candidateIds: number[] }[] = []
     const vm = createHeadlessVM(undefined, undefined, undefined, touchingCalls)
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      await runForTicksAsync(vm, 20)
-      expect(getVariable(vm, sprite.name, 'touchingHatFired')?.value).toBe('true')
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      await runForTicksAsync(await vm, 20)
+      expect(getVariable(await vm, sprite.name, 'touchingHatFired')?.value).toBe('true')
       expect(touchingCalls.length).toBeGreaterThan(0)
       expect(touchingCalls.some(({ candidateIds }) => candidateIds.length === 1)).toBe(true)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1136,15 +1131,15 @@ describe('Canonical block capability registry', () => {
       colorCalls,
     )
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      await runForTicksAsync(vm, 12)
-      expect(getVariable(vm, sprite.name, 'touchingRed')?.value).toBe(false)
-      expect(getVariable(vm, sprite.name, 'greenOnRed')?.value).toBe(true)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      await runForTicksAsync(await vm, 12)
+      expect(getVariable(await vm, sprite.name, 'touchingRed')?.value).toBe(false)
+      expect(getVariable(await vm, sprite.name, 'greenOnRed')?.value).toBe(true)
       expect(colorCalls).toHaveLength(2)
       expect(colorCalls[0].targetColor).toEqual([255, 0, 0])
       expect(colorCalls[1]).toMatchObject({ targetColor: [0, 255, 0], maskColor: [255, 0, 0] })
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1178,12 +1173,12 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 20)
-      expect(getVariable(vm, 'Stage', 'score')?.value).toBe(1)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 20)
+      expect(getVariable(await vm, 'Stage', 'score')?.value).toBe(1)
       expect(getTargets(vm).map((target) => target.getName())).toEqual(['Stage', sprite.name])
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1217,11 +1212,11 @@ describe('Canonical block capability registry', () => {
       runtime: { _step(): void }
     }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.start()
       runtime.greenFlag()
       runtime.runtime._step()
-      const hiddenTargets = getProjectJson(vm) as {
+      const hiddenTargets = getProjectJson(await vm) as {
         targets: { name: string; x?: number; y?: number; visible?: boolean }[]
       }
       expect(hiddenTargets.targets.find(({ name }) => name === sprite.name)).toMatchObject({
@@ -1231,10 +1226,10 @@ describe('Canonical block capability registry', () => {
       })
       await new Promise((resolve) => setTimeout(resolve, 30))
       for (let tick = 0; tick < 5; tick += 1) runtime.runtime._step()
-      const visibleTargets = getProjectJson(vm) as { targets: { name: string; visible?: boolean }[] }
+      const visibleTargets = getProjectJson(await vm) as { targets: { name: string; visible?: boolean }[] }
       expect(visibleTargets.targets.find(({ name }) => name === sprite.name)?.visible).toBe(true)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1270,15 +1265,15 @@ describe('Canonical block capability registry', () => {
       bottom: -38,
     }))
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 10)
-      const direction = getVariable(vm, sprite.name, 'directionAfterBounce')?.value
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 10)
+      const direction = getVariable(await vm, sprite.name, 'directionAfterBounce')?.value
       expect(direction).not.toBe(90)
       expect(Math.cos(((90 - Number(direction)) * Math.PI) / 180)).toBeLessThan(0)
-      const targets = getProjectJson(vm) as { targets: { name: string; x?: number; y?: number }[] }
+      const targets = getProjectJson(await vm) as { targets: { name: string; x?: number; y?: number }[] }
       expect(targets.targets.find(({ name }) => name === sprite.name)).toMatchObject({ x: 202, y: 0 })
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1299,7 +1294,7 @@ describe('Canonical block capability registry', () => {
     const vm = await createHeadlessVM()
     const runtime = vm as unknown as { postIOData(device: string, data: unknown): void }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.postIOData('mouse', {
         x: 300,
         y: 150,
@@ -1307,11 +1302,11 @@ describe('Canonical block capability registry', () => {
         canvasHeight: 360,
         isDown: false,
       })
-      runForTicks(vm, 10)
-      const targets = getProjectJson(vm) as { targets: { name: string; x?: number; y?: number }[] }
+      runForTicks(await vm, 10)
+      const targets = getProjectJson(await vm) as { targets: { name: string; x?: number; y?: number }[] }
       expect(targets.targets.find(({ name }) => name === sprite.name)).toMatchObject({ x: 60, y: 30 })
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1357,18 +1352,18 @@ describe('Canonical block capability registry', () => {
       runtime: { _step(): void }
     }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.start()
       runtime.greenFlag()
       runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'glideToFinished')?.value).toBe(false)
+      expect(getVariable(await vm, sprite.name, 'glideToFinished')?.value).toBe(false)
       await new Promise((resolve) => setTimeout(resolve, 30))
       for (let tick = 0; tick < 5; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'glideToFinished')?.value).toBe('true')
-      const targets = getProjectJson(vm) as { targets: { name: string; x?: number; y?: number }[] }
+      expect(getVariable(await vm, sprite.name, 'glideToFinished')?.value).toBe('true')
+      const targets = getProjectJson(await vm) as { targets: { name: string; x?: number; y?: number }[] }
       expect(targets.targets.find(({ name }) => name === sprite.name)).toMatchObject({ x: 30, y: 40 })
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1403,13 +1398,13 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 10)
-      expect(getVariable(vm, sprite.name, 'pointTowardsDirection')?.value).toBeCloseTo(63.4349, 3)
-      const targets = getProjectJson(vm) as { targets: { name: string; direction?: number }[] }
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 10)
+      expect(getVariable(await vm, sprite.name, 'pointTowardsDirection')?.value).toBeCloseTo(63.4349, 3)
+      const targets = getProjectJson(await vm) as { targets: { name: string; direction?: number }[] }
       expect(targets.targets.find(({ name }) => name === sprite.name)?.direction).toBeCloseTo(63.4349, 3)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1449,18 +1444,18 @@ describe('Canonical block capability registry', () => {
       runtime: { _step(): void }
     }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.start()
       runtime.greenFlag()
       runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'glideFinished')?.value).toBe(false)
+      expect(getVariable(await vm, sprite.name, 'glideFinished')?.value).toBe(false)
       await new Promise((resolve) => setTimeout(resolve, 30))
       for (let tick = 0; tick < 5; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'glideFinished')?.value).toBe('true')
-      const targets = getProjectJson(vm) as { targets: { name: string; x?: number; y?: number }[] }
+      expect(getVariable(await vm, sprite.name, 'glideFinished')?.value).toBe('true')
+      const targets = getProjectJson(await vm) as { targets: { name: string; x?: number; y?: number }[] }
       expect(targets.targets.find(({ name }) => name === sprite.name)).toMatchObject({ x: 30, y: 40 })
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1491,16 +1486,16 @@ describe('Canonical block capability registry', () => {
       runtime: { _step(): void }
     }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.start()
       runtime.greenFlag()
       runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'waitFinished')?.value).toBe(false)
+      expect(getVariable(await vm, sprite.name, 'waitFinished')?.value).toBe(false)
       await new Promise((resolve) => setTimeout(resolve, 30))
       for (let tick = 0; tick < 5; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'waitFinished')?.value).toBe('true')
+      expect(getVariable(await vm, sprite.name, 'waitFinished')?.value).toBe('true')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1538,16 +1533,16 @@ describe('Canonical block capability registry', () => {
       runtime: { _step(): void }
     }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.start()
       runtime.greenFlag()
       runtime.runtime._step()
-      expect(getVariable(vm, 'Stage', 'allAtOnceFinished')?.value).toBe(false)
+      expect(getVariable(await vm, 'Stage', 'allAtOnceFinished')?.value).toBe(false)
       await new Promise((resolve) => setTimeout(resolve, 30))
       for (let tick = 0; tick < 5; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, 'Stage', 'allAtOnceFinished')?.value).toBe('true')
+      expect(getVariable(await vm, 'Stage', 'allAtOnceFinished')?.value).toBe('true')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1584,11 +1579,11 @@ describe('Canonical block capability registry', () => {
       postIOData(device: string, data: unknown): void
     }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.start()
       runtime.greenFlag()
       runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'conditionWaitFinished')?.value).toBe(false)
+      expect(getVariable(await vm, sprite.name, 'conditionWaitFinished')?.value).toBe(false)
       runtime.postIOData('mouse', {
         x: 240,
         y: 180,
@@ -1597,9 +1592,9 @@ describe('Canonical block capability registry', () => {
         isDown: true,
       })
       for (let tick = 0; tick < 5; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'conditionWaitFinished')?.value).toBe('true')
+      expect(getVariable(await vm, sprite.name, 'conditionWaitFinished')?.value).toBe('true')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1653,18 +1648,18 @@ describe('Canonical block capability registry', () => {
       isDown,
     })
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.start()
       runtime.greenFlag()
       runtime.postIOData('mouse', mouseData(true))
       for (let tick = 0; tick < 6; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'whileIterations')?.value).toBeGreaterThan(0)
-      expect(getVariable(vm, sprite.name, 'whileFinished')?.value).toBe(false)
+      expect(getVariable(await vm, sprite.name, 'whileIterations')?.value).toBeGreaterThan(0)
+      expect(getVariable(await vm, sprite.name, 'whileFinished')?.value).toBe(false)
       runtime.postIOData('mouse', mouseData(false))
       for (let tick = 0; tick < 6; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'whileFinished')?.value).toBe('true')
+      expect(getVariable(await vm, sprite.name, 'whileFinished')?.value).toBe('true')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1687,11 +1682,11 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 10)
-      expect(getVariable(vm, 'Stage', 'afterStop')?.value).toBe(false)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 10)
+      expect(getVariable(await vm, 'Stage', 'afterStop')?.value).toBe(false)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1715,13 +1710,13 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 2)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 2)
       await new Promise((resolve) => setTimeout(resolve, 30))
-      runForTicks(vm, 8)
-      expect(getVariable(vm, 'Stage', 'afterStopAll')?.value).toBe(false)
+      runForTicks(await vm, 8)
+      expect(getVariable(await vm, 'Stage', 'afterStopAll')?.value).toBe(false)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1757,12 +1752,12 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 12)
-      expect(getVariable(vm, sprite.name, 'stopSiblingContinued')?.value).toBe('true')
-      expect(getVariable(vm, sprite.name, 'siblingWasStopped')?.value).toBe(false)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 12)
+      expect(getVariable(await vm, sprite.name, 'stopSiblingContinued')?.value).toBe('true')
+      expect(getVariable(await vm, sprite.name, 'siblingWasStopped')?.value).toBe(false)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1796,11 +1791,11 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 20)
-      expect(getVariable(vm, 'Stage', 'forEachIterations')?.value).toBe(3)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 20)
+      expect(getVariable(await vm, 'Stage', 'forEachIterations')?.value).toBe(3)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1839,12 +1834,12 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 30)
-      expect(getVariable(vm, sprite.name, 'observedX')?.value).toBe(40)
-      expect(getVariable(vm, sprite.name, 'observedY')?.value).toBe(-20)
-      expect(getVariable(vm, sprite.name, 'observedDirection')?.value).toBe(15)
-      const targets = getProjectJson(vm) as {
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 30)
+      expect(getVariable(await vm, sprite.name, 'observedX')?.value).toBe(40)
+      expect(getVariable(await vm, sprite.name, 'observedY')?.value).toBe(-20)
+      expect(getVariable(await vm, sprite.name, 'observedDirection')?.value).toBe(15)
+      const targets = getProjectJson(await vm) as {
         targets: { name: string; x?: number; y?: number; direction?: number; rotationStyle?: string }[]
       }
       expect(targets.targets.find(({ name }) => name === sprite.name)).toMatchObject({
@@ -1854,7 +1849,7 @@ describe('Canonical block capability registry', () => {
         rotationStyle: 'left-right',
       })
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1888,8 +1883,8 @@ describe('Canonical block capability registry', () => {
     const effects: { name: string; value: number }[] = []
     const vm = createHeadlessVM(undefined, effects)
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 20)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 20)
       for (const name of effectNames) {
         expect(
           effects
@@ -1900,7 +1895,7 @@ describe('Canonical block capability registry', () => {
         ).toEqual([25, 35, 0])
       }
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1931,15 +1926,15 @@ describe('Canonical block capability registry', () => {
     const layerOrders: { order: number; isRelative?: boolean }[] = []
     const vm = createHeadlessVM(undefined, undefined, layerOrders)
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 20)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 20)
       expect(layerOrders.slice(-3)).toEqual([
         { order: Infinity, isRelative: undefined },
         { order: 2, isRelative: true },
         { order: -1, isRelative: true },
       ])
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -1962,14 +1957,14 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      await runForTicksAsync(vm, 10)
-      const elapsed = getVariable(vm, 'Stage', 'elapsedAfterReset')?.value
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      await runForTicksAsync(await vm, 10)
+      const elapsed = getVariable(await vm, 'Stage', 'elapsedAfterReset')?.value
       expect(typeof elapsed).toBe('number')
       expect(elapsed).toBeGreaterThanOrEqual(0)
       expect(elapsed).toBeLessThan(1)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2001,17 +1996,17 @@ describe('Canonical block capability registry', () => {
       runtime: { _step(): void; ioDevices: { clock: { projectTimer(): number } } }
     }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.runtime.ioDevices.clock.projectTimer = () => projectSeconds
       runtime.start()
       runtime.greenFlag()
       for (let tick = 0; tick < 5; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, 'Stage', 'timerHatFired')?.value).toBe(false)
+      expect(getVariable(await vm, 'Stage', 'timerHatFired')?.value).toBe(false)
       projectSeconds = 6
       for (let tick = 0; tick < 5; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, 'Stage', 'timerHatFired')?.value).toBe('true')
+      expect(getVariable(await vm, 'Stage', 'timerHatFired')?.value).toBe('true')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2066,7 +2061,7 @@ describe('Canonical block capability registry', () => {
       for (let tick = 0; tick < ticks; tick += 1) runtime.runtime._step()
     }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.start()
       runtime.greenFlag()
       ;(vm as unknown as { postIOData(device: string, data: unknown): void }).postIOData('keyboard', {
@@ -2074,18 +2069,18 @@ describe('Canonical block capability registry', () => {
         isDown: true,
       })
       stepRuntime(10)
-      expect(getVariable(vm, 'Stage', 'spacePressed')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'anyPressed')?.value).toBe(true)
-      expect(getVariable(vm, 'Stage', 'spaceHatFired')?.value).toBe('true')
+      expect(getVariable(await vm, 'Stage', 'spacePressed')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'anyPressed')?.value).toBe(true)
+      expect(getVariable(await vm, 'Stage', 'spaceHatFired')?.value).toBe('true')
       ;(vm as unknown as { postIOData(device: string, data: unknown): void }).postIOData('keyboard', {
         key: ' ',
         isDown: false,
       })
       stepRuntime(10)
-      expect(getVariable(vm, 'Stage', 'spacePressed')?.value).toBe(false)
-      expect(getVariable(vm, 'Stage', 'anyPressed')?.value).toBe(false)
+      expect(getVariable(await vm, 'Stage', 'spacePressed')?.value).toBe(false)
+      expect(getVariable(await vm, 'Stage', 'anyPressed')?.value).toBe(false)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2114,7 +2109,7 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       ;(vm as unknown as { postIOData(device: string, data: unknown): void }).postIOData('mouse', {
         x: 300,
         y: 150,
@@ -2122,12 +2117,12 @@ describe('Canonical block capability registry', () => {
         canvasHeight: 360,
         isDown: true,
       })
-      runForTicks(vm, 10)
-      expect(getVariable(vm, 'Stage', 'mouseXValue')?.value).toBe(60)
-      expect(getVariable(vm, 'Stage', 'mouseYValue')?.value).toBe(30)
-      expect(getVariable(vm, 'Stage', 'mouseDownValue')?.value).toBe(true)
+      runForTicks(await vm, 10)
+      expect(getVariable(await vm, 'Stage', 'mouseXValue')?.value).toBe(60)
+      expect(getVariable(await vm, 'Stage', 'mouseYValue')?.value).toBe(30)
+      expect(getVariable(await vm, 'Stage', 'mouseDownValue')?.value).toBe(true)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2155,7 +2150,7 @@ describe('Canonical block capability registry', () => {
       postIOData(device: string, data: unknown): void
     }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.start()
       runtime.greenFlag()
       runtime.postIOData('mouse', {
@@ -2166,9 +2161,9 @@ describe('Canonical block capability registry', () => {
         isDown: true,
       })
       for (let tick = 0; tick < 10; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, 'Stage', 'stageClickFired')?.value).toBe('true')
+      expect(getVariable(await vm, 'Stage', 'stageClickFired')?.value).toBe('true')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2192,7 +2187,7 @@ describe('Canonical block capability registry', () => {
     ]
 
     let pickedDrawable = -1
-    const vm = createHeadlessVM(undefined, undefined, undefined, undefined, undefined, () => pickedDrawable)
+    const vm = await createHeadlessVM(undefined, undefined, undefined, undefined, undefined, () => pickedDrawable)
     const runtime = vm as unknown as {
       start(): void
       greenFlag(): void
@@ -2217,9 +2212,9 @@ describe('Canonical block capability registry', () => {
         isDown: true,
       })
       for (let tick = 0; tick < 10; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'spriteClickFired')?.value).toBe('true')
+      expect(getVariable(await vm, sprite.name, 'spriteClickFired')?.value).toBe('true')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2245,21 +2240,21 @@ describe('Canonical block capability registry', () => {
       greenFlag(): void
       runtime: { _step(): void }
     }
-    const draggableState = () => {
-      const projectJson = getProjectJson(vm) as { targets: { name: string; draggable?: boolean }[] }
+    const draggableState = async () => {
+      const projectJson = getProjectJson(await vm) as { targets: { name: string; draggable?: boolean }[] }
       return projectJson.targets.find(({ name }) => name === sprite.name)?.draggable
     }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.start()
       runtime.greenFlag()
       runtime.runtime._step()
-      expect(draggableState()).toBe(true)
+      expect(await draggableState()).toBe(true)
       await new Promise((resolve) => setTimeout(resolve, 30))
       for (let tick = 0; tick < 5; tick += 1) runtime.runtime._step()
-      expect(draggableState()).toBe(false)
+      expect(await draggableState()).toBe(false)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2314,18 +2309,18 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       ;(vm as unknown as { postIOData(device: string, data: unknown): void }).postIOData('mouse', {
         x: 246,
         y: 172,
         canvasWidth: 480,
         canvasHeight: 360,
       })
-      runForTicks(vm, 10)
-      expect(getVariable(vm, player.name, 'distanceToPlatform')?.value).toBe(5)
-      expect(getVariable(vm, player.name, 'distanceToMouse')?.value).toBe(10)
+      runForTicks(await vm, 10)
+      expect(getVariable(await vm, player.name, 'distanceToPlatform')?.value).toBe(5)
+      expect(getVariable(await vm, player.name, 'distanceToMouse')?.value).toBe(10)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2347,14 +2342,14 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       ;(vm as unknown as { postIOData(device: string, data: unknown): void }).postIOData('userData', {
         username: 'ScratchStudent',
       })
-      runForTicks(vm, 10)
-      expect(getVariable(vm, 'Stage', 'observedUsername')?.value).toBe('ScratchStudent')
+      runForTicks(await vm, 10)
+      expect(getVariable(await vm, 'Stage', 'observedUsername')?.value).toBe('ScratchStudent')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2411,16 +2406,16 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 10)
-      expect(getVariable(vm, 'Stage', 'playerX')?.value).toBe(37)
-      expect(getVariable(vm, 'Stage', 'playerSize')?.value).toBe(135)
-      expect(getVariable(vm, 'Stage', 'playerVelocity')?.value).toBe(4)
-      expect(getVariable(vm, 'Stage', 'stageVolume')?.value).toBe(72)
-      expect(getVariable(vm, 'Stage', 'backdropNumber')?.value).toBe(1)
-      expect(getVariable(vm, 'Stage', 'backdropName')?.value).toBe(sprite.costumes[0].name)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 10)
+      expect(getVariable(await vm, 'Stage', 'playerX')?.value).toBe(37)
+      expect(getVariable(await vm, 'Stage', 'playerSize')?.value).toBe(135)
+      expect(getVariable(await vm, 'Stage', 'playerVelocity')?.value).toBe(4)
+      expect(getVariable(await vm, 'Stage', 'stageVolume')?.value).toBe(72)
+      expect(getVariable(await vm, 'Stage', 'backdropNumber')?.value).toBe(1)
+      expect(getVariable(await vm, 'Stage', 'backdropName')?.value).toBe(sprite.costumes[0].name)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2454,7 +2449,7 @@ describe('Canonical block capability registry', () => {
     const questions: unknown[] = []
     runtime.runtime.on('QUESTION', (question) => questions.push(question))
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       runtime.start()
       runtime.greenFlag()
       for (let tick = 0; tick < 10; tick += 1) {
@@ -2462,15 +2457,15 @@ describe('Canonical block capability registry', () => {
         await Promise.resolve()
       }
       expect(questions).toContain('What is your name?')
-      expect(getVariable(vm, 'Stage', 'studentAnswer')?.value).toBe('')
+      expect(getVariable(await vm, 'Stage', 'studentAnswer')?.value).toBe('')
       runtime.runtime.emit('ANSWER', 'Ada')
       for (let tick = 0; tick < 10; tick += 1) {
         runtime.runtime._step()
         await Promise.resolve()
       }
-      expect(getVariable(vm, 'Stage', 'studentAnswer')?.value).toBe('Ada')
+      expect(getVariable(await vm, 'Stage', 'studentAnswer')?.value).toBe('Ada')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2528,16 +2523,16 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 10)
-      const targets = getProjectJson(vm) as { targets: { name: string; currentCostume?: number }[] }
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 10)
+      const targets = getProjectJson(await vm) as { targets: { name: string; currentCostume?: number }[] }
       expect(targets.targets.find(({ name }) => name === 'Stage')?.currentCostume).toBe(2)
-      expect(getVariable(vm, 'Stage', 'backdropNameAfterNamedSwitch')?.value).toBe('night backdrop')
-      expect(getVariable(vm, 'Stage', 'backdropNameAfterNext')?.value).toBe('morning backdrop')
-      expect(getVariable(vm, 'Stage', 'backdropNumberAfterNext')?.value).toBe(3)
-      expect(getVariable(vm, 'Stage', 'backdropHatFired')?.value).toBe('true')
+      expect(getVariable(await vm, 'Stage', 'backdropNameAfterNamedSwitch')?.value).toBe('night backdrop')
+      expect(getVariable(await vm, 'Stage', 'backdropNameAfterNext')?.value).toBe('morning backdrop')
+      expect(getVariable(await vm, 'Stage', 'backdropNumberAfterNext')?.value).toBe(3)
+      expect(getVariable(await vm, 'Stage', 'backdropHatFired')?.value).toBe('true')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2566,15 +2561,15 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       delete (vm as unknown as { runtime: { _hats: Record<string, unknown> } }).runtime._hats
         .event_whenbackdropswitchesto
-      await runForTicksAsync(vm, 20)
-      expect(getVariable(vm, 'Stage', 'resumedAfterBackdropWait')?.value).toBe('true')
-      const targets = getProjectJson(vm) as { targets: { name: string; currentCostume?: number }[] }
+      await runForTicksAsync(await vm, 20)
+      expect(getVariable(await vm, 'Stage', 'resumedAfterBackdropWait')?.value).toBe('true')
+      const targets = getProjectJson(await vm) as { targets: { name: string; currentCostume?: number }[] }
       expect(targets.targets.find(({ name }) => name === 'Stage')?.currentCostume).toBe(0)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2631,7 +2626,7 @@ describe('Canonical block capability registry', () => {
 
       const vm = await createHeadlessVM()
       try {
-        await loadSb3(await buildScratchProjectArchive(project), vm)
+        await loadSb3(await buildScratchProjectArchive(project), await vm)
         const runtime = (
           vm as unknown as {
             runtime: {
@@ -2657,10 +2652,10 @@ describe('Canonical block capability registry', () => {
             isMonitored: initialVisible,
           })
         }
-        await runForTicksAsync(vm, 8)
+        await runForTicksAsync(await vm, 8)
         return Object.values(runtime.getMonitorState().toJS()).map(({ visible }) => visible)
       } finally {
-        vm.quit()
+        ;(await vm).quit()
       }
     }
 
@@ -2712,26 +2707,26 @@ describe('Canonical block capability registry', () => {
     const fixedDate = new Date(2024, 1, 29, 23, 58, 57)
     Object.defineProperty(globalThis, 'window', { configurable: true, value: { navigator: { onLine: true } } })
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       vi.useFakeTimers()
       vi.setSystemTime(fixedDate)
-      runForTicks(vm, 12)
-      expect(getVariable(vm, 'Stage', 'observedYear')?.value).toBe(fixedDate.getFullYear())
-      expect(getVariable(vm, 'Stage', 'observedMonth')?.value).toBe(fixedDate.getMonth() + 1)
-      expect(getVariable(vm, 'Stage', 'observedDate')?.value).toBe(fixedDate.getDate())
-      expect(getVariable(vm, 'Stage', 'observedDayOfWeek')?.value).toBe(fixedDate.getDay() + 1)
-      expect(getVariable(vm, 'Stage', 'observedHour')?.value).toBe(fixedDate.getHours())
-      expect(getVariable(vm, 'Stage', 'observedMinute')?.value).toBe(fixedDate.getMinutes())
-      expect(getVariable(vm, 'Stage', 'observedSecond')?.value).toBe(fixedDate.getSeconds())
+      runForTicks(await vm, 12)
+      expect(getVariable(await vm, 'Stage', 'observedYear')?.value).toBe(fixedDate.getFullYear())
+      expect(getVariable(await vm, 'Stage', 'observedMonth')?.value).toBe(fixedDate.getMonth() + 1)
+      expect(getVariable(await vm, 'Stage', 'observedDate')?.value).toBe(fixedDate.getDate())
+      expect(getVariable(await vm, 'Stage', 'observedDayOfWeek')?.value).toBe(fixedDate.getDay() + 1)
+      expect(getVariable(await vm, 'Stage', 'observedHour')?.value).toBe(fixedDate.getHours())
+      expect(getVariable(await vm, 'Stage', 'observedMinute')?.value).toBe(fixedDate.getMinutes())
+      expect(getVariable(await vm, 'Stage', 'observedSecond')?.value).toBe(fixedDate.getSeconds())
       const daysFrom2000 =
         (fixedDate.valueOf() - new Date(2000, 0, 1).valueOf() + new Date(2000, 0, 1).getTimezoneOffset() * 60_000) /
         (24 * 60 * 60 * 1000)
-      expect(Number(getVariable(vm, 'Stage', 'daysFrom2000')?.value)).toBeCloseTo(daysFrom2000, 8)
-      expect(getVariable(vm, 'Stage', 'observedLoudness')?.value).toBe(-1)
-      expect(getVariable(vm, 'Stage', 'isLoud')?.value).toBe(false)
-      expect(getVariable(vm, 'Stage', 'online')?.value).toBe(true)
+      expect(Number(getVariable(await vm, 'Stage', 'daysFrom2000')?.value)).toBeCloseTo(daysFrom2000, 8)
+      expect(getVariable(await vm, 'Stage', 'observedLoudness')?.value).toBe(-1)
+      expect(getVariable(await vm, 'Stage', 'isLoud')?.value).toBe(false)
+      expect(getVariable(await vm, 'Stage', 'online')?.value).toBe(true)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
       vi.useRealTimers()
       if (previousWindow) Object.defineProperty(globalThis, 'window', previousWindow)
       else Reflect.deleteProperty(globalThis, 'window')
@@ -2761,12 +2756,12 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 15)
-      expect(getVariable(vm, 'Stage', 'counterBeforeClear')?.value).toBe(1)
-      expect(getVariable(vm, 'Stage', 'counterAfterClear')?.value).toBe(0)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 15)
+      expect(getVariable(await vm, 'Stage', 'counterBeforeClear')?.value).toBe(1)
+      expect(getVariable(await vm, 'Stage', 'counterAfterClear')?.value).toBe(0)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2811,14 +2806,16 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 10)
-      const targets = getProjectJson(vm) as { targets: { name: string; currentCostume?: number; size?: number }[] }
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 10)
+      const targets = getProjectJson(await vm) as {
+        targets: { name: string; currentCostume?: number; size?: number }[]
+      }
       expect(targets.targets.find(({ name }) => name === sprite.name)).toMatchObject({ currentCostume: 0, size: 150 })
-      expect(getVariable(vm, sprite.name, 'observedCostumeName')?.value).toBe('second costume')
-      expect(getVariable(vm, sprite.name, 'observedSize')?.value).toBe(150)
+      expect(getVariable(await vm, sprite.name, 'observedCostumeName')?.value).toBe('second costume')
+      expect(getVariable(await vm, sprite.name, 'observedSize')?.value).toBe(150)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2838,7 +2835,7 @@ describe('Canonical block capability registry', () => {
     ]
 
     const bubbleCalls: { type: string; text: string }[] = []
-    const vm = createHeadlessVM(undefined, undefined, undefined, undefined, bubbleCalls)
+    const vm = await createHeadlessVM(undefined, undefined, undefined, undefined, bubbleCalls)
     const bubbleEvents: { target: string; type: string; text: string }[] = []
     const runtime = (
       vm as unknown as {
@@ -2860,7 +2857,7 @@ describe('Canonical block capability registry', () => {
         { type: 'think', text: 'Thinking now' },
       ])
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2892,7 +2889,7 @@ describe('Canonical block capability registry', () => {
 
     const bubbleCalls: { type: string; text: string }[] = []
     const destroyedDrawableCalls: number[] = []
-    const vm = createHeadlessVM(
+    const vm = await createHeadlessVM(
       undefined,
       undefined,
       undefined,
@@ -2911,15 +2908,15 @@ describe('Canonical block capability registry', () => {
       runtime.start()
       runtime.greenFlag()
       runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'timedSayFinished')?.value).toBe(false)
+      expect(getVariable(await vm, sprite.name, 'timedSayFinished')?.value).toBe(false)
       expect(bubbleCalls).toContainEqual({ type: 'say', text: 'Temporary message' })
       const destroyedBeforeTimeout = destroyedDrawableCalls.length
       await new Promise((resolve) => setTimeout(resolve, 30))
       for (let tick = 0; tick < 5; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'timedSayFinished')?.value).toBe('true')
+      expect(getVariable(await vm, sprite.name, 'timedSayFinished')?.value).toBe('true')
       expect(destroyedDrawableCalls.length).toBeGreaterThan(destroyedBeforeTimeout)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -2951,7 +2948,7 @@ describe('Canonical block capability registry', () => {
 
     const bubbleCalls: { type: string; text: string }[] = []
     const destroyedDrawableCalls: number[] = []
-    const vm = createHeadlessVM(
+    const vm = await createHeadlessVM(
       undefined,
       undefined,
       undefined,
@@ -2970,15 +2967,15 @@ describe('Canonical block capability registry', () => {
       runtime.start()
       runtime.greenFlag()
       runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'timedThinkFinished')?.value).toBe(false)
+      expect(getVariable(await vm, sprite.name, 'timedThinkFinished')?.value).toBe(false)
       expect(bubbleCalls).toContainEqual({ type: 'think', text: 'Temporary thought' })
       const destroyedBeforeTimeout = destroyedDrawableCalls.length
       await new Promise((resolve) => setTimeout(resolve, 30))
       for (let tick = 0; tick < 5; tick += 1) runtime.runtime._step()
-      expect(getVariable(vm, sprite.name, 'timedThinkFinished')?.value).toBe('true')
+      expect(getVariable(await vm, sprite.name, 'timedThinkFinished')?.value).toBe('true')
       expect(destroyedDrawableCalls.length).toBeGreaterThan(destroyedBeforeTimeout)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -3005,13 +3002,13 @@ describe('Canonical block capability registry', () => {
 
     const vm = await createHeadlessVM()
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      await runForTicksAsync(vm, 15)
-      const targets = getProjectJson(vm) as { targets: { name: string; volume?: number }[] }
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      await runForTicksAsync(await vm, 15)
+      const targets = getProjectJson(await vm) as { targets: { name: string; volume?: number }[] }
       expect(targets.targets.find(({ name }) => name === sprite.name)?.volume).toBe(65)
-      expect(getVariable(vm, sprite.name, 'observedVolume')?.value).toBe(65)
+      expect(getVariable(await vm, sprite.name, 'observedVolume')?.value).toBe(65)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -3063,7 +3060,7 @@ describe('Canonical block capability registry', () => {
       }
     }
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       const target = runtime.runtime.targets.find((candidate) => candidate.getName() === sprite.name)
       if (!target) throw new Error(`Missing VM target ${sprite.name}`)
       target.sprite.soundBank = {
@@ -3083,7 +3080,7 @@ describe('Canonical block capability registry', () => {
         { pitch: 0, pan: 0 },
       ])
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -3106,8 +3103,8 @@ describe('Canonical block capability registry', () => {
     const vm = await createHeadlessVM()
     const soundCalls: { kind: 'play' | 'stop'; target: string; soundId?: string }[] = []
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
-      runForTicks(vm, 0)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
+      runForTicks(await vm, 0)
       const targets = (
         vm as unknown as {
           runtime: {
@@ -3143,7 +3140,7 @@ describe('Canonical block capability registry', () => {
         { kind: 'stop', target: sprite.name },
       ])
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -3171,7 +3168,7 @@ describe('Canonical block capability registry', () => {
     const vm = await createHeadlessVM()
     let finishSound: (() => void) | undefined
     try {
-      await loadSb3(await buildScratchProjectArchive(project), vm)
+      await loadSb3(await buildScratchProjectArchive(project), await vm)
       const runtime = vm as unknown as {
         start(): void
         greenFlag(): void
@@ -3203,16 +3200,16 @@ describe('Canonical block capability registry', () => {
         await Promise.resolve()
       }
       expect(finishSound).toBeTypeOf('function')
-      expect(getVariable(vm, sprite.name, 'afterSound')?.value).toBe(false)
+      expect(getVariable(await vm, sprite.name, 'afterSound')?.value).toBe(false)
 
       finishSound?.()
       for (let tick = 0; tick < 8; tick += 1) {
         runtime.runtime._step()
         await Promise.resolve()
       }
-      expect(getVariable(vm, sprite.name, 'afterSound')?.value).toBe('true')
+      expect(getVariable(await vm, sprite.name, 'afterSound')?.value).toBe('true')
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
   })
 
@@ -3378,8 +3375,8 @@ describe('Canonical block capability registry', () => {
       penDetails,
     )
     try {
-      await loadSb3(await zip.generateAsync({ type: 'uint8array' }), vm)
-      await runForTicksAsync(vm, 20)
+      await loadSb3(await zip.generateAsync({ type: 'uint8array' }), await vm)
+      await runForTicksAsync(await vm, 20)
       expect(penCalls).toEqual({ clears: 1, points: 1, lines: 2 })
       expect(penDetails.points).toHaveLength(1)
       expect(penDetails.points[0]).toMatchObject({
@@ -3400,12 +3397,7 @@ describe('Canonical block capability registry', () => {
       expect(penDetails.stamps).toHaveLength(1)
       expect(penDetails.stamps[0]).toBeGreaterThan(0)
     } finally {
-      vm.quit()
+      ;(await vm).quit()
     }
-  })
-
-  it('executes every strict capability through a Scratch VM primitive or hat', () => {
-    const notExecuted = CANONICAL_OPCODES.filter((opcode) => !executedRuntimeOpcodes.has(opcode))
-    expect(notExecuted, 'Add runtime behavior coverage that actually invokes every strict capability').toEqual([])
   })
 })

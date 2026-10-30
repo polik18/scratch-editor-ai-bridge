@@ -17,7 +17,7 @@ describe('Text to Speech network boundary', () => {
         AbortController: globalThis.AbortController,
         location: { hostname: 'localhost' },
       })
-      vm = createVM()
+      vm = await createVM()
       await loadSb3(
         await readFile(fixtureByName('load-extensions/confirm-load/text2speech-simple-project.sb3').path),
         vm,

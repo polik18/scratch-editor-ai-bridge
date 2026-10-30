@@ -3,15 +3,10 @@ import * as ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { CANONICAL_OPCODES } from '../../src/core/capabilities'
 
-const behaviorTestPath = new URL('./registry.test.ts', import.meta.url)
-const behaviorTestSource = await readFile(behaviorTestPath, 'utf8')
-const behaviorTestFile = ts.createSourceFile(
-  behaviorTestPath.pathname,
-  behaviorTestSource,
-  ts.ScriptTarget.Latest,
-  true,
-  ts.ScriptKind.TS,
-)
+const behaviorTestPaths = [
+  new URL('./registry.test.ts', import.meta.url),
+  new URL('../extensions/music.test.ts', import.meta.url),
+]
 const behaviorTitlePattern =
   /\b(executes|fires|waits|runs|stops|moves|glides|points|bounces|changes|reports|reads|switches|handles|clears|emits|clamps|routes|repeats)\b/i
 const runtimeCallNames = new Set([
@@ -23,6 +18,9 @@ const runtimeCallNames = new Set([
   'runVisibilityCase',
   'getVariable',
   'getTargets',
+  'createVM',
+  'loadSb3',
+  'runForTicks',
 ])
 
 interface BehaviorTestCase {
@@ -81,7 +79,17 @@ const collectBehaviorTestCases = (node: ts.Node): void => {
   }
   node.forEachChild(collectBehaviorTestCases)
 }
-collectBehaviorTestCases(behaviorTestFile)
+for (const behaviorTestPath of behaviorTestPaths) {
+  const behaviorTestSource = await readFile(behaviorTestPath, 'utf8')
+  const behaviorTestFile = ts.createSourceFile(
+    behaviorTestPath.pathname,
+    behaviorTestSource,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  )
+  collectBehaviorTestCases(behaviorTestFile)
+}
 
 describe('strict capability runtime coverage gate', () => {
   it('requires each strict opcode to be named and asserted in a VM-executing behavior test', () => {

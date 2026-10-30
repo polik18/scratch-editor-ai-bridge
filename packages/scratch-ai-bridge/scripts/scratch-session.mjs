@@ -1,7 +1,6 @@
-// scratch-session CLI: Stateful Scratch project CLI for AI agents
-// Usage: scratch-session <command> [args...]
-// Commands: new, load, save, ls, add-block, edit-block, remove-block, compile, preview, help
+#!/usr/bin/env node
+// scratch-session CLI: Stateful Scratch project CLI for AI agents.
+import { register } from 'tsx/esm/api';
 
-import { main } from './src/cli/session-cli.js';
-
-main();
+register();
+await import('../src/cli/session-cli.ts');

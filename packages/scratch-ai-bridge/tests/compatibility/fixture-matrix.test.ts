@@ -99,7 +99,7 @@ describe('official Scratch compatibility fixture matrix', () => {
         fixtureName,
       ).toEqual(cloudVariables.sort((a, b) => `${a.target}/${a.name}`.localeCompare(`${b.target}/${b.name}`)))
 
-      const compiled = buildScratchProjectJson(result.canonical)
+      const compiled = await buildScratchProjectJson(result.canonical)
       const compiledCloudVariables = compiled.targets.flatMap((target) =>
         Object.values(target.variables)
           .filter((value) => value[2] === true)
@@ -450,7 +450,7 @@ describe('official Scratch compatibility fixture matrix', () => {
 
     expect(canonicalTargets.map(({ comments }) => comments?.length ?? 0)).toEqual([1, 1])
     expect(blockComments).toHaveLength(5)
-    const roundTripped = projectJsonToCanonical(buildScratchProjectJson(result.canonical), fixture.name)
+    const roundTripped = projectJsonToCanonical(await buildScratchProjectJson(result.canonical), fixture.name)
     expect(roundTripped.stage.comments).toEqual(result.canonical.stage.comments)
     expect(roundTripped.sprites.map(({ comments }) => comments)).toEqual(
       result.canonical.sprites.map(({ comments }) => comments),
@@ -535,7 +535,7 @@ describe('official Scratch compatibility fixture matrix', () => {
       expect(issues, fixtureName).toContain(
         fixtureName === 'missing_sound.sb3' ? 'missing-archive-entry' : 'checksum-mismatch',
       )
-      expect(() => buildScratchProjectJson(result.canonical), fixtureName).toThrow(/source asset has/)
+      await expect(buildScratchProjectJson(result.canonical), fixtureName).rejects.toThrow(/source asset has/)
     }
   })
 
@@ -550,7 +550,7 @@ describe('official Scratch compatibility fixture matrix', () => {
     expect(
       result.canonical.monitors?.some(({ opcode, mode }) => opcode === 'data_listcontents' && mode === 'list'),
     ).toBe(true)
-    const compiled = buildScratchProjectJson(result.canonical)
+    const compiled = await buildScratchProjectJson(result.canonical)
     for (const monitor of compiled.monitors) {
       if (monitor.opcode !== 'data_variable' && monitor.opcode !== 'data_listcontents') continue
       const symbolName = monitor.params[monitor.opcode === 'data_variable' ? 'VARIABLE' : 'LIST']
@@ -590,7 +590,7 @@ describe('official Scratch compatibility fixture matrix', () => {
           sprite.sounds = []
         })
       }
-      const compiled = buildScratchProjectJson(compileInput)
+      const compiled = await buildScratchProjectJson(compileInput)
       expect(compiled.extensions).toEqual(sourceProject.extensions)
       expect(compiled.meta).toEqual(sourceProject.meta)
       for (const sourceTarget of sourceProject.targets as Record<string, unknown>[]) {

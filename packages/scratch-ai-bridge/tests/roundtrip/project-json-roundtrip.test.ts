@@ -16,9 +16,9 @@ const structuralSignature = (project: CanonicalProject) => ({
 })
 
 describe('Canonical IR project-json round trip', () => {
-  it('preserves the supported structural signature', () => {
+  it('preserves the supported structural signature', async () => {
     const source = example as CanonicalProject
-    const decoded = projectJsonToCanonical(buildScratchProjectJson(source), source.name)
+    const decoded = projectJsonToCanonical(await buildScratchProjectJson(source), source.name)
     expect(structuralSignature(decoded)).toEqual(structuralSignature(source))
   })
 })

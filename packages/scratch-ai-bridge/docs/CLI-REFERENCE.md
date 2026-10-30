@@ -75,23 +75,22 @@ scratch-ai-bridge test behavior game.json
 
 ### generate
 
-產生命令 (實驗性)。
+從 Canonical IR JSON 或受支援的 `spritesDef` GameDesign JSON 產生 SB3。輸出以暫存檔原子建立，既有路徑預設拒絕覆寫。
 
 ```
-scratch-ai-bridge generate <type> <input> [output]
+scratch-ai-bridge generate <design.json> --out <new-file.sb3> [--report <report.json>] [--preview <stage.png>] [--force]
 ```
 
-**類型：**
-
-- `batch`：批次產生 SB3 檔案
-- `manifest`：產生 Manifest JSON
+CLI stdout 永遠輸出版本化 JSON。生成 gate 包括 Canonical schema/semantic validation、SB3 archive、project JSON、block graph、costume/sound entry 及 MD5、Scratch VM load/save/reload。傳入 `--preview <stage.png>` 會以官方瀏覽器 renderer 載入並截取舞台；未傳入時 `renderer-preview` 為 `not-run`。`runtime-behavior` 仍為 `not-run`，生成成功不代表玩法已驗收。
 
 **範例：**
 
 ```bash
-scratch-ai-bridge generate batch designs/*.json output/
-scratch-ai-bridge generate manifest game.json
+scratch-ai-bridge generate game.json --out output/game.sb3 --report output/game.report.json
+scratch-ai-bridge generate game.json --out output/game.sb3 --force
 ```
+
+`scratch-session new-game --design=<design.json> --output=<directory>` 是同一 generator 的相容入口；`new-game` 和舊拼法 `newGame` 都有效。
 
 ### track
 

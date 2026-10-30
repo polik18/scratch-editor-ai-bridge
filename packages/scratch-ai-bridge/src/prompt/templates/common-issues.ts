@@ -10,7 +10,7 @@ export interface PromptTemplate {
   readonly description: string;
   readonly prompt: string;
   readonly examples: readonly string[];
-  readonly适用场景: readonly string[];
+  readonly applicableScenarios: readonly string[];
 }
 
 // ── Structure Templates ──────────────────────────────────────────────────────
@@ -26,7 +26,7 @@ const MISSING_START_BLOCK: PromptTemplate = {
     '如果這個積木群組希望自動執行，需要先接上「當綠旗被點擊」。',
     '這段積木是「{studentLabel}」，沒有事件觸發，需要加上開始積木。',
   ],
-  適用场景: [
+  applicableScenarios: [
     '學生忘記加事件觸發',
     '自製積木缺少事件包裝',
     '積木被誤放在錯誤位置',
@@ -44,7 +44,7 @@ const DETACHED_SCRIPT: PromptTemplate = {
     '積木的輸入插槽是空的，需要填入數值或變數。',
     '這段積木沒有連接到其他積木，需要接上事件觸發。',
   ],
-  適用场景: [
+  applicableScenarios: [
     '學生忘記設定數值',
     '積木連接斷裂',
     '自製積木參數未傳遞',
@@ -64,7 +64,7 @@ const LOOP_FOREVER: PromptTemplate = {
     '這個設定在每一輪迴圈中都會重複執行，確認是否為預期行為。',
     '如果只需要設定一次，可以把這段積木移到迴圈外面。',
   ],
-  適用场景: [
+  applicableScenarios: [
     '變數設定在迴圈內',
     '位置重置在迴圈內',
     '音效播放在迴圈內',
@@ -82,7 +82,7 @@ const WAIT_INSIDE_LOOP: PromptTemplate = {
     '迴圈內的等待會讓整個程式暫停，確認是否為預期行為。',
     '如果只是想讓動畫變慢，可以考慮調整等待時間。',
   ],
-  適用场景: [
+  applicableScenarios: [
     '動畫播放過快',
     '迴圈執行太頻繁',
     '需要控制節奏',
@@ -102,7 +102,7 @@ const SPRITE_NOT_VISIBLE: PromptTemplate = {
     '這段積木執行「隱藏」，所以角色不會顯示。',
     '角色位置在畫面外，可以加「移到 x:0 y:0」測試。',
   ],
-  適用场景: [
+  applicableScenarios: [
     '角色突然不見',
     '動畫看不到',
     '碰撞檢測失敗',
@@ -120,7 +120,7 @@ const WRONG_DIRECTIONS: PromptTemplate = {
     '角色面向 {direction} 度，前進會往這個方向移動，確認是否為預期方向。',
     '可以加「面向 90 度」讓角色向右移動。',
   ],
-  適用场景: [
+  applicableScenarios: [
     '角色移動方向錯誤',
     '碰撞檢測失敗',
     '動畫不符合預期',
@@ -140,7 +140,7 @@ const VARIABLE_NOT_SET: PromptTemplate = {
     '變數目前是 {value}，可能沒有正確設定，需要先設定值。',
     '這段積木使用變數 {name}，確認變數已正確設定。',
   ],
-  適用场景: [
+  applicableScenarios: [
     '變數值為 0',
     '變數值為空字串',
     '變數未初始化',
@@ -158,7 +158,7 @@ const SCORE_NOT_UPDATING: PromptTemplate = {
     '這段積木設定分數為 {value}，但沒有遞增，分數不會改變。',
     '可以加「分數變為 (分數 + 1)」讓分數每次增加 1。',
   ],
-  適用场景: [
+  applicableScenarios: [
     '分數卡在 0',
     '分數不增加',
     '分數不減少',
@@ -178,7 +178,7 @@ const UNKNOWN_BLOCK: PromptTemplate = {
     '這段積木使用了 {opcode}，目前無法完整解讀，建議在 Scratch 中執行確認。',
     '這是擴充功能或自製積木，靜態分析無法判斷行為。',
   ],
-  適用场景: [
+  applicableScenarios: [
     '擴充功能',
     '自製積木',
     '第三方積木',
@@ -196,7 +196,7 @@ const UNSUPPORTED_FEATURE: PromptTemplate = {
     '這段程式使用了 {feature}，目前無法完整解讀，建議在 Scratch 中執行確認。',
     '靜態分析無法判斷這個功能的行為，建議手動測試。',
   ],
-  適用场景: [
+  applicableScenarios: [
     '音效',
     '視訊',
     '雲端變數',

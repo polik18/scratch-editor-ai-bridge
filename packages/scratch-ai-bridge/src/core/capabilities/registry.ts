@@ -1,9 +1,9 @@
 import { BUILT_IN_BACKDROP_VISUALS, BUILT_IN_SPRITE_VISUALS } from '../visuals/presets'
 
 export type CanonicalBlockCategory =
-  'motion' | 'looks' | 'events' | 'control' | 'sensing' | 'operators' | 'data' | 'sound'
+  'motion' | 'looks' | 'events' | 'control' | 'sensing' | 'operators' | 'data' | 'sound' | 'extensions'
 export type CanonicalBlockShape = 'hat' | 'command' | 'reporter' | 'boolean'
-export type CanonicalInputKind = 'any' | 'number' | 'string' | 'boolean' | 'stack' | 'broadcast' | 'menu'
+export type CanonicalInputKind = 'any' | 'number' | 'string' | 'boolean' | 'stack' | 'broadcast' | 'menu' | 'color'
 export type CanonicalTargetKind = 'stage' | 'sprite'
 
 export interface CanonicalMenuShadow {
@@ -28,6 +28,8 @@ export interface CanonicalBlockCapability {
   readonly targets: readonly CanonicalTargetKind[]
   readonly inputs?: Readonly<Record<string, CanonicalInputCapability>>
   readonly fields?: Readonly<Record<string, CanonicalFieldCapability>>
+  /** Official Scratch extension module required by this block, if any. */
+  readonly extensionId?: string
 }
 
 const bothTargets = ['stage', 'sprite'] as const
@@ -799,6 +801,104 @@ export const CANONICAL_BLOCK_CAPABILITIES = {
     inputs: { VOLUME: { kind: 'number', required: true } },
   },
   sound_volume: { category: 'sound', shape: 'reporter', targets: bothTargets },
+
+  // Verified, commonly used Scratch extensions. Keep these explicit so the AI
+  // authoring vocabulary can grow without pretending every extension/device
+  // has identical runtime availability.
+  pen_clear: { category: 'extensions', shape: 'command', targets: bothTargets, extensionId: 'pen' },
+  pen_stamp: { category: 'extensions', shape: 'command', targets: spriteTarget, extensionId: 'pen' },
+  pen_penDown: { category: 'extensions', shape: 'command', targets: spriteTarget, extensionId: 'pen' },
+  pen_penUp: { category: 'extensions', shape: 'command', targets: spriteTarget, extensionId: 'pen' },
+  pen_setPenColorToColor: {
+    category: 'extensions',
+    shape: 'command',
+    targets: spriteTarget,
+    extensionId: 'pen',
+    inputs: { COLOR: { kind: 'color', required: true } },
+  },
+  pen_changePenColorParamBy: {
+    category: 'extensions',
+    shape: 'command',
+    targets: spriteTarget,
+    extensionId: 'pen',
+    inputs: {
+      COLOR_PARAM: { kind: 'menu', required: true },
+      VALUE: { kind: 'number', required: true },
+    },
+  },
+  pen_setPenColorParamTo: {
+    category: 'extensions',
+    shape: 'command',
+    targets: spriteTarget,
+    extensionId: 'pen',
+    inputs: {
+      COLOR_PARAM: { kind: 'menu', required: true },
+      VALUE: { kind: 'number', required: true },
+    },
+  },
+  pen_changePenSizeBy: {
+    category: 'extensions',
+    shape: 'command',
+    targets: spriteTarget,
+    extensionId: 'pen',
+    inputs: { SIZE: { kind: 'number', required: true } },
+  },
+  pen_setPenSizeTo: {
+    category: 'extensions',
+    shape: 'command',
+    targets: spriteTarget,
+    extensionId: 'pen',
+    inputs: { SIZE: { kind: 'number', required: true } },
+  },
+  music_playDrumForBeats: {
+    category: 'extensions',
+    shape: 'command',
+    targets: bothTargets,
+    extensionId: 'music',
+    inputs: {
+      DRUM: { kind: 'menu', required: true },
+      BEATS: { kind: 'number', required: true },
+    },
+  },
+  music_restForBeats: {
+    category: 'extensions',
+    shape: 'command',
+    targets: bothTargets,
+    extensionId: 'music',
+    inputs: { BEATS: { kind: 'number', required: true } },
+  },
+  music_playNoteForBeats: {
+    category: 'extensions',
+    shape: 'command',
+    targets: bothTargets,
+    extensionId: 'music',
+    inputs: {
+      NOTE: { kind: 'number', required: true },
+      BEATS: { kind: 'number', required: true },
+    },
+  },
+  music_setInstrument: {
+    category: 'extensions',
+    shape: 'command',
+    targets: bothTargets,
+    extensionId: 'music',
+    inputs: { INSTRUMENT: { kind: 'menu', required: true } },
+  },
+  music_setTempo: {
+    category: 'extensions',
+    shape: 'command',
+    targets: bothTargets,
+    extensionId: 'music',
+    inputs: { TEMPO: { kind: 'number', required: true } },
+  },
+  music_changeTempo: {
+    category: 'extensions',
+    shape: 'command',
+    targets: bothTargets,
+    extensionId: 'music',
+    inputs: { TEMPO: { kind: 'number', required: true } },
+  },
+  music_getTempo: { category: 'extensions', shape: 'reporter', targets: bothTargets, extensionId: 'music' },
 } as const satisfies Readonly<Record<string, CanonicalBlockCapability>>
 
 export type KnownOpcode = keyof typeof CANONICAL_BLOCK_CAPABILITIES
@@ -867,7 +967,7 @@ export const createAuthoringInstruction = (withRequirementCoverage = false): str
 ${withRequirementCoverage ? 'project 物件' : '根物件'}必須包含 format="scratch-ai-bridge/canonical-ir"、version=1、name、stage、sprites、broadcasts。
 stage 必須包含 kind="stage"、name、variables、lists、costumes、sounds、scripts、procedures。
 每個 sprite 必須包含 kind="sprite"、name、variables、lists、costumes、sounds、scripts、procedures、x、y、direction、size、visible、draggable、rotationStyle。
-每個 script 必須是 {"blocks":[...]}，不能直接使用積木陣列。
+每個 script 必須是 {"blocks":[...]}，不能直接使用積木陣列。Stage 和 sprite 都可以有 scripts；Stage script 的 target 名稱必須等於 stage.name。
 每個 input 都必須是下列物件之一：
 - 常數：{"type":"literal","value":10}
 - 變數：{"type":"variable","name":"score"}
@@ -882,7 +982,8 @@ fields 的值必須直接是 string、number 或 boolean，例如 {"KEY_OPTION":
 每個 visible=true 的 sprite 至少要有一個 costume；可用內建造型名稱：${BUILT_IN_SPRITE_VISUALS.join('、')}。
 使用上述內建名稱時不要輸出 data，Bridge 會安全加入圖像；若不確定造型，角色使用 generic-character，背景使用 platform-day。Paddle/球拍、Wall/牆/邊界、Brick/磚塊等角色名稱會優先決定造型；Left/Right wall 會使用直向牆，Top/Bottom wall 使用橫向牆，避免被泛用 costume 名稱覆蓋。
 不要使用 Mario、Goomba 等受版權保護角色的原始圖像；應使用通用平台英雄與敵人造型。
-空的 lists、costumes、sounds、scripts、procedures 也必須輸出 []。
+Stage 至少要有一個背景 costume；Stage 與 sprite 的 scripts 都可用來放置初始化、關卡與全域事件邏輯。空的 lists、costumes、sounds、scripts、procedures 也必須輸出 []。
+Pen（pen_*）與 Music（music_*）是已驗證的官方擴充積木；使用到時 compiler 會從 opcode 自動加入 project.extensions，不必手動猜 extension id。其他尚未列出的擴充、硬體或自製積木仍須先加入 capability registry 並驗證 runtime，不能假設會執行。
 布林條件必須使用 capability registry 標示為 boolean 的 reporter，不可直接把數值變數當條件。registry 的 shape 僅供辨識積木類型；Canonical IR block 禁止輸出 shape 欄位，積木形狀由 opcode 決定。
 可用積木與必要參數：
 ${CANONICAL_OPCODES.map(describeBlock).join('\n')}
@@ -890,7 +991,7 @@ ${CANONICAL_OPCODES.map(describeBlock).join('\n')}
 碰撞 TOUCHINGOBJECTMENU 可用角色名稱、_edge_ 或 _mouse_。
 不要自行加入 Scratch block id、parent、next 或 shadow id；這些由 compiler 產生。
 Scratch 的 control_forever 每輪都會讓出執行時間，不要只為消除分析器警告而額外插入 control_wait。若迴圈內設定變數是碰撞、計分或狀態更新，保留在迴圈內；只把只需執行一次的初始值設定放在迴圈前。
-若需求超出上述 capability，只產生可執行的簡化示範，不得杜撰 opcode.${
+若需求超出上述 capability，不得靜默刪除玩法或假裝已完成；優先提出最接近且仍有趣的替代方案，並依需求覆蓋欄位標記近似、未支援或環境受限項目。重要玩法會因此改變時，先請使用者選擇或明確採用替代方案。不得杜撰 opcode.${
   withRequirementCoverage
     ? `
 requirementCoverage 必須逐項列出原作品需求中的角色、玩法與目標，使用 id、requirement、status、evidencePointers 欄位。status 只能是 implemented-structure、approximated、not-implemented、runtime-unavailable、not-verifiable-from-ir。implemented-structure 必須引用 project 內實際存在的 block JSON Pointer；路徑以 project 物件為根，不要加 /project 前綴（例如 /sprites/0/scripts/0/blocks/0）。只近似或未做的項目不得標成 implemented-structure。FPS、手感及未執行行為使用 not-verifiable-from-ir。Bridge 會檢查 pointer，但 AI 自述不等於 runtime 驗證。
@@ -899,22 +1000,135 @@ rotationStyle 只能使用 "all around"、"left-right" 或 "don't rotate"，不�
     : ''
 }`
 
-export const createStudentProjectInstruction = (
+export type GameGenreProfile = 'auto' | 'platformer' | 'arcade' | 'puzzle-story' | 'rhythm' | 'drawing' | 'simulation'
+
+export interface StudentProjectPreferences {
+  readonly genre?: GameGenreProfile
+  readonly confirmedBrief?: string
+}
+
+export interface ProjectFragmentPromptOptions {
+  readonly projectName: string
+  readonly fragmentId: string
+  readonly targetKind: 'stage' | 'sprite'
+  readonly targetName: string
+  readonly designBrief: string
+  readonly existingTargets?: readonly string[]
+  readonly sharedNames?: readonly string[]
+  /** Use only when the same AI conversation already contains the full authoring contract. */
+  readonly reuseCapabilityContract?: boolean
+}
+
+/** Produces one independently generated, mergeable target so large projects fit across AI turns. */
+export const createProjectFragmentInstruction = (options: ProjectFragmentPromptOptions): string => {
+  const targetKind = options.targetKind
+  const opcodes = CANONICAL_OPCODES.filter((opcode) =>
+    (CANONICAL_BLOCK_CAPABILITIES[opcode].targets as readonly string[]).includes(targetKind),
+  )
+  const targetShape =
+    targetKind === 'stage'
+      ? `{"kind":"stage","name":${JSON.stringify(options.targetName)},"variables":[],"lists":[],"costumes":[{"name":"platform-day","dataFormat":"svg"}],"sounds":[],"scripts":[],"procedures":[]}`
+      : `{"kind":"sprite","name":${JSON.stringify(options.targetName)},"variables":[],"lists":[],"costumes":[{"name":"generic-character","dataFormat":"svg"}],"sounds":[],"scripts":[],"procedures":[],"x":0,"y":0,"direction":90,"size":100,"visible":true,"draggable":false,"rotationStyle":"all around"}`
+  const capabilityContract = options.reuseCapabilityContract
+    ? '沿用本 AI 對話前文的 Scratch AI Bridge 完整 authoring contract 和 opcode 清單。這個模式只適用同一對話；不得猜測未列出的積木，也不得遺失前文規則。若你看不到先前能力規格，請先要求使用者重貼完整模式的指令。'
+    : `此片段可用的 opcode 與必要參數：\n${opcodes.map(describeBlock).join('\n')}`
+  return `你正在分段製作 Scratch 遊戲。只產生一個 target 片段，供 Scratch AI Bridge 合併；不要重輸出整個專案，也不要用 Markdown。
+
+作品：${options.projectName}
+本片段 ID：${options.fragmentId}
+本片段 target：${targetKind}「${options.targetName}」
+設計 brief：
+${options.designBrief.trim()}
+
+已存在的 targets：${options.existingTargets?.join('、') || '尚無；若本片段為 sprite，Stage 必須已先加入。'}
+共享廣播/變數等名稱：${options.sharedNames?.join('、') || '尚未指定；請沿用 brief 的命名並避免自行另造同義名稱。'}
+
+輸出根物件格式：{"format":"scratch-ai-bridge/project-fragment","version":1,"projectName":${JSON.stringify(options.projectName)},"fragmentId":${JSON.stringify(options.fragmentId)},"target":${targetShape},"broadcasts":[],"extensions":[]}
+target 必須符合上述完整形狀；scripts 每項是 {"blocks":[...]}，空集合也要輸出 []。需要加入共享變數、廣播或擴充時，分別放在 target.variables、broadcasts、extensions；同名共享資料必須內容一致。已存在的同一 sprite 可用不同 fragmentId 再提供增量 scripts，但不要重複宣告不同值的同名變數/造型/自訂積木。
+每個 input 必須使用 literal、variable、list、broadcast、block 或 stack 物件格式；fields 直接填純量。不要輸出 Scratch block id、parent、next 或 shadow id。布林條件使用布林 reporter。保留完整玩法邏輯，不要把複雜需求簡化成只有移動。
+
+${capabilityContract}
+
+素材與選單限制：Stage 背景可用 ${BUILT_IN_BACKDROP_VISUALS.join('、')}；Sprite 造型可用 ${BUILT_IN_SPRITE_VISUALS.join('、')}。可用內建造型名稱時不要輸出 data。KEY_OPTION 可用 space、方向鍵、any、a-z、0-9；TOUCHINGOBJECTMENU 可用已存在角色名稱、_edge_ 或 _mouse_。不要用 Mario 等受版權角色原始圖像，不要杜撰 opcode 或假裝未支援功能已實作。
+
+只輸出一個 JSON 物件。`
+}
+
+/** A compact prompt for concept development; it intentionally contains no block catalog or JSON schema. */
+export const createGameDesignDiscussionInstruction = (
   request: string,
-): string => `這是一個「先聊點子，再一起做作品」的兩階段任務。下面的 JSON 輸出規定只在最後製作作品時生效；開始時請先用繁體中文和學生簡短討論，不要立刻輸出 JSON、程式碼或完整作品答案。
+  genre: GameGenreProfile = 'auto',
+): string => `請用繁體中文陪學生把點子設計成真正有玩法的 Scratch 遊戲。現在只做遊戲設計討論，先不要輸出程式碼、JSON 或 Scratch 積木。
 
-第一階段：陪學生發想
-- 先肯定並用一句話說出你聽懂的作品想法，不批評它太簡單。
-- 想想這個點子還缺少哪些遊戲設計要素：玩家要完成什麼、可以做什麼、會遇到什麼挑戰、成功或失敗時會發生什麼。
-- 提出 2 到 3 個貼合這個點子的簡短玩法靈感，例如一種障礙、一個有趣選擇或一個意外轉折；說明讓玩法變有趣的效果。不要把所有靈感都塞進作品，請讓學生挑選、修改或提出自己的想法。
-- 一次最多問 2 個簡單問題，問題要短、適合國小生理解，並給幾個可選方向；也接受學生自由回答。不要要求姓名、班級或其他個人資料。
-- 等學生回答後，優先採用學生自己的選擇，簡短整理成玩法，再開始製作。若有一個關鍵玩法仍不清楚，最多再追問 1 次；若學生說「直接做」或不想討論，就用最簡單可玩的方式理解原想法並開始製作。
-
-第二階段：產生 Scratch 作品
-- 保留學生原本的角色、玩法與目標，也納入學生在討論中選擇的點子。若目前能力無法完整做到，請產生可執行的簡化版本。
-- 最後回覆時只輸出規定的完整 JSON；不要把討論文字、Markdown 或程式碼框放進最終回覆。
-
-作品需求：
+學生的原始想法：
 ${request.trim()}
 
+學生偏好的類型：${
+  {
+    auto: '尚未決定，請根據點子提出不同方向。',
+    platformer: '平台跳躍/動作冒險',
+    arcade: '街機射擊/閃避',
+    'puzzle-story': '解謎/冒險故事',
+    rhythm: '節奏/音樂互動',
+    drawing: '繪圖/互動藝術',
+    simulation: '模擬/經營',
+  }[genre]
+}
+
+請按這個流程：
+1. 用一句友善的話重述想法，不嫌它太簡單。
+2. 提出 2–3 個不同但都貼合主題的玩法方向，說清楚玩家會做什麼、樂趣來自哪裡；不要把所有方向硬塞進同一款遊戲。
+3. 一次最多問 2 個簡單問題，讓學生選擇玩法類型、主要操作或想要的感覺。每題提供幾個短選項，也允許回答「你決定」或自由回答。不索取個人資料。
+4. 等學生選擇後，整理一份精簡的「已確認遊戲設計 brief」，並把尚未決定的小細節用明確的合理預設補上；仍不輸出 JSON。
+
+已確認 brief 請包含：遊戲名稱與一句話賣點、類型、玩家角色/目標、玩家反覆做的核心循環（操作→挑戰→回饋）、主要障礙與難度/進展、獎勵或驚喜、成功/失敗/重玩方式、操作方式、畫面/音效氣氛，以及第一分鐘玩家會經歷什麼。玩法應有立即回饋、逐步變化和清楚目標；保持 Scratch 可實作，但不要因為追求簡單就刪掉原始想法。
+
+如果學生說「直接做」或「你決定」，替他做有創意但範圍合理的設計，列明你採用的預設，完成 brief 後再等待下一步。`
+
+export const createStudentProjectInstruction = (
+  request: string,
+  preferences: StudentProjectPreferences = {},
+): string => {
+  const genre = preferences.genre ?? 'auto'
+  const genreNames: Record<GameGenreProfile, string> = {
+    auto: '請依已確認 brief 選擇最合適的類型，不要套用固定遊戲模板。',
+    platformer: '平台跳躍/動作冒險',
+    arcade: '街機射擊/閃避',
+    'puzzle-story': '解謎/冒險故事',
+    rhythm: '節奏/音樂互動',
+    drawing: '繪圖/互動藝術',
+    simulation: '模擬/經營',
+  }
+  const brief = preferences.confirmedBrief?.trim()
+
+  return `這是「依設計 brief 製作遊戲」階段。這份訊息可能在新的 AI 對話中使用；以下原始需求和已確認 brief 是完整設計依據，不需要讀取前一段聊天紀錄。
+
+原始作品需求：
+${request.trim()}
+
+已確認遊戲設計 brief：
+${brief || '尚未提供。請先自行完成一份精簡設計：確定玩家角色與目標、核心循環（操作→挑戰→回饋）、至少一種有趣障礙、逐步進展/獎勵、成功/失敗與快速重玩；採用合理預設並在 requirementCoverage 中標明近似或未實作項目，不要退化成只有移動和說話的空殼示範。'}
+
+指定類型：${genreNames[genre]}
+
+製作要求：
+- 保留原始需求及 brief 中每一項核心玩法；開始前先在內部建立「需求→角色/狀態/事件/腳本」映射，並用有意義的變化、回饋和重玩動機完成核心循環。
+- 至少規劃初始化/reset、玩家主要操作、挑戰/碰撞或選擇、進展/獎勵、成功/失敗回饋。依遊戲類型選擇所需架構，不要硬套平台遊戲模板。
+- 若有必要需求超過工具能力，保留最接近的核心體驗，並在 requirementCoverage 明確標示 approximated、runtime-unavailable 或 not-implemented；不可靜默省略，也不可杜撰 opcode。
+- 確保造型和背景對應角色用途；避免所有角色只用相同 generic 外觀。音效素材未提供時不可宣稱已加入實際音效。
+- 產生前檢查腳本能否形成完整玩法，尤其是開始狀態、可觀察回饋、勝敗條件與重開流程；最後只輸出規定的完整 JSON。
+
 ${createAuthoringInstruction(true)}`
+}
+
+export const estimatePromptSize = (
+  prompt: string,
+): { readonly characters: number; readonly estimatedTokens: number } => {
+  const cjkCharacters = (prompt.match(/[\u3400-\u9fff\uf900-\ufaff]/g) ?? []).length
+  const otherCharacters = [...prompt].length - cjkCharacters
+  return {
+    characters: [...prompt].length,
+    // A rough mixed-language estimate for before/after comparisons only; provider tokenizers differ.
+    estimatedTokens: Math.ceil(cjkCharacters + otherCharacters / 4),
+  }
+}

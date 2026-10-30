@@ -1,0 +1,17 @@
+{
+  "file": "research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.sb3",
+  "bytes": 4472,
+  "sha256": "7b9e60d8a1e9defdebcb27d8bdf7ba01d749d5b2a89fc48bd5044410d386bd1a",
+  "entries": 6,
+  "asset_entries": 5,
+  "targets": 5,
+  "sprites": 4,
+  "blocks": 48,
+  "scripts": 9,
+  "variables": 4,
+  "lists": 1,
+  "broadcasts": 3,
+  "costumes": 5,
+  "missing_assets": [],
+  "asset_hash_mismatches": []
+}

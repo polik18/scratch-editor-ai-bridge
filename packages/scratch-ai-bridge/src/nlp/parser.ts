@@ -1,8 +1,6 @@
 // NLP Parser: Convert natural language to Scratch block commands
 // Usage: import { parseNaturalLanguage } from '@scratch/scratch-ai-bridge/nlp';
 
-import type { CanonicalBlockCategory, CanonicalBlockCapability } from '../core/capabilities';
-import type { Session } from '../cli/session';
 
 // Common task templates mapped to block opcodes
 const COMMON_TASKS: Record<string, string[]> = {
@@ -30,27 +28,8 @@ const COMMON_TASKS: Record<string, string[]> = {
   touch: ['sensing_touchingobject'],
 };
 
-// Block categories by opcode
-const OPCODE_TO_CATEGORY: Record<string, CanonicalBlockCategory> = {
-  motion_movesteps: 'motion',
-  motion_turnright: 'motion',
-  motion_turnleft: 'motion',
-  motion_gotoxy: 'motion',
-  looks_say: 'looks',
-  looks_sayforsecs: 'looks',
-  looks_show: 'looks',
-  looks_hide: 'looks',
-  event_whenthisspriteclicked: 'events',
-  event_whenflagclicked: 'events',
-  event_whenkeypressed: 'events',
-  control_repeat: 'control',
-  control_wait: 'control',
-  sound_play: 'sound',
-  sound_playuntildone: 'sound',
-  data_setvariableto: 'data',
-  data_changevariableby: 'data',
-  sensing_touchingobject: 'sensing',
-};
+// Block categories by opcode (kept for future use)
+// const OPCODE_TO_CATEGORY: Record<string, CanonicalBlockCategory> = {};
 
 // Input defaults for common blocks
 const INPUT_DEFAULTS: Record<string, Record<string, any>> = {

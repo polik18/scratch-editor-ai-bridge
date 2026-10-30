@@ -1,8 +1,8 @@
 # Scratch AI Bridge Improvement Status
 
-**Last Updated**: 2026-10-27  
-**Version**: 0.2.0  
-**Status**: ✅ Complete (Steps 1-5)
+**Last Updated**: 2026-10-30
+**Version**: 0.2.1
+**Status**: ✅ TypeScript compilation and package build verified; behavioral tests remain unrun
 
 ## Steps Completed
 
@@ -114,6 +114,49 @@ npm run dev
 # Visit: http://localhost:5173/src/ui/preview.html
 ```
 
+## TypeScript Compilation Fix (2026-10-30)
+
+**Status**: ✅ Complete for type-check and production build
+**Initial check**: Before fixes, `npx tsc --noEmit --pretty false` reported **20 diagnostics**. The earlier 19-error count omitted one `main.ts` diagnostic.
+
+### Initial diagnostic snapshot
+
+| File | Count | Diagnostics and locations |
+|---|---:|---|
+| `src/cli/session-cli.ts` | 3 | TS6192 unused import declaration (line 37); TS2554 `inspect()` called with an argument although its signature expects none (line 231); TS6133 unused `_outputPath` (line 442). |
+| `src/cli/session/session.ts` | 1 | TS6133 unused `patch` parameter in `applyPatchToProject()` (line 822). |
+| `src/cli/session/validator.ts` | 3 | TS2367 compares `string` with `boolean` (line 170); TS2345 passes `unknown` where `BlockData` is required (line 258); TS6133 unused `allBlockIds` parameter (line 269). |
+| `src/main.ts` | 5 | TS6133 unused `studentPreviewGeneration` (8565), `studentPreviewRenderQueue` (8569), `stopStudentAnimation` (9069), and `AI_INSTRUCTION` (9085); TS2339 `finish` is unavailable on inferred `never` (9073). |
+| `src/ui/index.ts`, `src/ui/main.ts` | 3 | TS6142 JSX configuration missing for `App.tsx` (one each at `index.ts:2` and `main.ts:2`); TS2459 `init` is not exported from `main.ts` (`index.ts:5`). |
+| `tests/compatibility/official-sb2-procedure-execution.test.ts` | 3 | TS2349 calls a `void` value (lines 335, 371, 409). |
+| `tests/capabilities/registry.test.ts` | 2 | TS6133 unused `createVM` import (line 22) and `renderer` (line 50). |
+| **Total** | **20** | Snapshot from the command above; line numbers can move as files change. |
+
+### Fixes applied
+
+- Removed unused imports/arguments and corrected the CLI `inspect()` call to match the session API.
+- Corrected validator typing and removed an unused parameter. The `next` check now follows the declared Scratch block type (`string | null`).
+- Configured TypeScript to preserve TSX for Vite and exported `init` from the UI entry module.
+- Replaced the browser UI's Node-only Playwright screenshot call with an in-browser Scratch VM canvas render and PNG download. The CLI Playwright automation remains Node-only.
+- Moved Node filesystem/path imports in `ScratchSession` into the file load/save methods so browser entry points do not eagerly load Node builtins.
+- Fixed three compatibility-test cleanup expressions that JavaScript parsed as attempts to call the preceding `void` result. Removed unused test declarations and attached the renderer mock built by the capability test helper.
+- Removed unused declarations in the duplicated `main()` preview setup and used a typed mutable state container to avoid impossible `never` narrowing.
+
+The `plan/apply/undo/diff()` methods do not implement patch operations. They now report `unsupported`, and `apply()` throws instead of saving an unchanged project as if a patch succeeded. Implementing transactional patch operations, undo history, and semantic diffs remains a separate functional task.
+
+### Verification results
+
+- `npx tsc --noEmit --pretty false`: **passed, 0 diagnostics**.
+- `npm run build`: **passed**, including Vite bundle generation, service worker generation, and bundle-budget checks.
+- Build warnings remain for `node:path` and `node:fs/promises` being externalized in Node-only session methods, unresolved runtime `new URL()` expressions, and large Scratch renderer/VM chunks. These warnings did not fail the build; browser runtime verification is still needed.
+- Tests and the `scratch-session compile` workflow were not run.
+
+### Remaining work
+
+1. Run focused tests and browser verification for session creation, preview PNG download, and the compatibility test cleanup.
+2. Implement the documented patch schema and real `plan/apply/undo/diff` behavior before advertising those CLI operations as supported.
+3. Reassess the remaining bundler warnings and browser runtime behavior, especially the Node-only session load/save methods.
+
 ## Current Capabilities
 
 ### AI Agent Integration
@@ -170,8 +213,8 @@ npm run dev
 ### Modified Files
 
 - `package.json` (added `scratch-session` bin, updated scripts)
-- `src/cli/session-cli.ts` (added `nlpParse` and `previewScreenshot` commands)
-- `src/cli/session/session.ts` (added `SessionInfo.name` field)
+- `src/cli/session-cli.ts` (added `nlpParse` and `previewScreenshot` commands, fixed compile() optional parameter)
+- `src/cli/session/session.ts` (added SessionInfo.name field, JSZip wrapper, plan/apply/undo/diff methods, unused variable suppressions)
 - `vite.config.ts` (added `uiPreview` entry)
 
 ## Testing
@@ -187,17 +230,15 @@ scratch-session preview-screenshot /tmp/preview.png
 # Test Web UI
 npm run dev
 # Visit: http://localhost:5173/src/ui/preview.html
+
+# Verify TypeScript compilation (current focus)
+npx tsc --noEmit
+npm run build
 ```
-
-## Next Steps
-
-1. **Integration Testing**: Full end-to-end workflow
-2. **Production Deployment**: GitHub Pages + Cloudflare Worker
-3. **Documentation**: User guide and examples
-4. **Performance Optimization**: Reduce build size, improve load time
 
 ## Known Limitations
 
 - oMLX endpoint requires authentication (placeholder integration)
 - Web UI uses DOM API instead of React (lightweight alternative)
 - Preview requires Playwright (browser automation overhead)
+- Patch planning/application, undo history, and semantic diff are intentionally unsupported pending implementation; see the dated status above.

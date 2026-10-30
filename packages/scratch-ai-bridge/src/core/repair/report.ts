@@ -484,13 +484,14 @@ const semanticSuggestion = (issue: CanonicalSemanticIssue): string => {
 const pathTail = (path: string): string => decodePointerPart(path.slice(path.lastIndexOf('/') + 1))
 
 const canonicalInputExample = (
-  kind: 'any' | 'number' | 'string' | 'boolean' | 'stack' | 'broadcast' | 'menu',
+  kind: 'any' | 'number' | 'string' | 'boolean' | 'stack' | 'broadcast' | 'menu' | 'color',
   menuValue?: string,
 ): unknown => {
   if (kind === 'stack') return { type: 'stack', blocks: [] }
   if (kind === 'broadcast') return undefined
   if (kind === 'boolean') return { type: 'literal', value: false }
   if (kind === 'number') return { type: 'literal', value: 0 }
+  if (kind === 'color') return { type: 'literal', value: '#000000' }
   if (kind === 'menu' && menuValue === undefined) return undefined
   return { type: 'literal', value: menuValue ?? '' }
 }

@@ -216,7 +216,7 @@ export const validateCanonicalSemantics = (project: CanonicalProject): readonly 
       }
       if (
         inputCapability &&
-        ['any', 'number', 'string', 'menu'].includes(inputCapability.kind) &&
+        ['any', 'number', 'string', 'menu', 'color'].includes(inputCapability.kind) &&
         (input.type === 'stack' || input.type === 'broadcast')
       ) {
         issue('error', 'input-kind', path, `${inputName} 必須是常數或 reporter input`)

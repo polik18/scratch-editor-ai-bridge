@@ -18,6 +18,7 @@
     "feedback:corpus:generate": "node scripts/generate-feedback-corpus.mjs",
     "lint": "eslint . && prettier --check .",
     "measure:archive-memory": "node --expose-gc scripts/measure-archive-memory.mjs",
+    "measure:fragment-budget": "tsx scripts/measure-project-fragment-budget.ts",
     "prebuild": "npm run generate:validator",
     "predev": "npm run generate:validator",
     "pretest": "npm run generate:validator",

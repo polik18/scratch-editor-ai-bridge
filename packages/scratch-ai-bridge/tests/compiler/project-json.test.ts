@@ -16,7 +16,7 @@ describe('Scratch project JSON compiler', () => {
     const projectFile = zip.file('project.json')
     expect(projectFile).not.toBeNull()
     if (!projectFile) return
-    const project = JSON.parse(await projectFile.async('string')) as ReturnType<typeof buildScratchProjectJson>
+    const project = JSON.parse(await projectFile.async('string')) as any
     const stage = project.targets[0]
     const sprite = project.targets[1]
     const stageFile = zip.file(stage.costumes[0].md5ext)
@@ -47,9 +47,9 @@ describe('Scratch project JSON compiler', () => {
     const projectFile = zip.file('project.json')
     expect(projectFile).not.toBeNull()
     if (!projectFile) return
-    const project = JSON.parse(await projectFile.async('string')) as ReturnType<typeof buildScratchProjectJson>
+    const project = JSON.parse(await projectFile.async('string')) as any
     const presets = await Promise.all(
-      project.targets.map(async (target) => {
+      project.targets.map(async (target: any) => {
         const costumeFile = zip.file(target.costumes[0].md5ext)
         expect(costumeFile).not.toBeNull()
         return costumeFile ? /data-sab-preset="([^"]+)"/.exec(await costumeFile.async('string'))?.[1] : undefined
@@ -90,9 +90,9 @@ describe('Scratch project JSON compiler', () => {
     const projectFile = zip.file('project.json')
     expect(projectFile).not.toBeNull()
     if (!projectFile) return
-    const compiled = JSON.parse(await projectFile.async('string')) as ReturnType<typeof buildScratchProjectJson>
+    const compiled = JSON.parse(await projectFile.async('string')) as any
     const visuals = await Promise.all(
-      compiled.targets.slice(1).map(async (target) => {
+      compiled.targets.slice(1).map(async (target: any) => {
         const asset = zip.file(target.costumes[0].md5ext)
         expect(asset).not.toBeNull()
         return asset ? await asset.async('string') : ''
@@ -109,8 +109,8 @@ describe('Scratch project JSON compiler', () => {
     expect(visuals[3]).toContain('width="64" height="28"')
   })
 
-  it('creates deterministic block graph, symbols and nested substacks', () => {
-    const result = buildScratchProjectJson(example as CanonicalProject)
+  it('creates deterministic block graph, symbols and nested substacks', async () => {
+    const result = await buildScratchProjectJson(example as CanonicalProject)
     const stage = result.targets[0]
     expect(stage.isStage).toBe(true)
     expect(Object.keys(stage.variables)).toHaveLength(1)
@@ -121,11 +121,11 @@ describe('Scratch project JSON compiler', () => {
     expect(blocks.some((block) => block.opcode === 'data_changevariableby')).toBe(true)
   })
 
-  it('compiles nested canonical metadata without flattening JSON values', () => {
+  it('compiles nested canonical metadata without flattening JSON values', async () => {
     const project = structuredClone(example as CanonicalProject)
     project.meta = { custom: { array: [null, 1, { enabled: true }] } }
     expect(validateCanonicalProject(project)).toMatchObject({ valid: true })
-    expect(buildScratchProjectJson(project).meta.custom).toEqual({ array: [null, 1, { enabled: true }] })
+    expect((await buildScratchProjectJson(project)).meta.custom).toEqual({ array: [null, 1, { enabled: true }] })
   })
 
   it('preserves WAV and MP3 bytes and sound metadata through archive compilation', async () => {
@@ -150,7 +150,7 @@ describe('Scratch project JSON compiler', () => {
       },
     ]
 
-    const compiled = buildScratchProjectJson(project)
+    const compiled = await buildScratchProjectJson(project)
     const archive = await buildScratchProjectArchive(project)
     const zip = await JSZip.loadAsync(archive)
     for (const [index, expectedBytes] of [wavBytes, mp3Bytes].entries()) {
@@ -165,7 +165,7 @@ describe('Scratch project JSON compiler', () => {
     }
   })
 
-  it('compiles newly registered arithmetic and text reporters through the generic graph path', () => {
+  it('compiles newly registered arithmetic and text reporters through the generic graph path', async () => {
     const project = structuredClone(example as CanonicalProject)
     const assigned = project.stage.scripts[0].blocks[1]
     if (!assigned.inputs) throw new Error('Expected score assignment in the example project')
@@ -385,7 +385,7 @@ describe('Scratch project JSON compiler', () => {
       ],
     })
 
-    const stage = buildScratchProjectJson(project).targets[0]
+    const stage = (await buildScratchProjectJson(project)).targets[0]
     expect(Object.values(stage.blocks).map(({ opcode }) => opcode)).toEqual(
       expect.arrayContaining([
         'operator_add',
@@ -417,7 +417,8 @@ describe('Scratch project JSON compiler', () => {
         shadow: true,
       })
     }
-    const spriteBlocks = buildScratchProjectJson(project).targets.find(({ isStage }) => !isStage)?.blocks ?? {}
+    const spriteBlocks =
+      (await buildScratchProjectJson(project)).targets.find(({ isStage }) => !isStage)?.blocks ?? {}
     expect(Object.values(spriteBlocks).map(({ opcode }) => opcode)).toEqual(
       expect.arrayContaining([
         'motion_turnright',
@@ -471,8 +472,8 @@ describe('Scratch project JSON compiler', () => {
     }
   })
 
-  it('creates official menu shadows for platformer collision and costume blocks', () => {
-    const result = buildScratchProjectJson(platformer as CanonicalProject)
+  it('creates official menu shadows for platformer collision and costume blocks', async () => {
+    const result = await buildScratchProjectJson(platformer as CanonicalProject)
     const player = result.targets.find((target) => target.name === 'Player')
     expect(player).toBeDefined()
     if (!player) return
@@ -505,7 +506,7 @@ describe('Scratch project JSON compiler', () => {
     })
   })
 
-  it('compiles list commands, reporters, and list fields from the capability registry', () => {
+  it('compiles list commands, reporters, and list fields from the capability registry', async () => {
     const project = structuredClone(example as CanonicalProject)
     project.stage.lists.push({ name: 'items', value: [] })
     project.stage.scripts.push({
@@ -650,7 +651,7 @@ describe('Scratch project JSON compiler', () => {
       ],
     })
 
-    const stage = buildScratchProjectJson(project).targets[0]
+    const stage = (await buildScratchProjectJson(project)).targets[0]
     const blocks = Object.values(stage.blocks)
     expect(blocks.map(({ opcode }) => opcode)).toEqual(
       expect.arrayContaining([
@@ -687,7 +688,7 @@ describe('Scratch project JSON compiler', () => {
     ])
   })
 
-  it('compiles additional event hats and the broadcast-and-wait block', () => {
+  it('compiles additional event hats and the broadcast-and-wait block', async () => {
     const project = structuredClone(example as CanonicalProject)
     project.broadcasts.push({ name: 'finish' })
     project.stage.scripts.push({
@@ -705,7 +706,7 @@ describe('Scratch project JSON compiler', () => {
     project.sprites.push(structuredClone((platformer as CanonicalProject).sprites[0]))
     project.sprites[0].scripts.push({ blocks: [{ opcode: 'event_whenthisspriteclicked' }] })
 
-    const result = buildScratchProjectJson(project)
+    const result = await buildScratchProjectJson(project)
     expect(Object.values(result.targets[0].blocks).map(({ opcode }) => opcode)).toEqual(
       expect.arrayContaining([
         'event_whenstageclicked',
@@ -719,7 +720,7 @@ describe('Scratch project JSON compiler', () => {
     )
   })
 
-  it('compiles backdrop, graphic-effect, layer, and looks reporter capabilities', () => {
+  it('compiles backdrop, graphic-effect, layer, and looks reporter capabilities', async () => {
     const project = structuredClone(example as CanonicalProject)
     project.sprites.push(structuredClone((platformer as CanonicalProject).sprites[0]))
     project.stage.scripts.push({
@@ -781,7 +782,7 @@ describe('Scratch project JSON compiler', () => {
       ],
     })
 
-    const result = buildScratchProjectJson(project)
+    const result = await buildScratchProjectJson(project)
     const stageOpcodes = Object.values(result.targets[0].blocks).map(({ opcode }) => opcode)
     const spriteOpcodes = Object.values(result.targets[1].blocks).map(({ opcode }) => opcode)
     expect(stageOpcodes).toEqual(
@@ -805,7 +806,7 @@ describe('Scratch project JSON compiler', () => {
     )
   })
 
-  it('compiles common sensing inputs, reporters, and browser capability blocks', () => {
+  it('compiles common sensing inputs, reporters, and browser capability blocks', async () => {
     const project = structuredClone(example as CanonicalProject)
     project.sprites.push(structuredClone((platformer as CanonicalProject).sprites[0]))
     project.sprites[0].scripts.push({
@@ -914,7 +915,7 @@ describe('Scratch project JSON compiler', () => {
       ],
     })
 
-    const sprite = buildScratchProjectJson(project).targets.find(({ isStage }) => !isStage)
+    const sprite = (await buildScratchProjectJson(project)).targets.find(({ isStage }) => !isStage)
     expect(sprite).toBeDefined()
     if (!sprite) return
     const blocks = Object.values(sprite.blocks)
@@ -949,7 +950,7 @@ describe('Scratch project JSON compiler', () => {
       expect(sprite.blocks[objectMenuId]).toMatchObject({ opcode: 'sensing_of_object_menu', shadow: true })
   })
 
-  it('compiles remaining common motion reporters and glide controls', () => {
+  it('compiles remaining common motion reporters and glide controls', async () => {
     const project = structuredClone(example as CanonicalProject)
     project.sprites.push(structuredClone((platformer as CanonicalProject).sprites[0]))
     project.sprites[0].scripts.push({
@@ -992,7 +993,7 @@ describe('Scratch project JSON compiler', () => {
         },
       ],
     })
-    const sprite = buildScratchProjectJson(project).targets.find(({ isStage }) => !isStage)
+    const sprite = (await buildScratchProjectJson(project)).targets.find(({ isStage }) => !isStage)
     expect(sprite).toBeDefined()
     if (!sprite) return
     expect(Object.values(sprite.blocks).map(({ opcode }) => opcode)).toEqual(
@@ -1013,7 +1014,7 @@ describe('Scratch project JSON compiler', () => {
       expect(sprite.blocks[glideMenuId]).toMatchObject({ opcode: 'motion_glideto_menu', shadow: true })
   })
 
-  it('compiles sound playback, effect, volume, and reporter blocks', () => {
+  it('compiles sound playback, effect, volume, and reporter blocks', async () => {
     const project = structuredClone(example as CanonicalProject)
     project.sprites.push(structuredClone((platformer as CanonicalProject).sprites[0]))
     project.sprites[0].scripts.push({
@@ -1033,7 +1034,7 @@ describe('Scratch project JSON compiler', () => {
         { opcode: 'looks_say', inputs: { MESSAGE: { type: 'block', block: { opcode: 'sound_volume' } } } },
       ],
     })
-    const sprite = buildScratchProjectJson(project).targets.find(({ isStage }) => !isStage)
+    const sprite = (await buildScratchProjectJson(project)).targets.find(({ isStage }) => !isStage)
     expect(sprite).toBeDefined()
     if (!sprite) return
     const blocks = Object.values(sprite.blocks)
@@ -1060,5 +1061,32 @@ describe('Scratch project JSON compiler', () => {
         shadow: true,
       })
     }
+  })
+
+  it('infers official extension declarations from nested Canonical blocks', async () => {
+    const project = structuredClone(emptyVisuals) as CanonicalProject
+    project.extensions = []
+    project.stage.scripts = [
+      {
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          {
+            opcode: 'control_forever',
+            inputs: {
+              SUBSTACK: {
+                type: 'stack',
+                blocks: [
+                  { opcode: 'pen_clear' },
+                  { opcode: 'music_setTempo', inputs: { TEMPO: { type: 'literal', value: 120 } } },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    ]
+
+    const compiled = await buildScratchProjectJson(project)
+    expect(compiled.extensions).toEqual(['music', 'pen'])
   })
 })

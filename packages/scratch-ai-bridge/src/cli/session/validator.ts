@@ -167,7 +167,7 @@ function validateBlock(
   }
 
   // Validate next field
-  if (block.next !== undefined && block.next !== null && block.next !== false) {
+  if (block.next !== undefined && block.next !== null) {
     if (!allBlockIds.has(block.next)) {
       errors.push(`${prefix} has next "${block.next}" but next block not found`);
     }
@@ -239,23 +239,13 @@ function validateInput(
  */
 export function fixSB3(sb3: SB3Data): SB3Data {
   // Clone sb3 to avoid mutating original
-  const fixed = JSON.parse(JSON.stringify(sb3));
-
-  // Collect all block IDs
-  const allBlockIds = new Set<string>();
-  for (const target of fixed.targets) {
-    if (target.blocks) {
-      for (const blockId of Object.keys(target.blocks)) {
-        allBlockIds.add(blockId);
-      }
-    }
-  }
+  const fixed = JSON.parse(JSON.stringify(sb3)) as SB3Data;
 
   // Fix each target
   for (const target of fixed.targets) {
     if (target.blocks) {
       for (const [blockId, block] of Object.entries(target.blocks)) {
-        fixBlock(blockId, block, allBlockIds);
+        fixBlock(blockId, block);
       }
     }
   }
@@ -266,7 +256,7 @@ export function fixSB3(sb3: SB3Data): SB3Data {
 /**
  * Fix a single block
  */
-function fixBlock(blockId: string, block: BlockData, allBlockIds: Set<string>): void {
+function fixBlock(blockId: string, block: BlockData): void {
   // Set topLevel based on parent
   if (block.topLevel === undefined) {
     if (block.parent === undefined || block.parent === null) {

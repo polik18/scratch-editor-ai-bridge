@@ -1,6 +1,7 @@
 import type { DataFormat } from '@scratch/scratch-storage'
 import JSZip from 'jszip'
 import { createOfflineScratchStorage } from '../../scratch/storage'
+import { getBlockCapability } from '../capabilities/registry'
 import { encodeCanonicalScriptsToBlockGraph, type EncodedScratchBlockGraph } from '../graph'
 import type {
   CanonicalCostume,
@@ -446,6 +447,24 @@ const compileMonitors = (project: CanonicalProject): CanonicalMonitor[] =>
     return { ...monitor, id: symbolId }
   })
 
+const inferExtensions = (project: CanonicalProject): string[] => {
+  const extensions = new Set(project.extensions ?? [])
+  const visitBlocks = (blocks: CanonicalProject['stage']['scripts'][number]['blocks']): void => {
+    for (const block of blocks) {
+      const extensionId = getBlockCapability(block.opcode)?.extensionId
+      if (extensionId) extensions.add(extensionId)
+      for (const input of Object.values(block.inputs ?? {})) {
+        if (input.type === 'block') visitBlocks([input.block])
+        else if (input.type === 'stack') visitBlocks(input.blocks)
+      }
+    }
+  }
+  for (const target of [project.stage, ...project.sprites]) {
+    for (const script of target.scripts) visitBlocks(script.blocks)
+  }
+  return [...extensions].sort()
+}
+
 const buildScratchProjectBundle = async (project: CanonicalProject): Promise<ScratchProjectBundle> => {
   const symbols = createSymbolTable(project)
   const registry = await createAssetRegistry()
@@ -461,7 +480,7 @@ const buildScratchProjectBundle = async (project: CanonicalProject): Promise<Scr
   const scratchProject: ScratchProjectJson = {
     targets: [stage, ...sprites],
     monitors: compileMonitors(project),
-    extensions: project.extensions ?? [],
+    extensions: inferExtensions(project),
     meta: {
       semver: '3.0.0',
       vm: '15.2.0',

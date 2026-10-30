@@ -34,7 +34,6 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { ScratchSession, type AddSpriteOptions } from './session/session.js';
 import { generateGameFromDesign } from './game-cli.js';
-import { verifyEndToEnd, generateVerificationReport } from './verification.js';
 
 // ─── Session state file ──────────────────────────────────────────────────────
 
@@ -132,7 +131,7 @@ const commands: Record<string, CommandHandler> = {
   async newGame(argv) {
     const designArg = argv.find(a => a.startsWith('--design='));
     if (!designArg) {
-      throw new Error('Usage: new-game --design=<design-file.md> [--output=<dir>]');
+      throw new Error('Usage: new-game --design=<design-file.json> [--output=<dir>]');
     }
     const designPath = designArg.replace('--design=', '');
     
@@ -141,11 +140,10 @@ const commands: Record<string, CommandHandler> = {
     
     const outputPath = await generateGameFromDesign(designPath, outputDir);
     console.log(`✓ Game created: ${outputPath}`);
-    
-    // Load the new project
-    const sess = new ScratchSession();
-    await sess.loadSb3(outputPath);
-    await saveSession(sess, outputPath);
+  },
+
+  async ['new-game'](argv) {
+    await commands.newGame(argv);
   },
 
   async load(argv) {
@@ -225,10 +223,9 @@ const commands: Record<string, CommandHandler> = {
     const result = sess.diff();
     console.log(JSON.stringify(result, null, 2));
   },
-  async inspect(argv) {
+  async inspect() {
     const sess = await loadSession();
-    const detail = argv.find(a => a.startsWith('--detail='))?.replace('--detail=', '') || 'default';
-    const result = sess.inspect(detail);
+    const result = sess.inspect();
     console.log(JSON.stringify(result, null, 2));
   },
 
@@ -407,7 +404,7 @@ const commands: Record<string, CommandHandler> = {
   // ── Compile ──────────────────────────────────────────────────────────────
 
   async compile(argv) {
-    const outputPath = argv[0];
+    const outputPath = argv?.[0];
     const sess = await loadSession();
     
     // Get raw archive bytes for verification
@@ -437,8 +434,7 @@ const commands: Record<string, CommandHandler> = {
   },
   // ── Preview ──────────────────────────────────────────────────────────────
 
-  async preview(argv) {
-    const _outputPath = argv[0];
+  async preview(_argv) {
     const sess = await loadSession();
     
     // Get raw archive bytes for verification

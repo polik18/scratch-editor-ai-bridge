@@ -1,0 +1,232 @@
+{
+  "format": "scratch-ai-bridge/generation",
+  "version": 1,
+  "status": "success",
+  "success": true,
+  "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.repaired.sb3",
+  "manifest": {
+    "inputHash": "b61f0d87aa74e0a0bd37e4f27ce537f96c19818245b3635b7e6bb0865c57eb55",
+    "toolVersion": "0.1.0",
+    "timestamp": "2026-10-30T13:05:53.729Z",
+    "gateResults": [
+      {
+        "name": "design-input-validation",
+        "status": "pass"
+      },
+      {
+        "name": "canonical-schema-validation",
+        "status": "pass"
+      },
+      {
+        "name": "canonical-semantic-validation",
+        "status": "pass"
+      },
+      {
+        "name": "scratch-vm-compile-save",
+        "status": "pass"
+      },
+      {
+        "name": "renderer-preview",
+        "status": "pass",
+        "details": {
+          "path": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.preview.png",
+          "width": 480,
+          "height": 360,
+          "renderer": "scratch-render",
+          "previewReady": true
+        }
+      },
+      {
+        "name": "archive-validation",
+        "status": "pass",
+        "details": {
+          "hasProjectJson": true,
+          "hasEntries": true,
+          "entryCount": 6,
+          "hasAssets": true,
+          "assetCount": 5,
+          "md5extCoverage": 5
+        }
+      },
+      {
+        "name": "project-json-validation",
+        "status": "pass"
+      },
+      {
+        "name": "block-graph-validation",
+        "status": "pass",
+        "details": {
+          "blockCount": 58,
+          "topBlockCount": 11,
+          "nextLinkCount": 32,
+          "parentLinkCount": 47,
+          "inputLinkCount": 47
+        }
+      },
+      {
+        "name": "asset-presence-and-md5",
+        "status": "pass",
+        "details": {
+          "entries": 6,
+          "assets": 5
+        }
+      },
+      {
+        "name": "scratch-vm-load",
+        "status": "pass",
+        "details": {
+          "targets": 5,
+          "sprites": 4,
+          "blocks": 58,
+          "scripts": 11,
+          "variables": 4,
+          "lists": 1,
+          "costumes": 5,
+          "sounds": 0
+        }
+      },
+      {
+        "name": "scratch-vm-save",
+        "status": "pass"
+      },
+      {
+        "name": "scratch-vm-reload",
+        "status": "pass",
+        "details": {
+          "targets": 5,
+          "sprites": 4,
+          "blocks": 58,
+          "scripts": 11,
+          "variables": 4,
+          "lists": 1,
+          "costumes": 5,
+          "sounds": 0,
+          "entries": 6,
+          "assets": 5
+        }
+      },
+      {
+        "name": "runtime-behavior",
+        "status": "not-run",
+        "message": "No deterministic gameplay scenario was supplied."
+      },
+      {
+        "name": "atomic-output-write",
+        "status": "pass"
+      }
+    ],
+    "outputHash": "sha256:86e111bd549cc2302781ff3328b6f1739fc5abf9230246eb640d0c59a38f242d",
+    "outputFile": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.repaired.sb3",
+    "metadata": {
+      "input": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.canonical.json"
+    }
+  },
+  "gates": [
+    {
+      "name": "design-input-validation",
+      "status": "pass"
+    },
+    {
+      "name": "canonical-schema-validation",
+      "status": "pass"
+    },
+    {
+      "name": "canonical-semantic-validation",
+      "status": "pass"
+    },
+    {
+      "name": "scratch-vm-compile-save",
+      "status": "pass"
+    },
+    {
+      "name": "renderer-preview",
+      "status": "pass",
+      "details": {
+        "path": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.preview.png",
+        "width": 480,
+        "height": 360,
+        "renderer": "scratch-render",
+        "previewReady": true
+      }
+    },
+    {
+      "name": "archive-validation",
+      "status": "pass",
+      "details": {
+        "hasProjectJson": true,
+        "hasEntries": true,
+        "entryCount": 6,
+        "hasAssets": true,
+        "assetCount": 5,
+        "md5extCoverage": 5
+      }
+    },
+    {
+      "name": "project-json-validation",
+      "status": "pass"
+    },
+    {
+      "name": "block-graph-validation",
+      "status": "pass",
+      "details": {
+        "blockCount": 58,
+        "topBlockCount": 11,
+        "nextLinkCount": 32,
+        "parentLinkCount": 47,
+        "inputLinkCount": 47
+      }
+    },
+    {
+      "name": "asset-presence-and-md5",
+      "status": "pass",
+      "details": {
+        "entries": 6,
+        "assets": 5
+      }
+    },
+    {
+      "name": "scratch-vm-load",
+      "status": "pass",
+      "details": {
+        "targets": 5,
+        "sprites": 4,
+        "blocks": 58,
+        "scripts": 11,
+        "variables": 4,
+        "lists": 1,
+        "costumes": 5,
+        "sounds": 0
+      }
+    },
+    {
+      "name": "scratch-vm-save",
+      "status": "pass"
+    },
+    {
+      "name": "scratch-vm-reload",
+      "status": "pass",
+      "details": {
+        "targets": 5,
+        "sprites": 4,
+        "blocks": 58,
+        "scripts": 11,
+        "variables": 4,
+        "lists": 1,
+        "costumes": 5,
+        "sounds": 0,
+        "entries": 6,
+        "assets": 5
+      }
+    },
+    {
+      "name": "runtime-behavior",
+      "status": "not-run",
+      "message": "No deterministic gameplay scenario was supplied."
+    },
+    {
+      "name": "atomic-output-write",
+      "status": "pass"
+    }
+  ],
+  "diagnostics": []
+}

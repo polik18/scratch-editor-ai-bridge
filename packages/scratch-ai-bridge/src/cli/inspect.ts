@@ -19,7 +19,11 @@ export interface CliInspection {
   readonly fileId: string
   readonly status: 'ok' | 'partial'
   readonly partialReasons: readonly string[]
-  readonly summary: ReturnType<typeof analyzeCanonicalProject>['summary']
+  readonly summary: Omit<ReturnType<typeof analyzeCanonicalProject>['summary'], 'blocks'> & {
+    readonly blocks: number
+    readonly analyzedBlocks: number
+    readonly shadowBlocks: number
+  }
   readonly score: {
     readonly total: number | null
     readonly max: number
@@ -123,6 +127,14 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
       ? Object.keys(target.blocks)
       : [],
   )
+  const shadowBlockCount = rawTargets.reduce((count: number, target: unknown) => {
+    if (!target || typeof target !== 'object' || !('blocks' in target)) return count
+    const blocks = (target as { blocks?: unknown }).blocks
+    if (!blocks || typeof blocks !== 'object') return count
+    return count + Object.values(blocks).filter(
+      (block) => block && typeof block === 'object' && (block as { shadow?: unknown }).shadow === true,
+    ).length
+  }, 0)
   const redact = (value: string, code?: string): string => {
     let output = value
     for (const id of allBlockIds) {
@@ -214,7 +226,12 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
     fileId: createHash('sha256').update(bytes).digest('hex'),
     status: partial ? 'partial' : 'ok',
     partialReasons,
-    summary: analysis.summary,
+    summary: {
+      ...analysis.summary,
+      blocks: allBlockIds.length,
+      analyzedBlocks: analysis.summary.blocks,
+      shadowBlocks: shadowBlockCount,
+    },
     score: {
       total: projectScore.total,
       max: projectScore.max,

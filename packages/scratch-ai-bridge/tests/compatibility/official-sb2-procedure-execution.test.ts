@@ -304,7 +304,7 @@ describe('Official legacy procedure execution through Scratch VM normalization',
 
   it('executes an independent SB3 procedure graph before and after Canonical recompilation', async () => {
     const sourceArchive = await createIndependentSb3ProcedureFixture()
-    const sourceVm = createVM() as ScratchVMHandle & { loadProject(input: Uint8Array): Promise<void> }
+    const sourceVm = await createVM() as ScratchVMHandle & { loadProject(input: Uint8Array): Promise<void> }
     let bridgeVm: ScratchVMHandle | undefined
     let reloadedVm: ScratchVMHandle | undefined
     try {
@@ -326,21 +326,21 @@ describe('Official legacy procedure execution through Scratch VM normalization',
       runForTicks(bridgeVm, 20)
       expect(bridgeMessages).toContain('independent fixture executed')
 
-      reloadedVm = createVM()
+      reloadedVm = await createVM()
       await loadSb3(await saveSb3(bridgeVm), reloadedVm)
       const reloadedMessages = observeSayMessages(reloadedVm)
-      runForTicks(reloadedVm, 20)
+      runForTicks(reloadedVm as ScratchVMHandle, 20)
       expect(reloadedMessages).toContain('independent fixture executed')
     } finally {
       sourceVm.quit()
-      bridgeVm?.quit()
-      reloadedVm?.quit()
+      if (bridgeVm) bridgeVm.quit()
+      if (reloadedVm) reloadedVm.quit()
     }
   })
 
   it('executes the procedure-bearing Title target from the official SB3 fixture through Canonical recompilation', async () => {
     const sourceArchive = await createOfficialSb3ProcedureSlice()
-    const sourceVm = createVM() as ScratchVMHandle & { loadProject(input: Uint8Array): Promise<void> }
+    const sourceVm = await createVM() as ScratchVMHandle & { loadProject(input: Uint8Array): Promise<void> }
     let bridgeVm: ScratchVMHandle | undefined
     let reloadedVm: ScratchVMHandle | undefined
     try {
@@ -362,22 +362,22 @@ describe('Official legacy procedure execution through Scratch VM normalization',
       runForTicks(bridgeVm, 400)
       expect([...bridgeProcedureCalls()]).toEqual(expect.arrayContaining(['fade in', 'fade out']))
 
-      reloadedVm = createVM()
+      reloadedVm = await createVM()
       await loadSb3(await saveSb3(bridgeVm), reloadedVm)
       const reloadedProcedureCalls = observeRuntimeProcedureCalls(reloadedVm)
-      runForTicks(reloadedVm, 400)
+      runForTicks(reloadedVm as ScratchVMHandle, 400)
       expect([...reloadedProcedureCalls()]).toEqual(expect.arrayContaining(['fade in', 'fade out']))
     } finally {
       sourceVm.quit()
-      bridgeVm?.quit()
-      reloadedVm?.quit()
+      if (bridgeVm) bridgeVm.quit()
+      if (reloadedVm) reloadedVm.quit()
     }
   }, 30_000)
 
   it.each(officialProcedureFixtureNames)(
     'preserves official fixture %s through Canonical compile and reload',
     async (fixtureName) => {
-      const legacyVm = createVM() as ScratchVMHandle & { loadProject(input: Uint8Array): Promise<void> }
+      const legacyVm = await createVM() as ScratchVMHandle & { loadProject(input: Uint8Array): Promise<void> }
       let bridgeVm: ScratchVMHandle | undefined
       try {
         await legacyVm.loadProject(await loadVisualFreeSb2Archive(getProcedureFixturePath(fixtureName)))
@@ -395,7 +395,7 @@ describe('Official legacy procedure execution through Scratch VM normalization',
         assertOfficialProcedureResults(bridgeMessages)
         expect(procedureAssertions(bridgeMessages)).toEqual(procedureAssertions(legacyMessages))
 
-        const directSb3Vm = createVM()
+        const directSb3Vm = await createVM()
         try {
           await loadSb3(await saveSb3(bridgeVm), directSb3Vm)
           const directSb3Messages = observeSayMessages(directSb3Vm)
@@ -407,7 +407,7 @@ describe('Official legacy procedure execution through Scratch VM normalization',
         }
       } finally {
         legacyVm.quit()
-        bridgeVm?.quit()
+        if (bridgeVm) bridgeVm.quit()
       }
     },
   )

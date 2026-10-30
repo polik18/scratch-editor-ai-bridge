@@ -46,20 +46,26 @@ export async function validateArchive(archive: Uint8Array): Promise<ArchiveValid
     const entryCount = Object.keys(allEntries).length;
     const hasEntries = entryCount > 0;
     
-    // Check for assets (costumes, sounds)
-    const costumeEntries = Object.entries(allEntries).filter(([name]) => 
-      name.startsWith('assets/') && (name.endsWith('.svg') || name.endsWith('.png'))
-    );
-    const soundEntries = Object.entries(allEntries).filter(([name]) => 
-      name.startsWith('assets/') && (name.endsWith('.wav') || name.endsWith('.mp3'))
-    );
-    
-    const hasAssets = costumeEntries.length > 0 || soundEntries.length > 0;
-    const assetCount = costumeEntries.length + soundEntries.length;
-    
-    // Calculate md5ext coverage
-    // For now, just count asset entries
-    const md5extCoverage = assetCount;
+    const project = projectJsonEntry ? JSON.parse(await projectJsonEntry.async('string')) as {
+      targets?: { costumes?: { md5ext?: unknown }[]; sounds?: { md5ext?: unknown }[] }[];
+    } : undefined;
+    const assetNames = new Set<string>();
+    for (const [targetIndex, target] of (project?.targets ?? []).entries()) {
+      for (const [kind, entries] of [['costumes', target.costumes ?? []], ['sounds', target.sounds ?? []]] as const) {
+        for (const [assetIndex, asset] of entries.entries()) {
+          if (typeof asset.md5ext !== 'string' || asset.md5ext.length === 0) {
+            errors.push(`/targets/${targetIndex}/${kind}/${assetIndex} is missing md5ext`);
+            continue;
+          }
+          assetNames.add(asset.md5ext);
+          if (!zip.file(asset.md5ext)) errors.push(`Missing referenced asset entry "${asset.md5ext}"`);
+        }
+      }
+    }
+
+    const assetCount = assetNames.size;
+    const md5extCoverage = [...assetNames].filter((name) => Boolean(zip.file(name))).length;
+    const hasAssets = assetCount > 0 && md5extCoverage === assetCount;
     
     return {
       status: errors.length === 0 ? 'pass' : 'fail',

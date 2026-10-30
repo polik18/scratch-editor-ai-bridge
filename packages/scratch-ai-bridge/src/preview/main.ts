@@ -14,9 +14,11 @@ import {
   resumePreviewAudio,
   startScratchPreviewDrag,
   startProjectRuntime,
+  setRuntimePatchValues,
   stopScratchPreviewDrag,
   stopProjectRuntime,
   type ScratchPreviewDragState,
+  type ScratchRuntimePatchUpdate,
 } from '../scratch/vm'
 
 const canvas = document.querySelector<HTMLCanvasElement>('#stage')
@@ -33,6 +35,7 @@ const pendingExtensionConsents = new Map<string, (allowed: boolean) => void>()
 const peripheralSubscriptions: (() => void)[] = []
 let previewHardwareExtensions = new Set<string>()
 let activeHardwareExtension: string | null = null
+let previewRevision = 0
 
 const createConsentedFetch =
   (fetcher: typeof fetch): typeof fetch =>
@@ -97,7 +100,7 @@ const sendHardwareStatus = (extensionId: string, status: string, detail: string)
   window.parent.postMessage({ type: 'hardware-status', extensionId, status, detail, token: previewToken }, '*')
 }
 
-const stop = (notifyParent = true): void => {
+const stop = (notifyParent = true, loseCanvasContext = true): void => {
   for (const resolve of pendingExtensionConsents.values()) resolve(false)
   pendingExtensionConsents.clear()
   if (previewTimeout !== null) window.clearTimeout(previewTimeout)
@@ -117,8 +120,10 @@ const stop = (notifyParent = true): void => {
     }
     vm.quit()
     vm = null
-    const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
-    gl?.getExtension('WEBGL_lose_context')?.loseContext()
+    if (loseCanvasContext) {
+      const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
+      gl?.getExtension('WEBGL_lose_context')?.loseContext()
+    }
   }
   pressedKeys.clear()
   pointerDown = false
@@ -126,6 +131,7 @@ const stop = (notifyParent = true): void => {
   activeDrag = null
   previewHardwareExtensions = new Set()
   activeHardwareExtension = null
+  previewRevision = 0
   if (notifyParent) send('stopped')
 }
 
@@ -235,7 +241,6 @@ canvas.addEventListener('pointerleave', (event) => {
   if (pointerDown) return
   postMouse(event)
 })
-
 window.addEventListener('message', (event: MessageEvent<unknown>) => {
   if (event.source !== window.parent || typeof event.data !== 'object' || event.data === null) return
   const message = event.data as {
@@ -245,8 +250,105 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     extensionId?: unknown
     peripheralId?: unknown
     token?: unknown
+    requestId?: unknown
+    baseRevision?: unknown
+    revision?: unknown
+    operations?: unknown
   }
   if (!previewToken || (message as { token?: unknown }).token !== previewToken) return
+  if (message.type === 'apply-runtime-patch') {
+    const requestId = typeof message.requestId === 'string' ? message.requestId : ''
+    const rejectPatch = (reason: string): void => {
+      window.parent.postMessage(
+        { type: 'runtime-patch-result', token: previewToken, requestId, ok: false, error: reason.slice(0, 500) },
+        '*',
+      )
+    }
+    if (!requestId || requestId.length > 128 || !vm) {
+      rejectPatch('Patch request or running preview is invalid.')
+      return
+    }
+    if (
+      typeof message.baseRevision !== 'number' ||
+      !Number.isSafeInteger(message.baseRevision) ||
+      message.baseRevision !== previewRevision ||
+      typeof message.revision !== 'number' ||
+      !Number.isSafeInteger(message.revision) ||
+      message.revision !== previewRevision + 1
+    ) {
+      rejectPatch(`Stale patch revision; current revision is ${previewRevision}.`)
+      return
+    }
+    if (!Array.isArray(message.operations) || message.operations.length < 1 || message.operations.length > 20) {
+      rejectPatch('Patch must contain 1–20 operations.')
+      return
+    }
+    try {
+      const updates = message.operations.map((operation): ScratchRuntimePatchUpdate => {
+        if (typeof operation !== 'object' || operation === null || Array.isArray(operation))
+          throw new Error('Patch operation shape is invalid.')
+        const item = operation as Record<string, unknown>
+        if (item.op === 'set-variable') {
+          if (
+            Object.keys(item).some((key) => !['op', 'target', 'name', 'value'].includes(key)) ||
+            typeof item.target !== 'string' ||
+            item.target.length < 1 ||
+            item.target.length > 80 ||
+            typeof item.name !== 'string' ||
+            item.name.length < 1 ||
+            item.name.length > 80 ||
+            (typeof item.value !== 'string' && typeof item.value !== 'number' && typeof item.value !== 'boolean')
+          )
+            throw new Error('Variable patch operation shape is invalid.')
+          return { op: 'set-variable', targetName: item.target, variableName: item.name, value: item.value }
+        }
+        if (item.op === 'set-target-property') {
+          if (
+            Object.keys(item).some((key) => !['op', 'target', 'property', 'value'].includes(key)) ||
+            typeof item.target !== 'string' ||
+            item.target.length < 1 ||
+            item.target.length > 80 ||
+            (item.property !== 'x' &&
+              item.property !== 'y' &&
+              item.property !== 'direction' &&
+              item.property !== 'size' &&
+              item.property !== 'visible' &&
+              item.property !== 'currentCostume') ||
+            (typeof item.value !== 'string' && typeof item.value !== 'number' && typeof item.value !== 'boolean')
+          )
+            throw new Error('Target property patch operation shape is invalid.')
+          return { op: 'set-target-property', targetName: item.target, property: item.property, value: item.value }
+        }
+        if (item.op === 'set-stage-property') {
+          if (
+            Object.keys(item).some((key) => !['op', 'property', 'value'].includes(key)) ||
+            (item.property !== 'tempo' && item.property !== 'volume' && item.property !== 'backdropIndex') ||
+            typeof item.value !== 'number'
+          )
+            throw new Error('Stage property patch operation shape is invalid.')
+          return { op: 'set-stage-property', property: item.property, value: item.value }
+        }
+        throw new Error('Patch operation is not supported.')
+      })
+      const changes = setRuntimePatchValues(vm, updates)
+      previewRevision = message.revision
+      window.parent.postMessage(
+        {
+          type: 'runtime-patch-result',
+          token: previewToken,
+          requestId,
+          baseRevision: message.baseRevision,
+          revision: previewRevision,
+          ok: true,
+          changes,
+        },
+        '*',
+      )
+    } catch (error) {
+      rejectPatch(error instanceof Error ? error.message : String(error))
+    }
+    return
+  }
   if (vm && typeof message.extensionId === 'string' && previewHardwareExtensions.has(message.extensionId)) {
     const extensionId = message.extensionId
     try {
@@ -281,11 +383,16 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
   }
   if (message.type !== 'start-preview' || !(message.archive instanceof Blob) || vm) return
 
+  const initialRevision = message.revision === undefined ? 0 : message.revision
+  if (typeof initialRevision !== 'number' || !Number.isSafeInteger(initialRevision) || initialRevision < 0) return
+
   void (async () => {
     try {
+      send('progress', '正在建立 Scratch 執行環境。')
       const previewVM = await createPreviewVM(createConsentedFetch)
       vm = previewVM
-      await renderSb3Preview(message.archive as Blob, previewVM, canvas)
+      send('progress', '正在載入作品與角色素材。')
+      await renderSb3Preview(message.archive as Blob, previewVM, canvas, (stage) => send('progress', stage))
       previewHardwareExtensions = new Set(
         Array.isArray(message.extensions)
           ? message.extensions.filter(
@@ -297,6 +404,7 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
       await Promise.all(
         Array.from(previewHardwareExtensions, (extensionId) => loadPreviewHardwareExtension(previewVM, extensionId)),
       )
+      send('progress', '作品已載入，正在啟動遊戲。')
       const hardwareEvents = [
         'PERIPHERAL_LIST_UPDATE',
         'PERIPHERAL_CONNECTED',
@@ -347,7 +455,8 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
         )
       }
       startProjectRuntime(vm)
-      previewTimeout = window.setTimeout(stop, 15_000)
+      previewRevision = initialRevision
+      previewTimeout = window.setTimeout(stop, 120_000)
       send('ready')
     } catch (error) {
       stop(false)
