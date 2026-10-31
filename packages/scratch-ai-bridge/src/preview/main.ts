@@ -15,6 +15,9 @@ import {
   startScratchPreviewDrag,
   startProjectRuntime,
   setRuntimePatchValues,
+  captureScratchProgress,
+  captureScratchTargetProgress,
+  restoreScratchProgress,
   stopScratchPreviewDrag,
   stopProjectRuntime,
   type ScratchPreviewDragState,
@@ -254,8 +257,37 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     baseRevision?: unknown
     revision?: unknown
     operations?: unknown
+    snapshot?: unknown
+    targetSnapshot?: unknown
   }
   if (!previewToken || (message as { token?: unknown }).token !== previewToken) return
+  if (message.type === 'capture-game-progress' || message.type === 'restore-game-progress') {
+    const requestId = typeof message.requestId === 'string' ? message.requestId : ''
+    try {
+      if (!requestId || requestId.length > 128 || !vm || message.baseRevision !== previewRevision)
+        throw new Error('預覽已停止或作品版本已變更。')
+      const snapshot = message.type === 'capture-game-progress' ? captureScratchProgress(vm) : undefined
+      const targets = message.type === 'capture-game-progress' ? captureScratchTargetProgress(vm) : undefined
+      if (message.type === 'restore-game-progress')
+        restoreScratchProgress(vm, message.snapshot, message.targetSnapshot)
+      window.parent.postMessage(
+        { type: 'game-progress-result', token: previewToken, requestId, ok: true, snapshot, targets },
+        '*',
+      )
+    } catch (error) {
+      window.parent.postMessage(
+        {
+          type: 'game-progress-result',
+          token: previewToken,
+          requestId,
+          ok: false,
+          error: error instanceof Error ? error.message.slice(0, 500) : '存檔操作失敗。',
+        },
+        '*',
+      )
+    }
+    return
+  }
   if (message.type === 'apply-runtime-patch') {
     const requestId = typeof message.requestId === 'string' ? message.requestId : ''
     const rejectPatch = (reason: string): void => {

@@ -1,5 +1,6 @@
 import type { ScratchStorage } from '@scratch/scratch-storage'
 import ScratchVM from '@scratch/scratch-vm'
+import { parseProgressTargets, type ProgressTargetState } from '../core/progress/target-state'
 import parseScratchProject from './csp-scratch-parser'
 import {
   DISABLED_SCRATCH_EXTENSION_IDS,
@@ -996,4 +997,202 @@ export const setRuntimePatchValues = (
       }),
     ),
   )
+}
+
+export interface ScratchProgressVariable {
+  readonly targetName: string
+  readonly isStage: boolean
+  readonly id: string
+  readonly name: string
+  readonly type: '' | 'list'
+  readonly value: string | number | boolean | readonly (string | number | boolean)[]
+}
+
+const isProgressScalar = (value: unknown): value is string | number | boolean =>
+  (typeof value === 'string' && value.length <= 512) ||
+  (typeof value === 'number' && Number.isFinite(value) && Math.abs(value) <= 1_000_000_000) ||
+  typeof value === 'boolean'
+
+/**
+ * Capture bounded non-cloud variables and lists of original targets.
+ * @param vm Running Scratch VM.
+ * @returns Progress values that can be restored to the same project.
+ */
+export const captureScratchProgress = (vm: ScratchVMHandle): readonly ScratchProgressVariable[] => {
+  const targets = asInternalVM(vm).runtime.targets.filter((target) => target.isOriginal)
+  const names = targets.map((target) => target.getName())
+  if (new Set(names).size !== names.length) throw new Error('Progress cannot identify targets with duplicate names.')
+  const result: ScratchProgressVariable[] = []
+  for (const target of targets) {
+    for (const variable of Object.values(target.variables)) {
+      if (variable.isCloud || (variable.type !== '' && variable.type !== 'list')) continue
+      const value = variable.value
+      if (variable.type === '' && !isProgressScalar(value)) throw new Error(`Unsupported value in ${variable.name}.`)
+      if (
+        variable.type === 'list' &&
+        (!Array.isArray(value) || value.length > 1000 || !value.every(isProgressScalar))
+      )
+        throw new Error(`Unsupported list in ${variable.name}.`)
+      result.push({
+        targetName: target.getName(),
+        isStage: target.isStage,
+        id: variable.id,
+        name: variable.name,
+        type: variable.type,
+        value: Array.isArray(value)
+          ? ([...(value as unknown[])] as (string | number | boolean)[])
+          : (value as string | number | boolean),
+      })
+      if (result.length > 200) throw new Error('Progress exceeds 200 variables and lists.')
+    }
+  }
+  if (new TextEncoder().encode(JSON.stringify(result)).byteLength > 128 * 1024)
+    throw new Error('Progress exceeds 128 KiB.')
+  return result
+}
+
+/**
+ * Capture the visual state of original sprites and the stage.
+ * @param vm Running Scratch VM.
+ * @returns Validated target states.
+ */
+export const captureScratchTargetProgress = (vm: ScratchVMHandle): readonly ProgressTargetState[] => {
+  const targets = asInternalVM(vm).runtime.targets.filter((target) => target.isOriginal)
+  if (targets.some((target) => target.currentCostume < 0 || target.currentCostume >= target.getCostumes().length))
+    throw new Error('A target has no valid costume to save.')
+  return parseProgressTargets(
+    targets.map((target) =>
+      target.isStage
+        ? { name: target.getName(), isStage: true, currentCostume: target.currentCostume }
+        : {
+            name: target.getName(),
+            isStage: false,
+            currentCostume: target.currentCostume,
+            x: target.x,
+            y: target.y,
+            direction: target.direction,
+            size: target.size,
+            visible: target.visible,
+          },
+    ),
+  )
+}
+
+/**
+ * Validate the whole progress snapshot before restoring any variable.
+ * @param vm Running Scratch VM.
+ * @param snapshot Untrusted progress entries.
+ * @param targetSnapshot Optional original target states.
+ */
+export const restoreScratchProgress = (vm: ScratchVMHandle, snapshot: unknown, targetSnapshot?: unknown): void => {
+  if (
+    !Array.isArray(snapshot) ||
+    snapshot.length > 200 ||
+    new TextEncoder().encode(JSON.stringify(snapshot)).byteLength > 128 * 1024
+  )
+    throw new Error('Invalid or oversized progress snapshot.')
+  const targets = asInternalVM(vm).runtime.targets.filter((target) => target.isOriginal)
+  const seen = new Set<string>()
+  const updates = snapshot.map((item: unknown) => {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) throw new Error('Invalid progress entry.')
+    const entry = item as Record<string, unknown>
+    if (
+      Object.keys(entry).some((key) => !['targetName', 'isStage', 'id', 'name', 'type', 'value'].includes(key)) ||
+      typeof entry.targetName !== 'string' ||
+      typeof entry.isStage !== 'boolean' ||
+      typeof entry.id !== 'string' ||
+      typeof entry.name !== 'string' ||
+      (entry.type !== '' && entry.type !== 'list')
+    )
+      throw new Error('Invalid progress entry fields.')
+    const key = JSON.stringify([entry.targetName, entry.id])
+    if (seen.has(key)) throw new Error('Duplicate progress entry.')
+    seen.add(key)
+    const matches = targets.filter(
+      (target) => target.getName() === entry.targetName && target.isStage === entry.isStage,
+    )
+    if (matches.length !== 1) throw new Error('Progress target is missing or ambiguous.')
+    if (!Object.hasOwn(matches[0].variables, entry.id))
+      throw new Error('Progress variable does not match this project.')
+    const variable = matches[0].variables[entry.id]
+    if (variable.isCloud || variable.type !== entry.type || variable.name !== entry.name)
+      throw new Error('Progress variable does not match this project.')
+    const value = entry.value
+    if (
+      entry.type === ''
+        ? !isProgressScalar(value)
+        : !Array.isArray(value) || value.length > 1000 || !value.every(isProgressScalar)
+    )
+      throw new Error('Invalid progress value.')
+    return { variable, value: Array.isArray(value) ? [...(value as unknown[])] : value, before: variable.value }
+  })
+  const requestedTargets = targetSnapshot === undefined ? [] : parseProgressTargets(targetSnapshot)
+  const targetUpdates = requestedTargets.map((state) => {
+    const matches = targets.filter((target) => target.getName() === state.name && target.isStage === state.isStage)
+    if (matches.length !== 1 || state.currentCostume >= matches[0].getCostumes().length)
+      throw new Error('Saved target or costume does not match this project.')
+    const target = matches[0]
+    const before = target.isStage
+      ? { name: target.getName(), isStage: true, currentCostume: target.currentCostume }
+      : {
+          name: target.getName(),
+          isStage: false,
+          currentCostume: target.currentCostume,
+          x: target.x,
+          y: target.y,
+          direction: target.direction,
+          size: target.size,
+          visible: target.visible,
+        }
+    return { target, state, before }
+  })
+  const applyTarget = (target: ScratchTargetInternal, state: ProgressTargetState): void => {
+    target.setCostume(state.currentCostume)
+    if (state.isStage) {
+      if (target.currentCostume !== state.currentCostume) throw new Error('Could not restore the stage backdrop.')
+      return
+    }
+    if (
+      state.x === undefined ||
+      state.y === undefined ||
+      state.direction === undefined ||
+      state.size === undefined ||
+      state.visible === undefined
+    )
+      throw new Error('Saved sprite state is incomplete.')
+    if (asInternalVM(vm).renderer) target.setSize(state.size)
+    else target.size = state.size
+    target.setDirection(state.direction)
+    target.setXY(state.x, state.y, true)
+    target.setVisible(state.visible)
+    const differs = (left: number, right: number): boolean => Math.abs(left - right) > 1e-7
+    if (
+      target.currentCostume !== state.currentCostume ||
+      differs(target.x, state.x) ||
+      differs(target.y, state.y) ||
+      differs(target.direction, state.direction) ||
+      differs(target.size, state.size) ||
+      target.visible !== state.visible
+    )
+      throw new Error(`Could not exactly restore sprite ${state.name}.`)
+  }
+  try {
+    for (const update of updates) update.variable.value = update.value
+    for (const update of targetUpdates) applyTarget(update.target, update.state)
+  } catch (error) {
+    for (const update of updates) update.variable.value = update.before
+    let rollbackFailed = false
+    for (const update of targetUpdates) {
+      try {
+        applyTarget(update.target, update.before)
+      } catch {
+        rollbackFailed = true
+      }
+    }
+    if (rollbackFailed)
+      throw new Error(
+        'Progress restore failed and the original target state could not be fully recovered; restart the preview.',
+      )
+    throw error
+  }
 }

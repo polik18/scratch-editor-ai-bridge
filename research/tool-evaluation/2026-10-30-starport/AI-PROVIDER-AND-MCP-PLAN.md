@@ -162,7 +162,7 @@ Bridge UI ── Provider API adapter ── 使用者選定的雲端或本機�
 - **Phase 5：未實作**：遠端 Streamable HTTP MCP 維持後置。
 - **驗證狀態**：Bridge package production build、更新後 stdio MCP loopback pairing relay smoke、本機 provider mock、AI core/MCP source targeted ESLint 與 Prettier 均通過。沒有對真實本機模型做 live request，需使用者提供已啟動的 loopback model endpoint 才能端到端驗收。整包 lint 仍被既有 1,276 項錯誤擋住，不是本次改動範圍。
 
-本 MVP 對應「Bridge 直連本機 AI」與「MCP host 透過本機 relay 操作目前 Bridge 頁面」。模型 API 僅允許 loopback 位址；若模型 API 在另一台區網電腦，仍需獨立 provider companion。Phase 5 遠端 Streamable HTTP MCP 仍是可選後續項目。
+本 MVP 對應「Bridge 直連本機 AI」與「MCP host 透過本機 relay 操作目前 Bridge 頁面」。模型 API 僅允許 loopback 位址；若模型 API 在另一台區網電腦，可透過本機私人 IPv4 model gateway 連接；驗證範圍與限制見 [整合計畫](SB3-SAVE-REMOTE-PLAN.md)。Phase 5 遠端 Streamable HTTP MCP 仍是可選後續項目。
 
 ## 風險與未決事項
 

@@ -56,12 +56,14 @@ export class BrowserBridgeRelay {
     })
   }
 
-  listen(port: number): Promise<void> {
+  listen(port: number): Promise<number> {
     return new Promise((resolve, reject) => {
       this.server.once('error', reject)
       this.server.listen(port, '127.0.0.1', () => {
         this.server.off('error', reject)
-        resolve()
+        const address = this.server.address()
+        if (!address || typeof address === 'string') return reject(new Error('Bridge relay has no TCP address.'))
+        resolve(address.port)
       })
     })
   }

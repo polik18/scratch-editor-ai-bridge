@@ -1,8 +1,10 @@
 import { Buffer } from 'node:buffer'
 import { md5 } from '@noble/hashes/legacy.js'
+import { sha256 } from '@noble/hashes/sha256'
 import { bytesToHex } from '@noble/hashes/utils.js'
 import { initializeScratchVM } from './bootstrap/vm-bootstrap'
 import { requestOpenAiCompatiblePatch } from './core/ai/openai-compatible'
+import { inspectRawProjectForAi, proposeRawLivePatch } from './core/ai/raw-tool-core'
 import { inspectProjectForAi, proposeLivePatch } from './core/ai/tool-core'
 import {
   analyzeCanonicalProject,
@@ -18,6 +20,10 @@ import {
 import {
   exportLosslessSb3,
   patchLosslessSb3BlockGraphs,
+  patchRawSb3Properties,
+  patchRawSb3Variables,
+  rawSb3Revision,
+  type RawPropertyChange,
   type RawSb3ArchiveEntry,
   type RawSb3Project,
 } from './core/archive'
@@ -56,6 +62,7 @@ import {
   type ProjectFragmentSession,
   type RequirementCoverageEntry,
 } from './core/normalizer'
+import { accessProgressSave, parseProgressSave, type ProgressSave } from './core/progress/storage'
 import { createAnalysisPrompt, createScoringFeedbackPrompt, type TutorMode } from './core/prompt'
 import {
   createAiOutputValidationReport,
@@ -153,6 +160,13 @@ interface ActiveStudentAnimation {
     baseRevision: number,
     revision: number,
   ): Promise<Record<string, unknown>>
+
+  requestProgress(
+    type: 'capture-game-progress' | 'restore-game-progress',
+    revision: number,
+    snapshot?: unknown,
+    targetSnapshot?: unknown,
+  ): Promise<Record<string, unknown>>
 }
 
 let activeStudentAnimation: ActiveStudentAnimation | null = null
@@ -190,7 +204,7 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     return
   }
 
-  if (message.type === 'runtime-patch-result') {
+  if (message.type === 'runtime-patch-result' || message.type === 'game-progress-result') {
     active.onRuntimePatchResult(message)
 
     return
@@ -1679,6 +1693,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   previewColumn.append(previewActions)
 
   let liveProject = structuredClone(project)
+  let currentRawForProgress = rawSource
   let liveRevision = 0
   let livePatchBusy = false
   const liveUndoStack: {
@@ -1720,6 +1735,38 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   const localAiHelp = document.createElement('p')
   localAiHelp.textContent =
     '填入這台電腦上的 OpenAI-compatible 模型 API 網址（localhost、127.0.0.1 或 ::1）與模型 ID。API key 可留空；若需要，僅保留在目前頁面記憶體，不會存檔。模型服務需允許本網站跨來源連線（CORS）。目前不連外部付費 API。'
+  const gatewayHelp = document.createElement('p')
+  gatewayHelp.textContent =
+    '若模型在另一台區網電腦，先啟動本機 model gateway 指向該電腦，再於此配對。使用 HTTP 時作品文字和憑證會在區網明文傳輸。'
+  const gatewayLabel = document.createElement('label')
+  gatewayLabel.htmlFor = 'local-ai-gateway'
+  gatewayLabel.textContent = '本機 model gateway 網址'
+  const gatewayUrl = document.createElement('input')
+  gatewayUrl.id = 'local-ai-gateway'
+  gatewayUrl.type = 'url'
+  gatewayUrl.value = 'http://127.0.0.1:43129'
+  const gatewayConnect = document.createElement('button')
+  gatewayConnect.type = 'button'
+  gatewayConnect.className = 'button secondary'
+  gatewayConnect.textContent = '配對區網模型 gateway'
+  const gatewayDisconnect = document.createElement('button')
+  gatewayDisconnect.type = 'button'
+  gatewayDisconnect.className = 'button secondary'
+  gatewayDisconnect.textContent = '中斷區網模型 gateway'
+  gatewayDisconnect.hidden = true
+  const gatewayStatus = document.createElement('p')
+  gatewayStatus.setAttribute('role', 'status')
+  gatewayStatus.textContent = '區網 gateway 未連線。'
+  let gatewayToken = ''
+  let gatewayOrigin = ''
+  const gatewayFetch: typeof fetch = (input, init) => {
+    const url = new URL(input instanceof Request ? input.url : input.toString())
+    if (!gatewayToken || url.origin !== gatewayOrigin || url.pathname !== '/v1/chat/completions')
+      return Promise.reject(new Error('模型網址與配對的 gateway 不符；請重新配對或中斷 gateway。'))
+    const headers = new Headers(init?.headers)
+    headers.set('X-Bridge-Token', gatewayToken)
+    return fetch(input, { ...init, headers })
+  }
   const localAiBaseUrlLabel = document.createElement('label')
   localAiBaseUrlLabel.htmlFor = 'local-ai-base-url'
   localAiBaseUrlLabel.textContent = 'API 網址'
@@ -1767,6 +1814,12 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   localAiSettings.append(
     localAiSettingsSummary,
     localAiHelp,
+    gatewayHelp,
+    gatewayLabel,
+    gatewayUrl,
+    gatewayConnect,
+    gatewayDisconnect,
+    gatewayStatus,
     localAiBaseUrlLabel,
     localAiBaseUrl,
     localAiModelLabel,
@@ -1778,6 +1831,57 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     localAiActions,
   )
   const localAiController: { current: AbortController | null } = { current: null }
+  const stopGateway = (): void => {
+    const token = gatewayToken
+    const origin = gatewayOrigin
+    gatewayToken = ''
+    gatewayOrigin = ''
+    localAiController.current?.abort()
+    gatewayDisconnect.hidden = true
+    gatewayConnect.disabled = false
+    gatewayStatus.textContent = '區網 gateway 已中斷。'
+    if (token && origin)
+      void fetch(`${origin}/bridge/unpair`, { method: 'POST', headers: { 'X-Bridge-Token': token } }).catch(
+        () => undefined,
+      )
+  }
+  gatewayConnect.addEventListener('click', () => {
+    void (async () => {
+      gatewayConnect.disabled = true
+      try {
+        const url = new URL(gatewayUrl.value)
+        if (
+          url.protocol !== 'http:' ||
+          !['127.0.0.1', 'localhost'].includes(url.hostname) ||
+          url.username ||
+          url.password ||
+          url.pathname !== '/' ||
+          url.search ||
+          url.hash
+        )
+          throw new Error('Gateway 必須是本機 HTTP origin，例如 http://127.0.0.1:43129。')
+        const response = await fetch(`${url.origin}/bridge/pair`, { method: 'POST', cache: 'no-store' })
+        if (!response.ok) throw new Error(`Gateway 配對失敗（HTTP ${response.status}）。`)
+        const result = (await response.json()) as { token?: unknown; endpoint?: unknown }
+        if (typeof result.token !== 'string' || result.token.length < 32 || typeof result.endpoint !== 'string')
+          throw new Error('Gateway 配對回應無效。')
+        gatewayToken = result.token
+        gatewayOrigin = url.origin
+        localAiBaseUrl.value = `${url.origin}/v1`
+        gatewayDisconnect.hidden = false
+        gatewayStatus.textContent = `已配對 ${result.endpoint}，配對最長 30 分鐘。`
+      } catch (error) {
+        gatewayConnect.disabled = false
+        gatewayStatus.textContent =
+          error instanceof TypeError
+            ? '無法連接 gateway；請確認程序正在執行、網址正確，並允許瀏覽器存取本機網路。'
+            : error instanceof Error
+              ? error.message
+              : String(error)
+      }
+    })()
+  })
+  gatewayDisconnect.addEventListener('click', stopGateway)
   const mcpSettings = document.createElement('details')
   mcpSettings.className = 'live-ai-settings'
   const mcpSettingsSummary = document.createElement('summary')
@@ -1819,6 +1923,13 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     readonly summary: string
     readonly baseRevision: number
     readonly patchJson: string
+  } | null = null
+  let rawAi: {
+    inspect: () => string
+    validate: (json: string) => ReturnType<typeof proposeRawLivePatch>
+    present: (json: string) => ReturnType<typeof proposeRawLivePatch>
+    status: () => unknown
+    report: (message: string) => void
   } | null = null
   const livePatchDiff = document.createElement('pre')
   livePatchDiff.className = 'live-patch-diff'
@@ -1918,6 +2029,23 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
       throw new Error('MCP relay 傳來無效的工具要求。')
     const { tool, arguments: args } = request as { tool?: unknown; arguments?: unknown }
     if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('MCP 工具參數格式錯誤。')
+    if (rawAi) {
+      if (tool === 'inspect_project') return { projectName: liveProject.name, instruction: rawAi.inspect() }
+      if (tool === 'get_patch_status') return rawAi.status()
+      if (tool === 'propose_live_patch') {
+        if (localAiController.current) throw new Error('本機 AI 請求進行中。')
+        const patchJson = (args as { patchJson?: unknown }).patchJson
+        if (typeof patchJson !== 'string') throw new Error('請提供 patchJson 字串。')
+        const candidate = rawAi.present(patchJson)
+        return {
+          state: 'pending-user-review',
+          candidateId: candidate.candidateId,
+          baseRevision: candidate.baseRevision,
+          changes: candidate.changes,
+        }
+      }
+      throw new Error(`Bridge 不提供 MCP 工具「${String(tool)}」。`)
+    }
     if (tool === 'inspect_project') {
       return {
         projectName: liveProject.name,
@@ -2047,6 +2175,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   window.addEventListener('pagehide', () => {
     mcpActiveToken = ''
     mcpPollController?.abort()
+    if (gatewayToken) stopGateway()
   })
   livePatchPromptButton.addEventListener('click', () => {
     copyStudentPrompt(
@@ -2058,6 +2187,61 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   localAiGenerateButton.addEventListener('click', () => {
     void (async () => {
       if (localAiController.current) return
+      if (rawAi) {
+        const adapter = rawAi
+        const controller = new AbortController()
+        localAiController.current = controller
+        const timeout = window.setTimeout(() => controller.abort(), 120_000)
+        localAiGenerateButton.disabled = true
+        localAiCancelButton.hidden = false
+        adapter.report('正在請本機模型提出修改…')
+        try {
+          const response = await requestOpenAiCompatiblePatch({
+            baseUrl: localAiBaseUrl.value,
+            model: localAiModel.value,
+            apiKey: localAiKey.value,
+            instruction: adapter.inspect(),
+            request: localAiRequest.value,
+            signal: controller.signal,
+            ...(gatewayToken ? { fetchImpl: gatewayFetch } : {}),
+            onToolCall: (name, argumentsJson) => {
+              try {
+                if (name === 'inspect_project') return { output: adapter.inspect() }
+                const args: unknown = JSON.parse(argumentsJson)
+                if (
+                  name !== 'propose_live_patch' ||
+                  typeof args !== 'object' ||
+                  args === null ||
+                  typeof (args as { patchJson?: unknown }).patchJson !== 'string'
+                )
+                  throw new Error('工具參數無效。')
+                const candidate = adapter.validate((args as { patchJson: string }).patchJson)
+                return {
+                  output: JSON.stringify({ candidateId: candidate.candidateId, changes: candidate.changes }),
+                  patchJson: candidate.patchJson,
+                }
+              } catch (error) {
+                return { output: `候選未通過驗證：${error instanceof Error ? error.message : String(error)}` }
+              }
+            },
+          })
+          adapter.present(response)
+        } catch (error) {
+          adapter.report(
+            error instanceof Error && error.name === 'AbortError'
+              ? '本機模型請求已取消或逾時。'
+              : error instanceof Error
+                ? error.message
+                : String(error),
+          )
+        } finally {
+          window.clearTimeout(timeout)
+          if (localAiController.current === controller) localAiController.current = null
+          localAiGenerateButton.disabled = false
+          localAiCancelButton.hidden = true
+        }
+        return
+      }
       if (preparedLivePatch?.baseRevision === liveRevision) {
         livePatchStatus.dataset.kind = 'error'
         livePatchStatus.textContent = '目前已有待審修改；請先套用、清除或編輯後再產生另一份修改。'
@@ -2083,6 +2267,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           instruction: inspectProjectForAi(liveProject, liveRevision),
           request: localAiRequest.value,
           signal: controller.signal,
+          ...(gatewayToken ? { fetchImpl: gatewayFetch } : {}),
           onToolCall: (name, argumentsJson) => {
             try {
               const args: unknown = JSON.parse(argumentsJson)
@@ -2156,7 +2341,8 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   const waitForAnimationReady = async (): Promise<void> => {
     const deadline = Date.now() + 20_000
     while (Date.now() < deadline) {
-      if (activeStudentAnimation && stageStatus.textContent?.includes('動畫執行中')) return
+      if (generation !== studentPreviewGeneration) throw new Error('預覽已切換。')
+      if (activeStudentAnimation && stageStatus.textContent.includes('動畫執行中')) return
       if (!activeStudentAnimation && !startAnimation.disabled && !animationStarting)
         throw new Error(stageStatus.textContent || '動畫預覽重載失敗。')
       await new Promise((resolve) => window.setTimeout(resolve, 50))
@@ -2167,10 +2353,393 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     const currentAnimation = activeStudentAnimation
     liveRevision = revision
     patchedPreviewArchive = archive
-    if (currentAnimation) currentAnimation.replaceProject(archive, revision)
-    else if (!startAnimation.hidden) startAnimation.click()
+    if (currentAnimation) {
+      stageStatus.textContent = '正在重新載入作品。'
+      currentAnimation.replaceProject(archive, revision)
+    } else if (!startAnimation.hidden) startAnimation.click()
     else throw new Error('動畫預覽目前無法重載。')
     await waitForAnimationReady()
+  }
+  if (rawSource) {
+    livePatchPanel.hidden = true
+    const panel = document.createElement('details')
+    panel.className = 'student-live-patch'
+    const title = document.createElement('summary')
+    title.textContent = '調整匯入作品的角色、舞台與變數'
+    const help = document.createElement('p')
+    help.textContent =
+      '修改作品中的初始屬性及非雲端變數。支援的修改會同步到執行中的遊戲；其他修改會重載遊戲並重置進度。下載會另存新的 SB3。'
+    const targetLabel = document.createElement('label')
+    targetLabel.textContent = '角色或舞台'
+    const targetSelect = document.createElement('select')
+    targetLabel.append(targetSelect)
+    const propertyLabel = document.createElement('label')
+    propertyLabel.textContent = '屬性或變數'
+    const propertySelect = document.createElement('select')
+    propertyLabel.append(propertySelect)
+    const valueLabel = document.createElement('label')
+    valueLabel.textContent = '新值（可見填 true 或 false；造型使用從 0 開始的編號）'
+    const valueInput = document.createElement('input')
+    valueInput.type = 'text'
+    valueLabel.append(valueInput)
+    const status = document.createElement('p')
+    status.setAttribute('role', 'status')
+    const actions = document.createElement('div')
+    actions.className = 'button-row'
+    const makeButton = (label: string): HTMLButtonElement => {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'button secondary'
+      button.textContent = label
+      actions.append(button)
+      return button
+    }
+    const apply = makeButton('套用屬性')
+    const undo = makeButton('復原')
+    const redo = makeButton('重做')
+    const save = makeButton('下載修改後的 SB3')
+    const acceptCandidate = makeButton('確認套用 AI 修改')
+    const discardCandidate = makeButton('捨棄 AI 修改')
+    acceptCandidate.hidden = true
+    discardCandidate.hidden = true
+    const candidateDiff = document.createElement('pre')
+    candidateDiff.className = 'live-patch-diff'
+    candidateDiff.hidden = true
+    let currentRaw = rawSource
+    let rawCandidate: ReturnType<typeof proposeRawLivePatch> | null = null
+    let rawBusy = false
+    interface RawHistoryEntry {
+      project: RawSb3Project
+      runtime: ScratchRuntimePatchUpdate | null
+      animation: ActiveStudentAnimation | null
+    }
+    const undoStack: RawHistoryEntry[] = []
+    const redoStack: RawHistoryEntry[] = []
+    const getTargets = (): Record<string, unknown>[] =>
+      Array.isArray(currentRaw.projectJson.targets)
+        ? currentRaw.projectJson.targets.filter(
+            (target: unknown): target is Record<string, unknown> =>
+              typeof target === 'object' && target !== null && !Array.isArray(target),
+          )
+        : []
+    const getVariables = (target: Record<string, unknown> | undefined): Record<string, unknown> => {
+      const variables = target?.variables
+      return typeof variables === 'object' && variables !== null && !Array.isArray(variables)
+        ? (variables as Record<string, unknown>)
+        : {}
+    }
+    const refresh = (): void => {
+      const targets = getTargets()
+      const chosen = targetSelect.value
+      targetSelect.replaceChildren()
+      for (const target of targets) {
+        if (typeof target.name !== 'string' || targets.filter((item) => item.name === target.name).length !== 1)
+          continue
+        const option = document.createElement('option')
+        option.value = target.name
+        option.textContent = target.isStage === true ? `${target.name}（舞台）` : target.name
+        targetSelect.append(option)
+      }
+      if (Array.from(targetSelect.options).some((option) => option.value === chosen)) targetSelect.value = chosen
+      const target = targets.find((item) => item.name === targetSelect.value)
+      const previousProperty = propertySelect.value
+      propertySelect.replaceChildren()
+      const fields =
+        target?.isStage === true
+          ? ['currentCostume', 'volume', 'tempo']
+          : ['x', 'y', 'direction', 'size', 'visible', 'currentCostume', 'volume']
+      for (const field of fields) {
+        if (typeof target?.[field] !== (field === 'visible' ? 'boolean' : 'number')) continue
+        const option = document.createElement('option')
+        option.value = field
+        option.textContent = field
+        propertySelect.append(option)
+      }
+      for (const [id, variable] of Object.entries(getVariables(target))) {
+        if (!Array.isArray(variable) || typeof variable[0] !== 'string' || variable[2] === true) continue
+        if (!['string', 'number', 'boolean'].includes(typeof variable[1])) continue
+        const option = document.createElement('option')
+        option.value = `variable:${id}`
+        option.textContent = `變數：${variable[0]}`
+        propertySelect.append(option)
+      }
+      if (Array.from(propertySelect.options).some((option) => option.value === previousProperty))
+        propertySelect.value = previousProperty
+      const selected = propertySelect.value
+      const variable = selected.startsWith('variable:') ? getVariables(target)[selected.slice(9)] : undefined
+      const oldValue: unknown = Array.isArray(variable) ? variable[1] : target?.[selected]
+      valueInput.value =
+        typeof oldValue === 'string' || typeof oldValue === 'number' || typeof oldValue === 'boolean'
+          ? String(oldValue)
+          : ''
+      apply.disabled = !target || !propertySelect.value
+      undo.disabled = undoStack.length === 0
+      redo.disabled = redoStack.length === 0
+    }
+    const setBusy = (busy: boolean): void => {
+      rawBusy = busy
+      for (const element of [
+        targetSelect,
+        propertySelect,
+        valueInput,
+        apply,
+        undo,
+        redo,
+        save,
+        acceptCandidate,
+        discardCandidate,
+      ])
+        element.disabled = busy
+      if (!busy) refresh()
+    }
+    const install = async (
+      next: RawSb3Project,
+      runtime: ScratchRuntimePatchUpdate | null,
+    ): Promise<ScratchRuntimePatchUpdate | null> => {
+      const nextArchive = await exportLosslessSb3(next)
+      if (generation !== studentPreviewGeneration) throw new Error('預覽已切換，修改未套用。')
+      let inverse: ScratchRuntimePatchUpdate | null = null
+      const animation = activeStudentAnimation
+      if (animation) {
+        const previousArchive = patchedPreviewArchive ?? (await exportLosslessSb3(currentRaw))
+        try {
+          if (runtime) {
+            const response = await requestRuntimePatch([runtime], liveRevision)
+            if (generation !== studentPreviewGeneration || activeStudentAnimation !== animation)
+              throw new Error('預覽已切換，修改結果已捨棄。')
+            if (response.ok !== true || !Array.isArray(response.changes) || response.changes.length !== 1)
+              throw new Error(typeof response.error === 'string' ? response.error : '預覽 VM 未確認修改。')
+            const before: unknown = (response.changes[0] as { beforeValue?: unknown }).beforeValue
+            if (typeof before !== 'number' && typeof before !== 'string' && typeof before !== 'boolean')
+              throw new Error('預覽 VM 傳回無效的復原值。')
+            if (runtime.op === 'set-stage-property' && typeof before !== 'number')
+              throw new Error('預覽 VM 傳回無效的舞台復原值。')
+            inverse = { ...runtime, value: before } as ScratchRuntimePatchUpdate
+            liveRevision += 1
+            patchedPreviewArchive = nextArchive
+          } else {
+            await reloadPreviewArchive(nextArchive, liveRevision + 1)
+            if (generation !== studentPreviewGeneration || activeStudentAnimation !== animation)
+              throw new Error('預覽已切換，修改結果已捨棄。')
+          }
+        } catch (error) {
+          if (generation !== studentPreviewGeneration || activeStudentAnimation !== animation) throw error
+          try {
+            await reloadPreviewArchive(previousArchive, liveRevision + 1)
+          } catch {
+            patchedPreviewArchive = previousArchive
+            throw new Error('預覽重載及回復失敗，請重新執行作品；原始作品仍可下載。')
+          }
+          throw error
+        }
+      } else {
+        patchedPreviewArchive = nextArchive
+      }
+      if (generation !== studentPreviewGeneration) throw new Error('預覽已切換，修改結果已捨棄。')
+      currentRaw = next
+      currentRawForProgress = next
+      return inverse
+    }
+    rawAi = {
+      inspect: () => inspectRawProjectForAi(currentRaw),
+      validate: (json) => proposeRawLivePatch(currentRaw, json),
+      present: (json) => {
+        if (rawBusy) throw new Error('正在套用修改，請稍後再試。')
+        if (rawCandidate) throw new Error('已有待審的 AI 修改，請先確認或捨棄。')
+        const candidate = proposeRawLivePatch(currentRaw, json)
+        rawCandidate = candidate
+        candidateDiff.textContent = [
+          candidate.summary,
+          ...candidate.changes,
+          '確認後若遊戲執行中將重載並重置進度。',
+        ].join('\n')
+        candidateDiff.hidden = false
+        acceptCandidate.hidden = false
+        discardCandidate.hidden = false
+        status.textContent = 'AI 修改已通過檢查，請檢視差異並確認。'
+        return candidate
+      },
+      status: () =>
+        rawCandidate
+          ? {
+              state:
+                rawCandidate.baseRevision === rawSb3Revision(currentRaw) ? 'pending-user-review' : 'revision-changed',
+              candidateId: rawCandidate.candidateId,
+              baseRevision: rawCandidate.baseRevision,
+            }
+          : { state: 'no-candidate', revision: rawSb3Revision(currentRaw) },
+      report: (message) => {
+        status.textContent = message
+      },
+    }
+    discardCandidate.addEventListener('click', () => {
+      rawCandidate = null
+      candidateDiff.hidden = true
+      acceptCandidate.hidden = true
+      discardCandidate.hidden = true
+      status.textContent = '已捨棄 AI 修改。'
+    })
+    acceptCandidate.addEventListener('click', () => {
+      void (async () => {
+        if (!rawCandidate) return
+        setBusy(true)
+        try {
+          const candidate = proposeRawLivePatch(currentRaw, rawCandidate.patchJson)
+          const previous = currentRaw
+          await install(candidate.project, null)
+          undoStack.push({ project: previous, runtime: null, animation: activeStudentAnimation })
+          if (undoStack.length > 20) undoStack.shift()
+          redoStack.length = 0
+          rawCandidate = null
+          candidateDiff.hidden = true
+          acceptCandidate.hidden = true
+          discardCandidate.hidden = true
+          status.textContent = `已套用 AI 修改「${candidate.summary}」。`
+        } catch (error) {
+          status.textContent = error instanceof Error ? error.message : String(error)
+        } finally {
+          setBusy(false)
+        }
+      })()
+    })
+    targetSelect.addEventListener('change', refresh)
+    propertySelect.addEventListener('change', refresh)
+    apply.addEventListener('click', () => {
+      void (async () => {
+        setBusy(true)
+        try {
+          const target = getTargets().find((item) => item.name === targetSelect.value)
+          const selection = propertySelect.value
+          const fieldLabel = propertySelect.selectedOptions.item(0)?.textContent ?? selection
+          const variableId = selection.startsWith('variable:') ? selection.slice(9) : null
+          const variable = variableId !== null ? getVariables(target)[variableId] : undefined
+          const expected: unknown = Array.isArray(variable) ? variable[1] : target?.[selection]
+          if (typeof expected !== 'number' && typeof expected !== 'boolean' && typeof expected !== 'string')
+            throw new Error('找不到可修改的屬性或變數。')
+          const text = valueInput.value
+          if (typeof expected !== 'string' && !text.trim()) throw new Error('請輸入新值。')
+          const value =
+            typeof expected === 'string'
+              ? text
+              : typeof expected === 'boolean'
+                ? text.trim() === 'true'
+                  ? true
+                  : text.trim() === 'false'
+                    ? false
+                    : text
+                : Number(text)
+          if (typeof expected === 'boolean' && typeof value !== 'boolean')
+            throw new Error('布林值請填 true 或 false。')
+          const revision = rawSb3Revision(currentRaw)
+          const next =
+            variableId !== null
+              ? patchRawSb3Variables(currentRaw, revision, [
+                  { targetName: targetSelect.value, variableId, expected, value },
+                ])
+              : typeof expected !== 'string' && typeof value !== 'string'
+                ? patchRawSb3Properties(currentRaw, revision, [
+                    {
+                      targetName: targetSelect.value,
+                      property: selection as RawPropertyChange['property'],
+                      expected,
+                      value,
+                    },
+                  ])
+                : (() => {
+                    throw new Error('屬性值無效。')
+                  })()
+          let runtime: ScratchRuntimePatchUpdate | null = null
+          if (variableId !== null && Array.isArray(variable) && typeof variable[0] === 'string') {
+            const sameName = Object.values(getVariables(target)).filter(
+              (entry) => Array.isArray(entry) && entry[0] === variable[0],
+            )
+            if (sameName.length === 1)
+              runtime = { op: 'set-variable', targetName: targetSelect.value, variableName: variable[0], value }
+          } else if (target?.isStage === true && typeof value === 'number') {
+            if (selection === 'tempo' && value >= 20 && value <= 500)
+              runtime = { op: 'set-stage-property', property: 'tempo', value }
+            else if (selection === 'volume') runtime = { op: 'set-stage-property', property: 'volume', value }
+            else if (selection === 'currentCostume')
+              runtime = { op: 'set-stage-property', property: 'backdropIndex', value }
+          } else if (target?.isStage === false && typeof value !== 'string') {
+            const limits: Partial<Record<string, readonly [number, number]>> = {
+              x: [-240, 240],
+              y: [-180, 180],
+              direction: [-180, 180],
+              size: [1, 500],
+            }
+            const range = limits[selection]
+            if (
+              (selection === 'visible' && typeof value === 'boolean') ||
+              selection === 'currentCostume' ||
+              (typeof value === 'number' && range && value >= range[0] && value <= range[1])
+            )
+              runtime = {
+                op: 'set-target-property',
+                targetName: targetSelect.value,
+                property: selection as Extract<ScratchRuntimePatchUpdate, { op: 'set-target-property' }>['property'],
+                value,
+              }
+          }
+          const previous = currentRaw
+          const inverse = await install(next, runtime)
+          undoStack.push({ project: previous, runtime: inverse, animation: activeStudentAnimation })
+          if (undoStack.length > 20) undoStack.shift()
+          redoStack.length = 0
+          status.textContent = `已套用 ${targetSelect.value}／${fieldLabel}：${String(expected)} → ${String(value)}。`
+        } catch (error) {
+          status.textContent = error instanceof Error ? error.message : String(error)
+        } finally {
+          setBusy(false)
+        }
+      })()
+    })
+    const moveHistory = (from: RawHistoryEntry[], to: RawHistoryEntry[], message: string): void => {
+      void (async () => {
+        const next = from.at(-1)
+        if (!next) return
+        setBusy(true)
+        try {
+          const previous = currentRaw
+          const inverse = await install(next.project, next.animation === activeStudentAnimation ? next.runtime : null)
+          from.pop()
+          to.push({ project: previous, runtime: inverse, animation: activeStudentAnimation })
+          status.textContent = message
+        } catch (error) {
+          status.textContent = error instanceof Error ? error.message : String(error)
+        } finally {
+          setBusy(false)
+        }
+      })()
+    }
+    undo.addEventListener('click', () => moveHistory(undoStack, redoStack, '已復原修改。'))
+    redo.addEventListener('click', () => moveHistory(redoStack, undoStack, '已重做修改。'))
+    save.addEventListener('click', () => {
+      setBusy(true)
+      void exportLosslessSb3(currentRaw)
+        .then((archive) => download(archive, 'scratch-preserved-edit.sb3'))
+        .catch((error: unknown) => {
+          status.textContent = error instanceof Error ? error.message : String(error)
+        })
+        .finally(() => setBusy(false))
+    })
+    refresh()
+    localAiSettings.hidden = false
+    localAiGenerateButton.disabled = false
+    mcpSettings.hidden = false
+    panel.append(
+      title,
+      help,
+      localAiSettings,
+      mcpSettings,
+      targetLabel,
+      propertyLabel,
+      valueLabel,
+      candidateDiff,
+      actions,
+      status,
+    )
+    previewColumn.append(panel)
   }
   applyPatchButton.addEventListener('click', () => {
     void (async () => {
@@ -2435,8 +3004,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   livePatchPanel.append(
     livePatchSummary,
     livePatchHelp,
-    localAiSettings,
-    mcpSettings,
+    ...(rawSource ? [] : [localAiSettings, mcpSettings]),
     livePatchPromptButton,
     livePatchInputLabel,
     livePatchInput,
@@ -2445,6 +3013,162 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     livePatchStatus,
   )
   previewColumn.append(livePatchPanel)
+
+  const progressPanel = document.createElement('details')
+  progressPanel.className = 'student-live-patch'
+  const progressTitle = document.createElement('summary')
+  progressTitle.textContent = '本機遊戲進度'
+  const progressHelp = document.createElement('p')
+  progressHelp.textContent =
+    '存檔包含原始角色的位置、方向、大小、造型、顯示狀態，以及非雲端變數與清單，保存在這個瀏覽器。分身、積木執行位置及雲端資料不包含；請在遊戲開始後讀檔，遊戲腳本仍可能改寫讀入的值。作品內容改變後，舊版本存檔不會自動套用。'
+  const progressLabel = document.createElement('label')
+  progressLabel.textContent = '存檔名稱'
+  const progressSlot = document.createElement('input')
+  progressSlot.type = 'text'
+  progressSlot.maxLength = 40
+  progressSlot.value = '我的進度'
+  progressLabel.append(progressSlot)
+  const progressActions = document.createElement('div')
+  progressActions.className = 'button-row'
+  const progressButton = (name: string): HTMLButtonElement => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'button secondary'
+    button.textContent = name
+    progressActions.append(button)
+    return button
+  }
+  const progressSave = progressButton('儲存進度')
+  const progressLoad = progressButton('讀取進度')
+  const progressDelete = progressButton('刪除存檔')
+  const progressExport = progressButton('匯出存檔')
+  const progressImport = progressButton('匯入存檔')
+  const progressFile = document.createElement('input')
+  progressFile.type = 'file'
+  progressFile.accept = 'application/json,.json'
+  progressFile.hidden = true
+  const progressStatus = document.createElement('p')
+  progressStatus.setAttribute('role', 'status')
+  const progressRevision = (): string =>
+    currentRawForProgress
+      ? rawSb3Revision(currentRawForProgress)
+      : `sha256:${bytesToHex(sha256(new TextEncoder().encode(JSON.stringify(liveProject))))}`
+  const setProgressBusy = (busy: boolean): void => {
+    for (const element of [progressSlot, progressSave, progressLoad, progressDelete, progressExport, progressImport])
+      element.disabled = busy
+  }
+  const runProgress = (operation: 'save' | 'load' | 'delete'): void => {
+    void (async () => {
+      setProgressBusy(true)
+      try {
+        const slot = progressSlot.value.trim()
+        const revision = progressRevision()
+        const stored = await accessProgressSave(revision, slot, 'get')
+        if (operation === 'delete') {
+          if (!stored) throw new Error('找不到這個作品版本的存檔。')
+          if (!window.confirm(`確定刪除「${slot}」的本機存檔？`)) return
+          await accessProgressSave(revision, slot, 'delete', undefined, stored)
+          progressStatus.textContent = '已刪除本機存檔。'
+          return
+        }
+        const animation = activeStudentAnimation
+        if (!animation) throw new Error('請先執行作品，再儲存或讀取進度。')
+        const runtimeRevision = liveRevision
+        if (operation === 'save') {
+          if (stored && !window.confirm(`「${slot}」已有存檔，確定覆蓋？`)) return
+          const result = await animation.requestProgress('capture-game-progress', runtimeRevision)
+          if (result.ok !== true || !Array.isArray(result.snapshot) || !Array.isArray(result.targets))
+            throw new Error(typeof result.error === 'string' ? result.error : '無法擷取進度。')
+          if (
+            activeStudentAnimation !== animation ||
+            liveRevision !== runtimeRevision ||
+            progressRevision() !== revision
+          )
+            throw new Error('擷取期間作品已變更，請重新儲存。')
+          const save: ProgressSave = {
+            format: 'scratch-ai-bridge/progress',
+            version: 1,
+            projectRevision: revision,
+            slot,
+            savedAt: new Date().toISOString(),
+            variables: result.snapshot,
+            targets: result.targets,
+          }
+          await accessProgressSave(revision, slot, 'put', save, stored)
+          progressStatus.textContent = `已儲存 ${result.snapshot.length} 個非雲端變數與清單，以及 ${result.targets.length} 個角色或舞台狀態。`
+        } else {
+          if (typeof stored !== 'object' || stored === null || Array.isArray(stored))
+            throw new Error('找不到這個作品版本的存檔。')
+          const save = parseProgressSave(stored, revision, slot)
+          if (
+            activeStudentAnimation !== animation ||
+            liveRevision !== runtimeRevision ||
+            progressRevision() !== revision
+          )
+            throw new Error('作品已變更，請重新讀取。')
+          const result = await animation.requestProgress(
+            'restore-game-progress',
+            runtimeRevision,
+            save.variables,
+            save.targets,
+          )
+          if (result.ok !== true) throw new Error(typeof result.error === 'string' ? result.error : '無法恢復進度。')
+          progressStatus.textContent = save.targets
+            ? '已讀取變數、清單與角色狀態；遊戲腳本可能繼續改變它們。'
+            : '已讀取舊版存檔中的變數與清單；遊戲腳本可能繼續改變它們。'
+        }
+      } catch (error) {
+        progressStatus.textContent = error instanceof Error ? error.message : String(error)
+      } finally {
+        setProgressBusy(false)
+      }
+    })()
+  }
+  progressSave.addEventListener('click', () => runProgress('save'))
+  progressLoad.addEventListener('click', () => runProgress('load'))
+  progressDelete.addEventListener('click', () => runProgress('delete'))
+  progressExport.addEventListener('click', () => {
+    void (async () => {
+      setProgressBusy(true)
+      try {
+        const slot = progressSlot.value.trim()
+        const revision = progressRevision()
+        const save = parseProgressSave(await accessProgressSave(revision, slot, 'get'), revision, slot)
+        downloadJson(save, 'scratch-game-progress.json')
+        progressStatus.textContent = '已匯出本機存檔。'
+      } catch (error) {
+        progressStatus.textContent = error instanceof Error ? error.message : String(error)
+      } finally {
+        setProgressBusy(false)
+      }
+    })()
+  })
+  progressImport.addEventListener('click', () => progressFile.click())
+  progressFile.addEventListener('change', () => {
+    const file = progressFile.files?.[0]
+    progressFile.value = ''
+    if (!file) return
+    void (async () => {
+      setProgressBusy(true)
+      try {
+        if (file.size > 160 * 1024) throw new Error('存檔檔案超過 160 KiB。')
+        const slot = progressSlot.value.trim()
+        const revision = progressRevision()
+        const save = parseProgressSave(JSON.parse(await file.text()) as unknown, revision, slot)
+        const stored = await accessProgressSave(revision, slot, 'get')
+        if (stored && !window.confirm(`「${slot}」已有存檔，確定覆蓋？`)) return
+        if (progressRevision() !== revision) throw new Error('作品已變更，請重新匯入。')
+        await accessProgressSave(revision, slot, 'put', save, stored)
+        progressStatus.textContent = '已匯入本機存檔；執行作品後可讀取。'
+      } catch (error) {
+        progressStatus.textContent = error instanceof Error ? error.message : String(error)
+      } finally {
+        setProgressBusy(false)
+      }
+    })()
+  })
+  progressPanel.append(progressTitle, progressHelp, progressLabel, progressActions, progressFile, progressStatus)
+  previewColumn.append(progressPanel)
 
   studentPreview.append(previewColumn)
 
@@ -2554,6 +3278,21 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
                   return { op: operation.op, property: operation.property, value: operation.value }
                 }),
               },
+              '*',
+            )
+          }),
+
+        requestProgress: (type, revision, snapshot, targetSnapshot) =>
+          new Promise<Record<string, unknown>>((resolve) => {
+            const requestId = crypto.randomUUID()
+            const progressTimer = window.setTimeout(() => {
+              pendingLivePatches.delete(requestId)
+              resolve({ ok: false, error: '存檔操作逾時。' })
+              if (type === 'restore-game-progress') animation.finish('讀檔未能確認，已停止預覽。')
+            }, 5_000)
+            pendingLivePatches.set(requestId, { resolve, timer: progressTimer })
+            frame.contentWindow?.postMessage(
+              { type, token, requestId, baseRevision: revision, snapshot, targetSnapshot },
               '*',
             )
           }),

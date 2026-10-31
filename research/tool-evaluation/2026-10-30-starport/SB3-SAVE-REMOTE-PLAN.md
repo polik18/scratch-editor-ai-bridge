@@ -61,3 +61,7 @@
 - 目前 API/MCP MVP 與既有邊界：[`AI-PROVIDER-AND-MCP-PLAN.md`](AI-PROVIDER-AND-MCP-PLAN.md)。
 - [MCP transport 規格](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)、[MCP 安全最佳實務](https://modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices)：實作時應重新核對所採協定版本。
 - [MDN 本機網路存取](https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Local_network_access)：瀏覽器權限與混合內容行為因環境而異，需在目標瀏覽器實測。
+
+## 實作進度（2026-10-31）
+
+已新增 raw SB3 內容 revision、屬性及非雲端變數修改；匯入作品預覽支援下載、復原/重做。支援的執行中變更與其復原/重做不重載，其他操作重載並重置進度；復原綁定原動畫 session。API 與 MCP 使用 raw 專用 validator，可對每次一個既有屬性或變數提案，顯示差異並要求人工確認；AI 提案套用目前重載。瀏覽器以模擬 provider 與 relay 驗證待審、過期拒絕及操作；尚未使用真實模型或完整 MCP host 驗證本路徑。本機進度 MVP 已支援非雲端變數/清單儲存、讀取、刪除、匯出匯入，以內容 hash 綁定精確作品版本；原始角色位置、方向、大小、造型及顯示狀態亦可恢復；分身/執行緒及跨版本遷移尚未支援。區網模型 gateway 已支援私人 IPv4 固定端點與本機短效配對；已在同機私人網卡測試模擬服務，尚未以另一台電腦或真實模型驗收。新增只監聽 loopback 的 MCP Streamable HTTP，可經 SSH 通道使用並要求獨立短效 bearer token；尚未跨實體裝置驗收，無 OAuth 或公網部署支援。穩定作品 ID、AI 積木修改、跨裝置存檔同步與 Scratch cloud 等階段尚未實作。

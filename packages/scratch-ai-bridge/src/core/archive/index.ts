@@ -7,3 +7,10 @@ export {
   type Sb3ArchiveInput,
 } from './sb3-archive'
 export { inspectZipDirectory, type ZipDirectory, type ZipDirectoryEntry } from './zip-directory'
+export {
+  patchRawSb3Properties,
+  patchRawSb3Variables,
+  rawSb3Revision,
+  type RawPropertyChange,
+  type RawVariableChange,
+} from './raw-property-patch'
