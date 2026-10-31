@@ -641,7 +641,11 @@ export const postScratchIOData = (vm: ScratchVMHandle, device: string, data: Rec
 export const attachScratchCloudSession = (
   vm: ScratchVMHandle,
   options: Omit<CloudSessionOptions, 'variableNames' | 'applyIncoming'>,
-): { readonly session: ScratchCloudSession; readonly variableNames: readonly string[]; readonly disconnect: () => void } => {
+): {
+  readonly session: ScratchCloudSession
+  readonly variableNames: readonly string[]
+  readonly disconnect: () => void
+} => {
   const internal = asInternalVM(vm)
   if (internal.runtime.ioDevices.cloud.provider) throw new Error('A cloud provider is already attached.')
   const stages = internal.runtime.targets.filter((target) => target.isOriginal && target.isStage)

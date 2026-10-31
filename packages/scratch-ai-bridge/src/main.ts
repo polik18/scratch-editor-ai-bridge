@@ -41,6 +41,7 @@ import {
   estimatePromptSize,
   type GameGenreProfile,
 } from './core/capabilities'
+import { parseSelfHostedCloudValue, selfHostedCloudKey, validSelfHostedCloudValue } from './core/cloud/self-hosted'
 import { compileCanonicalProjectToSb3, ProjectCompileError } from './core/compiler'
 import { decompileSb3WithBlockGraphs, normalizeThroughVm } from './core/decompiler'
 import type { VmNormalizationReport } from './core/decompiler/normalization-report'
@@ -68,7 +69,12 @@ import {
   type ProjectFragmentSession,
   type RequirementCoverageEntry,
 } from './core/normalizer'
-import { decryptProgressSave, encryptProgressSave, isEncryptedProgressSave } from './core/progress/encryption'
+import {
+  decryptProgressSave,
+  encryptProgressSave,
+  encryptCloudValue,
+  isEncryptedProgressSave,
+} from './core/progress/encryption'
 import { accessProgressSave, parseProgressSave, type ProgressSave } from './core/progress/storage'
 import {
   deleteSyncedSave,
@@ -173,6 +179,8 @@ interface ActiveStudentAnimation {
 
   onRuntimePatchResult(message: Record<string, unknown>): void
 
+  onSelfHostedCloudMessage(message: Record<string, unknown>): void
+
   replaceProject(archive: Blob, revision: number): void
 
   applyRuntimePatch(
@@ -187,6 +195,8 @@ interface ActiveStudentAnimation {
     snapshot?: unknown,
     targetSnapshot?: unknown,
   ): Promise<Record<string, unknown>>
+
+  requestSelfHostedCloud(revision: number, projectId: string, canWrite: boolean): Promise<Record<string, unknown>>
 }
 
 let activeStudentAnimation: ActiveStudentAnimation | null = null
@@ -227,6 +237,10 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
   if (message.type === 'runtime-patch-result' || message.type === 'game-progress-result') {
     active.onRuntimePatchResult(message)
 
+    return
+  }
+  if (message.type === 'selfhosted-cloud-write' || message.type === 'selfhosted-cloud-status') {
+    active.onSelfHostedCloudMessage(message)
     return
   }
 
@@ -1714,6 +1728,8 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
 
   let liveProject = structuredClone(project)
   let currentRawForProgress = rawSource
+  let handleSelfHostedCloudMessage: (message: Record<string, unknown>) => void = () => undefined
+  let stopSelfHostedCloud: (reason: string) => void = () => undefined
   let liveRevision = 0
   let livePatchBusy = false
   const liveUndoStack: {
@@ -3172,8 +3188,31 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   const syncDelete = makeSyncButton('刪除遠端存檔')
   const syncStatus = document.createElement('p')
   syncStatus.setAttribute('role', 'status')
+  const cloudHelp = document.createElement('p')
+  cloudHelp.textContent =
+    '自架雲端變數讓相同版本作品、使用相同 token 和密碼的玩家共享數值，與個人存檔分開。連線後才接收初始值，遊戲需處理較晚抵達的更新；同時寫入可能衝突，不能保證多人加總是原子操作。未勾選寫入時只讀取；停止時已在傳送中的最後一筆可能仍完成。'
+  const cloudWriteLabel = document.createElement('label')
+  const cloudWrite = document.createElement('input')
+  cloudWrite.type = 'checkbox'
+  cloudWriteLabel.append(cloudWrite, document.createTextNode('允許此遊戲寫入自架雲端變數'))
+  const cloudActions = document.createElement('div')
+  cloudActions.className = 'button-row'
+  const cloudConnect = document.createElement('button')
+  cloudConnect.type = 'button'
+  cloudConnect.className = 'button secondary'
+  cloudConnect.textContent = '連接自架雲端變數'
+  const cloudDisconnect = document.createElement('button')
+  cloudDisconnect.type = 'button'
+  cloudDisconnect.className = 'button secondary'
+  cloudDisconnect.textContent = '中斷自架雲端變數'
+  cloudDisconnect.hidden = true
+  cloudActions.append(cloudConnect, cloudDisconnect)
+  const cloudStatus = document.createElement('p')
+  cloudStatus.setAttribute('role', 'status')
+  cloudStatus.textContent = '自架雲端變數未連線。'
   const syncBaselines = new Map<string, { etag: string | null; localFingerprint: string | null }>()
   const resetSync = (): void => {
+    stopSelfHostedCloud('同步設定已變更，自架雲端變數已中斷。')
     syncBaselines.clear()
     if (syncAuto.checked) {
       syncAuto.checked = false
@@ -3193,6 +3232,10 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     syncAutoLabel,
     syncActions,
     syncStatus,
+    cloudHelp,
+    cloudWriteLabel,
+    cloudActions,
+    cloudStatus,
   )
   const progressRevision = (): string =>
     currentRawForProgress
@@ -3217,6 +3260,324 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
       element.disabled = busy
   }
   const syncConnection = (): SyncConnection => ({ baseUrl: syncUrl.value.trim(), token: syncToken.value.trim() })
+  interface SelfHostedCloudState {
+    readonly animation: ActiveStudentAnimation
+    readonly projectId: string
+    readonly revision: number
+    readonly connection: SyncConnection
+    readonly controller: AbortController
+    readonly names: readonly string[]
+    readonly password: string
+    readonly canWrite: boolean
+    readonly expiresAt: number
+    readonly seen: Map<string, string>
+    readonly cloudValues: Map<string, string | number>
+    readonly generations: Map<string, number>
+    readonly pending: Map<string, string | number>
+    activeName: string | null
+    writing: boolean
+    offset: number
+    pollTimer: number | null
+    expiryTimer: number | null
+  }
+  let cloudState: SelfHostedCloudState | null = null
+  let cloudStarting: {
+    animation: ActiveStudentAnimation
+    controller: AbortController
+    projectId: string
+    revision: number
+    canWrite: boolean
+    pending: Map<string, string | number>
+  } | null = null
+  const cloudIsCurrent = (state: SelfHostedCloudState): boolean =>
+    cloudState === state &&
+    !state.controller.signal.aborted &&
+    activeStudentAnimation === state.animation &&
+    liveRevision === state.revision &&
+    Date.now() < state.expiresAt
+  stopSelfHostedCloud = (reason) => {
+    const current = cloudState
+    const starting = cloudStarting
+    if (!current && !starting) return
+    cloudState = null
+    cloudStarting = null
+    current?.controller.abort()
+    starting?.controller.abort()
+    if (current?.pollTimer !== null && current?.pollTimer !== undefined) window.clearTimeout(current.pollTimer)
+    if (current?.expiryTimer !== null && current?.expiryTimer !== undefined) window.clearTimeout(current.expiryTimer)
+    current?.pending.clear()
+    starting?.pending.clear()
+    const animation = current?.animation ?? starting?.animation
+    animation?.frame.contentWindow?.postMessage({ type: 'disconnect-selfhosted-cloud', token: animation.token }, '*')
+    cloudConnect.disabled = false
+    cloudDisconnect.hidden = true
+    cloudWrite.disabled = false
+    cloudStatus.textContent = reason
+  }
+  const cloudWriteLoop = async (state: SelfHostedCloudState): Promise<void> => {
+    if (state.writing) return
+    state.writing = true
+    try {
+      while (cloudIsCurrent(state) && state.pending.size > 0) {
+        const next = state.pending.entries().next().value as [string, string | number] | undefined
+        if (!next) break
+        const [name, value] = next
+        state.pending.delete(name)
+        state.activeName = name
+        try {
+          const key = selfHostedCloudKey(state.projectId, name)
+          const previous = await getSyncedSave(state.connection, key)
+          if (previous)
+            parseSelfHostedCloudValue(
+              await decryptProgressSave(previous.document, state.password),
+              state.projectId,
+              name,
+            )
+          const document = await encryptCloudValue(
+            {
+              format: 'scratch-ai-bridge/self-hosted-cloud-value',
+              version: 1,
+              projectRevision: state.projectId,
+              name,
+              value,
+            },
+            state.password,
+          )
+          if (!cloudIsCurrent(state)) break
+          const etag = await putSyncedSave(state.connection, key, document, previous?.etag ?? null)
+          if (!cloudIsCurrent(state)) break
+          state.seen.set(name, etag)
+          state.cloudValues.set(name, value)
+          cloudStatus.textContent = `自架雲端變數已連線；已送出「${name}」。`
+        } catch (error) {
+          if (cloudIsCurrent(state)) {
+            const message = error instanceof Error ? error.message : String(error)
+            cloudStatus.textContent = message.includes('遠端存檔已變更')
+              ? '雲端變數同時被其他玩家修改；本次寫入未覆蓋，稍後將讀取遠端值。'
+              : `雲端變數未送出：${message}`
+          }
+        } finally {
+          state.activeName = null
+        }
+        if (cloudIsCurrent(state)) await new Promise((resolve) => window.setTimeout(resolve, 250))
+      }
+    } finally {
+      state.writing = false
+    }
+  }
+  const pollCloud = async (state: SelfHostedCloudState): Promise<void> => {
+    if (!cloudIsCurrent(state)) {
+      if (cloudState === state) stopSelfHostedCloud('作品或預覽已變更，請重新連線。')
+      return
+    }
+    try {
+      const count = Math.min(10, state.names.length)
+      for (let index = 0; index < count; index += 1) {
+        const name = state.names[state.offset % state.names.length]
+        state.offset += 1
+        if (state.activeName === name || state.pending.has(name)) continue
+        const generation = state.generations.get(name) ?? 0
+        const remote = await getSyncedSave(state.connection, selfHostedCloudKey(state.projectId, name))
+        if (!cloudIsCurrent(state)) return
+        if (state.activeName === name || state.pending.has(name) || (state.generations.get(name) ?? 0) !== generation)
+          continue
+        if (!remote) continue
+        if (state.seen.get(name) === remote.etag) {
+          if (!state.canWrite && state.cloudValues.has(name))
+            state.animation.frame.contentWindow?.postMessage(
+              {
+                type: 'selfhosted-cloud-incoming',
+                token: state.animation.token,
+                baseRevision: state.revision,
+                projectId: state.projectId,
+                name,
+                value: state.cloudValues.get(name),
+              },
+              '*',
+            )
+          continue
+        }
+        const value = parseSelfHostedCloudValue(
+          await decryptProgressSave(remote.document, state.password),
+          state.projectId,
+          name,
+        )
+        if (!cloudIsCurrent(state)) return
+        if (state.activeName === name || state.pending.has(name) || (state.generations.get(name) ?? 0) !== generation)
+          continue
+        state.animation.frame.contentWindow?.postMessage(
+          {
+            type: 'selfhosted-cloud-incoming',
+            token: state.animation.token,
+            baseRevision: state.revision,
+            projectId: state.projectId,
+            name,
+            value,
+          },
+          '*',
+        )
+        state.seen.set(name, remote.etag)
+        state.cloudValues.set(name, value)
+        cloudStatus.textContent = `自架雲端變數已連線；已更新「${name}」。`
+      }
+    } catch (error) {
+      if (cloudIsCurrent(state))
+        cloudStatus.textContent = `雲端變數讀取失敗：${error instanceof Error ? error.message : String(error)}`
+    }
+    if (cloudIsCurrent(state))
+      state.pollTimer = window.setTimeout(() => {
+        void pollCloud(state)
+      }, 2000)
+  }
+  handleSelfHostedCloudMessage = (message) => {
+    if (message.type === 'selfhosted-cloud-status') {
+      if (message.stopped === true)
+        stopSelfHostedCloud(typeof message.reason === 'string' ? message.reason : '雲端連線已停止。')
+      else if (cloudState && typeof message.reason === 'string') cloudStatus.textContent = message.reason
+      return
+    }
+    const state = cloudState
+    const starting = cloudStarting
+    if (
+      !state &&
+      starting &&
+      !starting.controller.signal.aborted &&
+      starting.canWrite &&
+      activeStudentAnimation === starting.animation &&
+      message.projectId === starting.projectId &&
+      message.baseRevision === starting.revision &&
+      typeof message.name === 'string' &&
+      message.name.length <= 256 &&
+      validSelfHostedCloudValue(message.value)
+    ) {
+      if (starting.pending.size < 100 || starting.pending.has(message.name))
+        starting.pending.set(message.name, message.value)
+      return
+    }
+    if (
+      !state ||
+      !cloudIsCurrent(state) ||
+      !state.canWrite ||
+      message.projectId !== state.projectId ||
+      message.baseRevision !== state.revision ||
+      typeof message.name !== 'string' ||
+      !state.names.includes(message.name) ||
+      !validSelfHostedCloudValue(message.value)
+    )
+      return
+    state.generations.set(message.name, (state.generations.get(message.name) ?? 0) + 1)
+    state.pending.set(message.name, message.value)
+    void cloudWriteLoop(state)
+  }
+  cloudConnect.addEventListener('click', () => {
+    void (async () => {
+      if (cloudState || cloudStarting) return
+      const animation = activeStudentAnimation
+      if (!animation) {
+        cloudStatus.textContent = '請先執行作品，再連接雲端變數。'
+        return
+      }
+      if (progressPassword.value.length < 12) {
+        cloudStatus.textContent = '請先輸入至少 12 個字元的加密密碼。'
+        return
+      }
+      const controller = new AbortController()
+      const projectId = progressRevision()
+      const revision = liveRevision
+      const canWrite = cloudWrite.checked
+      cloudStarting = { animation, controller, projectId, revision, canWrite, pending: new Map() }
+      cloudConnect.disabled = true
+      cloudDisconnect.hidden = false
+      cloudWrite.disabled = true
+      cloudStatus.textContent = '正在檢查自架雲端變數與連線…'
+      try {
+        const password = progressPassword.value
+        const connection: SyncConnection = { ...syncConnection(), signal: controller.signal }
+        const response = await animation.requestSelfHostedCloud(revision, projectId, canWrite)
+        if (
+          response.ok !== true ||
+          !Array.isArray(response.names) ||
+          !response.names.every((name: unknown) => typeof name === 'string') ||
+          typeof response.expiresAt !== 'number' ||
+          !Number.isFinite(response.expiresAt) ||
+          response.expiresAt <= Date.now()
+        )
+          throw new Error(typeof response.error === 'string' ? response.error : '無法連接雲端變數。')
+        const names = response.names as string[]
+        const initial: { name: string; etag: string; value: string | number }[] = []
+        for (const name of names) {
+          const remote = await getSyncedSave(connection, selfHostedCloudKey(projectId, name))
+          if (remote)
+            initial.push({
+              name,
+              etag: remote.etag,
+              value: parseSelfHostedCloudValue(await decryptProgressSave(remote.document, password), projectId, name),
+            })
+        }
+        if (
+          controller.signal.aborted ||
+          cloudStarting?.controller !== controller ||
+          activeStudentAnimation !== animation ||
+          liveRevision !== revision ||
+          progressRevision() !== projectId ||
+          Date.now() >= response.expiresAt
+        )
+          throw new Error('作品、預覽或授權已變更。')
+        const pending = new Map([...cloudStarting.pending].filter(([name]) => names.includes(name)))
+        const state: SelfHostedCloudState = {
+          animation,
+          projectId,
+          revision,
+          connection,
+          controller,
+          names,
+          password,
+          canWrite,
+          expiresAt: response.expiresAt,
+          seen: new Map(),
+          cloudValues: new Map(),
+          generations: new Map(),
+          pending,
+          activeName: null,
+          writing: false,
+          offset: 0,
+          pollTimer: null,
+          expiryTimer: null,
+        }
+        cloudState = state
+        cloudStarting = null
+        for (const item of initial) {
+          if (state.pending.has(item.name)) continue
+          animation.frame.contentWindow?.postMessage(
+            {
+              type: 'selfhosted-cloud-incoming',
+              token: animation.token,
+              baseRevision: revision,
+              projectId,
+              name: item.name,
+              value: item.value,
+            },
+            '*',
+          )
+          state.seen.set(item.name, item.etag)
+          state.cloudValues.set(item.name, item.value)
+        }
+        state.expiryTimer = window.setTimeout(
+          () => {
+            if (cloudState === state) stopSelfHostedCloud('連線已到 30 分鐘上限，請重新連線。')
+          },
+          Math.max(0, state.expiresAt - Date.now()),
+        )
+        cloudStatus.textContent = `自架雲端變數已連線（${names.length} 個，${canWrite ? '可讀寫' : '唯讀'}）。`
+        if (state.pending.size) void cloudWriteLoop(state)
+        void pollCloud(state)
+      } catch (error) {
+        if (cloudStarting?.controller === controller)
+          stopSelfHostedCloud(error instanceof Error ? error.message : String(error))
+      }
+    })()
+  })
+  cloudDisconnect.addEventListener('click', () => stopSelfHostedCloud('自架雲端變數已中斷。'))
   const progressFingerprint = (value: unknown): string | null =>
     value === undefined ? null : bytesToHex(sha256(new TextEncoder().encode(JSON.stringify(value))))
   const pushProgress = async (revision: string, slot: string, automatic: boolean): Promise<void> => {
@@ -3234,9 +3595,16 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
         (baseline !== undefined && baseline.etag !== remoteVersion))
     )
       throw new Error('遠端存檔與同步基準不同；請手動下載或上傳並確認。')
-    const remoteSave = remote ? parseProgressSave(await decryptProgressSave(remote.document, progressPassword.value), revision, slot) : null
+    const remoteSave = remote
+      ? parseProgressSave(await decryptProgressSave(remote.document, progressPassword.value), revision, slot)
+      : null
     if (!automatic && baseline?.etag !== remoteVersion && (remoteVersion !== null || baseline !== undefined)) {
-      if (!window.confirm(`遠端存檔可能與本機不同。\n本機時間：${save.savedAt}\n遠端時間：${remoteSave?.savedAt ?? '遠端已刪除'}\n確定以上方本機存檔覆蓋遠端？`)) throw new Error('已取消上傳。')
+      if (
+        !window.confirm(
+          `遠端存檔可能與本機不同。\n本機時間：${save.savedAt}\n遠端時間：${remoteSave?.savedAt ?? '遠端已刪除'}\n確定以上方本機存檔覆蓋遠端？`,
+        )
+      )
+        throw new Error('已取消上傳。')
     }
     const document = await encryptProgressSave(save, progressPassword.value)
     const latest = await accessProgressSave(revision, slot, 'get')
@@ -3652,6 +4020,23 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
             )
           }),
 
+        requestSelfHostedCloud: (revision, projectId, canWrite) =>
+          new Promise<Record<string, unknown>>((resolve) => {
+            const requestId = crypto.randomUUID()
+            const timer = window.setTimeout(() => {
+              pendingLivePatches.delete(requestId)
+              frame.contentWindow?.postMessage({ type: 'disconnect-selfhosted-cloud', token }, '*')
+              resolve({ ok: false, error: '自架雲端變數連線逾時。' })
+            }, 5_000)
+            pendingLivePatches.set(requestId, { resolve, timer })
+            frame.contentWindow?.postMessage(
+              { type: 'connect-selfhosted-cloud', token, requestId, baseRevision: revision, projectId, canWrite },
+              '*',
+            )
+          }),
+
+        onSelfHostedCloudMessage: (message) => handleSelfHostedCloudMessage(message),
+
         onRuntimePatchResult: (message) => {
           if (typeof message.requestId !== 'string') return
           const pending = pendingLivePatches.get(message.requestId)
@@ -3662,6 +4047,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
         },
 
         replaceProject: (archive, revision) => {
+          stopSelfHostedCloud('作品已修改，請重新連接自架雲端變數。')
           archiveForCurrentFrame = archive
           revisionForCurrentFrame = revision
           frame.src = previewUrl.toString()
@@ -3785,6 +4171,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
         },
 
         finish: (message: string) => {
+          stopSelfHostedCloud('預覽已停止，自架雲端變數已中斷。')
           if (activeStudentAnimation === animation) activeStudentAnimation = null
 
           setLivePatchReady(false)

@@ -1,3 +1,4 @@
+import { validSelfHostedCloudValue } from '../core/cloud/self-hosted'
 import { SCRATCH_LINK_HARDWARE_EXTENSION_IDS } from '../scratch/extensions'
 import {
   connectScratchPeripheral,
@@ -17,6 +18,7 @@ import {
   setRuntimePatchValues,
   captureScratchProgress,
   captureScratchTargetProgress,
+  attachScratchCloudSession,
   restoreScratchProgress,
   stopScratchPreviewDrag,
   stopProjectRuntime,
@@ -39,6 +41,16 @@ const peripheralSubscriptions: (() => void)[] = []
 let previewHardwareExtensions = new Set<string>()
 let activeHardwareExtension: string | null = null
 let previewRevision = 0
+let selfHostedCloud: {
+  readonly projectId: string
+  readonly revision: number
+  readonly handle: ReturnType<typeof attachScratchCloudSession>
+} | null = null
+
+const disconnectSelfHostedCloud = (): void => {
+  selfHostedCloud?.handle.disconnect()
+  selfHostedCloud = null
+}
 
 const createConsentedFetch =
   (fetcher: typeof fetch): typeof fetch =>
@@ -104,6 +116,7 @@ const sendHardwareStatus = (extensionId: string, status: string, detail: string)
 }
 
 const stop = (notifyParent = true, loseCanvasContext = true): void => {
+  disconnectSelfHostedCloud()
   for (const resolve of pendingExtensionConsents.values()) resolve(false)
   pendingExtensionConsents.clear()
   if (previewTimeout !== null) window.clearTimeout(previewTimeout)
@@ -259,8 +272,90 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     operations?: unknown
     snapshot?: unknown
     targetSnapshot?: unknown
+    projectId?: unknown
+    canWrite?: unknown
+    name?: unknown
+    value?: unknown
   }
   if (!previewToken || (message as { token?: unknown }).token !== previewToken) return
+  if (message.type === 'disconnect-selfhosted-cloud') {
+    disconnectSelfHostedCloud()
+    return
+  }
+  if (message.type === 'selfhosted-cloud-incoming') {
+    if (
+      selfHostedCloud &&
+      message.baseRevision === previewRevision &&
+      message.projectId === selfHostedCloud.projectId
+    )
+      selfHostedCloud.handle.session.receive({
+        projectId: message.projectId,
+        name: message.name,
+        value: message.value,
+      })
+    return
+  }
+  if (message.type === 'connect-selfhosted-cloud') {
+    const requestId = typeof message.requestId === 'string' ? message.requestId : ''
+    try {
+      if (
+        !requestId ||
+        requestId.length > 128 ||
+        !vm ||
+        message.baseRevision !== previewRevision ||
+        typeof message.projectId !== 'string' ||
+        !/^sha256:[a-f0-9]{64}$/.test(message.projectId) ||
+        typeof message.canWrite !== 'boolean'
+      )
+        throw new Error('雲端連線要求無效。')
+      if (selfHostedCloud) throw new Error('雲端變數已連線。')
+      const activeVm = vm
+      const revision = previewRevision
+      const projectId = message.projectId
+      const expiresAt = Date.now() + 30 * 60_000
+      const handle = attachScratchCloudSession(activeVm, {
+        grant: { projectId, username: 'self-hosted', expiresAt, canRead: true, canWrite: message.canWrite },
+        verifyGrant: (grant) =>
+          vm === activeVm && previewRevision === revision && grant.projectId === projectId && Date.now() < expiresAt,
+        validValue: validSelfHostedCloudValue,
+        minWriteIntervalMs: 0,
+        send: (update, signal) => {
+          if (!signal.aborted)
+            window.parent.postMessage(
+              { type: 'selfhosted-cloud-write', token: previewToken, baseRevision: revision, ...update },
+              '*',
+            )
+        },
+        report: (reason) =>
+          window.parent.postMessage({ type: 'selfhosted-cloud-status', token: previewToken, reason }, '*'),
+      })
+      selfHostedCloud = { projectId, revision, handle }
+      handle.session.setConnected(true)
+      window.parent.postMessage(
+        {
+          type: 'game-progress-result',
+          token: previewToken,
+          requestId,
+          ok: true,
+          names: handle.variableNames,
+          expiresAt,
+        },
+        '*',
+      )
+    } catch (error) {
+      window.parent.postMessage(
+        {
+          type: 'game-progress-result',
+          token: previewToken,
+          requestId,
+          ok: false,
+          error: error instanceof Error ? error.message.slice(0, 500) : '雲端連線失敗。',
+        },
+        '*',
+      )
+    }
+    return
+  }
   if (
     message.type === 'capture-game-progress' ||
     message.type === 'restore-game-progress' ||
@@ -372,6 +467,18 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
         throw new Error('Patch operation is not supported.')
       })
       const changes = setRuntimePatchValues(vm, updates)
+      if (selfHostedCloud) {
+        disconnectSelfHostedCloud()
+        window.parent.postMessage(
+          {
+            type: 'selfhosted-cloud-status',
+            token: previewToken,
+            reason: '作品已修改，請重新連接自架雲端變數。',
+            stopped: true,
+          },
+          '*',
+        )
+      }
       previewRevision = message.revision
       window.parent.postMessage(
         {
