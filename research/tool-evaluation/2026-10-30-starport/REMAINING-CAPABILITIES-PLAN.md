@@ -1,8 +1,10 @@
 # Scratch AI Bridge 剩餘能力研究與實作計畫
 
 日期：2026-10-31
-狀態：研究完成、待執行
+狀態：歷史研究；最新進度與使用者決策見整合計畫
 範圍：模型 provider 直連、原始 SB3 live patch、Scratch cloud variable sync、遊戲進度保存。本文件是研究基礎；provider 本機 MVP 已實作，其餘狀態與更新後實施順序以 [整合計畫](SB3-SAVE-REMOTE-PLAN.md) 為準。
+
+使用者已明確表示優先自架、不需 Scratch 官方登入且不另外付費；下文優先 Scratch 官方雲端的早期建議已由此決策取代。Scratch 官方服務只作可選相容項目，不是自架遊戲或同步的前置條件。
 
 Provider 直連現已擴充為「使用者自選模型 API + 外部 AI 的 MCP」雙接入；Tool Core、API/自訂模型、stdio MCP 的獨立階段與安全邊界詳見 [`AI-PROVIDER-AND-MCP-PLAN.md`](AI-PROVIDER-AND-MCP-PLAN.md)。本文件其餘 SB3、cloud sync、checkpoint 計畫仍有效。
 

@@ -1,5 +1,6 @@
 import type { ScratchStorage } from '@scratch/scratch-storage'
 import ScratchVM from '@scratch/scratch-vm'
+import { ScratchCloudSession, type CloudSessionOptions } from '../core/cloud/session'
 import { parseProgressTargets, type ProgressTargetState } from '../core/progress/target-state'
 import parseScratchProject from './csp-scratch-parser'
 import {
@@ -102,6 +103,7 @@ interface ScratchTargetInternal extends ScratchTarget {
 
 interface ScratchRuntimeInternal {
   readonly targets: ScratchTargetInternal[]
+  readonly ioDevices: { readonly cloud: { readonly provider: unknown } }
   getTargetById(id: string): ScratchTargetInternal | null
   _step(): void
   handleProjectLoaded(): void
@@ -109,6 +111,7 @@ interface ScratchRuntimeInternal {
 
 interface ScratchVMInternal extends ScratchVMHandle {
   readonly runtime: ScratchRuntimeInternal
+  setCloudProvider(provider: ScratchCloudSession | null): void
   readonly renderer: {
     draw(): void
     getNativeSize(): [number, number]
@@ -627,6 +630,61 @@ export const stopProjectRuntime = (vm: ScratchVMHandle): void => asInternalVM(vm
  */
 export const postScratchIOData = (vm: ScratchVMHandle, device: string, data: Record<string, unknown>): void =>
   asInternalVM(vm).postIOData(device, data)
+
+/**
+ * Attach a guarded transport-independent cloud session to one loaded VM.
+ * No network transport or Scratch account authorization is provided here.
+ * @param vm VM containing the authorized project.
+ * @param options Verified grant, provider policy and transport callbacks.
+ * @returns The session and a function to detach it.
+ */
+export const attachScratchCloudSession = (
+  vm: ScratchVMHandle,
+  options: Omit<CloudSessionOptions, 'variableNames' | 'applyIncoming'>,
+): { readonly session: ScratchCloudSession; readonly variableNames: readonly string[]; readonly disconnect: () => void } => {
+  const internal = asInternalVM(vm)
+  if (internal.runtime.ioDevices.cloud.provider) throw new Error('A cloud provider is already attached.')
+  const stages = internal.runtime.targets.filter((target) => target.isOriginal && target.isStage)
+  if (stages.length !== 1) throw new Error('Cloud session requires a unique Stage.')
+  const stage = stages[0]
+  const variables = Object.values(stage.variables).filter((variable) => variable.type === '' && variable.isCloud)
+  const variableIds = new Map(variables.map((variable) => [variable.name, variable.id]))
+  const assertBound = (name: string): void => {
+    const currentStages = internal.runtime.targets.filter((target) => target.isOriginal && target.isStage)
+    const matchingVariables = Object.values(stage.variables).filter(
+      (variable) => variable.type === '' && variable.isCloud && variable.name === name,
+    )
+    if (
+      internal.runtime.ioDevices.cloud.provider !== session ||
+      currentStages.length !== 1 ||
+      currentStages[0] !== stage ||
+      matchingVariables.length !== 1 ||
+      matchingVariables[0].id !== variableIds.get(name)
+    )
+      throw new Error('Cloud project or variable changed.')
+  }
+  const session = new ScratchCloudSession({
+    ...options,
+    variableNames: variables.map((variable) => variable.name),
+    send: (update, signal) => {
+      assertBound(update.name)
+      return options.send(update, signal)
+    },
+    applyIncoming: (name, value) => {
+      assertBound(name)
+      internal.postIOData('cloud', { varUpdate: { name, value } })
+    },
+  })
+  internal.setCloudProvider(session)
+  return {
+    session,
+    variableNames: variables.map((variable) => variable.name),
+    disconnect: () => {
+      session.requestCloseConnection()
+      if (internal.runtime.ioDevices.cloud.provider === session) internal.setCloudProvider(null)
+    },
+  }
+}
 
 export interface ScratchPreviewDragState {
   readonly targetId: string

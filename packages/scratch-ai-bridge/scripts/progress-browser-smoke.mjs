@@ -130,17 +130,37 @@ try {
   await panel.getByRole('button', { name: '讀取進度' }).click()
   await panel.getByRole('status').filter({ hasText: '已讀取' }).waitFor()
   if ((await readScore()) !== 3) throw new Error('imported save was not restored')
+  const password = panel.locator(':scope > label input[type=password]')
+  await password.fill('correct horse battery staple')
+  const encryptedDownload = page.waitForEvent('download')
+  await panel.getByRole('button', { name: '匯出存檔' }).click()
+  const encryptedBytes = await readFile(await (await encryptedDownload).path())
+  if (encryptedBytes.toString().includes('progressTest')) throw new Error('encrypted save exposed plaintext')
+  await panel.locator(':scope > label input[type=text]').fill('加密進度')
+  await password.fill('wrong horse battery staple')
+  await panel
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'encrypted.json', mimeType: 'application/json', buffer: encryptedBytes })
+  await panel.getByRole('status').filter({ hasText: '密碼錯誤' }).waitFor()
+  await password.fill('correct horse battery staple')
+  await panel
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'encrypted.json', mimeType: 'application/json', buffer: encryptedBytes })
+  await panel.getByRole('status').filter({ hasText: '已匯入' }).waitFor()
+  await changeScore()
+  await panel.getByRole('button', { name: '讀取進度' }).click()
+  await panel.getByRole('status').filter({ hasText: '已讀取' }).waitFor()
+  if ((await readScore()) !== 3) throw new Error('encrypted save was not restored')
+  await password.fill('')
   const wrong = JSON.parse(saveBytes.toString())
   wrong.projectRevision = `sha256:${'0'.repeat(64)}`
   const invalid = structuredClone(wrong)
   invalid.variables[0].id = 'missing-id'
-  await panel
-    .locator('input[type=file]')
-    .setInputFiles({
-      name: 'invalid.json',
-      mimeType: 'application/json',
-      buffer: Buffer.from(JSON.stringify(invalid)),
-    })
+  await panel.locator('input[type=file]').setInputFiles({
+    name: 'invalid.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(invalid)),
+  })
   await panel.getByRole('status').filter({ hasText: 'does not match' }).waitFor()
   await panel.locator(':scope > label input[type=text]').fill('跨版本進度')
   page.once('dialog', (dialog) => dialog.dismiss())

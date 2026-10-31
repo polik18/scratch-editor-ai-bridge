@@ -68,7 +68,15 @@ import {
   type ProjectFragmentSession,
   type RequirementCoverageEntry,
 } from './core/normalizer'
+import { decryptProgressSave, encryptProgressSave, isEncryptedProgressSave } from './core/progress/encryption'
 import { accessProgressSave, parseProgressSave, type ProgressSave } from './core/progress/storage'
+import {
+  deleteSyncedSave,
+  getSyncedSave,
+  putSyncedSave,
+  syncSaveKey,
+  type SyncConnection,
+} from './core/progress/sync-client'
 import { createAnalysisPrompt, createScoringFeedbackPrompt, type TutorMode } from './core/prompt'
 import {
   createAiOutputValidationReport,
@@ -3095,6 +3103,13 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   progressSlot.maxLength = 40
   progressSlot.value = '我的進度'
   progressLabel.append(progressSlot)
+  const progressPasswordLabel = document.createElement('label')
+  progressPasswordLabel.textContent = '匯出／匯入密碼（選填，至少 12 個字元；留空時匯出明文）'
+  const progressPassword = document.createElement('input')
+  progressPassword.type = 'password'
+  progressPassword.autocomplete = 'off'
+  progressPassword.maxLength = 256
+  progressPasswordLabel.append(progressPassword)
   const progressActions = document.createElement('div')
   progressActions.className = 'button-row'
   const progressButton = (name: string): HTMLButtonElement => {
@@ -3116,25 +3131,246 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   progressFile.hidden = true
   const progressStatus = document.createElement('p')
   progressStatus.setAttribute('role', 'status')
+  const syncPanel = document.createElement('details')
+  syncPanel.className = 'live-ai-settings'
+  const syncTitle = document.createElement('summary')
+  syncTitle.textContent = '自架跨裝置同步'
+  const syncHelp = document.createElement('p')
+  syncHelp.textContent =
+    '先啟動自己的同步伺服器；另一台電腦以 SSH tunnel 連線。同步只傳送加密存檔，請在上方輸入至少 12 字元的加密密碼。Token 與密碼僅留在目前頁面。自動同步會在儲存時上傳、讀取時檢查遠端；雙方都變更時會保留資料並提示處理。'
+  const syncUrlLabel = document.createElement('label')
+  syncUrlLabel.htmlFor = 'progress-sync-url'
+  syncUrlLabel.textContent = '本機同步伺服器網址'
+  const syncUrl = document.createElement('input')
+  syncUrl.id = 'progress-sync-url'
+  syncUrl.type = 'url'
+  syncUrl.value = 'http://127.0.0.1:43131'
+  const syncTokenLabel = document.createElement('label')
+  syncTokenLabel.htmlFor = 'progress-sync-token'
+  syncTokenLabel.textContent = '同步伺服器 token'
+  const syncToken = document.createElement('input')
+  syncToken.id = 'progress-sync-token'
+  syncToken.type = 'password'
+  syncToken.autocomplete = 'off'
+  syncToken.maxLength = 64
+  const syncAutoLabel = document.createElement('label')
+  const syncAuto = document.createElement('input')
+  syncAuto.type = 'checkbox'
+  syncAutoLabel.append(syncAuto, document.createTextNode('啟用自動同步（僅在沒有衝突時）'))
+  const syncActions = document.createElement('div')
+  syncActions.className = 'button-row'
+  const makeSyncButton = (name: string): HTMLButtonElement => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'button secondary'
+    button.textContent = name
+    syncActions.append(button)
+    return button
+  }
+  const syncUpload = makeSyncButton('上傳加密存檔')
+  const syncDownload = makeSyncButton('下載同步存檔')
+  const syncDelete = makeSyncButton('刪除遠端存檔')
+  const syncStatus = document.createElement('p')
+  syncStatus.setAttribute('role', 'status')
+  const syncBaselines = new Map<string, { etag: string | null; localFingerprint: string | null }>()
+  const resetSync = (): void => {
+    syncBaselines.clear()
+    if (syncAuto.checked) {
+      syncAuto.checked = false
+      syncStatus.textContent = '同步設定已變更，請重新啟用自動同步。'
+    }
+  }
+  syncUrl.addEventListener('input', resetSync)
+  syncToken.addEventListener('input', resetSync)
+  progressPassword.addEventListener('input', resetSync)
+  syncPanel.append(
+    syncTitle,
+    syncHelp,
+    syncUrlLabel,
+    syncUrl,
+    syncTokenLabel,
+    syncToken,
+    syncAutoLabel,
+    syncActions,
+    syncStatus,
+  )
   const progressRevision = (): string =>
     currentRawForProgress
       ? rawSb3Revision(currentRawForProgress)
       : `sha256:${bytesToHex(sha256(new TextEncoder().encode(JSON.stringify(liveProject))))}`
   const setProgressBusy = (busy: boolean): void => {
-    for (const element of [progressSlot, progressSave, progressLoad, progressDelete, progressExport, progressImport])
+    for (const element of [
+      progressSlot,
+      progressPassword,
+      progressSave,
+      progressLoad,
+      progressDelete,
+      progressExport,
+      progressImport,
+      syncUrl,
+      syncToken,
+      syncAuto,
+      syncUpload,
+      syncDownload,
+      syncDelete,
+    ])
       element.disabled = busy
   }
+  const syncConnection = (): SyncConnection => ({ baseUrl: syncUrl.value.trim(), token: syncToken.value.trim() })
+  const progressFingerprint = (value: unknown): string | null =>
+    value === undefined ? null : bytesToHex(sha256(new TextEncoder().encode(JSON.stringify(value))))
+  const pushProgress = async (revision: string, slot: string, automatic: boolean): Promise<void> => {
+    syncStatus.textContent = '正在上傳加密存檔…'
+    const connection = syncConnection()
+    const key = syncSaveKey(revision, slot)
+    const local = await accessProgressSave(revision, slot, 'get')
+    const save = parseProgressSave(local, revision, slot)
+    const remote = await getSyncedSave(connection, key)
+    const remoteVersion = remote?.etag ?? null
+    const baseline = syncBaselines.get(key)
+    if (
+      automatic &&
+      ((baseline === undefined && remoteVersion !== null) ||
+        (baseline !== undefined && baseline.etag !== remoteVersion))
+    )
+      throw new Error('遠端存檔與同步基準不同；請手動下載或上傳並確認。')
+    const remoteSave = remote ? parseProgressSave(await decryptProgressSave(remote.document, progressPassword.value), revision, slot) : null
+    if (!automatic && baseline?.etag !== remoteVersion && (remoteVersion !== null || baseline !== undefined)) {
+      if (!window.confirm(`遠端存檔可能與本機不同。\n本機時間：${save.savedAt}\n遠端時間：${remoteSave?.savedAt ?? '遠端已刪除'}\n確定以上方本機存檔覆蓋遠端？`)) throw new Error('已取消上傳。')
+    }
+    const document = await encryptProgressSave(save, progressPassword.value)
+    const latest = await accessProgressSave(revision, slot, 'get')
+    if (progressRevision() !== revision || JSON.stringify(latest) !== JSON.stringify(local))
+      throw new Error('本機作品或存檔已變更，請重新同步。')
+    const etag = await putSyncedSave(connection, key, document, remoteVersion)
+    syncBaselines.set(key, { etag, localFingerprint: progressFingerprint(local) })
+    syncStatus.textContent = '已上傳加密存檔。'
+  }
+  const runSync = (operation: 'upload' | 'download' | 'delete'): void => {
+    void (async () => {
+      setProgressBusy(true)
+      syncStatus.textContent = '正在處理同步…'
+      try {
+        const revision = progressRevision()
+        const slot = progressSlot.value.trim()
+        const connection = syncConnection()
+        const key = syncSaveKey(revision, slot)
+        if (operation === 'upload') {
+          await pushProgress(revision, slot, false)
+          return
+        }
+        const remote = await getSyncedSave(connection, key)
+        if (!remote) throw new Error('遠端沒有這個作品版本的存檔。')
+        if (operation === 'delete') {
+          if (!window.confirm(`確定刪除遠端「${slot}」存檔？`)) return
+          await deleteSyncedSave(connection, key, remote.etag)
+          syncBaselines.set(key, {
+            etag: null,
+            localFingerprint: progressFingerprint(await accessProgressSave(revision, slot, 'get')),
+          })
+          syncAuto.checked = false
+          syncStatus.textContent = '已刪除遠端存檔。'
+          return
+        }
+        const decrypted = await decryptProgressSave(remote.document, progressPassword.value)
+        const save = parseProgressSave(decrypted, revision, slot)
+        const local = await accessProgressSave(revision, slot, 'get')
+        if (local && !window.confirm(`本機「${slot}」已有存檔，確定以遠端版本覆蓋？`)) return
+        if (progressRevision() !== revision) throw new Error('作品已變更，請重新下載。')
+        await accessProgressSave(revision, slot, 'put', save, local)
+        syncBaselines.set(key, { etag: remote.etag, localFingerprint: progressFingerprint(save) })
+        syncStatus.textContent = '已下載並解密存檔；執行作品後可讀取。'
+      } catch (error) {
+        syncStatus.textContent =
+          error instanceof TypeError
+            ? '同步連線失敗；請確認本機服務、SSH tunnel 與瀏覽器本機網路權限。'
+            : error instanceof Error
+              ? error.message
+              : String(error)
+      } finally {
+        setProgressBusy(false)
+      }
+    })()
+  }
+  syncUpload.addEventListener('click', () => runSync('upload'))
+  syncDownload.addEventListener('click', () => runSync('download'))
+  syncDelete.addEventListener('click', () => runSync('delete'))
+  const pullIfUnchanged = async (revision: string, slot: string, local: unknown): Promise<unknown> => {
+    const key = syncSaveKey(revision, slot)
+    const baseline = syncBaselines.get(key)
+    if (!baseline) throw new Error('請先重新啟用自動同步，建立目前存檔的基準。')
+    const remote = await getSyncedSave(syncConnection(), key)
+    const version = remote?.etag ?? null
+    if (version === baseline.etag) return local
+    if (!remote || progressFingerprint(local) !== baseline.localFingerprint)
+      throw new Error('本機與遠端都有變更，或遠端存檔已刪除；請手動處理。')
+    const save = parseProgressSave(await decryptProgressSave(remote.document, progressPassword.value), revision, slot)
+    if (progressRevision() !== revision) throw new Error('作品已變更，請重新同步。')
+    await accessProgressSave(revision, slot, 'put', save, local)
+    syncBaselines.set(key, { etag: remote.etag, localFingerprint: progressFingerprint(save) })
+    syncStatus.textContent = '已自動下載遠端加密存檔。'
+    return save
+  }
+  syncAuto.addEventListener('change', () => {
+    if (!syncAuto.checked) return
+    void (async () => {
+      setProgressBusy(true)
+      syncStatus.textContent = '正在建立同步基準…'
+      try {
+        if (progressPassword.value.length < 12) throw new Error('啟用同步前，請輸入至少 12 個字元的加密密碼。')
+        const revision = progressRevision()
+        const slot = progressSlot.value.trim()
+        const key = syncSaveKey(revision, slot)
+        const local = await accessProgressSave(revision, slot, 'get')
+        const remote = await getSyncedSave(syncConnection(), key)
+        if (remote) {
+          const save = parseProgressSave(
+            await decryptProgressSave(remote.document, progressPassword.value),
+            revision,
+            slot,
+          )
+          if (local !== undefined && progressFingerprint(local) !== progressFingerprint(save))
+            throw new Error('本機與遠端存檔不同；請先手動選擇下載或上傳。')
+          if (progressRevision() !== revision) throw new Error('作品已變更，請重新啟用同步。')
+          if (local === undefined) await accessProgressSave(revision, slot, 'put', save, local)
+          syncBaselines.set(key, { etag: remote.etag, localFingerprint: progressFingerprint(save) })
+        } else {
+          syncBaselines.set(key, { etag: null, localFingerprint: progressFingerprint(local) })
+          if (local !== undefined) await pushProgress(revision, slot, true)
+        }
+        syncStatus.textContent = '自動同步已啟用。'
+      } catch (error) {
+        syncAuto.checked = false
+        syncStatus.textContent = `無法啟用自動同步：${error instanceof Error ? error.message : String(error)}`
+      } finally {
+        setProgressBusy(false)
+      }
+    })()
+  })
   const runProgress = (operation: 'save' | 'load' | 'delete'): void => {
     void (async () => {
       setProgressBusy(true)
+      progressStatus.textContent = '正在處理進度…'
       try {
         const slot = progressSlot.value.trim()
         const revision = progressRevision()
-        const stored = await accessProgressSave(revision, slot, 'get')
+        let stored = await accessProgressSave(revision, slot, 'get')
+        if (operation === 'load' && syncAuto.checked) {
+          try {
+            stored = await pullIfUnchanged(revision, slot, stored)
+          } catch (error) {
+            syncStatus.textContent = `未取得遠端更新，將使用本機存檔：${error instanceof Error ? error.message : String(error)}`
+          }
+        }
         if (operation === 'delete') {
           if (!stored) throw new Error('找不到這個作品版本的存檔。')
           if (!window.confirm(`確定刪除「${slot}」的本機存檔？`)) return
           await accessProgressSave(revision, slot, 'delete', undefined, stored)
+          syncBaselines.delete(syncSaveKey(revision, slot))
+          if (syncAuto.checked) {
+            syncAuto.checked = false
+            syncStatus.textContent = '本機存檔已刪除，自動同步已停用；遠端存檔仍保留。'
+          }
           progressStatus.textContent = '已刪除本機存檔。'
           return
         }
@@ -3163,6 +3399,13 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           }
           await accessProgressSave(revision, slot, 'put', save, stored)
           progressStatus.textContent = `已儲存 ${result.snapshot.length} 個非雲端變數與清單，以及 ${result.targets.length} 個角色或舞台狀態。`
+          if (syncAuto.checked) {
+            try {
+              await pushProgress(revision, slot, true)
+            } catch (error) {
+              syncStatus.textContent = `本機已儲存，但未上傳：${error instanceof Error ? error.message : String(error)}`
+            }
+          }
         } else {
           if (typeof stored !== 'object' || stored === null || Array.isArray(stored))
             throw new Error('找不到這個作品版本的存檔。')
@@ -3201,8 +3444,12 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
         const slot = progressSlot.value.trim()
         const revision = progressRevision()
         const save = parseProgressSave(await accessProgressSave(revision, slot, 'get'), revision, slot)
-        downloadJson(save, 'scratch-game-progress.json')
-        progressStatus.textContent = '已匯出本機存檔。'
+        const output = progressPassword.value ? await encryptProgressSave(save, progressPassword.value) : save
+        downloadJson(
+          output,
+          progressPassword.value ? 'scratch-game-progress-encrypted.json' : 'scratch-game-progress.json',
+        )
+        progressStatus.textContent = progressPassword.value ? '已匯出加密存檔；請妥善保管密碼。' : '已匯出明文存檔。'
       } catch (error) {
         progressStatus.textContent = error instanceof Error ? error.message : String(error)
       } finally {
@@ -3218,10 +3465,14 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     void (async () => {
       setProgressBusy(true)
       try {
-        if (file.size > 160 * 1024) throw new Error('存檔檔案超過 160 KiB。')
+        if (file.size > 224 * 1024) throw new Error('存檔檔案超過 224 KiB。')
         const slot = progressSlot.value.trim()
         const revision = progressRevision()
-        let save = parseProgressSave(JSON.parse(await file.text()) as unknown, null, slot)
+        const parsed: unknown = JSON.parse(await file.text())
+        const decrypted = isEncryptedProgressSave(parsed)
+          ? await decryptProgressSave(parsed, progressPassword.value)
+          : parsed
+        let save = parseProgressSave(decrypted, null, slot)
         if (save.projectRevision !== revision) {
           const animation = activeStudentAnimation
           if (!animation) throw new Error('此存檔來自不同版本；請先執行目前作品以檢查相容性。')
@@ -3262,7 +3513,16 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
       }
     })()
   })
-  progressPanel.append(progressTitle, progressHelp, progressLabel, progressActions, progressFile, progressStatus)
+  progressPanel.append(
+    progressTitle,
+    progressHelp,
+    progressLabel,
+    progressPasswordLabel,
+    progressActions,
+    progressFile,
+    progressStatus,
+    syncPanel,
+  )
   previewColumn.append(progressPanel)
 
   studentPreview.append(previewColumn)

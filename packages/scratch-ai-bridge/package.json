@@ -26,6 +26,7 @@
     "pretest": "npm run generate:validator",
     "preview": "vite preview",
     "session": "tsx src/cli/session-cli.ts",
+    "sync-server": "tsx src/progress-sync/main.ts",
     "test": "vitest run",
     "test:browser": "node scripts/browser-smoke.mjs",
     "test:browser:firefox": "BROWSER=firefox node scripts/browser-smoke.mjs",
@@ -50,6 +51,7 @@
     "scratch-ai-bridge-mcp": "scripts/scratch-ai-bridge-mcp.mjs",
     "scratch-ai-bridge-mcp-http": "scripts/scratch-ai-bridge-mcp-http.mjs",
     "scratch-ai-bridge-model-gateway": "scripts/scratch-ai-bridge-model-gateway.mjs",
+    "scratch-ai-bridge-sync": "scripts/scratch-ai-bridge-sync.mjs",
     "scratch-session": "scripts/scratch-session.mjs"
   },
   "devDependencies": {
