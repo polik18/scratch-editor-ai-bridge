@@ -261,15 +261,24 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     targetSnapshot?: unknown
   }
   if (!previewToken || (message as { token?: unknown }).token !== previewToken) return
-  if (message.type === 'capture-game-progress' || message.type === 'restore-game-progress') {
+  if (
+    message.type === 'capture-game-progress' ||
+    message.type === 'restore-game-progress' ||
+    message.type === 'validate-game-progress'
+  ) {
     const requestId = typeof message.requestId === 'string' ? message.requestId : ''
     try {
       if (!requestId || requestId.length > 128 || !vm || message.baseRevision !== previewRevision)
         throw new Error('預覽已停止或作品版本已變更。')
       const snapshot = message.type === 'capture-game-progress' ? captureScratchProgress(vm) : undefined
       const targets = message.type === 'capture-game-progress' ? captureScratchTargetProgress(vm) : undefined
-      if (message.type === 'restore-game-progress')
-        restoreScratchProgress(vm, message.snapshot, message.targetSnapshot)
+      if (message.type === 'restore-game-progress' || message.type === 'validate-game-progress')
+        restoreScratchProgress(
+          vm,
+          message.snapshot,
+          message.targetSnapshot,
+          message.type === 'validate-game-progress',
+        )
       window.parent.postMessage(
         { type: 'game-progress-result', token: previewToken, requestId, ok: true, snapshot, targets },
         '*',

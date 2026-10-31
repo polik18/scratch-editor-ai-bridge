@@ -36,6 +36,68 @@ export const createBridgeMcpFactory = (relay: BrowserBridgeRelay): (() => McpSer
     )
 
     server.registerTool(
+      'inspect_raw_targets',
+      {
+        description: '分頁列出原始 SB3 的角色，需提供目前 revision。',
+        inputSchema: z.object({
+          baseRevision: z.string().min(1).max(100),
+          offset: z.number().int().min(0).optional(),
+          limit: z.number().int().min(1).max(30).optional(),
+        }),
+      },
+      async (args) => {
+        try {
+          enforceToolLimit()
+          return result(await relay.call('inspect_raw_targets', args))
+        } catch (error) {
+          return failure(error)
+        }
+      },
+    )
+
+    server.registerTool(
+      'inspect_raw_variables',
+      {
+        description: '分頁讀取原始 SB3 指定角色的非雲端變數，需提供目前 revision。',
+        inputSchema: z.object({
+          baseRevision: z.string().min(1).max(100),
+          targetIndex: z.number().int().min(0),
+          offset: z.number().int().min(0).optional(),
+          limit: z.number().int().min(1).max(30).optional(),
+        }),
+      },
+      async (args) => {
+        try {
+          enforceToolLimit()
+          return result(await relay.call('inspect_raw_variables', args))
+        } catch (error) {
+          return failure(error)
+        }
+      },
+    )
+
+    server.registerTool(
+      'inspect_raw_blocks',
+      {
+        description: '分頁讀取原始 SB3 指定角色的積木圖；需先用 inspect_project 取得 revision。',
+        inputSchema: z.object({
+          baseRevision: z.string().min(1).max(100),
+          targetIndex: z.number().int().min(0),
+          offset: z.number().int().min(0).optional(),
+          limit: z.number().int().min(1).max(20).optional(),
+        }),
+      },
+      async (args) => {
+        try {
+          enforceToolLimit()
+          return result(await relay.call('inspect_raw_blocks', args))
+        } catch (error) {
+          return failure(error)
+        }
+      },
+    )
+
+    server.registerTool(
       'propose_live_patch',
       {
         description:

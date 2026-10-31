@@ -6,6 +6,7 @@ export interface OpenAiCompatiblePatchRequest {
   readonly request: string
   readonly signal?: AbortSignal
   readonly fetchImpl?: typeof fetch
+  readonly enableRawBlockInspection?: boolean
   readonly onToolCall: (
     name: string,
     argumentsJson: string,
@@ -94,6 +95,7 @@ export const requestOpenAiCompatiblePatch = async ({
   request,
   signal,
   onToolCall,
+  enableRawBlockInspection = false,
   fetchImpl = fetch,
 }: OpenAiCompatiblePatchRequest): Promise<string> => {
   if (!model.trim()) throw new Error('請輸入模型 ID。')
@@ -132,6 +134,63 @@ export const requestOpenAiCompatiblePatch = async ({
               parameters: { type: 'object', properties: {}, additionalProperties: false },
             },
           },
+          ...(enableRawBlockInspection
+            ? [
+                {
+                  type: 'function',
+                  function: {
+                    name: 'inspect_raw_targets',
+                    description: '分頁列出原始 SB3 的角色。',
+                    parameters: {
+                      type: 'object',
+                      properties: {
+                        baseRevision: { type: 'string' },
+                        offset: { type: 'integer', minimum: 0 },
+                        limit: { type: 'integer', minimum: 1, maximum: 30 },
+                      },
+                      required: ['baseRevision'],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                {
+                  type: 'function',
+                  function: {
+                    name: 'inspect_raw_variables',
+                    description: '分頁讀取原始 SB3 某個角色的非雲端變數。',
+                    parameters: {
+                      type: 'object',
+                      properties: {
+                        baseRevision: { type: 'string' },
+                        targetIndex: { type: 'integer', minimum: 0 },
+                        offset: { type: 'integer', minimum: 0 },
+                        limit: { type: 'integer', minimum: 1, maximum: 30 },
+                      },
+                      required: ['baseRevision', 'targetIndex'],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+                {
+                  type: 'function',
+                  function: {
+                    name: 'inspect_raw_blocks',
+                    description: '分頁讀取原始 SB3 某個角色的積木圖。',
+                    parameters: {
+                      type: 'object',
+                      properties: {
+                        baseRevision: { type: 'string' },
+                        targetIndex: { type: 'integer', minimum: 0 },
+                        offset: { type: 'integer', minimum: 0 },
+                        limit: { type: 'integer', minimum: 1, maximum: 20 },
+                      },
+                      required: ['baseRevision', 'targetIndex'],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+              ]
+            : []),
           {
             type: 'function',
             function: {

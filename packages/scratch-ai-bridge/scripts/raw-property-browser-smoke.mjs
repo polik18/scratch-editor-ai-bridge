@@ -15,7 +15,28 @@ try {
   await page.locator('button[data-tab="analyze"]').click()
   const fixtureZip = await JSZip.loadAsync(await readFile(fixture))
   const fixtureProject = JSON.parse(await fixtureZip.file('project.json').async('string'))
-  fixtureProject.targets.find((target) => target.name === 'Sprite1').variables.smokeVariable = ['smoke', 3]
+  const sprite = fixtureProject.targets.find((target) => target.name === 'Sprite1')
+  sprite.variables.smokeVariable = ['smoke', 3]
+  sprite.blocks.testHat = {
+    opcode: 'event_whenflagclicked',
+    next: 'testMove',
+    parent: null,
+    inputs: {},
+    fields: {},
+    shadow: false,
+    topLevel: true,
+    x: 0,
+    y: 0,
+  }
+  sprite.blocks.testMove = {
+    opcode: 'motion_movesteps',
+    next: null,
+    parent: 'testHat',
+    inputs: { STEPS: [1, [4, '10']] },
+    fields: {},
+    shadow: false,
+    topLevel: false,
+  }
   fixtureZip.file('project.json', JSON.stringify(fixtureProject))
   await page.locator('#sb3-file').setInputFiles({
     name: 'draggable.sb3',
@@ -226,6 +247,60 @@ try {
   await panel.locator(':scope > p[role=status]').filter({ hasText: '已套用 AI 修改' }).waitFor({ timeout: 30000 })
   const applied = await tool('applied', 'get_patch_status')
   if (applied.result?.state !== 'no-candidate') throw new Error('MCP candidate was not cleared after apply')
+  const graphInspect = await tool('graph-project', 'inspect_project')
+  const graphRevision = /revision: (sha256:[a-f0-9]+)/.exec(graphInspect.result.instruction)?.[1]
+  const targetPage = await tool('target-page', 'inspect_raw_targets', {
+    baseRevision: graphRevision,
+    offset: 1,
+    limit: 1,
+  })
+  if (targetPage.result?.targets?.[0]?.name !== 'Sprite1') throw new Error('MCP target inspection failed')
+  const variablePage = await tool('variable-page', 'inspect_raw_variables', {
+    baseRevision: graphRevision,
+    targetIndex: 1,
+  })
+  if (!variablePage.result?.variables?.some((variable) => variable.id === 'smokeVariable'))
+    throw new Error('MCP variable inspection failed')
+  const blockPage = await tool('graph-page', 'inspect_raw_blocks', {
+    baseRevision: graphRevision,
+    targetIndex: 1,
+    offset: 0,
+    limit: 10,
+  })
+  if (blockPage.result?.blocks?.testMove?.opcode !== 'motion_movesteps')
+    throw new Error(`MCP block inspection failed: ${JSON.stringify(blockPage)}`)
+  const graphPatch = {
+    format: 'scratch-ai-bridge/raw-patch',
+    version: 1,
+    baseRevision: graphRevision,
+    summary: '調整積木',
+    change: {
+      kind: 'blocks',
+      graphPatch: {
+        format: 'scratch-ai-bridge/block-graph-patch',
+        version: 1,
+        patches: [
+          {
+            targetIndex: 1,
+            targetName: 'Sprite1',
+            isStage: false,
+            blocks: { testMove: { inputs: { STEPS: [1, [4, '20']] } } },
+          },
+        ],
+      },
+    },
+  }
+  const graphCandidate = await tool('graph-propose', 'propose_live_patch', { patchJson: JSON.stringify(graphPatch) })
+  if (graphCandidate.result?.state !== 'pending-user-review')
+    throw new Error(`MCP block proposal failed: ${JSON.stringify(graphCandidate)}`)
+  await panel.getByRole('button', { name: '確認套用 AI 修改' }).click()
+  await panel.locator(':scope > p[role=status]').filter({ hasText: '已套用 AI 修改' }).waitFor({ timeout: 30000 })
+  const graphDownload = page.waitForEvent('download')
+  await panel.getByRole('button', { name: '下載修改後的 SB3' }).click()
+  const graphZip = await JSZip.loadAsync(await readFile(await (await graphDownload).path()))
+  const graphProject = JSON.parse(await graphZip.file('project.json').async('string'))
+  const steps = graphProject.targets.find((target) => target.name === 'Sprite1').blocks.testMove.inputs.STEPS
+  if (JSON.stringify(steps) !== JSON.stringify([1, [4, '20']])) throw new Error('AI block change was not preserved')
   await panel.getByRole('button', { name: '中斷 MCP' }).click()
   console.log('Raw SB3 browser smoke passed')
 } finally {

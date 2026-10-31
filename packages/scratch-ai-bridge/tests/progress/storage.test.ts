@@ -14,6 +14,7 @@ describe('progress import validation', () => {
   it('binds an imported save to the selected slot while retaining its exact project revision', () => {
     expect(parseProgressSave(data, revision, 'copy')).toMatchObject({ slot: 'copy', projectRevision: revision })
     expect(() => parseProgressSave(data, `sha256:${'b'.repeat(64)}`, 'copy')).toThrow(/版本/)
+    expect(parseProgressSave(data, null, 'copy').projectRevision).toBe(revision)
   })
   it('rejects duplicate identifiers and unsupported values', () => {
     expect(() =>

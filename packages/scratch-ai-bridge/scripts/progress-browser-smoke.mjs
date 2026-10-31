@@ -132,10 +132,31 @@ try {
   if ((await readScore()) !== 3) throw new Error('imported save was not restored')
   const wrong = JSON.parse(saveBytes.toString())
   wrong.projectRevision = `sha256:${'0'.repeat(64)}`
+  const invalid = structuredClone(wrong)
+  invalid.variables[0].id = 'missing-id'
+  await panel
+    .locator('input[type=file]')
+    .setInputFiles({
+      name: 'invalid.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(JSON.stringify(invalid)),
+    })
+  await panel.getByRole('status').filter({ hasText: 'does not match' }).waitFor()
+  await panel.locator(':scope > label input[type=text]').fill('跨版本進度')
+  page.once('dialog', (dialog) => dialog.dismiss())
   await panel
     .locator('input[type=file]')
     .setInputFiles({ name: 'wrong.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(wrong)) })
-  await panel.getByRole('status').filter({ hasText: '與作品版本不符' }).waitFor()
+  await panel.getByRole('status').filter({ hasText: '已取消跨版本匯入' }).waitFor()
+  page.once('dialog', (dialog) => dialog.accept())
+  await panel
+    .locator('input[type=file]')
+    .setInputFiles({ name: 'wrong.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(wrong)) })
+  await panel.getByRole('status').filter({ hasText: '已匯入' }).waitFor()
+  await changeScore()
+  await panel.getByRole('button', { name: '讀取進度' }).click()
+  await panel.getByRole('status').filter({ hasText: '已讀取' }).waitFor()
+  if ((await readScore()) !== 3) throw new Error('rebound save was not restored')
   const canonical = JSON.parse(
     await readFile(
       fileURLToPath(new URL('../src/core/ir/examples/06-platformer-core.json', import.meta.url)),

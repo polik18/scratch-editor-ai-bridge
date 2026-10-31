@@ -1083,8 +1083,14 @@ export const captureScratchTargetProgress = (vm: ScratchVMHandle): readonly Prog
  * @param vm Running Scratch VM.
  * @param snapshot Untrusted progress entries.
  * @param targetSnapshot Optional original target states.
+ * @param validateOnly Validate without changing the VM.
  */
-export const restoreScratchProgress = (vm: ScratchVMHandle, snapshot: unknown, targetSnapshot?: unknown): void => {
+export const restoreScratchProgress = (
+  vm: ScratchVMHandle,
+  snapshot: unknown,
+  targetSnapshot?: unknown,
+  validateOnly = false,
+): void => {
   if (
     !Array.isArray(snapshot) ||
     snapshot.length > 200 ||
@@ -1176,6 +1182,7 @@ export const restoreScratchProgress = (vm: ScratchVMHandle, snapshot: unknown, t
     )
       throw new Error(`Could not exactly restore sprite ${state.name}.`)
   }
+  if (validateOnly) return
   try {
     for (const update of updates) update.variable.value = update.value
     for (const update of targetUpdates) applyTarget(update.target, update.state)

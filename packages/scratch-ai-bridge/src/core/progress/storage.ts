@@ -13,17 +13,19 @@ export interface ProgressSave {
 /**
  * Check an untrusted imported save before adding it to local storage.
  * @param value Parsed save data.
- * @param revision Expected project content revision.
+ * @param revision Expected project content revision, or null when inspecting an import.
  * @param slot Destination slot.
  * @returns Validated save bound to the selected slot.
  */
-export const parseProgressSave = (value: unknown, revision: string, slot: string): ProgressSave => {
+export const parseProgressSave = (value: unknown, revision: string | null, slot: string): ProgressSave => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new Error('存檔格式無效。')
   const save = value as Record<string, unknown>
   if (
     save.format !== 'scratch-ai-bridge/progress' ||
     save.version !== 1 ||
-    save.projectRevision !== revision ||
+    typeof save.projectRevision !== 'string' ||
+    !/^sha256:[a-f0-9]{64}$/.test(save.projectRevision) ||
+    (revision !== null && save.projectRevision !== revision) ||
     typeof save.savedAt !== 'string' ||
     !Number.isFinite(Date.parse(save.savedAt)) ||
     !Array.isArray(save.variables) ||
@@ -62,7 +64,7 @@ export const parseProgressSave = (value: unknown, revision: string, slot: string
   return {
     format: 'scratch-ai-bridge/progress',
     version: 1,
-    projectRevision: revision,
+    projectRevision: save.projectRevision,
     slot,
     savedAt: save.savedAt,
     variables: save.variables,

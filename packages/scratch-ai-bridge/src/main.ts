@@ -4,7 +4,13 @@ import { sha256 } from '@noble/hashes/sha256'
 import { bytesToHex } from '@noble/hashes/utils.js'
 import { initializeScratchVM } from './bootstrap/vm-bootstrap'
 import { requestOpenAiCompatiblePatch } from './core/ai/openai-compatible'
-import { inspectRawProjectForAi, proposeRawLivePatch } from './core/ai/raw-tool-core'
+import {
+  inspectRawBlocks,
+  inspectRawTargets,
+  inspectRawVariables,
+  inspectRawProjectForAi,
+  proposeRawLivePatch,
+} from './core/ai/raw-tool-core'
 import { inspectProjectForAi, proposeLivePatch } from './core/ai/tool-core'
 import {
   analyzeCanonicalProject,
@@ -85,7 +91,13 @@ import {
   type AutomaticVisualSummary,
 } from './core/visuals/presets'
 import { SCRATCH_LINK_HARDWARE_EXTENSION_IDS } from './scratch/extensions'
-import { renderSb3Preview, type ScratchRuntimePatchChange, type ScratchRuntimePatchUpdate } from './scratch/vm'
+import {
+  createVM,
+  loadSb3,
+  renderSb3Preview,
+  type ScratchRuntimePatchChange,
+  type ScratchRuntimePatchUpdate,
+} from './scratch/vm'
 import './style.css'
 
 globalThis.Buffer = Buffer
@@ -162,7 +174,7 @@ interface ActiveStudentAnimation {
   ): Promise<Record<string, unknown>>
 
   requestProgress(
-    type: 'capture-game-progress' | 'restore-game-progress',
+    type: 'capture-game-progress' | 'restore-game-progress' | 'validate-game-progress',
     revision: number,
     snapshot?: unknown,
     targetSnapshot?: unknown,
@@ -1926,6 +1938,9 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   } | null = null
   let rawAi: {
     inspect: () => string
+    inspectBlocks: (args: unknown) => ReturnType<typeof inspectRawBlocks>
+    inspectTargets: (args: unknown) => ReturnType<typeof inspectRawTargets>
+    inspectVariables: (args: unknown) => ReturnType<typeof inspectRawVariables>
     validate: (json: string) => ReturnType<typeof proposeRawLivePatch>
     present: (json: string) => ReturnType<typeof proposeRawLivePatch>
     status: () => unknown
@@ -2031,6 +2046,9 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('MCP 工具參數格式錯誤。')
     if (rawAi) {
       if (tool === 'inspect_project') return { projectName: liveProject.name, instruction: rawAi.inspect() }
+      if (tool === 'inspect_raw_blocks') return rawAi.inspectBlocks(args)
+      if (tool === 'inspect_raw_targets') return rawAi.inspectTargets(args)
+      if (tool === 'inspect_raw_variables') return rawAi.inspectVariables(args)
       if (tool === 'get_patch_status') return rawAi.status()
       if (tool === 'propose_live_patch') {
         if (localAiController.current) throw new Error('本機 AI 請求進行中。')
@@ -2203,11 +2221,16 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
             instruction: adapter.inspect(),
             request: localAiRequest.value,
             signal: controller.signal,
+            enableRawBlockInspection: true,
             ...(gatewayToken ? { fetchImpl: gatewayFetch } : {}),
             onToolCall: (name, argumentsJson) => {
               try {
                 if (name === 'inspect_project') return { output: adapter.inspect() }
                 const args: unknown = JSON.parse(argumentsJson)
+                if (name === 'inspect_raw_blocks') return { output: JSON.stringify(adapter.inspectBlocks(args)) }
+                if (name === 'inspect_raw_targets') return { output: JSON.stringify(adapter.inspectTargets(args)) }
+                if (name === 'inspect_raw_variables')
+                  return { output: JSON.stringify(adapter.inspectVariables(args)) }
                 if (
                   name !== 'propose_live_patch' ||
                   typeof args !== 'object' ||
@@ -2495,8 +2518,17 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     const install = async (
       next: RawSb3Project,
       runtime: ScratchRuntimePatchUpdate | null,
+      verifyGraph = false,
     ): Promise<ScratchRuntimePatchUpdate | null> => {
       const nextArchive = await exportLosslessSb3(next)
+      if (verifyGraph) {
+        const validationVm = await createVM()
+        try {
+          await loadSb3(nextArchive, validationVm)
+        } finally {
+          validationVm.quit()
+        }
+      }
       if (generation !== studentPreviewGeneration) throw new Error('預覽已切換，修改未套用。')
       let inverse: ScratchRuntimePatchUpdate | null = null
       const animation = activeStudentAnimation
@@ -2542,6 +2574,41 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     }
     rawAi = {
       inspect: () => inspectRawProjectForAi(currentRaw),
+      inspectTargets: (args) => {
+        if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('角色查詢格式無效。')
+        const item = args as { baseRevision?: unknown; offset?: unknown; limit?: unknown }
+        if (
+          typeof item.baseRevision !== 'string' ||
+          (item.offset !== undefined && typeof item.offset !== 'number') ||
+          (item.limit !== undefined && typeof item.limit !== 'number')
+        )
+          throw new Error('角色查詢欄位無效。')
+        return inspectRawTargets(currentRaw, item.baseRevision, item.offset, item.limit)
+      },
+      inspectVariables: (args) => {
+        if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('變數查詢格式無效。')
+        const item = args as { baseRevision?: unknown; targetIndex?: unknown; offset?: unknown; limit?: unknown }
+        if (
+          typeof item.baseRevision !== 'string' ||
+          typeof item.targetIndex !== 'number' ||
+          (item.offset !== undefined && typeof item.offset !== 'number') ||
+          (item.limit !== undefined && typeof item.limit !== 'number')
+        )
+          throw new Error('變數查詢欄位無效。')
+        return inspectRawVariables(currentRaw, item.baseRevision, item.targetIndex, item.offset, item.limit)
+      },
+      inspectBlocks: (args) => {
+        if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('積木查詢格式無效。')
+        const item = args as { baseRevision?: unknown; targetIndex?: unknown; offset?: unknown; limit?: unknown }
+        if (
+          typeof item.baseRevision !== 'string' ||
+          typeof item.targetIndex !== 'number' ||
+          (item.offset !== undefined && typeof item.offset !== 'number') ||
+          (item.limit !== undefined && typeof item.limit !== 'number')
+        )
+          throw new Error('積木查詢欄位無效。')
+        return inspectRawBlocks(currentRaw, item.baseRevision, item.targetIndex, item.offset, item.limit)
+      },
       validate: (json) => proposeRawLivePatch(currentRaw, json),
       present: (json) => {
         if (rawBusy) throw new Error('正在套用修改，請稍後再試。')
@@ -2586,7 +2653,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
         try {
           const candidate = proposeRawLivePatch(currentRaw, rawCandidate.patchJson)
           const previous = currentRaw
-          await install(candidate.project, null)
+          await install(candidate.project, null, candidate.requiresVmValidation)
           undoStack.push({ project: previous, runtime: null, animation: activeStudentAnimation })
           if (undoStack.length > 20) undoStack.shift()
           redoStack.length = 0
@@ -3020,7 +3087,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   progressTitle.textContent = '本機遊戲進度'
   const progressHelp = document.createElement('p')
   progressHelp.textContent =
-    '存檔包含原始角色的位置、方向、大小、造型、顯示狀態，以及非雲端變數與清單，保存在這個瀏覽器。分身、積木執行位置及雲端資料不包含；請在遊戲開始後讀檔，遊戲腳本仍可能改寫讀入的值。作品內容改變後，舊版本存檔不會自動套用。'
+    '存檔包含原始角色的位置、方向、大小、造型、顯示狀態，以及非雲端變數與清單，保存在這個瀏覽器。分身、積木執行位置及雲端資料不包含；請在遊戲開始後讀檔，遊戲腳本仍可能改寫讀入的值。作品變更後，可匯入舊存檔並確認相容性。'
   const progressLabel = document.createElement('label')
   progressLabel.textContent = '存檔名稱'
   const progressSlot = document.createElement('input')
@@ -3154,7 +3221,35 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
         if (file.size > 160 * 1024) throw new Error('存檔檔案超過 160 KiB。')
         const slot = progressSlot.value.trim()
         const revision = progressRevision()
-        const save = parseProgressSave(JSON.parse(await file.text()) as unknown, revision, slot)
+        let save = parseProgressSave(JSON.parse(await file.text()) as unknown, null, slot)
+        if (save.projectRevision !== revision) {
+          const animation = activeStudentAnimation
+          if (!animation) throw new Error('此存檔來自不同版本；請先執行目前作品以檢查相容性。')
+          const runtimeRevision = liveRevision
+          const validation = await animation.requestProgress(
+            'validate-game-progress',
+            runtimeRevision,
+            save.variables,
+            save.targets,
+          )
+          if (validation.ok !== true)
+            throw new Error(typeof validation.error === 'string' ? validation.error : '存檔無法與目前作品相容。')
+          if (
+            activeStudentAnimation !== animation ||
+            liveRevision !== runtimeRevision ||
+            progressRevision() !== revision
+          )
+            throw new Error('檢查期間作品已變更，請重新匯入。')
+          if (
+            !window.confirm(
+              `此存檔來自不同作品版本。角色與變數可對應，但遊戲規則可能已改變。確定將存檔綁定到目前版本？\n原版本：${save.projectRevision.slice(0, 19)}…\n目前版本：${revision.slice(0, 19)}…`,
+            )
+          ) {
+            progressStatus.textContent = '已取消跨版本匯入。'
+            return
+          }
+          save = { ...save, projectRevision: revision }
+        }
         const stored = await accessProgressSave(revision, slot, 'get')
         if (stored && !window.confirm(`「${slot}」已有存檔，確定覆蓋？`)) return
         if (progressRevision() !== revision) throw new Error('作品已變更，請重新匯入。')

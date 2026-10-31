@@ -47,9 +47,10 @@ args = [
 2. 在 Bridge 開啟作品，展開修改面板 →「連接外部 AI（MCP）」，按「連接 MCP」。Bridge 會向 localhost relay 配對 30 分鐘，無需複製或保存 token。瀏覽器若詢問是否允許本機連線，允許 Bridge 網頁連到自己的 localhost。
 3. 回到 Codex 或其他 MCP host 對話。工具呼叫會直接檢查目前 Bridge 頁面的作品，並把候選 patch 與差異送回畫面。Bridge 必須保持開啟；關閉網頁、按「中斷 MCP」或 30 分鐘到期後，host 工具不能再操作該作品。
 
-Server 提供三個工具：
+Server 提供以下工具：
 
 - `inspect_project`：讀取目前 Bridge 頁面的精簡結構及可修改規則。
+- `inspect_raw_targets`、`inspect_raw_variables`、`inspect_raw_blocks`：依 revision 分頁讀取原始 SB3 的角色、非雲端變數和積木圖。
 - `propose_live_patch`：讓 Bridge 依目前 revision 驗證外部模型提出的 live-patch JSON，並在頁面顯示差異。
 - `get_patch_status`：查詢目前 Bridge 頁面的最近候選與 revision 狀態。
 
@@ -59,7 +60,7 @@ Relay 只綁 loopback，使用 256-bit 隨機 token、30 分鐘到期、逐次 o
 
 ## 設計原則
 
-- API 與 MCP 對 Canonical 共用 `tool-core.ts`；原始 SB3 共用 `raw-tool-core.ts`，目前每次提案限一項既有屬性或非雲端變數，不支援 AI 積木修改。
+- API 與 MCP 對 Canonical 共用 `tool-core.ts`；原始 SB3 共用 `raw-tool-core.ts`，支援一次一項既有屬性、非雲端變數，或最多 20 個原始積木的局部修改。積木修改需先讀取相關圖、通過結構檢查與 VM 載入驗證；確認後重載遊戲並重置進度。
 - 模型輸出經各作品類型的 validator 與 revision 檢查；未知工具、違規欄位與過期 revision 均被拒絕。
 - 不在瀏覽器持久化 API key，不把 key 放到 URL、localStorage、IndexedDB、建置產物或 logs。
 - API endpoint 限本機 loopback；MCP relay 讀取使用者配對的 Bridge 頁面目前開啟的作品。原始 SB3 的 AI 提案確認後會重載遊戲並重置進度。
@@ -78,7 +79,7 @@ gateway 僅允許啟動時指定的 RFC 1918 私人 IPv4，且不跟隨 redirect
 
 ## 本機遊戲進度
 
-展開預覽中的「本機遊戲進度」，輸入存檔名稱，可儲存、讀取、刪除或匯出/匯入 JSON。存檔包含原始角色的位置、方向、大小、可見狀態、造型、非雲端變數及清單，並依作品內容版本綁定；分身、執行緒及雲端資料不包含。舊版存檔僅恢復變數及清單。先執行作品再讀檔，遊戲腳本之後可能再次改寫資料。瀏覽器清除網站資料可能刪除本機存檔，需自行匯出備份；匯出檔可能包含玩家資料。
+展開預覽中的「本機遊戲進度」，輸入存檔名稱，可儲存、讀取、刪除或匯出/匯入 JSON。存檔包含原始角色的位置、方向、大小、可見狀態、造型、非雲端變數及清單，並依作品內容版本綁定；分身、執行緒及雲端資料不包含。舊版存檔僅恢復變數及清單。先執行作品再讀檔，遊戲腳本之後可能再次改寫資料。匯入不同作品版本的存檔時，先執行目前作品；系統會檢查角色、變數 ID、清單及造型是否可對應，並要求確認。這不能保證遊戲規則或存檔語意相同。瀏覽器清除網站資料可能刪除本機存檔，需自行匯出備份；匯出檔可能包含玩家資料。
 
 ## 從另一台電腦使用 MCP（SSH）
 
