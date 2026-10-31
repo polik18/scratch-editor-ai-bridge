@@ -4,7 +4,7 @@
 
 ## Project in one paragraph
 
-Scratch AI Bridge is a browser-first tool inside the Scratch Editor monorepo. Its intended workflow is to turn a structured or AI-authored project into an `.sb3`, validate it with Scratch tooling, preview it in a Scratch VM, and let users inspect or preserve existing SB3 projects. The package is **not an MCP server**. The website has a local Scratch VM preview; it does not live-sync projects to the Scratch website or embed the official block editor.
+Scratch AI Bridge is a browser-first tool inside the Scratch Editor monorepo. Its intended workflow is to turn a structured or AI-authored project into an `.sb3`, validate it with Scratch tooling, preview it in a Scratch VM, and let users inspect or preserve existing SB3 projects. The package now includes an optional local stdio MCP server for read-only Canonical IR inspection and validated patch proposals; it does not attach to unsaved browser state. The website has a local Scratch VM preview; it does not live-sync projects to the Scratch website or embed the official block editor.
 
 ## Current handoff status — 2026-10-29
 

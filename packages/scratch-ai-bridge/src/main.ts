@@ -2,6 +2,8 @@ import { Buffer } from 'node:buffer'
 import { md5 } from '@noble/hashes/legacy.js'
 import { bytesToHex } from '@noble/hashes/utils.js'
 import { initializeScratchVM } from './bootstrap/vm-bootstrap'
+import { requestOpenAiCompatiblePatch } from './core/ai/openai-compatible'
+import { inspectProjectForAi, proposeLivePatch } from './core/ai/tool-core'
 import {
   analyzeCanonicalProject,
   createProjectFeedback,
@@ -1711,6 +1713,113 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   livePatchInput.className = 'mono editor live-patch-editor'
   livePatchInput.setAttribute('aria-label', 'AI 回傳的即時修改 patch JSON')
   livePatchInput.placeholder = '貼上 scratch-ai-bridge/live-patch v1 JSON'
+  const localAiSettings = document.createElement('details')
+  localAiSettings.className = 'live-ai-settings'
+  const localAiSettingsSummary = document.createElement('summary')
+  localAiSettingsSummary.textContent = '設定本機模型 API（不需要 OpenAI key）'
+  const localAiHelp = document.createElement('p')
+  localAiHelp.textContent =
+    '填入這台電腦上的 OpenAI-compatible 模型 API 網址（localhost、127.0.0.1 或 ::1）與模型 ID。API key 可留空；若需要，僅保留在目前頁面記憶體，不會存檔。模型服務需允許本網站跨來源連線（CORS）。目前不連外部付費 API。'
+  const localAiBaseUrlLabel = document.createElement('label')
+  localAiBaseUrlLabel.htmlFor = 'local-ai-base-url'
+  localAiBaseUrlLabel.textContent = 'API 網址'
+  const localAiBaseUrl = document.createElement('input')
+  localAiBaseUrl.id = 'local-ai-base-url'
+  localAiBaseUrl.type = 'url'
+  localAiBaseUrl.autocomplete = 'off'
+  localAiBaseUrl.placeholder = '例如 http://localhost:1234/v1'
+  const localAiModelLabel = document.createElement('label')
+  localAiModelLabel.htmlFor = 'local-ai-model'
+  localAiModelLabel.textContent = '模型 ID'
+  const localAiModel = document.createElement('input')
+  localAiModel.id = 'local-ai-model'
+  localAiModel.autocomplete = 'off'
+  localAiModel.placeholder = '填入模型服務回報的 model ID'
+  const localAiKeyLabel = document.createElement('label')
+  localAiKeyLabel.htmlFor = 'local-ai-key'
+  localAiKeyLabel.textContent = 'API key（本機服務需要時才填）'
+  const localAiKey = document.createElement('input')
+  localAiKey.id = 'local-ai-key'
+  localAiKey.type = 'password'
+  localAiKey.autocomplete = 'off'
+  localAiKey.placeholder = '可留空；不會保存到瀏覽器'
+  const localAiRequestLabel = document.createElement('label')
+  localAiRequestLabel.htmlFor = 'local-ai-request'
+  localAiRequestLabel.textContent = '想怎麼調整遊戲？'
+  const localAiRequest = document.createElement('textarea')
+  localAiRequest.id = 'local-ai-request'
+  localAiRequest.className = 'mono editor'
+  localAiRequest.placeholder = '例如：讓玩家跳得更高，並把移動速度稍微降低。'
+  localAiRequest.rows = 3
+  const localAiActions = document.createElement('div')
+  localAiActions.className = 'button-row'
+  const localAiGenerateButton = document.createElement('button')
+  localAiGenerateButton.type = 'button'
+  localAiGenerateButton.className = 'button primary'
+  localAiGenerateButton.textContent = '請本機 AI 提出修改'
+  localAiGenerateButton.disabled = Boolean(rawSource)
+  const localAiCancelButton = document.createElement('button')
+  localAiCancelButton.type = 'button'
+  localAiCancelButton.className = 'button secondary'
+  localAiCancelButton.textContent = '取消請求'
+  localAiCancelButton.hidden = true
+  localAiActions.append(localAiGenerateButton, localAiCancelButton)
+  localAiSettings.append(
+    localAiSettingsSummary,
+    localAiHelp,
+    localAiBaseUrlLabel,
+    localAiBaseUrl,
+    localAiModelLabel,
+    localAiModel,
+    localAiKeyLabel,
+    localAiKey,
+    localAiRequestLabel,
+    localAiRequest,
+    localAiActions,
+  )
+  const localAiController: { current: AbortController | null } = { current: null }
+  const mcpSettings = document.createElement('details')
+  mcpSettings.className = 'live-ai-settings'
+  const mcpSettingsSummary = document.createElement('summary')
+  mcpSettingsSummary.textContent = '連接外部 AI（MCP）'
+  const mcpHelp = document.createElement('p')
+  mcpHelp.textContent =
+    '先在 MCP host 啟動 scratch-ai-bridge-mcp，再按連接。Bridge 會向本機 relay 取得 30 分鐘配對權；外部 AI 可讀取目前作品並提出待審修改，不能自行套用。'
+  const mcpEndpointLabel = document.createElement('label')
+  mcpEndpointLabel.htmlFor = 'mcp-relay-url'
+  mcpEndpointLabel.textContent = '本機 MCP relay 網址'
+  const mcpEndpoint = document.createElement('input')
+  mcpEndpoint.id = 'mcp-relay-url'
+  mcpEndpoint.type = 'url'
+  mcpEndpoint.autocomplete = 'off'
+  mcpEndpoint.value = 'http://127.0.0.1:43128'
+  const mcpActions = document.createElement('div')
+  mcpActions.className = 'button-row'
+  const mcpConnectButton = document.createElement('button')
+  mcpConnectButton.type = 'button'
+  mcpConnectButton.className = 'button secondary'
+  mcpConnectButton.textContent = '連接 MCP'
+  const mcpDisconnectButton = document.createElement('button')
+  mcpDisconnectButton.type = 'button'
+  mcpDisconnectButton.className = 'button secondary'
+  mcpDisconnectButton.textContent = '中斷 MCP'
+  mcpDisconnectButton.hidden = true
+  mcpActions.append(mcpConnectButton, mcpDisconnectButton)
+  const mcpStatus = document.createElement('p')
+  mcpStatus.className = 'inline-status'
+  mcpStatus.setAttribute('role', 'status')
+  mcpStatus.setAttribute('aria-live', 'polite')
+  mcpStatus.textContent = '未連線'
+  mcpSettings.append(mcpSettingsSummary, mcpHelp, mcpEndpointLabel, mcpEndpoint, mcpActions, mcpStatus)
+  let mcpActiveToken = ''
+  let mcpConnectedEndpoint = ''
+  let mcpPollController: AbortController | null = null
+  let mcpCandidate: {
+    readonly candidateId: string
+    readonly summary: string
+    readonly baseRevision: number
+    readonly patchJson: string
+  } | null = null
   const livePatchDiff = document.createElement('pre')
   livePatchDiff.className = 'live-patch-diff'
   livePatchDiff.hidden = true
@@ -1745,6 +1854,8 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   if (rawSource) {
     livePatchStatus.textContent = '為保留匯入作品的原始積木與素材，即時修改目前只開放 Canonical IR 作品。'
     livePatchPromptButton.disabled = true
+    localAiSettings.hidden = true
+    mcpSettings.hidden = true
   } else {
     livePatchStatus.textContent = '開始執行作品後可調整既有變數、角色與舞台屬性；積木/腳本及雲端變數不支援。'
   }
@@ -1785,6 +1896,158 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     livePatchStatus.dataset.kind = 'ok'
     livePatchStatus.textContent = `修改內容合法（revision ${liveRevision}）。確認後套用到目前預覽。`
   }
+  const stopMcpConnection = (message: string): void => {
+    const token = mcpActiveToken
+    const endpoint = mcpConnectedEndpoint
+    mcpActiveToken = ''
+    mcpConnectedEndpoint = ''
+    mcpPollController?.abort()
+    mcpPollController = null
+    mcpConnectButton.disabled = false
+    mcpDisconnectButton.hidden = true
+    mcpStatus.textContent = message
+    if (token && endpoint)
+      void fetch(`${endpoint}/bridge/unpair`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        cache: 'no-store',
+      }).catch(() => undefined)
+  }
+  const handleMcpToolRequest = (request: unknown): unknown => {
+    if (typeof request !== 'object' || request === null || Array.isArray(request))
+      throw new Error('MCP relay 傳來無效的工具要求。')
+    const { tool, arguments: args } = request as { tool?: unknown; arguments?: unknown }
+    if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('MCP 工具參數格式錯誤。')
+    if (tool === 'inspect_project') {
+      return {
+        projectName: liveProject.name,
+        baseRevision: liveRevision,
+        instruction: inspectProjectForAi(liveProject, liveRevision),
+      }
+    }
+    if (tool === 'propose_live_patch') {
+      if (localAiController.current) throw new Error('本機 AI 請求進行中，請稍後再提出 MCP 修改。')
+      if (mcpCandidate?.baseRevision === liveRevision)
+        throw new Error('目前已有尚未處理的 MCP 候選；請先檢查、套用或清除後再提案。')
+      if (preparedLivePatch?.baseRevision === liveRevision)
+        throw new Error('目前已有待審修改；請先套用、清除或編輯後再提出 MCP 候選。')
+      if (livePatchInput.value.trim() && !mcpCandidate)
+        throw new Error('Patch 欄位已有內容；請先檢查或清除，再接受 MCP 候選。')
+      const patchJson = (args as { patchJson?: unknown }).patchJson
+      if (typeof patchJson !== 'string') throw new Error('MCP propose_live_patch 缺少 patchJson 字串。')
+      const candidate = proposeLivePatch(liveProject, liveRevision, patchJson)
+      livePatchInput.value = candidate.patchJson
+      livePatchInput.dispatchEvent(new Event('input', { bubbles: true }))
+      inspectLivePatch()
+      mcpCandidate = {
+        candidateId: candidate.candidateId,
+        summary: candidate.summary,
+        baseRevision: candidate.baseRevision,
+        patchJson: candidate.patchJson,
+      }
+      livePatchStatus.dataset.kind = 'pending'
+      livePatchStatus.textContent = `外部 AI 提出「${candidate.summary}」。差異已顯示；請檢查後自行確認套用。`
+      return {
+        state: 'pending-user-review',
+        candidateId: candidate.candidateId,
+        baseRevision: candidate.baseRevision,
+        operationCount: candidate.operationCount,
+        changes: candidate.changes,
+      }
+    }
+    if (tool === 'get_patch_status') {
+      if (!mcpCandidate) return { state: 'no-candidate', revision: liveRevision }
+      return {
+        ...mcpCandidate,
+        state: mcpCandidate.baseRevision === liveRevision ? 'pending-user-review' : 'revision-changed',
+        revision: liveRevision,
+      }
+    }
+    throw new Error(`Bridge 不提供 MCP 工具「${String(tool)}」。`)
+  }
+  const pollMcpRelay = async (endpoint: string, token: string): Promise<void> => {
+    while (mcpActiveToken === token) {
+      const controller = new AbortController()
+      mcpPollController = controller
+      try {
+        const response = await fetch(`${endpoint}/bridge/poll`, {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+          signal: controller.signal,
+        })
+        if (response.status === 204) {
+          mcpStatus.textContent = '已連線，等待外部 AI 工具呼叫。'
+        } else if (response.ok) {
+          const request: unknown = await response.json()
+          const id = (request as { id?: unknown }).id
+          if (typeof id !== 'string') throw new Error('MCP relay request 缺少 ID。')
+          let result: unknown
+          let error: string | undefined
+          try {
+            result = handleMcpToolRequest(request)
+          } catch (toolError) {
+            error = toolError instanceof Error ? toolError.message : String(toolError)
+          }
+          const delivered = await fetch(`${endpoint}/bridge/respond`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, result, ...(error ? { error } : {}) }),
+            cache: 'no-store',
+            signal: controller.signal,
+          })
+          if (!delivered.ok) throw new Error(`MCP relay 回覆失敗（HTTP ${delivered.status}）。`)
+        } else if (response.status === 401 || response.status === 403) {
+          throw new Error('MCP 配對碼無效，或目前網站來源未列入 server allowlist。')
+        } else {
+          throw new Error(`無法連線 MCP relay（HTTP ${response.status}）。`)
+        }
+      } catch (error) {
+        if (mcpActiveToken !== token) break
+        stopMcpConnection(error instanceof Error ? error.message : String(error))
+        break
+      } finally {
+        if (mcpPollController === controller) mcpPollController = null
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 400))
+    }
+  }
+  mcpConnectButton.addEventListener('click', () => {
+    try {
+      const url = new URL(mcpEndpoint.value.trim())
+      const hostname = url.hostname.replace(/^\[|\]$/g, '')
+      if (url.protocol !== 'http:' || !['localhost', '127.0.0.1', '::1'].includes(hostname))
+        throw new Error('MCP relay 僅允許本機 loopback HTTP。')
+      if (url.username || url.password || url.search || url.hash)
+        throw new Error('MCP relay 網址不可包含帳密、查詢參數或片段。')
+      mcpConnectButton.disabled = true
+      mcpStatus.textContent = '正在配對本機 MCP relay…'
+      void (async () => {
+        const endpoint = url.toString().replace(/\/+$/, '')
+        try {
+          const response = await fetch(`${endpoint}/bridge/pair`, { method: 'POST', cache: 'no-store' })
+          if (!response.ok) throw new Error(`MCP relay 配對失敗（HTTP ${response.status}）。`)
+          const pairing = (await response.json()) as { token?: unknown }
+          if (typeof pairing.token !== 'string' || pairing.token.length < 32)
+            throw new Error('MCP relay 沒有回傳有效的配對憑證。')
+          mcpActiveToken = pairing.token
+          mcpConnectedEndpoint = endpoint
+          mcpDisconnectButton.hidden = false
+          mcpStatus.textContent = '已配對本機 MCP relay，正在連線…'
+          void pollMcpRelay(endpoint, pairing.token)
+        } catch (error) {
+          mcpConnectButton.disabled = false
+          mcpStatus.textContent = error instanceof Error ? error.message : String(error)
+        }
+      })()
+    } catch (error) {
+      mcpStatus.textContent = error instanceof Error ? error.message : String(error)
+    }
+  })
+  mcpDisconnectButton.addEventListener('click', () => stopMcpConnection('已中斷 MCP 連線。'))
+  window.addEventListener('pagehide', () => {
+    mcpActiveToken = ''
+    mcpPollController?.abort()
+  })
   livePatchPromptButton.addEventListener('click', () => {
     copyStudentPrompt(
       createLiveVariablePatchInstruction(liveProject, liveRevision),
@@ -1792,6 +2055,86 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
       '已複製目前作品的即時修改指令',
     )
   })
+  localAiGenerateButton.addEventListener('click', () => {
+    void (async () => {
+      if (localAiController.current) return
+      if (preparedLivePatch?.baseRevision === liveRevision) {
+        livePatchStatus.dataset.kind = 'error'
+        livePatchStatus.textContent = '目前已有待審修改；請先套用、清除或編輯後再產生另一份修改。'
+        return
+      }
+      if (mcpCandidate?.baseRevision === liveRevision) {
+        livePatchStatus.dataset.kind = 'error'
+        livePatchStatus.textContent = '目前已有待審 MCP 候選；請先套用、清除或編輯後再產生另一份修改。'
+        return
+      }
+      const controller = new AbortController()
+      localAiController.current = controller
+      const timeout = window.setTimeout(() => controller.abort(), 120_000)
+      localAiGenerateButton.disabled = true
+      localAiCancelButton.hidden = false
+      livePatchStatus.dataset.kind = 'pending'
+      livePatchStatus.textContent = '正在把目前作品的精簡結構與修改要求送到你設定的模型…'
+      try {
+        const response = await requestOpenAiCompatiblePatch({
+          baseUrl: localAiBaseUrl.value,
+          model: localAiModel.value,
+          apiKey: localAiKey.value,
+          instruction: inspectProjectForAi(liveProject, liveRevision),
+          request: localAiRequest.value,
+          signal: controller.signal,
+          onToolCall: (name, argumentsJson) => {
+            try {
+              const args: unknown = JSON.parse(argumentsJson)
+              if (name === 'inspect_project') {
+                return { output: inspectProjectForAi(liveProject, liveRevision) }
+              }
+              if (name === 'propose_live_patch') {
+                if (
+                  typeof args !== 'object' ||
+                  args === null ||
+                  typeof (args as { patchJson?: unknown }).patchJson !== 'string'
+                )
+                  throw new Error('propose_live_patch 必須提供 patchJson 字串。')
+                const candidate = proposeLivePatch(
+                  liveProject,
+                  liveRevision,
+                  (args as { patchJson: string }).patchJson,
+                )
+                return {
+                  output: JSON.stringify({ candidateId: candidate.candidateId, changes: candidate.changes }),
+                  patchJson: candidate.patchJson,
+                }
+              }
+              throw new Error(`不支援的模型工具：${name}`)
+            } catch (error) {
+              return { output: `候選未通過驗證：${error instanceof Error ? error.message : String(error)}` }
+            }
+          },
+        })
+        const candidate = proposeLivePatch(liveProject, liveRevision, response)
+        livePatchInput.value = candidate.patchJson
+        livePatchInput.dispatchEvent(new Event('input', { bubbles: true }))
+        inspectLivePatch()
+        livePatchStatus.dataset.kind = 'pending'
+        livePatchStatus.textContent = '本機模型已提出修改，差異已顯示；請檢查後自行確認套用。'
+      } catch (error) {
+        livePatchStatus.dataset.kind = 'error'
+        livePatchStatus.textContent =
+          error instanceof Error && error.name === 'AbortError'
+            ? '本機模型請求已取消或逾時。'
+            : error instanceof Error
+              ? error.message
+              : String(error)
+      } finally {
+        window.clearTimeout(timeout)
+        if (localAiController.current === controller) localAiController.current = null
+        localAiGenerateButton.disabled = false
+        localAiCancelButton.hidden = true
+      }
+    })()
+  })
+  localAiCancelButton.addEventListener('click', () => localAiController.current?.abort())
   previewPatchButton.addEventListener('click', () => {
     try {
       inspectLivePatch()
@@ -2087,10 +2430,13 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   livePatchInput.addEventListener('input', () => {
     preparedLivePatch = null
     livePatchDiff.hidden = true
+    if (mcpCandidate && livePatchInput.value !== mcpCandidate.patchJson) mcpCandidate = null
   })
   livePatchPanel.append(
     livePatchSummary,
     livePatchHelp,
+    localAiSettings,
+    mcpSettings,
     livePatchPromptButton,
     livePatchInputLabel,
     livePatchInput,

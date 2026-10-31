@@ -1,7 +1,7 @@
 # Scratch AI Bridge：Provider API 與 MCP 雙接入計畫
 
 日期：2026-10-31
-狀態：計畫完成，尚未實作
+狀態：計畫完成；本機 Provider API 與 stdio MCP 核心已實作，整合與擴充事項見下方狀態
 目標：讓使用者可以在 Bridge 內使用自己選擇的 AI 模型，也可以從 Codex、Claude Desktop 等外部 AI 透過 MCP 操作 Bridge；兩條路徑共用同一組遊戲工具與安全規則。
 
 ## 使用者體驗目標
@@ -152,6 +152,17 @@ Bridge UI ── Provider API adapter ── 使用者選定的雲端或本機�
 5. Phase 5 僅在出現遠端使用需求後評估。
 
 選這個順序是因為 API 直連符合 Bridge 內直接創作的使用目標；先做共用 Tool Core 後，MCP 不會複製或削弱既有安全規則。MCP 可與 API 並存，並非二選一。
+
+## 實作狀態（2026-10-31）
+
+- **Phase 0–1：核心契約已落地**：`src/core/ai/tool-core.ts` 共用 `inspectProjectForAi` 與 `proposeLivePatch`；兩條路徑都使用既有 live-patch parser/schema/revision gate。
+- **Phase 2：本機 API MVP 已落地**：學生頁可連 `localhost`、`127.0.0.1` 或 `::1` 上的 OpenAI Chat Completions-compatible 模型；可選 API key 只留在當前頁面記憶體。支援 `inspect_project` / `propose_live_patch` 工具迴圈、最多 4 輪／8 次 tool calls、120 秒取消與 1 MiB 回應限制；不支援 tool calling 的 server 可回退成 JSON patch 輸出。公開雲端 endpoint 明確拒絕，因此不會誤用付費 API。
+- **Phase 3：本機 stdio MCP 已落地**：工具為 `inspect_project`、`propose_live_patch`、`get_patch_status`；relay 僅綁 loopback、由使用者在 Bridge 頁面發起 30 分鐘配對，MCP host 可操作目前開啟的 Canonical project session。每分鐘最多 20 次，最多 4 筆並行等待；沒有套用或檔案寫入工具。
+- **Phase 4：雙模式基本整合已落地**：API 與 MCP 共用當前 live project/revision 和 Tool Core；兩種入口皆禁止覆蓋另一個尚未處理的候選。revision 改變後，MCP status 回報舊候選失效。API/MCP 候選來源在 Bridge 狀態文字標明；本機工具結果不寫入對話記錄。
+- **Phase 5：未實作**：遠端 Streamable HTTP MCP 維持後置。
+- **驗證狀態**：Bridge package production build、更新後 stdio MCP loopback pairing relay smoke、本機 provider mock、AI core/MCP source targeted ESLint 與 Prettier 均通過。沒有對真實本機模型做 live request，需使用者提供已啟動的 loopback model endpoint 才能端到端驗收。整包 lint 仍被既有 1,276 項錯誤擋住，不是本次改動範圍。
+
+本 MVP 對應「Bridge 直連本機 AI」與「MCP host 透過本機 relay 操作目前 Bridge 頁面」。模型 API 僅允許 loopback 位址；若模型 API 在另一台區網電腦，仍需獨立 provider companion。Phase 5 遠端 Streamable HTTP MCP 仍是可選後續項目。
 
 ## 風險與未決事項
 

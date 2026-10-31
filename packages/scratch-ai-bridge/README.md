@@ -1,6 +1,8 @@
 # Scratch AI Bridge
 
-Scratch AI Bridge is a browser-only bridge between AI-authored structured JSON and Scratch projects. This package lives **inside the complete Scratch Editor monorepo** and uses the official `@scratch/scratch-vm` workspace.
+Scratch AI Bridge is a browser-first bridge between AI-authored structured JSON and Scratch projects, with optional local CLI/MCP companions. This package lives **inside the complete Scratch Editor monorepo** and uses the official `@scratch/scratch-vm` workspace.
+
+Optional local AI paths are documented in [`docs/AI-PROVIDER-MCP.md`](docs/AI-PROVIDER-MCP.md): use an OpenAI-compatible model running on localhost from the Bridge page, or expose validated patch tools to an external MCP host.
 
 Public beta: [https://polik18.github.io/scratch-editor-ai-bridge/](https://polik18.github.io/scratch-editor-ai-bridge/)
 
@@ -107,6 +109,7 @@ npm run cli --workspace=@scratch/scratch-ai-bridge -- inspect ./作品.sb3 --for
 npm run cli --workspace=@scratch/scratch-ai-bridge -- batch ./班級作品 --out ./班級分析結果 --jobs 1
 npm run cli --workspace=@scratch/scratch-ai-bridge -- generate ./遊戲設計.json --out ./新遊戲.sb3 --report ./新遊戲.report.json
 npm run session --workspace=@scratch/scratch-ai-bridge -- new-game --design=./遊戲設計.json --output=./build
+npm run mcp --workspace=@scratch/scratch-ai-bridge -- --project ./canonical-ir.json
 ```
 
 Existing output files are preserved by default. Pass `--force` to replace one intentionally. The `scratch-session`

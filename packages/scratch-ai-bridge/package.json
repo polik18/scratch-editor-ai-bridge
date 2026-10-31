@@ -2,7 +2,7 @@
   "name": "@scratch/scratch-ai-bridge",
   "version": "0.1.0",
   "private": true,
-  "description": "Pure front-end bridge between AI-authored JSON and Scratch projects.",
+  "description": "Browser-first AI bridge for creating, validating, and editing Scratch projects, with local CLI and MCP companions.",
   "license": "AGPL-3.0-only",
   "type": "module",
   "scripts": {
@@ -19,6 +19,7 @@
     "lint": "eslint . && prettier --check .",
     "measure:archive-memory": "node --expose-gc scripts/measure-archive-memory.mjs",
     "measure:fragment-budget": "tsx scripts/measure-project-fragment-budget.ts",
+    "mcp": "tsx src/mcp/main.ts",
     "prebuild": "npm run generate:validator",
     "predev": "npm run generate:validator",
     "pretest": "npm run generate:validator",
@@ -30,6 +31,7 @@
     "test:browser:safari": "node scripts/safari-smoke.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/server": "^2.4.0",
     "@noble/hashes": "1.8.0",
     "@scratch/scratch-render": "15.2.0",
     "@scratch/scratch-storage": "15.2.0",
@@ -38,10 +40,12 @@
     "buffer": "6.0.3",
     "events": "3.3.0",
     "jszip": "3.10.2",
-    "scratch-audio": "2.0.268"
+    "scratch-audio": "2.0.268",
+    "zod": "^4.6.5"
   },
   "bin": {
     "scratch-ai-bridge": "scripts/scratch-ai-bridge.mjs",
+    "scratch-ai-bridge-mcp": "scripts/scratch-ai-bridge-mcp.mjs",
     "scratch-session": "scripts/scratch-session.mjs"
   },
   "devDependencies": {

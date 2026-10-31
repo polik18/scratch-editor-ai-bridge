@@ -1046,6 +1046,34 @@ h1 {
   font-size: 13px;
   font-weight: 700;
 }
+.live-ai-settings {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.live-ai-settings summary {
+  color: var(--forest-dark);
+  font-weight: 700;
+  cursor: pointer;
+}
+.live-ai-settings p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.live-ai-settings label {
+  font-size: 13px;
+  font-weight: 700;
+}
+.live-ai-settings input,
+.live-ai-settings textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
 .live-patch-editor {
   min-height: 130px !important;
 }
