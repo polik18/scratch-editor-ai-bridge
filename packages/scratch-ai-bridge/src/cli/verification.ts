@@ -180,6 +180,11 @@ export function generateVerificationReport(result: VerificationResult): string {
   }
   lines.push('');
   
+  lines.push('Project JSON Validation:');
+  lines.push(`  Status: ${result.gates.projectJson.status}`);
+  for (const error of result.gates.projectJson.errors) lines.push(`    - ${error}`);
+  lines.push('');
+
   lines.push('Block Graph Validation:');
   lines.push(`  Status: ${result.gates.blockGraph.status}`);
   lines.push(`  Blocks: ${result.diagnostics.blockGraph.blockCount}`);

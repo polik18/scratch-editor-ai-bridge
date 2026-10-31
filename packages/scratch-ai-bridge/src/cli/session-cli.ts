@@ -6,7 +6,7 @@
  *   npx tsx src/cli/session-cli.ts load <file.sb3>
  *   npx tsx src/cli/session-cli.ts save [file.sb3]
  *   npx tsx src/cli/session-cli.ts info
- *   npx tsx src/cli/session-cli.ts inspect [--detail=default|project|targets|blocks|assets|capabilities]
+ *   npx tsx src/cli/session-cli.ts inspect
  *   npx tsx src/cli/session-cli.ts plan --patch=<patch.json>
  *   npx tsx src/cli/session-cli.ts apply --patch=<patch.json> --out=<output.sb3>
  *   npx tsx src/cli/session-cli.ts undo
@@ -23,6 +23,7 @@
  *   npx tsx src/cli/session-cli.ts attach <target> <hatOpcode> <bodyBlockId>
  *   npx tsx src/cli/session-cli.ts compile [output.sb3]
  *   npx tsx src/cli/session-cli.ts preview [output.png]
+ *   npx tsx src/cli/session-cli.ts open [--url http://localhost:8601]
  *
  * Session state is persisted in a .scratch-session.json sidecar file so
  * subsequent commands within the same project directory automatically resume
@@ -40,77 +41,71 @@ import { generateGameFromDesign } from './game-cli.js';
 const SESSION_FILE = '.scratch-session.json';
 
 interface SavedSession {
+  format: 'scratch-session';
+  version: 1;
   projectPath: string | null;
-  lastModified: string; // ISO timestamp
+  lastModified: string;
+  projectJson?: Record<string, unknown>;
 }
 
 function sessionFilePath(): string {
   return path.join(process.cwd(), SESSION_FILE);
 }
 
-function loadSavedSession(): SavedSession | null {
+function writeSessionFile(projectPath: string | null, projectJson?: Record<string, unknown>): void {
+  const state: SavedSession = { format: 'scratch-session', version: 1, projectPath, lastModified: new Date().toISOString(), ...(projectJson ? { projectJson } : {}) };
+  const temporary = `${sessionFilePath()}.${process.pid}.tmp`;
   try {
-    const content = fs.readFileSync(sessionFilePath(), 'utf-8');
-    return JSON.parse(content) as SavedSession;
-  } catch {
-    return null;
+    fs.writeFileSync(temporary, JSON.stringify(state, null, 2), { mode: 0o600 });
+    fs.renameSync(temporary, sessionFilePath());
+  } finally {
+    if (fs.existsSync(temporary)) fs.unlinkSync(temporary);
   }
 }
 
-function saveSessionFile(projectPath: string | null): void {
-  fs.writeFileSync(
-    sessionFilePath(),
-    JSON.stringify({ projectPath, lastModified: new Date().toISOString() }, null, 2),
-  );
-}
-
-// ─── Session helpers ─────────────────────────────────────────────────────────
-
-/** Load session from disk (creates new if not exists). */
+/** Restore an explicit sidecar; old sidecars are read and migrated on the next write. */
 async function loadSession(): Promise<ScratchSession> {
-  const saved = loadSavedSession();
-  const sess = new ScratchSession();
-
-  // If saved.projectPath is set, load from .sb3
-  if (saved?.projectPath && fs.existsSync(saved.projectPath)) {
-    await sess.loadSb3(saved.projectPath);
-    return sess;
-  }
-
-  // Otherwise, try to load project JSON from sidecar
+  const file = sessionFilePath();
+  if (!fs.existsSync(file)) throw new Error(`Session not found: ${file}. Run scratch-session new or load <file.sb3>.`);
+  let meta: Record<string, unknown>;
   try {
-    const metaStr = fs.readFileSync(sessionFilePath(), 'utf-8');
-    const meta = JSON.parse(metaStr);
-    const projectJson = meta.projectJson ?? meta; // Support both formats
-    sess.loadProjectJson(projectJson);
-    return sess;
-  } catch {
-    // No sidecar found, create new project
-    sess.newProject();
+    const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('expected an object');
+    meta = parsed as Record<string, unknown>;
+  } catch (error) {
+    throw new Error(`Cannot read session ${file}: ${error instanceof Error ? error.message : String(error)}. Restore the file or start a new session.`);
+  }
+  if (meta.format !== undefined && (meta.format !== 'scratch-session' || meta.version !== 1)) throw new Error('Unsupported session format or version.');
+  const sess = new ScratchSession();
+  if (typeof meta.projectPath === 'string' && meta.projectPath) {
+    const projectPath = path.resolve(process.cwd(), meta.projectPath);
+    if (!fs.existsSync(projectPath)) throw new Error(`Session project not found: ${projectPath}. Restore it or run load <file.sb3>.`);
+    await sess.loadSb3(projectPath);
     return sess;
   }
+  const projectJson = meta.projectJson ?? (Array.isArray(meta.targets) ? meta : undefined);
+  if (!projectJson || typeof projectJson !== 'object' || Array.isArray(projectJson) || !Array.isArray((projectJson as Record<string, unknown>).targets)) {
+    throw new Error('Session has no valid project data. Restore it or run new/load.');
+  }
+  sess.loadProjectJson(projectJson as Record<string, unknown>);
+  return sess;
 }
 
-/** Save session to disk. */
 async function saveSession(sess: ScratchSession, outputPath?: string): Promise<void> {
   const resolved = outputPath ?? sess.info().path;
-
   if (resolved) {
-    // Loaded project: save to .sb3 and update path in meta
-    await sess.saveSb3(resolved);
-    saveSessionFile(resolved);
+    const saved = await sess.saveSb3(resolved);
+    writeSessionFile(saved);
   } else {
-    // New project: save project JSON to sidecar, keep path null
-    const projectJson = sess.getProjectJson();
-    const meta = {
-      projectPath: null,
-      lastModified: new Date().toISOString(),
-      projectJson: projectJson, // Include the full project JSON
-    };
-    fs.writeFileSync(sessionFilePath(), JSON.stringify(meta, null, 2));
-    // Don't call saveSessionFile() - we already wrote the full meta
+    writeSessionFile(null, sess.getProjectJson());
   }
 }
+
+const requireOptionValue = (args: string[], index: number, option: string): string => {
+  const value = args[index];
+  if (value === undefined || value.startsWith('--')) throw new Error(`${option} requires a value. See scratch-session --help.`);
+  return value;
+};
 
 // ─── Command dispatch ────────────────────────────────────────────────────────
 
@@ -152,7 +147,7 @@ const commands: Record<string, CommandHandler> = {
     if (!fs.existsSync(filePath)) throw new Error(`File not found: ${filePath}`);
     const sess = new ScratchSession();
     await sess.loadSb3(filePath);
-    await saveSession(sess, filePath);
+    writeSessionFile(filePath);
     const info = sess.info();
     console.log(`✓ Loaded "${filePath}" (${info.targetCount} targets: ${info.targets.join(', ')})`);
   },
@@ -165,7 +160,7 @@ const commands: Record<string, CommandHandler> = {
     if (info.path || outputPath) {
       // Loaded project or explicit output: save to .sb3
       const saved = await sess.saveSb3(outputPath);
-      await saveSession(sess, saved);
+      writeSessionFile(saved);
       console.log(`✓ Saved to "${saved}"`);
     } else {
       // New project without output path: only save sidecar
@@ -294,20 +289,21 @@ const commands: Record<string, CommandHandler> = {
     for (let i = 0; i < rest.length; i++) {
       switch (rest[i]) {
         case '--field': {
-          const k = rest[++i];
-          const v = rest[++i];
+          const k = requireOptionValue(rest, ++i, '--field');
+          const v = requireOptionValue(rest, ++i, '--field');
           fields[k] = [v, null];
           break;
         }
         case '--input': {
-          const k = rest[++i];
-          const blockId = rest[++i];
-          const shadowId = rest[++i] ?? blockId;
+          const k = requireOptionValue(rest, ++i, '--input');
+          const blockId = requireOptionValue(rest, ++i, '--input');
+          const shadowId = rest[i + 1] && !rest[i + 1].startsWith('--') ? rest[++i] : blockId;
           inputs[k] = { block: blockId, shadow: shadowId };
           break;
         }
-        case '--parent': parent = rest[++i]; break;
-        case '--next': next = rest[++i]; break;
+        case '--parent': parent = requireOptionValue(rest, ++i, '--parent'); break;
+        case '--next': next = requireOptionValue(rest, ++i, '--next'); break;
+        default: throw new Error(`Unknown block option: ${rest[i]}. See scratch-session --help.`);
       }
     }
 
@@ -339,20 +335,21 @@ const commands: Record<string, CommandHandler> = {
     for (let i = 0; i < rest.length; i++) {
       switch (rest[i]) {
         case '--field': {
-          const k = rest[++i];
-          const v = rest[++i];
+          const k = requireOptionValue(rest, ++i, '--field');
+          const v = requireOptionValue(rest, ++i, '--field');
           fields[k] = [v, null];
           break;
         }
         case '--input': {
-          const k = rest[++i];
-          const blockId2 = rest[++i];
-          const shadowId = rest[++i] ?? blockId2;
+          const k = requireOptionValue(rest, ++i, '--input');
+          const blockId2 = requireOptionValue(rest, ++i, '--input');
+          const shadowId = rest[i + 1] && !rest[i + 1].startsWith('--') ? rest[++i] : blockId2;
           inputs[k] = { block: blockId2, shadow: shadowId };
           break;
         }
-        case '--parent': parent = rest[++i]; break;
-        case '--next': next = rest[++i]; break;
+        case '--parent': parent = requireOptionValue(rest, ++i, '--parent'); break;
+        case '--next': next = requireOptionValue(rest, ++i, '--next'); break;
+        default: throw new Error(`Unknown block option: ${rest[i]}. See scratch-session --help.`);
       }
     }
 
@@ -407,55 +404,46 @@ const commands: Record<string, CommandHandler> = {
     const outputPath = argv?.[0];
     const sess = await loadSession();
     
-    // Get raw archive bytes for verification
     const archive = await sess.compile();
-    
-    // Perform end-to-end verification
-    const { verifyEndToEnd, generateVerificationReport } = await import('./verification.js');
-    const result = await verifyEndToEnd(archive);
-    
-    if (result.status === 'fail') {
-      console.error('❌ Compilation verification failed:');
-      console.error(generateVerificationReport(result));
-      process.exit(1);
-    }
-    
+
     if (outputPath) {
-      const saved = await sess.saveSb3(outputPath);
-      console.log(`✓ Compiled and saved to "${saved}"`);
-      console.log(`✓ Verification passed: ${result.diagnostics.overall.gatesPassed}/${result.diagnostics.overall.gatesTotal} gates`);
+      await fs.promises.writeFile(outputPath, archive);
+      console.log(`✓ Compiled and saved to "${path.resolve(outputPath)}"`);
+      console.log('✓ Archive, block graph and Scratch VM load checks passed.');
     } else {
       const info = sess.info();
       const defaultPath = (info.path ?? 'output').replace(/\.sb3$/i, '') + '.compiled.sb3';
       await fs.promises.writeFile(defaultPath, archive);
       console.log(`✓ Compiled to "${defaultPath}" (${(archive.byteLength / 1024).toFixed(1)} KB)`);
-      console.log(`✓ Verification passed: ${result.diagnostics.overall.gatesPassed}/${result.diagnostics.overall.gatesTotal} gates`);
+      console.log('✓ Archive, block graph and Scratch VM load checks passed.');
     }
   },
   // ── Preview ──────────────────────────────────────────────────────────────
 
-  async preview(_argv) {
+  async preview(argv) {
     const sess = await loadSession();
-    
-    // Get raw archive bytes for verification
     const archive = await sess.compile();
-    
-    // Perform end-to-end verification
-    const { verifyEndToEnd, generateVerificationReport } = await import('./verification.js');
-    const result = await verifyEndToEnd(archive);
-    
-    if (result.status === 'fail') {
-      console.error('❌ Preview verification failed:');
-      console.error(generateVerificationReport(result));
-      process.exit(1);
+    const { captureRendererPreview } = await import('./renderer-preview.js');
+    const outputPath = argv[0] ?? 'preview.png';
+    const result = await captureRendererPreview(archive, outputPath);
+    console.log(`✓ Scratch stage screenshot saved to "${result.path}" (${result.width}x${result.height}).`);
+  },
+  async open(argv) {
+    let url = 'http://localhost:8601/';
+    let screenshot: string | undefined;
+    let headless = false;
+    for (let i = 0; i < argv.length; i++) {
+      if (argv[i] === '--headless') headless = true;
+      else if (argv[i] === '--url' || argv[i] === '--screenshot') {
+        const option = argv[i];
+        const value = argv[++i];
+        if (!value || value.startsWith('--')) throw new Error(`${option} requires a value.`);
+        if (option === '--url') url = value;
+        else screenshot = value;
+      } else throw new Error(`Unknown open option: ${argv[i]}`);
     }
-    
-    console.log('⏳ Loading project into VM for preview...');
-    // TODO: integrate with preview/main.ts for screenshot generation
-    // Currently compile() validates the project — preview requires Playwright
-    console.log('✓ Project passes verification.');
-    console.log(`  Gates passed: ${result.diagnostics.overall.gatesPassed}/${result.diagnostics.overall.gatesTotal}`);
-    console.log('  (Preview screenshot: run with --preview flag after browser integration)');
+    const { openSessionInBrowser } = await import('./session/browser.js');
+    await openSessionInBrowser(await loadSession(), { url, headless, ...(screenshot ? { screenshot } : {}) });
   },
   // ── NLP Parse ────────────────────────────────────────────────────────────
 
@@ -486,13 +474,7 @@ const commands: Record<string, CommandHandler> = {
   // ── Preview Screenshot ───────────────────────────────────────────────────
 
   async previewScreenshot(argv) {
-    const outputPath = argv[0];
-    const sess = await loadSession();
-    
-    const { previewScreenshot } = await import('../preview/automation.js');
-    const filePath = await previewScreenshot(sess, outputPath);
-    
-    console.log('✓ Screenshot saved to ' + filePath);
+    await commands.preview(argv);
   },
 };
 
@@ -513,6 +495,8 @@ async function main() {
 
   if (cmd === 'help' || cmd === '--help' || cmd === '-h') {
     console.error('scratch-session - Stateful Scratch project CLI\n');
+    console.error('Examples: new MyGame | load game.sb3 | compile checked.sb3 | preview stage.png | open --url http://localhost:8601/');
+    console.error('Guide: packages/scratch-ai-bridge/docs/USAGE-GUIDE.md\n');
     for (const [name] of Object.entries(commands).sort()) {
       console.error(`  ${name}`);
     }

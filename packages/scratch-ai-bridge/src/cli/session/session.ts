@@ -11,11 +11,6 @@
 
 import { uid, uidTarget } from './uid.js';
 
-// ─── Scratch VM & Canonical Project ──────────────────────────────────────────
-// Use official Scratch VM round-trip for SB3 generation
-import { projectJsonToCanonical } from '../../core/decompiler/project-json.js';
-import { buildScratchProjectArchive } from '../../core/compiler/project-json.js';
-
 // ─── Local type aliases (avoids importing all scratch/vm internals) ──────────
 
 /** Canonical input reference (used in block inputs). */
@@ -187,43 +182,36 @@ export class ScratchSession {
     return this.project;
   }
 
-  /**
-   /** Save the current project to an .sb3 file using jszip. */
-   async saveSb3(outputPath?: string): Promise<string> {
-     if (!this.project) throw new Error('No project loaded. Use newProject() or loadSb3() first.');
-     const [{ resolve }, fs] = await Promise.all([import('node:path'), import('node:fs/promises')]);
-     const resolved = outputPath ? resolve(outputPath) : this.projectPath;
-     if (!resolved) throw new Error('No output path. Pass an explicit output path.');
+  /** Serialize the current project and retain all source assets and archive entries. */
+  async archive(): Promise<Uint8Array> {
+    if (!this.project) throw new Error('No project loaded. Use newProject() or loadSb3() first.');
+    const { default: JSZip } = await import('jszip');
+    const zip = new JSZip();
+    zip.file('project.json', JSON.stringify(this.project));
+    if (this.zipEntries) {
+      for (const [name, entry] of this.zipEntries) {
+        if (name !== 'project.json') zip.file(name, await entry.async('uint8array'));
+      }
+    }
+    // The built-in blank costume is used by new Stage/sprite targets.
+    const blankName = 'cd21514d0531fdffb22204e0ec5ed84a.svg';
+    if (!zip.file(blankName) && this.targets().some((target) =>
+      Array.isArray(target['costumes']) && target['costumes'].some((costume: { md5ext?: string }) => costume.md5ext === blankName))) {
+      zip.file(blankName, '<svg version="1.1" width="2" height="2" viewBox="-1 -1 2 2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n  <!-- Exported by Scratch - http://scratch.mit.edu/ -->\n</svg>\n');
+    }
+    return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 6 } });
+  }
 
-     const { default: JSZip } = await import('jszip');
-     const zip = new JSZip();
-
-     // Add project.json (UTF-8 bytes)
-     const projectJson = JSON.stringify(this.project);
-     zip.file('project.json', new TextEncoder().encode(projectJson));
-
-     // Retain original ZIP entries (costumes, sounds, etc.)
-     if (this.zipEntries) {
-       for (const [name, entry] of this.zipEntries) {
-         // Skip project.json — we just overwrote it
-         if (name === 'project.json') continue;
-         // Re-add entry preserving its original content
-         const c = await (entry as any).async('uint8array');
-         zip.file(name, c);
-       }
-     }
-
-     const blob = await zip.generateAsync({
-       type: 'blob',
-       compression: 'DEFLATE',
-       compressionOptions: { level: 6 },
-     });
-     const buf = new Uint8Array(await blob.arrayBuffer());
-     await fs.writeFile(resolved, buf);
-     this.projectPath = resolved;
-     this.dirty = false;
-     return resolved;
-   }
+  /** Save a draft without requiring an unfinished block graph to validate. */
+  async saveSb3(outputPath?: string): Promise<string> {
+    const [{ resolve }, fs] = await Promise.all([import('node:path'), import('node:fs/promises')]);
+    const resolved = outputPath ? resolve(outputPath) : this.projectPath;
+    if (!resolved) throw new Error('No output path. Pass an explicit output path.');
+    await fs.writeFile(resolved, await this.archive());
+    this.projectPath = resolved;
+    this.dirty = false;
+    return resolved;
+  }
 
   // ─── Internal SB3 → project.json + ZIP entries loader ────────────────────
 
@@ -328,24 +316,7 @@ export class ScratchSession {
       variables: {},
       lists: {},
       broadcasts: {},
-      blocks: {
-        // Placeholder procedure definition so the sprite isn't empty
-        [id]: {
-          id,
-          opcode: 'procedures_defnoreturn',
-          next: null,
-          parent: null,
-          topLevel: true,
-          shadow: false,
-          fields: {},
-          inputs: {},
-          mutation: {
-            tagName: 'mutation',
-            children: '[]',
-            attributes: JSON.stringify({ argumentids: '[]', argumentnames: '[]', warp: 'false' }),
-          },
-        },
-      },
+      blocks: {},
       comments: {},
       currentCostume: 0,
       costumes: [
@@ -740,32 +711,22 @@ export class ScratchSession {
 
   // ─── Compile ─────────────────────────────────────────────────────────────
 
-  /**
-   * Compile the current Scratch project JSON to SB3 bytes.
-   * Retains original ZIP entries (costumes, sounds, etc.) if available.
-   * Uses official Scratch VM round-trip (loadProject + saveProjectSb3) for
-   * asset completeness and graph reciprocity validation.
-   * @throws {Error} If validation fails
-   */
+  /** Validate the same archive bytes that will be written, including a Scratch VM load. */
   async compile(): Promise<Uint8Array> {
-    if (!this.project) throw new Error('No project loaded.');
-
-    // Convert Scratch project JSON to Canonical Project format
-    const canonicalProject = projectJsonToCanonical(this.project as Record<string, unknown>);
-
-    // Build the archive with original ZIP entries retained
-    let retainMap: Map<string, Uint8Array> | undefined;
-    if (this.zipEntries) {
-      retainMap = new Map<string, Uint8Array>();
-      for (const [filename, entry] of this.zipEntries) {
-        retainMap.set(filename, await entry.async('uint8array'));
-      }
-    } else {
-      retainMap = undefined;
+    const archive = await this.archive();
+    const { verifyEndToEnd, generateVerificationReport } = await import('../verification.js');
+    const result = await verifyEndToEnd(archive);
+    if (result.status === 'fail') throw new Error(`Project validation failed:\n${generateVerificationReport(result)}`);
+    const { loadSb3 } = await import('../../scratch/vm.js');
+    let vm: Awaited<ReturnType<typeof loadSb3>> | undefined;
+    try {
+      vm = await loadSb3(archive);
+    } catch (error) {
+      throw new Error(`Scratch VM could not load the project: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      vm?.quit();
     }
-    const archiveBytes = await buildScratchProjectArchive(canonicalProject, { retainOriginalEntries: retainMap });
-
-    return archiveBytes;
+    return archive;
   }
 
   /**

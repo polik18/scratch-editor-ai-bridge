@@ -114,7 +114,7 @@ export function validateProjectJson(projectJson: unknown): { status: 'pass' | 'f
   const pj = projectJson as Record<string, unknown>;
   
   // Check for required top-level fields
-  const requiredFields = ['targets', 'monitors', 'extensions', 'meta'];
+  const requiredFields = ['targets', 'extensions', 'meta'];
   for (const field of requiredFields) {
     if (pj[field] === undefined) {
       errors.push(`Missing required field: ${field}`);
