@@ -1,0 +1,132 @@
+{
+  "shapes": [
+    {
+      "x": 48,
+      "y": 78,
+      "width": 30,
+      "height": 38,
+      "rx": 6,
+      "type": "rect",
+      "fill": "#7A8B99"
+    },
+    {
+      "x": 36,
+      "y": 80,
+      "width": 12,
+      "height": 30,
+      "rx": 5,
+      "type": "rect",
+      "fill": "#5E6D7A"
+    },
+    {
+      "x": 62,
+      "y": 80,
+      "width": 12,
+      "height": 30,
+      "rx": 5,
+      "type": "rect",
+      "fill": "#5E6D7A"
+    },
+    {
+      "x": 43,
+      "y": 100,
+      "width": 18,
+      "height": 10,
+      "rx": 4,
+      "type": "rect",
+      "fill": "#3E4A54"
+    },
+    {
+      "x": 55,
+      "y": 100,
+      "width": 18,
+      "height": 10,
+      "rx": 4,
+      "type": "rect",
+      "fill": "#3E4A54"
+    },
+    {
+      "x": 30,
+      "y": 82,
+      "width": 10,
+      "height": 26,
+      "rx": 5,
+      "type": "rect",
+      "fill": "#5E6D7A"
+    },
+    {
+      "x": 68,
+      "y": 82,
+      "width": 10,
+      "height": 26,
+      "rx": 5,
+      "type": "rect",
+      "fill": "#5E6D7A"
+    },
+    {
+      "cx": 50,
+      "cy": 52,
+      "r": 26,
+      "type": "circle",
+      "fill": "#8FB2D2"
+    },
+    {
+      "cx": 50,
+      "cy": 50,
+      "r": 22,
+      "type": "circle",
+      "fill": "#5E86AB"
+    },
+    {
+      "cx": 42,
+      "cy": 50,
+      "r": 8,
+      "type": "circle",
+      "fill": "#0A1016"
+    },
+    {
+      "cx": 58,
+      "cy": 50,
+      "r": 8,
+      "type": "circle",
+      "fill": "#0A1016"
+    },
+    {
+      "cx": 44,
+      "cy": 48,
+      "r": 3,
+      "type": "circle",
+      "fill": "#FFFFFF"
+    },
+    {
+      "cx": 60,
+      "cy": 48,
+      "r": 3,
+      "type": "circle",
+      "fill": "#FFFFFF"
+    },
+    {
+      "cx": 50,
+      "cy": 66,
+      "r": 6,
+      "type": "circle",
+      "fill": "#2ECC71"
+    },
+    {
+      "x": 41,
+      "y": 82,
+      "width": 18,
+      "height": 14,
+      "rx": 3,
+      "type": "rect",
+      "fill": "#F4C542"
+    },
+    {
+      "cx": 50,
+      "cy": 89,
+      "r": 5,
+      "type": "circle",
+      "fill": "#E0A800"
+    }
+  ]
+}

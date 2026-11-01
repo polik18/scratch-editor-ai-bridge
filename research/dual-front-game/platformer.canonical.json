@@ -1,0 +1,751 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Sky Gap",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [
+      {
+        "name": "Game state",
+        "value": "playing"
+      },
+      {
+        "name": "Falls",
+        "value": 0
+      }
+    ],
+    "lists": [],
+    "costumes": [
+      {
+        "name": "sky gap",
+        "dataFormat": "svg",
+        "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"480\" height=\"360\" viewBox=\"0 0 480 360\"><rect width=\"480\" height=\"360\" fill=\"#c4eafc\"/><circle cx=\"375\" cy=\"70\" r=\"32\" fill=\"#ffe59a\"/><path d=\"M0 295 H210 V360 H0 Z M300 295 H480 V360 H300 Z\" fill=\"#388a5c\"/><path d=\"M0 295 H210 M300 295 H480\" stroke=\"#235d45\" stroke-width=\"8\"/><path d=\"M400 160 V295 M400 160 L450 175 L400 190\" fill=\"#f27251\" stroke=\"#78433a\" stroke-width=\"5\"/><text x=\"240\" y=\"38\" text-anchor=\"middle\" fill=\"#173b54\" font-size=\"22\" font-family=\"sans-serif\">SKY GAP</text><text x=\"240\" y=\"60\" text-anchor=\"middle\" fill=\"#173b54\" font-size=\"13\" font-family=\"sans-serif\">ARROWS: MOVE   SPACE: JUMP</text></svg>",
+        "rotationCenterX": 240,
+        "rotationCenterY": 180
+      }
+    ],
+    "sounds": [],
+    "scripts": [
+      {
+        "position": {
+          "x": 50,
+          "y": 50
+        },
+        "blocks": [
+          {
+            "opcode": "event_whenflagclicked"
+          },
+          {
+            "opcode": "data_setvariableto",
+            "fields": {
+              "VARIABLE": "Game state"
+            },
+            "inputs": {
+              "VALUE": {
+                "type": "literal",
+                "value": "playing"
+              }
+            }
+          },
+          {
+            "opcode": "data_setvariableto",
+            "fields": {
+              "VARIABLE": "Falls"
+            },
+            "inputs": {
+              "VALUE": {
+                "type": "literal",
+                "value": 0
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Player",
+      "variables": [
+        {
+          "name": "vertical speed",
+          "value": 0
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "hero",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"50\" viewBox=\"0 0 40 50\"><rect x=\"2\" y=\"2\" width=\"36\" height=\"46\" rx=\"10\" fill=\"#36b8e8\" stroke=\"#142f4a\" stroke-width=\"3\"/><circle cx=\"13\" cy=\"19\" r=\"4\" fill=\"white\"/><circle cx=\"27\" cy=\"19\" r=\"4\" fill=\"white\"/><path d=\"M13 31 Q20 37 27 31\" stroke=\"#173b54\" stroke-width=\"2\" fill=\"none\"/></svg>",
+          "rotationCenterX": 20,
+          "rotationCenterY": 25
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "position": {
+            "x": 50,
+            "y": 50
+          },
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "motion_gotoxy",
+              "inputs": {
+                "X": {
+                  "type": "literal",
+                  "value": -180
+                },
+                "Y": {
+                  "type": "literal",
+                  "value": -90
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "vertical speed"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "control_forever",
+              "inputs": {
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "Game state"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": "playing"
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "motion_changeyby",
+                              "inputs": {
+                                "DY": {
+                                  "type": "variable",
+                                  "name": "vertical speed"
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "data_changevariableby",
+                              "fields": {
+                                "VARIABLE": "vertical speed"
+                              },
+                              "inputs": {
+                                "VALUE": {
+                                  "type": "literal",
+                                  "value": -1
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "control_if",
+                              "inputs": {
+                                "CONDITION": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "operator_and",
+                                    "inputs": {
+                                      "OPERAND1": {
+                                        "type": "block",
+                                        "block": {
+                                          "opcode": "operator_and",
+                                          "inputs": {
+                                            "OPERAND1": {
+                                              "type": "block",
+                                              "block": {
+                                                "opcode": "operator_or",
+                                                "inputs": {
+                                                  "OPERAND1": {
+                                                    "type": "block",
+                                                    "block": {
+                                                      "opcode": "operator_lt",
+                                                      "inputs": {
+                                                        "OPERAND1": {
+                                                          "type": "block",
+                                                          "block": {
+                                                            "opcode": "motion_xposition"
+                                                          }
+                                                        },
+                                                        "OPERAND2": {
+                                                          "type": "literal",
+                                                          "value": -29
+                                                        }
+                                                      }
+                                                    }
+                                                  },
+                                                  "OPERAND2": {
+                                                    "type": "block",
+                                                    "block": {
+                                                      "opcode": "operator_gt",
+                                                      "inputs": {
+                                                        "OPERAND1": {
+                                                          "type": "block",
+                                                          "block": {
+                                                            "opcode": "motion_xposition"
+                                                          }
+                                                        },
+                                                        "OPERAND2": {
+                                                          "type": "literal",
+                                                          "value": 59
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            },
+                                            "OPERAND2": {
+                                              "type": "block",
+                                              "block": {
+                                                "opcode": "operator_lt",
+                                                "inputs": {
+                                                  "OPERAND1": {
+                                                    "type": "block",
+                                                    "block": {
+                                                      "opcode": "motion_yposition"
+                                                    }
+                                                  },
+                                                  "OPERAND2": {
+                                                    "type": "literal",
+                                                    "value": -89
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "OPERAND2": {
+                                        "type": "block",
+                                        "block": {
+                                          "opcode": "operator_lt",
+                                          "inputs": {
+                                            "OPERAND1": {
+                                              "type": "variable",
+                                              "name": "vertical speed"
+                                            },
+                                            "OPERAND2": {
+                                              "type": "literal",
+                                              "value": 1
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "SUBSTACK": {
+                                  "type": "stack",
+                                  "blocks": [
+                                    {
+                                      "opcode": "motion_sety",
+                                      "inputs": {
+                                        "Y": {
+                                          "type": "literal",
+                                          "value": -90
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "opcode": "data_setvariableto",
+                                      "fields": {
+                                        "VARIABLE": "vertical speed"
+                                      },
+                                      "inputs": {
+                                        "VALUE": {
+                                          "type": "literal",
+                                          "value": 0
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "control_if",
+                              "inputs": {
+                                "CONDITION": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "operator_lt",
+                                    "inputs": {
+                                      "OPERAND1": {
+                                        "type": "block",
+                                        "block": {
+                                          "opcode": "motion_yposition"
+                                        }
+                                      },
+                                      "OPERAND2": {
+                                        "type": "literal",
+                                        "value": -165
+                                      }
+                                    }
+                                  }
+                                },
+                                "SUBSTACK": {
+                                  "type": "stack",
+                                  "blocks": [
+                                    {
+                                      "opcode": "motion_gotoxy",
+                                      "inputs": {
+                                        "X": {
+                                          "type": "literal",
+                                          "value": -180
+                                        },
+                                        "Y": {
+                                          "type": "literal",
+                                          "value": -90
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "opcode": "data_setvariableto",
+                                      "fields": {
+                                        "VARIABLE": "vertical speed"
+                                      },
+                                      "inputs": {
+                                        "VALUE": {
+                                          "type": "literal",
+                                          "value": 0
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "opcode": "data_changevariableby",
+                                      "fields": {
+                                        "VARIABLE": "Falls"
+                                      },
+                                      "inputs": {
+                                        "VALUE": {
+                                          "type": "literal",
+                                          "value": 1
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "control_if",
+                              "inputs": {
+                                "CONDITION": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "operator_and",
+                                    "inputs": {
+                                      "OPERAND1": {
+                                        "type": "block",
+                                        "block": {
+                                          "opcode": "operator_gt",
+                                          "inputs": {
+                                            "OPERAND1": {
+                                              "type": "block",
+                                              "block": {
+                                                "opcode": "motion_xposition"
+                                              }
+                                            },
+                                            "OPERAND2": {
+                                              "type": "literal",
+                                              "value": 155
+                                            }
+                                          }
+                                        }
+                                      },
+                                      "OPERAND2": {
+                                        "type": "block",
+                                        "block": {
+                                          "opcode": "operator_gt",
+                                          "inputs": {
+                                            "OPERAND1": {
+                                              "type": "block",
+                                              "block": {
+                                                "opcode": "motion_yposition"
+                                              }
+                                            },
+                                            "OPERAND2": {
+                                              "type": "literal",
+                                              "value": -100
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                },
+                                "SUBSTACK": {
+                                  "type": "stack",
+                                  "blocks": [
+                                    {
+                                      "opcode": "data_setvariableto",
+                                      "fields": {
+                                        "VARIABLE": "Game state"
+                                      },
+                                      "inputs": {
+                                        "VALUE": {
+                                          "type": "literal",
+                                          "value": "won"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "control_wait",
+                              "inputs": {
+                                "DURATION": {
+                                  "type": "literal",
+                                  "value": 0.03
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "position": {
+            "x": 550,
+            "y": 50
+          },
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "left arrow"
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_equals",
+                    "inputs": {
+                      "OPERAND1": {
+                        "type": "variable",
+                        "name": "Game state"
+                      },
+                      "OPERAND2": {
+                        "type": "literal",
+                        "value": "playing"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_changexby",
+                      "inputs": {
+                        "DX": {
+                          "type": "literal",
+                          "value": -8
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "position": {
+            "x": 1050,
+            "y": 50
+          },
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "right arrow"
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_equals",
+                    "inputs": {
+                      "OPERAND1": {
+                        "type": "variable",
+                        "name": "Game state"
+                      },
+                      "OPERAND2": {
+                        "type": "literal",
+                        "value": "playing"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_changexby",
+                      "inputs": {
+                        "DX": {
+                          "type": "literal",
+                          "value": 8
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "position": {
+            "x": 1550,
+            "y": 50
+          },
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "space"
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_and",
+                    "inputs": {
+                      "OPERAND1": {
+                        "type": "block",
+                        "block": {
+                          "opcode": "operator_equals",
+                          "inputs": {
+                            "OPERAND1": {
+                              "type": "variable",
+                              "name": "Game state"
+                            },
+                            "OPERAND2": {
+                              "type": "literal",
+                              "value": "playing"
+                            }
+                          }
+                        }
+                      },
+                      "OPERAND2": {
+                        "type": "block",
+                        "block": {
+                          "opcode": "operator_and",
+                          "inputs": {
+                            "OPERAND1": {
+                              "type": "block",
+                              "block": {
+                                "opcode": "operator_or",
+                                "inputs": {
+                                  "OPERAND1": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "operator_lt",
+                                      "inputs": {
+                                        "OPERAND1": {
+                                          "type": "block",
+                                          "block": {
+                                            "opcode": "motion_xposition"
+                                          }
+                                        },
+                                        "OPERAND2": {
+                                          "type": "literal",
+                                          "value": -29
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "OPERAND2": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "operator_gt",
+                                      "inputs": {
+                                        "OPERAND1": {
+                                          "type": "block",
+                                          "block": {
+                                            "opcode": "motion_xposition"
+                                          }
+                                        },
+                                        "OPERAND2": {
+                                          "type": "literal",
+                                          "value": 59
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            "OPERAND2": {
+                              "type": "block",
+                              "block": {
+                                "opcode": "operator_equals",
+                                "inputs": {
+                                  "OPERAND1": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "motion_yposition"
+                                    }
+                                  },
+                                  "OPERAND2": {
+                                    "type": "literal",
+                                    "value": -90
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "data_setvariableto",
+                      "fields": {
+                        "VARIABLE": "vertical speed"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "type": "literal",
+                          "value": 14
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": [],
+      "x": -180,
+      "y": -90,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "don't rotate"
+    },
+    {
+      "kind": "sprite",
+      "name": "Result",
+      "variables": [],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "playing",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"220\" height=\"50\" viewBox=\"0 0 220 50\"><text x=\"110\" y=\"33\" text-anchor=\"middle\" fill=\"#173b54\" font-family=\"sans-serif\" font-size=\"28\" font-weight=\"bold\"></text></svg>",
+          "rotationCenterX": 110,
+          "rotationCenterY": 25
+        },
+        {
+          "name": "won",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"220\" height=\"50\" viewBox=\"0 0 220 50\"><text x=\"110\" y=\"33\" text-anchor=\"middle\" fill=\"#173b54\" font-family=\"sans-serif\" font-size=\"28\" font-weight=\"bold\">YOU WIN!</text></svg>",
+          "rotationCenterX": 110,
+          "rotationCenterY": 25
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "position": {
+            "x": 50,
+            "y": 50
+          },
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "control_forever",
+              "inputs": {
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "looks_switchcostumeto",
+                      "inputs": {
+                        "COSTUME": {
+                          "type": "variable",
+                          "name": "Game state"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": [],
+      "x": 0,
+      "y": 40,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "don't rotate"
+    }
+  ],
+  "broadcasts": []
+}

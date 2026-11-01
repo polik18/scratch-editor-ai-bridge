@@ -23,4 +23,13 @@ describe('validateArchive', () => {
     expect(result.status).toBe('fail');
     expect(result.errors).toContain('Missing referenced asset entry "costume.svg"');
   });
+
+  it('rejects an asset whose bytes do not match its declared MD5', async () => {
+    const zip = new JSZip();
+    const assetId = '00000000000000000000000000000000';
+    zip.file('project.json', JSON.stringify({ targets: [{ costumes: [{ assetId, md5ext: `${assetId}.svg` }] }] }));
+    zip.file(`${assetId}.svg`, '<svg/>');
+    const result = await validateArchive(await zip.generateAsync({ type: 'uint8array' }));
+    expect(result.errors.join('\n')).toContain('checksum');
+  });
 });

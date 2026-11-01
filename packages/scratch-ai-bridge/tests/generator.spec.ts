@@ -54,6 +54,45 @@ describe('Generator', () => {
       await fs.rm(tempDir, { recursive: true, force: true });
     }, 10000);
 
+    it('reports the invalid rotation value and the allowed schema values', async () => {
+      const tempDir = await fs.mkdtemp('/tmp/scratch-invalid-rotation-');
+      try {
+        const designPath = path.join(tempDir, 'invalid.json');
+        const project = JSON.parse(await fs.readFile('src/core/ir/examples/06-platformer-core.json', 'utf8')) as { sprites: { rotationStyle: string }[] };
+        project.sprites[0].rotationStyle = 'all-around';
+        await fs.writeFile(designPath, JSON.stringify(project));
+        const result = await generateGame(designPath, { outputDir: tempDir });
+        expect(result.success).toBe(false);
+        expect(result.diagnostics[0]?.message).toContain('/sprites/0/rotationStyle');
+        expect(result.diagnostics[0]?.message).toContain('all-around');
+        expect(result.diagnostics[0]?.message).toContain('all around');
+        expect(result.diagnostics[0]?.message).toContain('left-right');
+      } finally {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    it.each([
+      ['unknown-variable', { opcode: 'data_setvariableto', fields: { VARIABLE: 'missing score' }, inputs: { VALUE: { type: 'literal', value: 1 } } }, '宣告同名變數'],
+      ['missing-input', { opcode: 'motion_movesteps' }, '補上必要'],
+      ['unknown-opcode', { opcode: 'motion_nonexistent' }, '支援的 opcode'],
+    ])('reports actionable guidance for %s', async (code, brokenBlock, suggestion) => {
+      const tempDir = await fs.mkdtemp('/tmp/scratch-invalid-semantic-');
+      try {
+        const designPath = path.join(tempDir, 'invalid.json');
+        const project = JSON.parse(await fs.readFile('src/core/ir/examples/06-platformer-core.json', 'utf8')) as { sprites: { scripts: { blocks: unknown[] }[] }[] };
+        project.sprites[0].scripts[1].blocks[1] = brokenBlock;
+        await fs.writeFile(designPath, JSON.stringify(project));
+        const result = await generateGame(designPath, { outputDir: tempDir });
+        expect(result.success).toBe(false);
+        expect(result.diagnostics[0]?.message).toContain('/sprites/0/scripts/1/blocks/1');
+        expect(result.diagnostics[0]?.message).toContain(code);
+        expect(result.diagnostics[0]?.message).toContain(suggestion);
+      } finally {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
     it('does not replace an existing output unless force is explicit', async () => {
       const tempDir = '/tmp/scratch-test-output-' + Date.now();
       await fs.mkdir(tempDir, { recursive: true });

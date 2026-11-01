@@ -11,6 +11,9 @@
 
 import { uid, uidTarget } from './uid.js';
 
+const legacyBlankSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="none"/></svg>';
+const blankSvg = legacyBlankSvg.replace('height="100">', 'height="100" viewBox="0 0 100 100">');
+
 // ─── Local type aliases (avoids importing all scratch/vm internals) ──────────
 
 /** Canonical input reference (used in block inputs). */
@@ -20,8 +23,8 @@ export interface CanonicalInputRef {
 }
 
 // Helper to convert to VM-compatible input format
-export function toVmInputRef(ref: CanonicalInputRef): Record<string, string> {
-  return { block: ref.block, shadow: ref.shadow };
+export function toVmInputRef(ref: CanonicalInputRef): (number | string)[] {
+  return ref.block === ref.shadow ? [1, ref.block] : ref.shadow ? [3, ref.block, ref.shadow] : [2, ref.block];
 }
 
 // ─── Session info types ──────────────────────────────────────────────────────
@@ -127,7 +130,7 @@ export class ScratchSession {
           size: 100,
           direction: 90,
           draggable: false,
-          rotationStyle: 'normal',
+          rotationStyle: 'all around',
           x: 0,
           y: 0,
         },
@@ -186,19 +189,53 @@ export class ScratchSession {
   async archive(): Promise<Uint8Array> {
     if (!this.project) throw new Error('No project loaded. Use newProject() or loadSb3() first.');
     const { default: JSZip } = await import('jszip');
+    const { createHash } = await import('node:crypto');
     const zip = new JSZip();
-    zip.file('project.json', JSON.stringify(this.project));
+    const project = structuredClone(this.project);
     if (this.zipEntries) {
       for (const [name, entry] of this.zipEntries) {
         if (name !== 'project.json') zip.file(name, await entry.async('uint8array'));
+      }
+    }
+    for (const [targetIndex, target] of ((project['targets'] ?? []) as Record<string, unknown>[]).entries()) {
+      for (const kind of ['costumes', 'sounds'] as const) {
+        for (const [index, asset] of (((target[kind] ?? []) as Record<string, unknown>[]).entries())) {
+          if (asset['data'] === undefined) continue;
+          const data = asset['data'];
+          const format = asset['dataFormat'];
+          const match = typeof data === 'string' ? /^data:[^;,]+;base64,([A-Za-z0-9+/]*={0,2})$/.exec(data) : null;
+          if (!match || !match[1] || match[1].length % 4 !== 0 || typeof format !== 'string' || !/^[a-z0-9]+$/.test(format)) {
+            throw new Error(`Invalid embedded asset at /targets/${targetIndex}/${kind}/${index}`);
+          }
+          let bytes = Buffer.from(match[1], 'base64');
+          if (format === 'svg' && bytes.toString('utf8') === legacyBlankSvg) bytes = Buffer.from(blankSvg);
+          const assetId = createHash('md5').update(bytes).digest('hex');
+          const md5ext = `${assetId}.${format}`;
+          zip.file(md5ext, bytes);
+          asset['assetId'] = assetId;
+          asset['md5ext'] = md5ext;
+          delete asset['data'];
+        }
       }
     }
     // The built-in blank costume is used by new Stage/sprite targets.
     const blankName = 'cd21514d0531fdffb22204e0ec5ed84a.svg';
     if (!zip.file(blankName) && this.targets().some((target) =>
       Array.isArray(target['costumes']) && target['costumes'].some((costume: { md5ext?: string }) => costume.md5ext === blankName))) {
-      zip.file(blankName, '<svg version="1.1" width="2" height="2" viewBox="-1 -1 2 2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n  <!-- Exported by Scratch - http://scratch.mit.edu/ -->\n</svg>\n');
+      const blankData = '<svg version="1.1" width="2" height="2" viewBox="-1 -1 2 2" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n  <!-- Exported by Scratch - http://scratch.mit.edu/ -->\n</svg>\n';
+      const assetId = createHash('md5').update(blankData).digest('hex');
+      const md5ext = `${assetId}.svg`;
+      zip.file(md5ext, blankData);
+      for (const target of (project['targets'] as Record<string, unknown>[])) {
+        for (const costume of ((target['costumes'] ?? []) as Record<string, unknown>[])) {
+          if (costume['md5ext'] === blankName) {
+            costume['assetId'] = assetId;
+            costume['md5ext'] = md5ext;
+          }
+        }
+      }
     }
+    zip.file('project.json', JSON.stringify(project));
     return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE', compressionOptions: { level: 6 } });
   }
 
@@ -302,13 +339,11 @@ export class ScratchSession {
       x = 0,
       y = 0,
       direction = 90,
-      rotationStyle = 'normal',
+      rotationStyle = 'all around',
       visible = true,
       draggable = false,
       size = 100,
     } = opts;
-
-    const blankCostumeId = 'cd21514d0531fdffb22204e0ec5ed84a';
     const newTarget: Record<string, unknown> = {
       id,
       name,
@@ -321,10 +356,9 @@ export class ScratchSession {
       currentCostume: 0,
       costumes: [
         {
-          assetId: blankCostumeId,
           name: `${name} costume1`,
-          md5ext: `${blankCostumeId}.svg`,
           dataFormat: 'svg',
+          data: `data:image/svg+xml;base64,${Buffer.from(blankSvg).toString('base64')}`,
           rotationCenterX: 47,
           rotationCenterY: 55,
           bitmapResolution: 1,
@@ -433,79 +467,17 @@ export class ScratchSession {
       shadow = false,
     } = opts;
 
-    // Convert inputs to CanonicalInputRef format
-    const convertedInputs: Record<string, CanonicalInputRef> = {};
+    // Scratch project.json stores input descriptors as arrays, not VM objects.
+    const convertedInputs: Record<string, unknown> = {};
     for (const [inputName, inputValue] of Object.entries(inputs)) {
-      if (typeof inputValue === 'object' && inputValue !== null) {
-        if ('block' in inputValue && 'shadow' in inputValue) {
-          // Already in CanonicalInputRef format
-          convertedInputs[inputName] = inputValue as CanonicalInputRef;
-        } else if (inputValue.type === 'literal' && 'value' in inputValue) {
-          // Literal value - create a reporter block
-          const reporterId = uid();
-          const shadowId = reporterId + '_shadow';
-          const reporterBlock: Record<string, unknown> = {
-            id: reporterId,
-            opcode: 'math_number',
-            fields: { NUM: [String(inputValue.value), null] },
-            inputs: {},
-            topLevel: true,
-            parent: null,
-            next: null,
-            shadow: false,
-          };
-          const shadowBlock: Record<string, unknown> = {
-            id: shadowId,
-            opcode: 'math_number',
-            fields: { NUM: [String(inputValue.value), null] },
-            inputs: {},
-            topLevel: true,
-            parent: null,
-            next: null,
-            shadow: true,
-          };
-          const blocks = (t['blocks'] as Record<string, Record<string, unknown>>) ?? {};
-          blocks[reporterId] = reporterBlock;
-          blocks[shadowId] = shadowBlock;
-          t['blocks'] = blocks;
-          convertedInputs[inputName] = { block: reporterId, shadow: shadowId };
-        } else if (inputValue.type === 'variable' && 'name' in inputValue) {
-          // Variable - create a variable reporter block
-          const varId = this.addVariable(targetName, String(inputValue.name));
-          const reporterId = uid();
-          const shadowId = reporterId + '_shadow';
-          const reporterBlock: Record<string, unknown> = {
-            id: reporterId,
-            opcode: 'data_variable',
-            fields: { VARIABLE: ['variableName', varId] },
-            inputs: {},
-            topLevel: true,
-            parent: null,
-            next: null,
-            shadow: false,
-          };
-          const shadowBlock: Record<string, unknown> = {
-            id: shadowId,
-            opcode: 'data_variable',
-            fields: { VARIABLE: ['variableName', varId] },
-            inputs: {},
-            topLevel: true,
-            parent: null,
-            next: null,
-            shadow: true,
-          };
-          const blocks = (t['blocks'] as Record<string, Record<string, unknown>>) ?? {};
-          blocks[reporterId] = reporterBlock;
-          blocks[shadowId] = shadowBlock;
-          t['blocks'] = blocks;
-          convertedInputs[inputName] = { block: reporterId, shadow: shadowId };
-        } else {
-          // Unknown format, use as-is (will fail validation)
-          convertedInputs[inputName] = inputValue as CanonicalInputRef;
-        }
+      if ('block' in inputValue && 'shadow' in inputValue) {
+        convertedInputs[inputName] = toVmInputRef(inputValue);
+      } else if (inputValue.type === 'literal') {
+        const value = inputValue.value;
+        convertedInputs[inputName] = [1, [typeof value === 'number' ? 4 : 10, String(value)]];
       } else {
-        // Not an object, use as-is (will fail validation)
-        convertedInputs[inputName] = inputValue as CanonicalInputRef;
+        const varId = this.addVariable(targetName, inputValue.name);
+        convertedInputs[inputName] = [3, [12, inputValue.name, varId], [10, '']];
       }
     }
 
@@ -570,10 +542,18 @@ export class ScratchSession {
       const b = blocks[current];
       if (!b) continue;
       if (b['next']) queue.push(b['next'] as string);
-      const inputs = b['inputs'] as Record<string, Record<string, string> | null> ?? {};
+      const inputs = b['inputs'] as Record<string, unknown> ?? {};
       for (const input of Object.values(inputs)) {
-        if (input?.['block']) toRemove.add(input['block']);
-        if (input?.['shadow']) toRemove.add(input['shadow']);
+        if (Array.isArray(input)) {
+          for (const ref of input.slice(1)) {
+            if (typeof ref === 'string' && blocks[ref]) queue.push(ref);
+          }
+        } else if (input && typeof input === 'object') {
+          const refs = input as { block?: unknown; shadow?: unknown };
+          for (const ref of [refs.block, refs.shadow]) {
+            if (typeof ref === 'string' && blocks[ref]) queue.push(ref);
+          }
+        }
       }
     }
 
@@ -581,23 +561,12 @@ export class ScratchSession {
     const blockToRemove = blocks[blockId];
     if (blockToRemove) {
       const prevBlockId = blockToRemove['parent'] as string | null;
-      const nextBlockId = blockToRemove['next'] as string | null;
-
-      // Update previous block's next pointer
       if (prevBlockId !== null && blocks[prevBlockId]) {
         const prevBlock = blocks[prevBlockId];
-        // If the previous block's next is this block, update it to this block's next
-        if (prevBlock['next'] === blockId) {
-          prevBlock['next'] = nextBlockId;
-        }
-      }
-
-      // Update next block's parent pointer
-      if (nextBlockId !== null && blocks[nextBlockId]) {
-        const nextBlock = blocks[nextBlockId];
-        // If the next block's parent is this block, update it to this block's parent
-        if (nextBlock['parent'] === blockId) {
-          nextBlock['parent'] = blockToRemove['parent'] as string | null;
+        if (prevBlock['next'] === blockId) prevBlock['next'] = null;
+        const inputs = (prevBlock['inputs'] ?? {}) as Record<string, unknown>;
+        for (const [name, input] of Object.entries(inputs)) {
+          if (Array.isArray(input) && input.slice(1).includes(blockId)) delete inputs[name];
         }
       }
     }
@@ -651,7 +620,7 @@ export class ScratchSession {
       if (patch.inputs === null) {
         b['inputs'] = {};
       } else {
-        const existingInputs = (b['inputs'] as Record<string, Record<string, string>>) ?? {};
+        const existingInputs = (b['inputs'] as Record<string, unknown>) ?? {};
         for (const [key, val] of Object.entries(patch.inputs)) {
           if (val === null) {
             delete existingInputs[key];
@@ -675,6 +644,33 @@ export class ScratchSession {
 
   // ─── Variable / List / Broadcast ─────────────────────────────────────────
 
+  /** Attach a detached reporter or stack to an input in the same target. */
+  connectInput(targetName: string, ownerId: string, inputName: string, childId: string): void {
+    const target = this.targetByName(targetName);
+    const blocks = target['blocks'] as Record<string, Record<string, unknown>>;
+    const owner = blocks[ownerId];
+    const child = blocks[childId];
+    if (!owner || !child) throw new Error(`Input connection requires existing blocks on "${targetName}".`);
+    if (!inputName || ownerId === childId || child['parent'] !== null || child['topLevel'] !== true) {
+      throw new Error('Input child must be a detached top-level block distinct from its owner.');
+    }
+    let ancestor: Record<string, unknown> | undefined = owner;
+    const seen = new Set<string>();
+    while (ancestor) {
+      const parent: unknown = ancestor['parent'];
+      if (typeof parent !== 'string') break;
+      if (parent === childId || seen.has(parent)) throw new Error('Input connection would create a block cycle.');
+      seen.add(parent);
+      ancestor = blocks[parent];
+    }
+    const inputs = owner['inputs'] as Record<string, unknown>;
+    if (inputs[inputName] !== undefined) throw new Error(`Input "${inputName}" is already connected.`);
+    inputs[inputName] = [2, childId];
+    child['parent'] = ownerId;
+    child['topLevel'] = false;
+    this.dirty = true;
+  }
+
   /**
    * Create a variable on a target.
    * @param targetName Target name
@@ -684,9 +680,9 @@ export class ScratchSession {
   addVariable(targetName: string, name: string, value: number | string = 0): string {
     const t = this.targetByName(targetName);
     const vars = (t['variables'] as Record<string, [string, number | string]> | undefined) ?? {};
-    if (vars[name]) throw new Error(`Variable "${name}" already exists on "${targetName}".`);
+    if (Object.values(vars).some(([existingName]) => existingName === name)) throw new Error(`Variable "${name}" already exists on "${targetName}".`);
     const id = uid();
-    vars[name] = [id, value];
+    vars[id] = [name, value];
     t['variables'] = vars;
     this.dirty = true;
     return id;

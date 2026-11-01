@@ -16,6 +16,7 @@
  *   npx tsx src/cli/session-cli.ts rm-sprite <name>
  *   npx tsx src/cli/session-cli.ts rename <oldName> <newName>
  *   npx tsx src/cli/session-cli.ts add-block <target> <opcode> [--field KEY VAL] [--input KEY BLOCKID SHADOWID] [--parent ID] [--next ID]
+ *   npx tsx src/cli/session-cli.ts connect-input <target> <owner-id> <input-name> <child-id>
  *   npx tsx src/cli/session-cli.ts rm-block <target> <blockId>
  *   npx tsx src/cli/session-cli.ts edit-block <target> <blockId> [--field KEY VAL] [--input KEY BLOCKID SHADOWID] [--parent ID] [--next ID]
  *   npx tsx src/cli/session-cli.ts add-var <target> <name> [value]
@@ -247,6 +248,20 @@ const commands: Record<string, CommandHandler> = {
         case '--x': opts.x = Number(rest[++i]); break;
         case '--y': opts.y = Number(rest[++i]); break;
         case '--direction': opts.direction = Number(rest[++i]); break;
+        case '--rotation-style': {
+          const val = rest[++i];
+          // Map user-friendly values to Scratch's actual values
+          const rotationMap: Record<string, string> = {
+            'normal': 'all around',
+            'left-right': 'left-right',
+            "don't rotate": "don't rotate"
+          };
+          if (!rotationMap[val]) {
+            throw new Error(`Invalid rotation-style: ${val}. Must be 'normal', 'left-right', or "don't rotate".`);
+          }
+          opts.rotationStyle = rotationMap[val] as AddSpriteOptions['rotationStyle'];
+          break;
+        }
         case '--visible': opts.visible = true; break;
         case '--draggable': opts.draggable = true; break;
         case '--size': opts.size = Number(rest[++i]); break;
@@ -281,7 +296,7 @@ const commands: Record<string, CommandHandler> = {
     if (!argv[0] || !argv[1]) throw new Error('Usage: add-block <target> <opcode> [--field KEY VAL] [--input KEY BLOCKID SHADOWID] [--parent ID] [--next ID]');
     const [target, opcode] = argv;
     const fields: Record<string, [string, string | null]> = {};
-    const inputs: Record<string, { block: string; shadow: string }> = {};
+    const inputs: Record<string, { block: string; shadow: string } | { type: 'literal'; value: string | number }> = {};
     let parent: string | null = null;
     let next: string | null = null;
 
@@ -299,6 +314,12 @@ const commands: Record<string, CommandHandler> = {
           const blockId = requireOptionValue(rest, ++i, '--input');
           const shadowId = rest[i + 1] && !rest[i + 1].startsWith('--') ? rest[++i] : blockId;
           inputs[k] = { block: blockId, shadow: shadowId };
+          break;
+        }
+        case '--input-literal': {
+          const k = requireOptionValue(rest, ++i, '--input-literal');
+          const v = requireOptionValue(rest, ++i, '--input-literal');
+          inputs[k] = { type: 'literal', value: v.trim() !== '' && Number.isFinite(Number(v)) ? Number(v) : v };
           break;
         }
         case '--parent': parent = requireOptionValue(rest, ++i, '--parent'); break;
@@ -362,6 +383,14 @@ const commands: Record<string, CommandHandler> = {
     });
     await saveSession(sess);
     console.log(`✓ Edited block "${blockId}" on "${target}"`);
+  },
+
+  async ['connect-input'](argv) {
+    if (argv.length !== 4) throw new Error('Usage: connect-input <target> <owner-block-id> <input-name> <child-block-id>');
+    const sess = await loadSession();
+    sess.connectInput(argv[0], argv[1], argv[2], argv[3]);
+    await saveSession(sess);
+    console.log(`✓ Connected input "${argv[2]}" on "${argv[1]}"`);
   },
 
   // ── Variable / List ──────────────────────────────────────────────────────
@@ -444,6 +473,21 @@ const commands: Record<string, CommandHandler> = {
     }
     const { openSessionInBrowser } = await import('./session/browser.js');
     await openSessionInBrowser(await loadSession(), { url, headless, ...(screenshot ? { screenshot } : {}) });
+  },
+  async ['open-camofox'](argv) {
+    let caller: 'codex' | 'hermes' | 'opencode' | 'antigravity' | undefined;
+    let url = 'http://localhost:8601/';
+    for (let i = 0; i < argv.length; i++) {
+      if (argv[i] === '--caller') {
+        const value = requireOptionValue(argv, ++i, '--caller');
+        if (!['codex', 'hermes', 'opencode', 'antigravity'].includes(value)) throw new Error('Invalid Camoufox caller.');
+        caller = value as typeof caller;
+      } else if (argv[i] === '--url') url = requireOptionValue(argv, ++i, '--url');
+      else throw new Error(`Unknown open-camofox option: ${argv[i]}`);
+    }
+    if (!caller) throw new Error('Usage: open-camofox --caller <codex|hermes|opencode|antigravity> [--url <local-gui-url>]');
+    const { openInCamofox } = await import('./session/camofox.js');
+    await openInCamofox(await loadSession(), caller, url);
   },
   // ── NLP Parse ────────────────────────────────────────────────────────────
 

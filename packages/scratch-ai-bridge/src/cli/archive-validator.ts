@@ -3,6 +3,8 @@
  */
 
 import JSZip from 'jszip';
+import { md5 } from '@noble/hashes/legacy.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
 import type { RawArchiveIR } from '../core/ir/raw-archive.js';
 
 /**
@@ -47,7 +49,7 @@ export async function validateArchive(archive: Uint8Array): Promise<ArchiveValid
     const hasEntries = entryCount > 0;
     
     const project = projectJsonEntry ? JSON.parse(await projectJsonEntry.async('string')) as {
-      targets?: { costumes?: { md5ext?: unknown }[]; sounds?: { md5ext?: unknown }[] }[];
+      targets?: { costumes?: { md5ext?: unknown; assetId?: unknown }[]; sounds?: { md5ext?: unknown; assetId?: unknown }[] }[];
     } : undefined;
     const assetNames = new Set<string>();
     for (const [targetIndex, target] of (project?.targets ?? []).entries()) {
@@ -58,7 +60,15 @@ export async function validateArchive(archive: Uint8Array): Promise<ArchiveValid
             continue;
           }
           assetNames.add(asset.md5ext);
-          if (!zip.file(asset.md5ext)) errors.push(`Missing referenced asset entry "${asset.md5ext}"`);
+          const entry = zip.file(asset.md5ext);
+          if (!entry) errors.push(`Missing referenced asset entry "${asset.md5ext}"`);
+          else if (typeof asset.assetId === 'string' && /^[a-f0-9]{32}$/i.test(asset.assetId)) {
+            if (!asset.md5ext.toLowerCase().startsWith(`${asset.assetId.toLowerCase()}.`)) {
+              errors.push(`Asset filename does not match assetId for "${asset.md5ext}"`);
+            }
+            const actual = bytesToHex(md5(await entry.async('uint8array')));
+            if (actual !== asset.assetId.toLowerCase()) errors.push(`Asset checksum mismatch for "${asset.md5ext}"`);
+          }
         }
       }
     }

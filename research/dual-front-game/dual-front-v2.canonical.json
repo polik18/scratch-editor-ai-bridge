@@ -1,0 +1,2350 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Dual Front Arena",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [
+      {
+        "name": "P1 health",
+        "value": 100
+      },
+      {
+        "name": "P2 health",
+        "value": 100
+      },
+      {
+        "name": "Game state",
+        "value": "playing"
+      }
+    ],
+    "lists": [],
+    "costumes": [
+      {
+        "name": "arena",
+        "dataFormat": "svg",
+        "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"480\" height=\"360\" viewBox=\"0 0 480 360\"><rect width=\"480\" height=\"360\" fill=\"#111d36\"/><circle cx=\"240\" cy=\"105\" r=\"75\" fill=\"#273f6c\"/><path d=\"M0 250 L480 250 L480 360 L0 360 Z\" fill=\"#273750\"/><path d=\"M0 250 H480 M0 290 H480 M120 250 L60 360 M240 250 V360 M360 250 L420 360\" stroke=\"#6384ad\" stroke-width=\"3\"/><text x=\"240\" y=\"48\" text-anchor=\"middle\" fill=\"#f4f6ff\" font-size=\"24\" font-family=\"sans-serif\">DUAL FRONT</text><text x=\"240\" y=\"76\" text-anchor=\"middle\" fill=\"#c5d5ed\" font-size=\"12\" font-family=\"sans-serif\">P1: A D / Q / F    P2: arrows / up / down</text></svg>",
+        "rotationCenterX": 240,
+        "rotationCenterY": 180
+      }
+    ],
+    "sounds": [],
+    "scripts": [
+      {
+        "blocks": [
+          {
+            "opcode": "event_whenflagclicked"
+          },
+          {
+            "opcode": "data_setvariableto",
+            "fields": {
+              "VARIABLE": "P1 health"
+            },
+            "inputs": {
+              "VALUE": {
+                "type": "literal",
+                "value": 100
+              }
+            }
+          },
+          {
+            "opcode": "data_setvariableto",
+            "fields": {
+              "VARIABLE": "P2 health"
+            },
+            "inputs": {
+              "VALUE": {
+                "type": "literal",
+                "value": 100
+              }
+            }
+          },
+          {
+            "opcode": "data_setvariableto",
+            "fields": {
+              "VARIABLE": "Game state"
+            },
+            "inputs": {
+              "VALUE": {
+                "type": "literal",
+                "value": "playing"
+              }
+            }
+          }
+        ],
+        "position": {
+          "x": 50,
+          "y": 50
+        }
+      }
+    ],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Player 1",
+      "variables": [
+        {
+          "name": "P1 mode",
+          "value": "light"
+        },
+        {
+          "name": "P1 attack lock",
+          "value": 0
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "light",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"110\" viewBox=\"0 0 100 110\"><path d=\"M30 79 L24 103 H40 L47 81 M54 81 L61 103 H77 L68 79\" fill=\"#263859\" stroke=\"#111b30\" stroke-width=\"3\"/><path d=\"M31 49 Q50 38 69 49 L68 83 Q50 91 32 83 Z\" fill=\"#48b8ff\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M34 54 L22 73 L30 78 L43 62\" fill=\"#48b8ff\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M60 55 L73 69 L65 77 L55 65\" fill=\"#48b8ff\" stroke=\"#182342\" stroke-width=\"3\"/><circle cx=\"50\" cy=\"29\" r=\"22\" fill=\"#48b8ff\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M32 25 Q50 14 68 25 L65 35 Q50 40 35 35 Z\" fill=\"#d5f4ff\"/><circle cx=\"43\" cy=\"29\" r=\"3\" fill=\"#172341\"/><circle cx=\"57\" cy=\"29\" r=\"3\" fill=\"#172341\"/><path d=\"M44 39 Q50 43 56 39\" fill=\"none\" stroke=\"#182342\" stroke-width=\"2\"/><path d=\"M44 54 L50 48 L56 54 L50 61 Z\" fill=\"#d5f4ff\"/></svg>",
+          "rotationCenterX": 50,
+          "rotationCenterY": 55
+        },
+        {
+          "name": "light-attack",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"110\" viewBox=\"0 0 100 110\"><path d=\"M30 79 L24 103 H40 L47 81 M54 81 L61 103 H77 L68 79\" fill=\"#263859\" stroke=\"#111b30\" stroke-width=\"3\"/><path d=\"M31 49 Q50 38 69 49 L68 83 Q50 91 32 83 Z\" fill=\"#48b8ff\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M34 54 L22 73 L30 78 L43 62\" fill=\"#48b8ff\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M60 55 L91 47 L96 55 L66 65\" fill=\"#48b8ff\" stroke=\"#182342\" stroke-width=\"3\"/><circle cx=\"50\" cy=\"29\" r=\"22\" fill=\"#48b8ff\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M32 25 Q50 14 68 25 L65 35 Q50 40 35 35 Z\" fill=\"#d5f4ff\"/><circle cx=\"43\" cy=\"29\" r=\"3\" fill=\"#172341\"/><circle cx=\"57\" cy=\"29\" r=\"3\" fill=\"#172341\"/><path d=\"M44 39 Q50 43 56 39\" fill=\"none\" stroke=\"#182342\" stroke-width=\"2\"/><path d=\"M44 54 L50 48 L56 54 L50 61 Z\" fill=\"#d5f4ff\"/></svg>",
+          "rotationCenterX": 50,
+          "rotationCenterY": 55
+        },
+        {
+          "name": "dark",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"110\" viewBox=\"0 0 100 110\"><path d=\"M30 79 L24 103 H40 L47 81 M54 81 L61 103 H77 L68 79\" fill=\"#263859\" stroke=\"#111b30\" stroke-width=\"3\"/><path d=\"M31 49 Q50 38 69 49 L68 83 Q50 91 32 83 Z\" fill=\"#6951ad\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M34 54 L22 73 L30 78 L43 62\" fill=\"#6951ad\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M60 55 L73 69 L65 77 L55 65\" fill=\"#6951ad\" stroke=\"#182342\" stroke-width=\"3\"/><circle cx=\"50\" cy=\"29\" r=\"22\" fill=\"#6951ad\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M32 25 Q50 14 68 25 L65 35 Q50 40 35 35 Z\" fill=\"#e4d5ff\"/><circle cx=\"43\" cy=\"29\" r=\"3\" fill=\"#172341\"/><circle cx=\"57\" cy=\"29\" r=\"3\" fill=\"#172341\"/><path d=\"M44 39 Q50 43 56 39\" fill=\"none\" stroke=\"#182342\" stroke-width=\"2\"/><path d=\"M44 54 L50 48 L56 54 L50 61 Z\" fill=\"#e4d5ff\"/></svg>",
+          "rotationCenterX": 50,
+          "rotationCenterY": 55
+        },
+        {
+          "name": "dark-attack",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"110\" viewBox=\"0 0 100 110\"><path d=\"M30 79 L24 103 H40 L47 81 M54 81 L61 103 H77 L68 79\" fill=\"#263859\" stroke=\"#111b30\" stroke-width=\"3\"/><path d=\"M31 49 Q50 38 69 49 L68 83 Q50 91 32 83 Z\" fill=\"#6951ad\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M34 54 L22 73 L30 78 L43 62\" fill=\"#6951ad\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M60 55 L91 47 L96 55 L66 65\" fill=\"#6951ad\" stroke=\"#182342\" stroke-width=\"3\"/><circle cx=\"50\" cy=\"29\" r=\"22\" fill=\"#6951ad\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M32 25 Q50 14 68 25 L65 35 Q50 40 35 35 Z\" fill=\"#e4d5ff\"/><circle cx=\"43\" cy=\"29\" r=\"3\" fill=\"#172341\"/><circle cx=\"57\" cy=\"29\" r=\"3\" fill=\"#172341\"/><path d=\"M44 39 Q50 43 56 39\" fill=\"none\" stroke=\"#182342\" stroke-width=\"2\"/><path d=\"M44 54 L50 48 L56 54 L50 61 Z\" fill=\"#e4d5ff\"/></svg>",
+          "rotationCenterX": 50,
+          "rotationCenterY": 55
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "motion_gotoxy",
+              "inputs": {
+                "X": {
+                  "type": "literal",
+                  "value": -130
+                },
+                "Y": {
+                  "type": "literal",
+                  "value": -75
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "P1 mode"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": "light"
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "P1 attack lock"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "motion_pointtowards",
+              "inputs": {
+                "TOWARDS": {
+                  "type": "literal",
+                  "value": "Player 2"
+                }
+              }
+            },
+            {
+              "opcode": "looks_switchcostumeto",
+              "inputs": {
+                "COSTUME": {
+                  "type": "variable",
+                  "name": "P1 mode"
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 50,
+            "y": 50
+          }
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "a"
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_equals",
+                    "inputs": {
+                      "OPERAND1": {
+                        "type": "variable",
+                        "name": "Game state"
+                      },
+                      "OPERAND2": {
+                        "type": "literal",
+                        "value": "playing"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_changexby",
+                      "inputs": {
+                        "DX": {
+                          "type": "literal",
+                          "value": -12
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "motion_pointtowards",
+                      "inputs": {
+                        "TOWARDS": {
+                          "type": "literal",
+                          "value": "Player 2"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 490,
+            "y": 50
+          }
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "d"
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_equals",
+                    "inputs": {
+                      "OPERAND1": {
+                        "type": "variable",
+                        "name": "Game state"
+                      },
+                      "OPERAND2": {
+                        "type": "literal",
+                        "value": "playing"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_changexby",
+                      "inputs": {
+                        "DX": {
+                          "type": "literal",
+                          "value": 12
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "motion_pointtowards",
+                      "inputs": {
+                        "TOWARDS": {
+                          "type": "literal",
+                          "value": "Player 2"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 930,
+            "y": 50
+          }
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "q"
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_equals",
+                    "inputs": {
+                      "OPERAND1": {
+                        "type": "variable",
+                        "name": "Game state"
+                      },
+                      "OPERAND2": {
+                        "type": "literal",
+                        "value": "playing"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "control_if_else",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 mode"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": "light"
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "data_setvariableto",
+                              "fields": {
+                                "VARIABLE": "P1 mode"
+                              },
+                              "inputs": {
+                                "VALUE": {
+                                  "type": "literal",
+                                  "value": "dark"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "SUBSTACK2": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "data_setvariableto",
+                              "fields": {
+                                "VARIABLE": "P1 mode"
+                              },
+                              "inputs": {
+                                "VALUE": {
+                                  "type": "literal",
+                                  "value": "light"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "looks_switchcostumeto",
+                      "inputs": {
+                        "COSTUME": {
+                          "type": "variable",
+                          "name": "P1 mode"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 1370,
+            "y": 50
+          }
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "f"
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_and",
+                    "inputs": {
+                      "OPERAND1": {
+                        "type": "block",
+                        "block": {
+                          "opcode": "operator_equals",
+                          "inputs": {
+                            "OPERAND1": {
+                              "type": "variable",
+                              "name": "Game state"
+                            },
+                            "OPERAND2": {
+                              "type": "literal",
+                              "value": "playing"
+                            }
+                          }
+                        }
+                      },
+                      "OPERAND2": {
+                        "type": "block",
+                        "block": {
+                          "opcode": "operator_equals",
+                          "inputs": {
+                            "OPERAND1": {
+                              "type": "variable",
+                              "name": "P1 attack lock"
+                            },
+                            "OPERAND2": {
+                              "type": "literal",
+                              "value": 0
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "data_setvariableto",
+                      "fields": {
+                        "VARIABLE": "P1 attack lock"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "type": "literal",
+                          "value": 1
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "motion_pointtowards",
+                      "inputs": {
+                        "TOWARDS": {
+                          "type": "literal",
+                          "value": "Player 2"
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "looks_switchcostumeto",
+                      "inputs": {
+                        "COSTUME": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_join",
+                            "inputs": {
+                              "STRING1": {
+                                "type": "variable",
+                                "name": "P1 mode"
+                              },
+                              "STRING2": {
+                                "type": "literal",
+                                "value": "-attack"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_lt",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "block",
+                                "block": {
+                                  "opcode": "sensing_distanceto",
+                                  "inputs": {
+                                    "DISTANCETOMENU": {
+                                      "type": "literal",
+                                      "value": "Player 2"
+                                    }
+                                  }
+                                }
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 76
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "data_changevariableby",
+                              "fields": {
+                                "VARIABLE": "P2 health"
+                              },
+                              "inputs": {
+                                "VALUE": {
+                                  "type": "literal",
+                                  "value": -10
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "control_if",
+                              "inputs": {
+                                "CONDITION": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "operator_lt",
+                                    "inputs": {
+                                      "OPERAND1": {
+                                        "type": "variable",
+                                        "name": "P2 health"
+                                      },
+                                      "OPERAND2": {
+                                        "type": "literal",
+                                        "value": 1
+                                      }
+                                    }
+                                  }
+                                },
+                                "SUBSTACK": {
+                                  "type": "stack",
+                                  "blocks": [
+                                    {
+                                      "opcode": "data_setvariableto",
+                                      "fields": {
+                                        "VARIABLE": "P2 health"
+                                      },
+                                      "inputs": {
+                                        "VALUE": {
+                                          "type": "literal",
+                                          "value": 0
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "opcode": "data_setvariableto",
+                                      "fields": {
+                                        "VARIABLE": "Game state"
+                                      },
+                                      "inputs": {
+                                        "VALUE": {
+                                          "type": "literal",
+                                          "value": "P1 wins"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_wait",
+                      "inputs": {
+                        "DURATION": {
+                          "type": "literal",
+                          "value": 0.35
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "looks_switchcostumeto",
+                      "inputs": {
+                        "COSTUME": {
+                          "type": "variable",
+                          "name": "P1 mode"
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "data_setvariableto",
+                      "fields": {
+                        "VARIABLE": "P1 attack lock"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "type": "literal",
+                          "value": 0
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 1810,
+            "y": 50
+          }
+        }
+      ],
+      "procedures": [],
+      "x": -130,
+      "y": -75,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "left-right"
+    },
+    {
+      "kind": "sprite",
+      "name": "Player 2",
+      "variables": [
+        {
+          "name": "P2 mode",
+          "value": "light"
+        },
+        {
+          "name": "P2 attack lock",
+          "value": 0
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "light",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"110\" viewBox=\"0 0 100 110\"><path d=\"M30 79 L24 103 H40 L47 81 M54 81 L61 103 H77 L68 79\" fill=\"#263859\" stroke=\"#111b30\" stroke-width=\"3\"/><path d=\"M31 49 Q50 38 69 49 L68 83 Q50 91 32 83 Z\" fill=\"#ffb052\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M34 54 L22 73 L30 78 L43 62\" fill=\"#ffb052\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M60 55 L73 69 L65 77 L55 65\" fill=\"#ffb052\" stroke=\"#182342\" stroke-width=\"3\"/><circle cx=\"50\" cy=\"29\" r=\"22\" fill=\"#ffb052\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M32 25 Q50 14 68 25 L65 35 Q50 40 35 35 Z\" fill=\"#d5f4ff\"/><circle cx=\"43\" cy=\"29\" r=\"3\" fill=\"#172341\"/><circle cx=\"57\" cy=\"29\" r=\"3\" fill=\"#172341\"/><path d=\"M44 39 Q50 43 56 39\" fill=\"none\" stroke=\"#182342\" stroke-width=\"2\"/><path d=\"M44 54 L50 48 L56 54 L50 61 Z\" fill=\"#d5f4ff\"/></svg>",
+          "rotationCenterX": 50,
+          "rotationCenterY": 55
+        },
+        {
+          "name": "light-attack",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"110\" viewBox=\"0 0 100 110\"><path d=\"M30 79 L24 103 H40 L47 81 M54 81 L61 103 H77 L68 79\" fill=\"#263859\" stroke=\"#111b30\" stroke-width=\"3\"/><path d=\"M31 49 Q50 38 69 49 L68 83 Q50 91 32 83 Z\" fill=\"#ffb052\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M34 54 L22 73 L30 78 L43 62\" fill=\"#ffb052\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M60 55 L91 47 L96 55 L66 65\" fill=\"#ffb052\" stroke=\"#182342\" stroke-width=\"3\"/><circle cx=\"50\" cy=\"29\" r=\"22\" fill=\"#ffb052\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M32 25 Q50 14 68 25 L65 35 Q50 40 35 35 Z\" fill=\"#d5f4ff\"/><circle cx=\"43\" cy=\"29\" r=\"3\" fill=\"#172341\"/><circle cx=\"57\" cy=\"29\" r=\"3\" fill=\"#172341\"/><path d=\"M44 39 Q50 43 56 39\" fill=\"none\" stroke=\"#182342\" stroke-width=\"2\"/><path d=\"M44 54 L50 48 L56 54 L50 61 Z\" fill=\"#d5f4ff\"/></svg>",
+          "rotationCenterX": 50,
+          "rotationCenterY": 55
+        },
+        {
+          "name": "dark",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"110\" viewBox=\"0 0 100 110\"><path d=\"M30 79 L24 103 H40 L47 81 M54 81 L61 103 H77 L68 79\" fill=\"#263859\" stroke=\"#111b30\" stroke-width=\"3\"/><path d=\"M31 49 Q50 38 69 49 L68 83 Q50 91 32 83 Z\" fill=\"#bb485c\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M34 54 L22 73 L30 78 L43 62\" fill=\"#bb485c\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M60 55 L73 69 L65 77 L55 65\" fill=\"#bb485c\" stroke=\"#182342\" stroke-width=\"3\"/><circle cx=\"50\" cy=\"29\" r=\"22\" fill=\"#bb485c\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M32 25 Q50 14 68 25 L65 35 Q50 40 35 35 Z\" fill=\"#e4d5ff\"/><circle cx=\"43\" cy=\"29\" r=\"3\" fill=\"#172341\"/><circle cx=\"57\" cy=\"29\" r=\"3\" fill=\"#172341\"/><path d=\"M44 39 Q50 43 56 39\" fill=\"none\" stroke=\"#182342\" stroke-width=\"2\"/><path d=\"M44 54 L50 48 L56 54 L50 61 Z\" fill=\"#e4d5ff\"/></svg>",
+          "rotationCenterX": 50,
+          "rotationCenterY": 55
+        },
+        {
+          "name": "dark-attack",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"100\" height=\"110\" viewBox=\"0 0 100 110\"><path d=\"M30 79 L24 103 H40 L47 81 M54 81 L61 103 H77 L68 79\" fill=\"#263859\" stroke=\"#111b30\" stroke-width=\"3\"/><path d=\"M31 49 Q50 38 69 49 L68 83 Q50 91 32 83 Z\" fill=\"#bb485c\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M34 54 L22 73 L30 78 L43 62\" fill=\"#bb485c\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M60 55 L91 47 L96 55 L66 65\" fill=\"#bb485c\" stroke=\"#182342\" stroke-width=\"3\"/><circle cx=\"50\" cy=\"29\" r=\"22\" fill=\"#bb485c\" stroke=\"#182342\" stroke-width=\"3\"/><path d=\"M32 25 Q50 14 68 25 L65 35 Q50 40 35 35 Z\" fill=\"#e4d5ff\"/><circle cx=\"43\" cy=\"29\" r=\"3\" fill=\"#172341\"/><circle cx=\"57\" cy=\"29\" r=\"3\" fill=\"#172341\"/><path d=\"M44 39 Q50 43 56 39\" fill=\"none\" stroke=\"#182342\" stroke-width=\"2\"/><path d=\"M44 54 L50 48 L56 54 L50 61 Z\" fill=\"#e4d5ff\"/></svg>",
+          "rotationCenterX": 50,
+          "rotationCenterY": 55
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "motion_gotoxy",
+              "inputs": {
+                "X": {
+                  "type": "literal",
+                  "value": 130
+                },
+                "Y": {
+                  "type": "literal",
+                  "value": -75
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "P2 mode"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": "light"
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "P2 attack lock"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "motion_pointtowards",
+              "inputs": {
+                "TOWARDS": {
+                  "type": "literal",
+                  "value": "Player 1"
+                }
+              }
+            },
+            {
+              "opcode": "looks_switchcostumeto",
+              "inputs": {
+                "COSTUME": {
+                  "type": "variable",
+                  "name": "P2 mode"
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 50,
+            "y": 50
+          }
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "left arrow"
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_equals",
+                    "inputs": {
+                      "OPERAND1": {
+                        "type": "variable",
+                        "name": "Game state"
+                      },
+                      "OPERAND2": {
+                        "type": "literal",
+                        "value": "playing"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_changexby",
+                      "inputs": {
+                        "DX": {
+                          "type": "literal",
+                          "value": -12
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "motion_pointtowards",
+                      "inputs": {
+                        "TOWARDS": {
+                          "type": "literal",
+                          "value": "Player 1"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 490,
+            "y": 50
+          }
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "right arrow"
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_equals",
+                    "inputs": {
+                      "OPERAND1": {
+                        "type": "variable",
+                        "name": "Game state"
+                      },
+                      "OPERAND2": {
+                        "type": "literal",
+                        "value": "playing"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_changexby",
+                      "inputs": {
+                        "DX": {
+                          "type": "literal",
+                          "value": 12
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "motion_pointtowards",
+                      "inputs": {
+                        "TOWARDS": {
+                          "type": "literal",
+                          "value": "Player 1"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 930,
+            "y": 50
+          }
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "up arrow"
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_equals",
+                    "inputs": {
+                      "OPERAND1": {
+                        "type": "variable",
+                        "name": "Game state"
+                      },
+                      "OPERAND2": {
+                        "type": "literal",
+                        "value": "playing"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "control_if_else",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 mode"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": "light"
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "data_setvariableto",
+                              "fields": {
+                                "VARIABLE": "P2 mode"
+                              },
+                              "inputs": {
+                                "VALUE": {
+                                  "type": "literal",
+                                  "value": "dark"
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "SUBSTACK2": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "data_setvariableto",
+                              "fields": {
+                                "VARIABLE": "P2 mode"
+                              },
+                              "inputs": {
+                                "VALUE": {
+                                  "type": "literal",
+                                  "value": "light"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "looks_switchcostumeto",
+                      "inputs": {
+                        "COSTUME": {
+                          "type": "variable",
+                          "name": "P2 mode"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 1370,
+            "y": 50
+          }
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "down arrow"
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_and",
+                    "inputs": {
+                      "OPERAND1": {
+                        "type": "block",
+                        "block": {
+                          "opcode": "operator_equals",
+                          "inputs": {
+                            "OPERAND1": {
+                              "type": "variable",
+                              "name": "Game state"
+                            },
+                            "OPERAND2": {
+                              "type": "literal",
+                              "value": "playing"
+                            }
+                          }
+                        }
+                      },
+                      "OPERAND2": {
+                        "type": "block",
+                        "block": {
+                          "opcode": "operator_equals",
+                          "inputs": {
+                            "OPERAND1": {
+                              "type": "variable",
+                              "name": "P2 attack lock"
+                            },
+                            "OPERAND2": {
+                              "type": "literal",
+                              "value": 0
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "data_setvariableto",
+                      "fields": {
+                        "VARIABLE": "P2 attack lock"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "type": "literal",
+                          "value": 1
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "motion_pointtowards",
+                      "inputs": {
+                        "TOWARDS": {
+                          "type": "literal",
+                          "value": "Player 1"
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "looks_switchcostumeto",
+                      "inputs": {
+                        "COSTUME": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_join",
+                            "inputs": {
+                              "STRING1": {
+                                "type": "variable",
+                                "name": "P2 mode"
+                              },
+                              "STRING2": {
+                                "type": "literal",
+                                "value": "-attack"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_lt",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "block",
+                                "block": {
+                                  "opcode": "sensing_distanceto",
+                                  "inputs": {
+                                    "DISTANCETOMENU": {
+                                      "type": "literal",
+                                      "value": "Player 1"
+                                    }
+                                  }
+                                }
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 76
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "data_changevariableby",
+                              "fields": {
+                                "VARIABLE": "P1 health"
+                              },
+                              "inputs": {
+                                "VALUE": {
+                                  "type": "literal",
+                                  "value": -10
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "control_if",
+                              "inputs": {
+                                "CONDITION": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "operator_lt",
+                                    "inputs": {
+                                      "OPERAND1": {
+                                        "type": "variable",
+                                        "name": "P1 health"
+                                      },
+                                      "OPERAND2": {
+                                        "type": "literal",
+                                        "value": 1
+                                      }
+                                    }
+                                  }
+                                },
+                                "SUBSTACK": {
+                                  "type": "stack",
+                                  "blocks": [
+                                    {
+                                      "opcode": "data_setvariableto",
+                                      "fields": {
+                                        "VARIABLE": "P1 health"
+                                      },
+                                      "inputs": {
+                                        "VALUE": {
+                                          "type": "literal",
+                                          "value": 0
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "opcode": "data_setvariableto",
+                                      "fields": {
+                                        "VARIABLE": "Game state"
+                                      },
+                                      "inputs": {
+                                        "VALUE": {
+                                          "type": "literal",
+                                          "value": "P2 wins"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_wait",
+                      "inputs": {
+                        "DURATION": {
+                          "type": "literal",
+                          "value": 0.35
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "looks_switchcostumeto",
+                      "inputs": {
+                        "COSTUME": {
+                          "type": "variable",
+                          "name": "P2 mode"
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "data_setvariableto",
+                      "fields": {
+                        "VARIABLE": "P2 attack lock"
+                      },
+                      "inputs": {
+                        "VALUE": {
+                          "type": "literal",
+                          "value": 0
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 1810,
+            "y": 50
+          }
+        }
+      ],
+      "procedures": [],
+      "x": 130,
+      "y": -75,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "left-right"
+    },
+    {
+      "kind": "sprite",
+      "name": "P1 HUD",
+      "variables": [],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "0",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"0\" height=\"18\" rx=\"4\" fill=\"#48b8ff\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P1  0 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "10",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"15\" height=\"18\" rx=\"4\" fill=\"#48b8ff\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P1  10 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "20",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"30\" height=\"18\" rx=\"4\" fill=\"#48b8ff\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P1  20 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "30",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"45\" height=\"18\" rx=\"4\" fill=\"#48b8ff\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P1  30 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "40",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"60\" height=\"18\" rx=\"4\" fill=\"#48b8ff\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P1  40 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "50",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"76\" height=\"18\" rx=\"4\" fill=\"#48b8ff\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P1  50 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "60",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"91\" height=\"18\" rx=\"4\" fill=\"#48b8ff\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P1  60 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "70",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"106\" height=\"18\" rx=\"4\" fill=\"#48b8ff\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P1  70 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "80",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"121\" height=\"18\" rx=\"4\" fill=\"#48b8ff\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P1  80 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "90",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"136\" height=\"18\" rx=\"4\" fill=\"#48b8ff\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P1  90 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "100",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"152\" height=\"18\" rx=\"4\" fill=\"#48b8ff\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P1  100 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "control_forever",
+              "inputs": {
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 0
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "0"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 10
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "10"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 20
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "20"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 30
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "30"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 40
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "40"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 50
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "50"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 60
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "60"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 70
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "70"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 80
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "80"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 90
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "90"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P1 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 100
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "100"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 50,
+            "y": 50
+          }
+        }
+      ],
+      "procedures": [],
+      "x": -140,
+      "y": 65,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "don't rotate"
+    },
+    {
+      "kind": "sprite",
+      "name": "P2 HUD",
+      "variables": [],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "0",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"0\" height=\"18\" rx=\"4\" fill=\"#ffb052\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P2  0 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "10",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"15\" height=\"18\" rx=\"4\" fill=\"#ffb052\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P2  10 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "20",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"30\" height=\"18\" rx=\"4\" fill=\"#ffb052\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P2  20 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "30",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"45\" height=\"18\" rx=\"4\" fill=\"#ffb052\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P2  30 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "40",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"60\" height=\"18\" rx=\"4\" fill=\"#ffb052\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P2  40 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "50",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"76\" height=\"18\" rx=\"4\" fill=\"#ffb052\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P2  50 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "60",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"91\" height=\"18\" rx=\"4\" fill=\"#ffb052\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P2  60 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "70",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"106\" height=\"18\" rx=\"4\" fill=\"#ffb052\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P2  70 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "80",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"121\" height=\"18\" rx=\"4\" fill=\"#ffb052\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P2  80 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "90",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"136\" height=\"18\" rx=\"4\" fill=\"#ffb052\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P2  90 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        },
+        {
+          "name": "100",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"160\" height=\"26\" viewBox=\"0 0 160 26\"><rect x=\"1\" y=\"1\" width=\"158\" height=\"24\" rx=\"6\" fill=\"#15223c\" stroke=\"#e1edff\" stroke-width=\"2\"/><rect x=\"4\" y=\"4\" width=\"152\" height=\"18\" rx=\"4\" fill=\"#ffb052\"/><text x=\"80\" y=\"18\" text-anchor=\"middle\" fill=\"white\" font-family=\"sans-serif\" font-size=\"14\">P2  100 / 100</text></svg>",
+          "rotationCenterX": 80,
+          "rotationCenterY": 13
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "control_forever",
+              "inputs": {
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 0
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "0"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 10
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "10"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 20
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "20"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 30
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "30"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 40
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "40"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 50
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "50"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 60
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "60"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 70
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "70"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 80
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "80"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 90
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "90"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "variable",
+                                "name": "P2 health"
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 100
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "looks_switchcostumeto",
+                              "inputs": {
+                                "COSTUME": {
+                                  "type": "literal",
+                                  "value": "100"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 50,
+            "y": 50
+          }
+        }
+      ],
+      "procedures": [],
+      "x": 140,
+      "y": 65,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "don't rotate"
+    },
+    {
+      "kind": "sprite",
+      "name": "Game result",
+      "variables": [],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "playing",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"180\" height=\"50\" viewBox=\"0 0 180 50\"><text x=\"90\" y=\"33\" text-anchor=\"middle\" fill=\"#ffffff\" stroke=\"#182342\" stroke-width=\"1\" font-family=\"sans-serif\" font-size=\"26\" font-weight=\"bold\"></text></svg>",
+          "rotationCenterX": 90,
+          "rotationCenterY": 25
+        },
+        {
+          "name": "P1 wins",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"180\" height=\"50\" viewBox=\"0 0 180 50\"><text x=\"90\" y=\"33\" text-anchor=\"middle\" fill=\"#ffffff\" stroke=\"#182342\" stroke-width=\"1\" font-family=\"sans-serif\" font-size=\"26\" font-weight=\"bold\">P1 WINS!</text></svg>",
+          "rotationCenterX": 90,
+          "rotationCenterY": 25
+        },
+        {
+          "name": "P2 wins",
+          "dataFormat": "svg",
+          "data": "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"180\" height=\"50\" viewBox=\"0 0 180 50\"><text x=\"90\" y=\"33\" text-anchor=\"middle\" fill=\"#ffffff\" stroke=\"#182342\" stroke-width=\"1\" font-family=\"sans-serif\" font-size=\"26\" font-weight=\"bold\">P2 WINS!</text></svg>",
+          "rotationCenterX": 90,
+          "rotationCenterY": 25
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "control_forever",
+              "inputs": {
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "looks_switchcostumeto",
+                      "inputs": {
+                        "COSTUME": {
+                          "type": "variable",
+                          "name": "Game state"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "position": {
+            "x": 50,
+            "y": 50
+          }
+        }
+      ],
+      "procedures": [],
+      "x": 0,
+      "y": 0,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "don't rotate"
+    }
+  ],
+  "broadcasts": [],
+  "monitors": [
+    {
+      "id": "P1 health",
+      "opcode": "data_variable",
+      "params": {
+        "VARIABLE": "P1 health"
+      },
+      "spriteName": null,
+      "mode": "default",
+      "value": 100,
+      "visible": false,
+      "x": 8,
+      "y": 8
+    },
+    {
+      "id": "P2 health",
+      "opcode": "data_variable",
+      "params": {
+        "VARIABLE": "P2 health"
+      },
+      "spriteName": null,
+      "mode": "default",
+      "value": 100,
+      "visible": false,
+      "x": 340,
+      "y": 8
+    },
+    {
+      "id": "Game state",
+      "opcode": "data_variable",
+      "params": {
+        "VARIABLE": "Game state"
+      },
+      "spriteName": null,
+      "mode": "default",
+      "value": "playing",
+      "visible": false,
+      "x": 180,
+      "y": 45
+    }
+  ]
+}

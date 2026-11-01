@@ -9,6 +9,7 @@ import { validateArchive, validateProjectJson } from './archive-validator.js';
 import { validateBlockGraph } from './graph-validator.js';
 import { compileCanonicalProjectToSb3 } from '../core/compiler/compiler.js';
 import { CANONICAL_IR_FORMAT, type CanonicalProject } from '../core/ir/types.js';
+import { createRepairReport } from '../core/repair/report.js';
 import { validateCanonicalProject, validateCanonicalSemantics } from '../core/validator/index.js';
 import { designToCanonicalIR } from './design-to-ir.js';
 import { createManifestEntry, type GateResult, type ManifestEntry } from './manifest.js';
@@ -187,13 +188,21 @@ export async function generateGame(input: string, options: GeneratorOptions = {}
     failureStage = 'canonical-schema-validation';
     const schema = validateCanonicalProject(canonical);
     if (!schema.valid) {
-      throw new Error(`Canonical IR schema validation failed: ${schema.errors.map((item) => `${item.instancePath || '/'} ${item.message}`).join('; ')}`);
+      const report = createRepairReport({ data: canonical, schemaIssues: schema.errors });
+      const details = report.issues.map((issue) => {
+        const actual = ['string', 'number', 'boolean'].includes(typeof issue.actual)
+          ? `; actual=${JSON.stringify(issue.actual)}`
+          : '';
+        return `${issue.path} ${issue.message}${actual}; expected=${issue.expected}; ${issue.suggestion}`;
+      });
+      throw new Error(`Canonical IR schema validation failed: ${details.join('; ')}`);
     }
     gates.push({ name: 'canonical-schema-validation', status: 'pass' });
     failureStage = 'canonical-semantic-validation';
     const semanticErrors = validateCanonicalSemantics(schema.data).filter((item) => item.severity === 'error');
     if (semanticErrors.length > 0) {
-      throw new Error(`Canonical IR semantic validation failed: ${semanticErrors.map((item) => `${item.path} [${item.code}] ${item.message}`).join('; ')}`);
+      const report = createRepairReport({ data: canonical, semanticIssues: semanticErrors });
+      throw new Error(`Canonical IR semantic validation failed: ${report.issues.map((item) => `${item.path} [${item.code}] ${item.message}; ${item.suggestion}`).join('; ')}`);
     }
     gates.push({ name: 'canonical-semantic-validation', status: 'pass' });
 

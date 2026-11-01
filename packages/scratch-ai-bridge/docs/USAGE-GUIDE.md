@@ -31,11 +31,13 @@ Scratch AI Bridge 是一個讓 AI 模型 (如 Gemini) 能與 Scratch 專案互�
 npm run session -- new 我的遊戲
 npm run session -- add-sprite Ball
 npm run session -- add-block Ball event_whenflagclicked
+npm run session -- add-block Ball motion_movesteps --input-literal STEPS 10
 npm run session -- info
 npm run session -- save ./my-game.sb3
 npm run session -- compile ./validated-game.sb3
 npm run session -- preview ./stage.png
 npm run session -- open --url http://localhost:8601/
+npm run session -- open-camofox --caller hermes --url http://localhost:8601/
 ```
 
 載入既有作品使用 `npm run session -- load ./game.sb3`；載入本身不改動檔案。之後對已載入作品執行新增或修改命令會儲存回該作品，若要保留原始檔，先 `save ./copy.sb3` 再修改。`save` 儲存編輯中的草稿，允許未完成的積木；`compile` 驗證素材存在、基本專案結構、積木連結及 Scratch VM 載入，輸出相同封裝，並不保證遊戲好玩或每一種積木行為正確。若有診斷，請先修正後重試。
@@ -43,6 +45,10 @@ npm run session -- open --url http://localhost:8601/
 新產生的 ID 是 shell 安全字元。從既有 SB3 匯入的 ID 可能含特殊字元，傳入 CLI 時請使用單引號，例如 `--parent 'JlQGmYeb.LFk{)IyAB(])'`。舊 session 會在下次寫入時升級；若指向的檔案移動或 state 損壞，CLI 會提示，請恢復檔案或重新執行 `load`，不會默默建立空白作品。
 
 `preview` 使用真正的 Scratch renderer 擷取初始舞台，需先完成本套件 build 並安裝 Playwright Chromium，預設不覆寫既有圖片。`open` 會啟動**新的瀏覽器視窗**，將作品載入指定的本機 Scratch GUI 或 Bridge 頁面並按綠旗；關閉視窗後命令結束。它不會接管已開啟的瀏覽器分頁。若 Bridge 位於其他埠，改用 `--url http://localhost:5178/`。兩者都需要對應的本機網頁服務先啟動；可用 `open --headless --screenshot stage.png` 做自動化檢查。`plan`、`apply`、`undo` 和 `diff` 尚未實作，請勿依賴它們修改作品。
+
+`--input-literal` 可為 `add-block` 指定數字或文字輸入。迴圈子堆疊或條件須先建立獨立積木，再使用 `connect-input <角色> <父積木ID> <輸入名稱> <子積木ID>` 連接，例如輸入名稱 `SUBSTACK`；連接不會自行產生碰撞邏輯。
+
+`open-camofox` 需已啟動本機 Scratch GUI 和 Camoufox，會驗證作品、檢查瀏覽器狀態、建立唯一工作分頁、取得及釋放租約，再匯入作品；必須指定執行者的 `--caller`。它不切換無頭／桌面模式，也不會按綠旗。此命令目前針對本機英文 Scratch GUI 測試，且目前只以 Codex caller 驗證；Hermes caller 尚待實際驗收。CLI session 與 GUI 不會自動雙向同步；GUI 變更需另存 SB3，並以 CLI 重新 `load`。
 
 ## 使用方式
 

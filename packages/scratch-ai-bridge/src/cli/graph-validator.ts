@@ -49,6 +49,7 @@ export function validateBlockGraph(projectJson: unknown): GraphValidationResult 
   // Collect all block IDs
   const allBlockIds = new Set<string>();
   const blockMap = new Map<string, Record<string, unknown>>();
+  const localReferences: { blockId: string; localIds: Set<string>; reference: string; relation: string }[] = [];
   
   // Get all targets
   const targets = Array.isArray(pj.targets) ? pj.targets : [];
@@ -65,6 +66,7 @@ export function validateBlockGraph(projectJson: unknown): GraphValidationResult 
     if (!blocks || typeof blocks !== 'object') {
       continue;
     }
+    const localIds = new Set(Object.keys(blocks));
     
     // Process each block
     for (const [blockId, block] of Object.entries(blocks)) {
@@ -78,10 +80,22 @@ export function validateBlockGraph(projectJson: unknown): GraphValidationResult 
       
       allBlockIds.add(bid);
       blockMap.set(bid, b);
+      for (const relation of ['next', 'parent'] as const) {
+        const ref = b[relation];
+        if (typeof ref === 'string' && ref) localReferences.push({ blockId: bid, localIds, reference: ref, relation });
+      }
       
       // Validate block structure
       if (b.opcode === undefined) {
         errors.push(`Block ${bid} missing opcode`);
+      }
+      const invalidOpcodes: Record<string, string> = {
+        motion_goto_xy: 'motion_gotoxy',
+        motion_bounce_off_edge: 'motion_ifonedgebounce',
+        sense_touchingobject: 'sensing_touchingobject',
+      };
+      if (typeof b.opcode === 'string' && invalidOpcodes[b.opcode]) {
+        errors.push(`Block ${bid} has invalid opcode "${b.opcode}"; use "${invalidOpcodes[b.opcode]}"`);
       }
       
       // Check next link
@@ -104,6 +118,13 @@ export function validateBlockGraph(projectJson: unknown): GraphValidationResult 
       if (b.inputs && typeof b.inputs === 'object') {
         for (const inputName in b.inputs) {
           const input = (b.inputs as Record<string, unknown>)[inputName];
+          if (!Array.isArray(input)) {
+            errors.push(`Block ${bid} input "${inputName}" must use Scratch SB3 array format`);
+            continue;
+          }
+          for (const ref of input.slice(1)) {
+            if (typeof ref === 'string' && ref) localReferences.push({ blockId: bid, localIds, reference: ref, relation: `input "${inputName}"` });
+          }
           if (Array.isArray(input) && input.length >= 2) {
             const [_, targetBlockId] = input as [string, string | number | [string, string, string]];
             if (typeof targetBlockId === 'string' && targetBlockId !== '' && !allBlockIds.has(targetBlockId)) {
@@ -112,6 +133,12 @@ export function validateBlockGraph(projectJson: unknown): GraphValidationResult 
           }
         }
       }
+    }
+  }
+
+  for (const { blockId, localIds, reference, relation } of localReferences) {
+    if (!localIds.has(reference) && allBlockIds.has(reference)) {
+      errors.push(`Block ${blockId} ${relation} points to block ${reference} on a different target`);
     }
   }
   

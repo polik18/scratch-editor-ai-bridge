@@ -32,7 +32,7 @@ export async function openSessionInBrowser(
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     }
   }
-  const archive = await session.archive()
+  const archive = await session.compile()
   const browser = await chromium.launch({ headless: options.headless })
   try {
     const page = await browser.newPage()
