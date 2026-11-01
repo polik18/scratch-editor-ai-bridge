@@ -1,5 +1,6 @@
 import type { CanonicalBlock, CanonicalProject } from '../ir/types'
 import type { AnalysisIR, ProjectMap } from './'
+import { createProjectFeedback, type ProjectFeedback } from './feedback'
 
 export interface ProjectScoreCriterion {
   readonly id: string
@@ -51,12 +52,14 @@ const criterionEvidence = (map: ProjectMap, opcodes: readonly string[]): string[
  * @param project - Canonical projection of the uploaded SB3.
  * @param analysis - Static analyzer findings for the project.
  * @param map - Evidence and import coverage for the project.
+ * @param projectFeedback - Optional already computed feedback for this project.
  * @returns The fixed-version rubric score and its evidence/limitations.
  */
 export const createProjectScore = (
   project: CanonicalProject,
   analysis: AnalysisIR,
   map: ProjectMap,
+  projectFeedback?: ProjectFeedback,
 ): ProjectScore => {
   const targets = [project.stage, ...project.sprites]
   const scripts = targets.flatMap((target) => target.scripts.map((script) => collectBlocks(script.blocks)))
@@ -75,7 +78,7 @@ export const createProjectScore = (
   const dataOpcodes = allBlocks.filter(({ opcode }) => opcode.startsWith('data_')).map(({ opcode }) => opcode)
   const interactionOpcodes = allBlocks
     .filter(({ opcode }) =>
-      /^(event_whenkeypressed|event_whenthisspriteclicked|event_whenstageclicked|sensing_touchingobject|event_broadcast|event_whenbroadcastreceived)$/.test(
+      /^(event_whenkeypressed|event_whenthisspriteclicked|event_whenstageclicked|sensing_touchingobject|event_broadcast|event_broadcastandwait|event_whenbroadcastreceived)$/.test(
         opcode,
       ),
     )
@@ -97,12 +100,26 @@ export const createProjectScore = (
   )
   const structuralCoverage =
     map.coverage.importedBlocks === 0 ? 100 : (map.coverage.recognizedBlocks / map.coverage.importedBlocks) * 100
-  const readableEvidence = map.evidence.length > 0
+  const readableEvidence = map.evidence.some(({ reference }) => !reference)
   const integrityScore = clamp(15 - integrityIssues.length * 3 - map.coverage.malformedGraphIssues * 2, 15)
-  const dataScore =
-    dataOpcodes.length === 0
-      ? 15
-      : clamp(15 - Math.min(10, analysis.diagnostics.filter(({ code }) => code.includes('variable')).length * 3), 15)
+  const usedVariableNames = new Set(
+    analysis.targets.flatMap((target) =>
+      [...target.scripts, ...target.procedures].flatMap(({ reads, writes }) => [...reads, ...writes]),
+    ),
+  )
+  for (const monitor of analysis.dependencies.monitors) if (monitor.variable) usedVariableNames.add(monitor.variable)
+  const unusedVariables = targets
+    .flatMap(({ variables }) => variables)
+    .filter(({ name }) => !usedVariableNames.has(name)).length
+  const stateIssues = analysis.diagnostics.filter(({ code }) =>
+    ['monitor-variable-missing', 'condition-variable-mismatch-in-loop'].includes(code),
+  ).length
+  const hasState =
+    dataOpcodes.length > 0 ||
+    targets.some(({ variables }) => variables.length > 0) ||
+    usedVariableNames.size > 0 ||
+    stateIssues > 0
+  const dataScore = clamp(15 - Math.min(10, stateIssues * 3 + (unusedVariables > 0 ? 2 : 0)), 15)
   const interactionScore =
     interactionOpcodes.length === 0
       ? 15
@@ -115,7 +132,44 @@ export const createProjectScore = (
     scripts.length === 0
       ? 0
       : clamp(15 * (triggeredScripts.length / scripts.length) + 10 * (activeScripts.length / scripts.length), 25)
-  const organizationScore = scripts.length === 0 ? 0 : clamp((5 * activeScripts.length) / scripts.length, 5)
+  const organizationIssues = analysis.diagnostics.filter(({ code }) =>
+    ['duplicate-script-in-target', 'empty-event-hat'].includes(code),
+  )
+  const fragmentedEvents = targets.reduce((sum, target) => {
+    const counts = new Map<string, number>()
+    for (const { blocks } of target.scripts) {
+      const first = blocks.at(0)
+      if (!first || !/^(event_when|control_start_as_clone)/.test(first.opcode)) continue
+      const key = JSON.stringify({ opcode: first.opcode, fields: first.fields, inputs: first.inputs })
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+    return sum + [...counts.values()].filter((count) => count > 4).length
+  }, 0)
+  const organizationScore =
+    scripts.length === 0
+      ? 0
+      : clamp(
+          (5 * activeScripts.length) / scripts.length -
+            Math.min(2, organizationIssues.length + (fragmentedEvents > 0 ? 1 : 0)),
+          5,
+        )
+
+  const feedback = projectFeedback ?? createProjectFeedback(analysis, map)
+  const evidenceFor = (codes: readonly string[]): string[] =>
+    [
+      ...new Set(
+        feedback.items
+          .filter(({ id }) => codes.some((code) => id.startsWith(`diagnostic:${code}:`)))
+          .flatMap(({ evidenceIds }) => evidenceIds),
+      ),
+    ].slice(0, 12)
+  const integrityEvidence =
+    integrityIssues.length > 0
+      ? evidenceFor(integrityIssues.map(({ code }) => code))
+      : map.evidence
+          .filter(({ reference }) => !reference)
+          .slice(0, 12)
+          .map(({ id }) => id)
 
   const criteria: ProjectScoreCriterion[] = [
     {
@@ -143,13 +197,20 @@ export const createProjectScore = (
       id: 'state',
       title: '變數、清單與狀態運用',
       points: 15,
-      score: dataOpcodes.length === 0 ? null : dataScore,
-      applicability: dataOpcodes.length === 0 ? 'not-applicable' : 'applicable',
-      explanation:
-        dataOpcodes.length === 0
-          ? '作品沒有使用變數或清單；此項不適用，不加分也不扣分。'
-          : `作品中有 ${dataOpcodes.length} 個資料相關積木；已檢查可辨識的變數診斷。`,
-      evidenceIds: criterionEvidence(map, dataOpcodes),
+      score: hasState ? dataScore : null,
+      applicability: hasState ? 'applicable' : 'not-applicable',
+      explanation: !hasState
+        ? '作品沒有宣告或使用變數、清單；此項不適用，不加分也不扣分。'
+        : `作品中有 ${dataOpcodes.length} 個資料相關積木；${unusedVariables} 個宣告變數未見讀寫，另有 ${stateIssues} 項變數監視器或迴圈條件的結構提醒。`,
+      evidenceIds: [
+        ...new Set([
+          ...evidenceFor(['monitor-variable-missing', 'condition-variable-mismatch-in-loop']),
+          ...map.evidence
+            .filter(({ reference }) => reference?.kind === 'variable' && !usedVariableNames.has(reference.key))
+            .map(({ id }) => id),
+          ...criterionEvidence(map, dataOpcodes),
+        ]),
+      ].slice(0, 12),
     },
     {
       id: 'interaction',
@@ -170,7 +231,7 @@ export const createProjectScore = (
       score: integrityScore,
       applicability: 'applicable',
       explanation: `${integrityIssues.length} 項可由分析確認的警告；${map.coverage.malformedGraphIssues} 項積木圖結構問題。`,
-      evidenceIds: map.evidence.slice(0, 12).map(({ id }) => id),
+      evidenceIds: integrityEvidence,
     },
     {
       id: 'organization',
@@ -178,11 +239,16 @@ export const createProjectScore = (
       points: 5,
       score: organizationScore,
       applicability: 'applicable',
-      explanation: `${activeScripts.length}/${scripts.length} 組腳本有事件入口及後續指令。`,
-      evidenceIds: criterionEvidence(
-        map,
-        allBlocks.map(({ opcode }) => opcode),
-      ),
+      explanation: `${activeScripts.length}/${scripts.length} 組腳本有事件入口及後續指令；另有 ${organizationIssues.length} 項重複腳本或空事件提醒；${fragmentedEvents} 組同一事件分成超過四段，可檢查是否適合合併。`,
+      evidenceIds: [
+        ...new Set([
+          ...evidenceFor(['duplicate-script-in-target', 'empty-event-hat']),
+          ...criterionEvidence(
+            map,
+            allBlocks.map(({ opcode }) => opcode),
+          ),
+        ]),
+      ].slice(0, 12),
     },
   ]
   const limits = [

@@ -42,7 +42,7 @@ export interface EvidencePacketV1 {
 export const EVIDENCE_PACKET_MAX_CHARS = 24_000
 
 const targetLabel = (targetIndex: number | undefined): string => {
-  if (targetIndex === undefined) return '作品'
+  if (targetIndex === undefined || targetIndex < 0) return '作品'
   if (targetIndex === 0) return '舞台'
   let suffix = ''
   let value = targetIndex - 1
@@ -68,9 +68,11 @@ const studentSafeClaim = (
     return `${location}有 ${count} 個積木目前無法讀懂，所以不能確定它們的作用。`
   }
   const blockLabel = source?.studentLabel
+    ? `${source.studentLabel}${source.symbol ? `（${source.symbol}）` : ''}`
+    : undefined
   if (!blockLabel) return `${location}有一段程式可以再檢查。`
   if (fact.kind === 'trigger') return `${location}的開始方式是${blockLabel.replace(/^當/, '')}。`
-  if (fact.kind === 'broadcast') return `${location}有送出或接收訊息的積木。`
+  if (fact.kind === 'broadcast') return `${location}有送出或接收${source?.symbol ?? '訊息'}的積木。`
   return `${location}包含「${blockLabel}」這個積木。`
 }
 
@@ -87,7 +89,32 @@ export const createEvidencePacket = (
   question = '',
 ): EvidencePacketV1 => {
   const allEvidence = new Map(projectMap.evidence.map((item) => [item.id, item]))
-  const regularFacts = projectMap.facts.filter(({ kind }) => kind !== 'limitation').slice(0, 36)
+  const candidates = projectMap.facts.filter(({ kind }) => kind !== 'limitation')
+  const diagnosticLocations = new Set(
+    analysis.diagnostics
+      .filter(({ severity, target, script }) => severity === 'warning' && target && script)
+      .map(({ target, script }) => `${target}:${script}`),
+  )
+  const regularFacts: typeof candidates = []
+  for (const priority of [0, 1, 2]) {
+    const groups = new Map<number, typeof candidates>()
+    for (const fact of candidates) {
+      const source = allEvidence.get(fact.evidence[0]?.id)
+      const diagnostic = source && diagnosticLocations.has(`${source.targetName}:${(source.scriptIndex ?? -1) + 1}`)
+      const rank = diagnostic ? 0 : fact.kind === 'trigger' ? 2 : 1
+      if (rank !== priority) continue
+      const key = source?.targetIndex ?? -1
+      const group = groups.get(key) ?? []
+      group.push(fact)
+      groups.set(key, group)
+    }
+    while (regularFacts.length < 36 && [...groups.values()].some((group) => group.length > 0)) {
+      for (const group of groups.values()) {
+        const fact = group.shift()
+        if (fact && regularFacts.length < 36) regularFacts.push(fact)
+      }
+    }
+  }
   const limitationFacts = projectMap.facts.filter(({ kind }) => kind === 'limitation')
   const facts = [
     ...regularFacts,
@@ -102,13 +129,13 @@ export const createEvidencePacket = (
       : []),
   ]
   const referencedIds = new Set(facts.flatMap((fact) => fact.evidence.map(({ id }) => id)))
-  const evidence = [...allEvidence.values()]
+  let evidence = [...allEvidence.values()]
     .filter((item) => referencedIds.has(item.id))
     .slice(0, 80)
     .map((item) => ({
       target: targetLabel(item.targetIndex),
       script: item.scriptIndex === null ? null : item.scriptIndex + 1,
-      blockLabel: item.studentLabel,
+      blockLabel: `${item.studentLabel}${item.symbol ? `（${item.symbol}）` : ''}`,
     }))
   const sourceEvidence = allEvidence
   const targetNames = analysis.targets.map(({ name }) => name)
@@ -118,10 +145,12 @@ export const createEvidencePacket = (
     recognizedBlocks: projectMap.coverage.recognizedBlocks,
     opaqueBlocks: projectMap.coverage.opaqueBlocks,
     malformedGraphIssues: projectMap.coverage.malformedGraphIssues,
-    scripts: projectMap.coverage.scripts.map(({ targetName, ...script }) => ({
-      target: targetLabel(targetNames.indexOf(targetName)),
-      ...script,
-    })),
+    scripts: projectMap.coverage.scripts
+      .filter((script) => script.opaqueBlocks > 0 || script.malformedGraphIssues > 0 || script.runtime !== 'core')
+      .map(({ targetName, ...script }) => ({
+        target: targetLabel(targetNames.indexOf(targetName)),
+        ...script,
+      })),
     extensions: projectMap.coverage.extensions.map(({ extensionName, recognizedBlocks, opaqueBlocks, runtime }) => ({
       extensionName,
       recognizedBlocks,
@@ -148,6 +177,18 @@ export const createEvidencePacket = (
     coverage,
   })
   let packet = createPacket()
+  while (JSON.stringify(packet).length > EVIDENCE_PACKET_MAX_CHARS && coverage.scripts.length > 0) {
+    coverage.scripts.pop()
+    packet = createPacket()
+  }
+  while (JSON.stringify(packet).length > EVIDENCE_PACKET_MAX_CHARS && evidence.length > 0) {
+    evidence = evidence.slice(0, -1)
+    packet = createPacket()
+  }
+  while (JSON.stringify(packet).length > EVIDENCE_PACKET_MAX_CHARS && coverage.extensions.length > 0) {
+    coverage.extensions.pop()
+    packet = createPacket()
+  }
   while (JSON.stringify(packet).length > EVIDENCE_PACKET_MAX_CHARS && observations.length > 1) {
     observations = observations.slice(0, -1)
     packet = createPacket()

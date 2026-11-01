@@ -489,6 +489,20 @@ const commands: Record<string, CommandHandler> = {
     const { openInCamofox } = await import('./session/camofox.js');
     await openInCamofox(await loadSession(), caller, url);
   },
+  async ['open-sb3'](argv) {
+    const sb3Path = argv[0];
+    if (!sb3Path) throw new Error('Usage: open-sb3 <path-to-sb3-file>');
+    if (!sb3Path.endsWith('.sb3')) throw new Error('File must be an .sb3 file');
+    const { execSync } = await import('child_process');
+    try {
+      // Try direct SB3 opening via Camoufox CLI first
+      execSync(`camofox-cli show "${sb3Path}"`, { stdio: 'inherit', shell: true } as any);
+    } catch (err: any) {
+      console.error('Note: Direct SB3 opening via Camoufox CLI failed. Using fallback method:');
+      const { openInCamofox } = await import('./session/camofox.js');
+      await openInCamofox(await loadSession(), 'hermes', 'http://localhost:8601/', sb3Path);
+    }
+  },
   // ── NLP Parse ────────────────────────────────────────────────────────────
 
   async nlpParse(argv) {

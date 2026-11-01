@@ -5963,7 +5963,13 @@ const analyzeFile = async (file: File) => {
 
     analysis = analyzeCanonicalProject(canonical, decompiled.rawBlockGraphs)
 
-    projectMap = createProjectMap(canonical, analysis, decompiled.rawBlockGraphs, decompiled.canonicalBlockMappings)
+    projectMap = createProjectMap(
+      canonical,
+      analysis,
+      decompiled.rawBlockGraphs,
+      decompiled.canonicalBlockMappings,
+      decompiled.rawArchive.projectJson,
+    )
 
     projectFeedback = createProjectFeedback(analysis, projectMap)
 
@@ -6110,7 +6116,13 @@ copyPrompt.addEventListener('click', () => {
 
         canonical,
 
-        projectMap: createProjectMap(canonical, analysis, sourceBlockGraphs, canonicalBlockMappings),
+        projectMap: createProjectMap(
+          canonical,
+          analysis,
+          sourceBlockGraphs,
+          canonicalBlockMappings,
+          rawArchive?.projectJson,
+        ),
 
         mode,
 

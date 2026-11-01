@@ -106,6 +106,7 @@ Examples:
 
 ```sh
 npm run cli --workspace=@scratch/scratch-ai-bridge -- inspect ./作品.sb3 --format markdown
+npm run cli --workspace=@scratch/scratch-ai-bridge -- inspect ./作品.sb3 --format student-markdown
 npm run cli --workspace=@scratch/scratch-ai-bridge -- batch ./班級作品 --out ./班級分析結果 --jobs 1
 npm run cli --workspace=@scratch/scratch-ai-bridge -- generate ./遊戲設計.json --out ./新遊戲.sb3 --report ./新遊戲.report.json
 npm run session --workspace=@scratch/scratch-ai-bridge -- new-game --design=./遊戲設計.json --output=./build

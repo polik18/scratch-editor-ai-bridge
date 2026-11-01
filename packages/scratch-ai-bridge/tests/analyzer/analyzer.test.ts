@@ -12,6 +12,438 @@ import fullEntitiesExample from '../../src/core/ir/examples/05-full-entities.jso
 import type { CanonicalProject } from '../../src/core/ir/types'
 
 describe('analysis IR', () => {
+  it('finds empty hats, duplicate event scripts, and next costume with one costume', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    const sprite = structuredClone((moveAndSayExample as CanonicalProject).sprites[0])
+    sprite.costumes = structuredClone((fullEntitiesExample as CanonicalProject).sprites[0].costumes.slice(0, 1))
+    sprite.scripts = [
+      { blocks: [{ opcode: 'event_whenflagclicked' }] },
+      { blocks: [{ opcode: 'event_whenflagclicked' }, { opcode: 'looks_nextcostume' }] },
+      { blocks: [{ opcode: 'event_whenflagclicked' }, { opcode: 'looks_nextcostume' }] },
+    ]
+    project.sprites = [sprite]
+    const codes = analyzeCanonicalProject(project).diagnostics.map(({ code }) => code)
+    expect(codes).toContain('empty-event-hat')
+    expect(codes).toContain('single-costume-nextcostume-loop')
+    expect(codes).toContain('duplicate-script-in-target')
+    const analysis = analyzeCanonicalProject(project)
+    const map = createProjectMap(project, analysis)
+    const costume = createProjectFeedback(analysis, map).items.find(({ id }) =>
+      id.includes('single-costume-nextcostume-loop'),
+    )
+    expect(costume?.evidenceIds.map((id) => map.evidence.find((entry) => entry.id === id)?.opcode)).toEqual([
+      'looks_nextcostume',
+      'asset-costume',
+    ])
+    sprite.costumes.push({ ...structuredClone(sprite.costumes[0]), name: 'second' })
+    expect(
+      analyzeCanonicalProject(project).diagnostics.some(({ code }) => code === 'single-costume-nextcostume-loop'),
+    ).toBe(false)
+    sprite.scripts = [{ blocks: [{ opcode: 'event_whenflagclicked' }, { opcode: 'looks_show' }] }]
+    const clean = analyzeCanonicalProject(project).diagnostics.map(({ code }) => code)
+    expect(clean).not.toContain('empty-event-hat')
+    expect(clean).not.toContain('single-costume-nextcostume-loop')
+    expect(clean).not.toContain('duplicate-script-in-target')
+  })
+
+  it('links duplicate scripts and green-flag clone deletion to their actual blocks', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    project.stage.scripts = [
+      { blocks: [{ opcode: 'event_whenflagclicked' }, { opcode: 'looks_show' }] },
+      { blocks: [{ opcode: 'event_whenflagclicked' }, { opcode: 'looks_show' }] },
+      { blocks: [{ opcode: 'event_whenflagclicked' }, { opcode: 'control_delete_this_clone' }] },
+      { blocks: [{ opcode: 'control_start_as_clone' }, { opcode: 'control_delete_this_clone' }] },
+    ]
+    const analysis = analyzeCanonicalProject(project)
+    const map = createProjectMap(project, analysis)
+    const feedback = createProjectFeedback(analysis, map)
+    const duplicate = feedback.items.find(({ id }) => id.includes('duplicate-script-in-target'))
+    expect(
+      new Set(duplicate?.evidenceIds.map((id) => map.evidence.find((item) => item.id === id)?.scriptIndex)),
+    ).toEqual(new Set([0, 1]))
+    const clone = feedback.items.find(({ id }) => id.includes('delete-clone-under-non-clone-hat'))
+    expect(clone?.evidenceIds.map((id) => map.evidence.find((item) => item.id === id)?.opcode)).toEqual([
+      'control_delete_this_clone',
+    ])
+    expect(analysis.diagnostics.filter(({ code }) => code === 'delete-clone-under-non-clone-hat')).toHaveLength(1)
+  })
+
+  it('recognizes duplicate scripts despite field ordering, positions and comments', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    project.stage.scripts = [
+      {
+        position: { x: 10, y: 10 },
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          { opcode: 'looks_seteffectto', fields: { EFFECT: 'COLOR', OTHER: 'value' }, comment: { text: 'first' } },
+        ],
+      },
+      {
+        position: { x: 100, y: 20 },
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          { opcode: 'looks_seteffectto', fields: { OTHER: 'value', EFFECT: 'COLOR' }, comment: { text: 'second' } },
+        ],
+      },
+    ]
+    expect(
+      analyzeCanonicalProject(project).diagnostics.some(({ code }) => code === 'duplicate-script-in-target'),
+    ).toBe(true)
+    project.stage.scripts[1].blocks[1].fields = { EFFECT: 'GHOST', OTHER: 'value' }
+    expect(
+      analyzeCanonicalProject(project).diagnostics.some(({ code }) => code === 'duplicate-script-in-target'),
+    ).toBe(false)
+  })
+
+  it('does not ignore an input merely because its name is comment', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    project.stage.scripts = [
+      {
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          { opcode: 'vendor_custom', inputs: { comment: { type: 'literal', value: 'one' } } },
+        ],
+      },
+      {
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          { opcode: 'vendor_custom', inputs: { comment: { type: 'literal', value: 'two' } } },
+        ],
+      },
+    ]
+    expect(
+      analyzeCanonicalProject(project).diagnostics.some(({ code }) => code === 'duplicate-script-in-target'),
+    ).toBe(false)
+  })
+
+  it('places evidence-backed warnings before ordinary observations', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    project.stage.scripts = [
+      {
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          { opcode: 'control_delete_this_clone' },
+          { opcode: 'looks_show' },
+        ],
+      },
+    ]
+    const analysis = analyzeCanonicalProject(project)
+    const feedback = createProjectFeedback(analysis, createProjectMap(project, analysis))
+    expect(feedback.items[0]).toMatchObject({ severity: 'warning' })
+    expect(feedback.items.some(({ kind }) => kind === 'confirmed-structure')).toBe(true)
+  })
+
+  it('flags overlapping comparisons and opposing immediate actions only for the same event', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    const condition = (value: string) => ({
+      opcode: 'control_if',
+      inputs: {
+        CONDITION: {
+          type: 'block' as const,
+          block: {
+            opcode: 'operator_lt',
+            inputs: {
+              OPERAND1: { type: 'variable' as const, name: 'score' },
+              OPERAND2: { type: 'literal' as const, value },
+            },
+          },
+        },
+        SUBSTACK: { type: 'stack' as const, blocks: [{ opcode: 'looks_switchcostumeto' }] },
+      },
+    })
+    project.stage.scripts = [
+      { blocks: [{ opcode: 'event_whenflagclicked' }, condition('3'), condition('2'), condition('1')] },
+      { blocks: [{ opcode: 'event_whenflagclicked' }, { opcode: 'looks_show' }] },
+      {
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          { opcode: 'control_wait', inputs: { DURATION: { type: 'literal', value: 0.1 } } },
+          { opcode: 'looks_hide' },
+        ],
+      },
+    ]
+    const codes = analyzeCanonicalProject(project).diagnostics.map(({ code }) => code)
+    expect(codes).toContain('overlapping-comparison-chain')
+    expect(codes).toContain('concurrent-event-state-conflict')
+    const analysis = analyzeCanonicalProject(project)
+    const map = createProjectMap(project, analysis)
+    const comparison = createProjectFeedback(analysis, map).items.find(({ id }) =>
+      id.includes('overlapping-comparison-chain'),
+    )
+    expect(comparison?.evidenceIds.map((id) => map.evidence.find((item) => item.id === id)?.opcode)).toEqual([
+      'operator_lt',
+      'operator_lt',
+      'operator_lt',
+    ])
+    project.stage.scripts[2].blocks[0] = { opcode: 'event_whenkeypressed', fields: { KEY_OPTION: 'space' } }
+    project.stage.scripts[0].blocks.splice(3, 1)
+    const clean = analyzeCanonicalProject(project).diagnostics.map(({ code }) => code)
+    expect(clean).not.toContain('overlapping-comparison-chain')
+    expect(clean).not.toContain('concurrent-event-state-conflict')
+  })
+
+  it('finds a shared changed property even after different setup actions', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    const conditional = (setup: string, value: number) => ({
+      opcode: 'control_if',
+      inputs: {
+        CONDITION: {
+          type: 'block' as const,
+          block: {
+            opcode: 'operator_lt',
+            inputs: {
+              OPERAND1: { type: 'variable' as const, name: 'score' },
+              OPERAND2: { type: 'literal' as const, value },
+            },
+          },
+        },
+        SUBSTACK: { type: 'stack' as const, blocks: [{ opcode: setup }, { opcode: 'looks_switchcostumeto' }] },
+      },
+    })
+    project.stage.scripts = [
+      {
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          conditional('looks_show', 30),
+          conditional('looks_hide', 20),
+          conditional('looks_setsizeto', 10),
+        ],
+      },
+    ]
+    expect(
+      analyzeCanonicalProject(project).diagnostics.some(({ code }) => code === 'overlapping-comparison-chain'),
+    ).toBe(true)
+  })
+
+  it('does not report a comparison chain that changes different visual effects', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    const conditional = (effect: string) => ({
+      opcode: 'control_if',
+      inputs: {
+        CONDITION: {
+          type: 'block' as const,
+          block: {
+            opcode: 'operator_lt',
+            inputs: {
+              OPERAND1: { type: 'variable' as const, name: 'score' },
+              OPERAND2: { type: 'literal' as const, value: 5 },
+            },
+          },
+        },
+        SUBSTACK: { type: 'stack' as const, blocks: [{ opcode: 'looks_seteffectto', fields: { EFFECT: effect } }] },
+      },
+    })
+    project.stage.scripts = [
+      {
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          conditional('COLOR'),
+          conditional('GHOST'),
+          conditional('PIXELATE'),
+        ],
+      },
+    ]
+    expect(
+      analyzeCanonicalProject(project).diagnostics.some(({ code }) => code === 'overlapping-comparison-chain'),
+    ).toBe(false)
+  })
+
+  it('reports competing visibility after non-yielding setup and links both scripts', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    const hat = { opcode: 'event_whenbroadcastreceived', fields: { BROADCAST_OPTION: 'intro' } }
+    project.stage.scripts = [
+      { blocks: [hat, { opcode: 'looks_seteffectto' }, { opcode: 'looks_setsizeto' }, { opcode: 'looks_hide' }] },
+      {
+        blocks: [
+          hat,
+          { opcode: 'control_wait', inputs: { DURATION: { type: 'literal', value: 0.01 } } },
+          { opcode: 'looks_show' },
+        ],
+      },
+    ]
+    const analysis = analyzeCanonicalProject(project)
+    const map = createProjectMap(project, analysis)
+    const item = createProjectFeedback(analysis, map).items.find(({ id }) =>
+      id.includes('concurrent-event-state-conflict'),
+    )
+    expect(item).toBeDefined()
+    expect(new Set(item?.evidenceIds.map((id) => map.evidence.find((e) => e.id === id)?.scriptIndex))).toEqual(
+      new Set([0, 1]),
+    )
+    project.stage.scripts[1].blocks[1] = {
+      opcode: 'control_wait',
+      inputs: { DURATION: { type: 'literal', value: 1 } },
+    }
+    expect(
+      analyzeCanonicalProject(project).diagnostics.some(({ code }) => code === 'concurrent-event-state-conflict'),
+    ).toBe(false)
+  })
+
+  it('deducts organization points for more than four scripts for the same event', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    project.stage.scripts = Array.from({ length: 5 }, (_, index) => ({
+      blocks: [
+        { opcode: 'event_whenflagclicked' },
+        { opcode: 'motion_movesteps', inputs: { STEPS: { type: 'literal' as const, value: index } } },
+      ],
+    }))
+    const analysis = analyzeCanonicalProject(project)
+    const map = createProjectMap(project, analysis)
+    const criterion = createProjectScore(project, analysis, map).criteria.find(({ id }) => id === 'organization')
+    expect(criterion?.score).toBeLessThan(5)
+    expect(criterion?.explanation).toContain('同一事件')
+    project.stage.scripts.pop()
+    const clean = analyzeCanonicalProject(project)
+    const cleanMap = createProjectMap(project, clean)
+    expect(createProjectScore(project, clean, cleanMap).criteria.find(({ id }) => id === 'organization')?.score).toBe(
+      5,
+    )
+  })
+
+  it('locates a loop condition whose sole write is outside the branch', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    project.stage.variables = [
+      { name: 'ready', value: 0 },
+      { name: 'other', value: 0 },
+    ]
+    project.stage.scripts = [
+      {
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          {
+            opcode: 'data_setvariableto',
+            fields: { VARIABLE: 'ready' },
+            inputs: { VALUE: { type: 'literal', value: 0 } },
+          },
+          {
+            opcode: 'control_forever',
+            inputs: {
+              SUBSTACK: {
+                type: 'stack',
+                blocks: [
+                  {
+                    opcode: 'control_if',
+                    inputs: {
+                      CONDITION: {
+                        type: 'block',
+                        block: {
+                          opcode: 'operator_equals',
+                          inputs: {
+                            OPERAND1: { type: 'variable', name: 'ready' },
+                            OPERAND2: { type: 'literal', value: 1 },
+                          },
+                        },
+                      },
+                      SUBSTACK: {
+                        type: 'stack',
+                        blocks: [
+                          {
+                            opcode: 'data_setvariableto',
+                            fields: { VARIABLE: 'other' },
+                            inputs: { VALUE: { type: 'literal', value: 1 } },
+                          },
+                        ],
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        ],
+      },
+    ]
+    const analysis = analyzeCanonicalProject(project)
+    const diagnostic = analysis.diagnostics.find(({ code }) => code === 'condition-variable-mismatch-in-loop')
+    expect(diagnostic).toMatchObject({ target: project.stage.name, script: 1 })
+    const map = createProjectMap(project, analysis)
+    const item = createProjectFeedback(analysis, map).items.find(({ id }) =>
+      id.includes('condition-variable-mismatch-in-loop'),
+    )
+    expect(item?.evidenceIds.map((id) => map.evidence.find((entry) => entry.id === id)?.path)).toEqual(
+      diagnostic?.evidencePaths?.slice(0, 2),
+    )
+    project.stage.scripts[0].blocks.push({ opcode: 'data_changevariableby', fields: { VARIABLE: 'ready' } })
+    expect(
+      analyzeCanonicalProject(project).diagnostics.some(({ code }) => code === 'condition-variable-mismatch-in-loop'),
+    ).toBe(false)
+  })
+
+  it('calibrates state and integrity scores from observable structural differences', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    project.stage.variables = [{ name: 'used', value: 0 }]
+    project.stage.scripts = [
+      {
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          {
+            opcode: 'data_setvariableto',
+            fields: { VARIABLE: 'used' },
+            inputs: { VALUE: { type: 'literal', value: 1 } },
+          },
+        ],
+      },
+    ]
+    const score = () => {
+      const analysis = analyzeCanonicalProject(project)
+      return createProjectScore(project, analysis, createProjectMap(project, analysis))
+    }
+    const clean = score()
+    project.stage.variables.push({ name: 'unused', value: 0 })
+    const unused = score()
+    expect(unused.criteria.find(({ id }) => id === 'state')?.score).toBe(
+      (clean.criteria.find(({ id }) => id === 'state')?.score ?? 0) - 2,
+    )
+    expect(unused.criteria.find(({ id }) => id === 'state')?.explanation).toContain('1 個宣告變數未見讀寫')
+    project.stage.scripts.push(structuredClone(project.stage.scripts[0]))
+    const duplicated = score()
+    expect(duplicated.criteria.find(({ id }) => id === 'integrity')?.score).toBeLessThan(
+      unused.criteria.find(({ id }) => id === 'integrity')?.score ?? 0,
+    )
+    expect(duplicated.criteria.find(({ id }) => id === 'organization')?.score).toBeLessThan(
+      unused.criteria.find(({ id }) => id === 'organization')?.score ?? 0,
+    )
+  })
+
+  it('treats a declared but unused variable as state evidence even without data blocks', () => {
+    const project = structuredClone(moveAndSayExample as CanonicalProject)
+    project.stage.variables = [{ name: 'unused-private', value: 0 }]
+    const analysis = analyzeCanonicalProject(project)
+    const map = createProjectMap(project, analysis)
+    const criterion = createProjectScore(project, analysis, map).criteria.find(({ id }) => id === 'state')
+    expect(criterion).toMatchObject({ applicability: 'applicable', score: 13 })
+    expect(
+      criterion?.evidenceIds.some((id) => map.evidence.find((item) => item.id === id)?.path === '/stage/variables/0'),
+    ).toBe(true)
+  })
+
+  it('counts monitored variables as used and scores a missing variable monitor', () => {
+    const project = structuredClone(moveAndSayExample as CanonicalProject)
+    project.stage.variables = [{ name: 'score', value: 0 }]
+    project.monitors = [
+      {
+        id: 'monitor',
+        opcode: 'data_variable',
+        params: { VARIABLE: 'score' },
+        spriteName: null,
+        mode: 'default',
+        value: 0,
+        visible: true,
+      },
+    ]
+    const calculate = () => {
+      const analysis = analyzeCanonicalProject(project)
+      return createProjectScore(project, analysis, createProjectMap(project, analysis))
+    }
+    const state = calculate().criteria.find(({ id }) => id === 'state')
+    expect(state).toMatchObject({ applicability: 'applicable', score: 15 })
+    expect(state?.explanation).toContain('0 個宣告變數未見讀寫')
+    project.monitors[0].params.VARIABLE = 'missing'
+    const missing = calculate().criteria.find(({ id }) => id === 'state')
+    expect(missing?.score).toBeLessThan(15)
+    expect(missing?.explanation).toContain('1 項變數監視器')
+  })
+
   it('creates grounded project facts with stable raw block evidence and separate coverage', () => {
     const project = structuredClone(broadcastExample as CanonicalProject)
     const rawGraphs = [
@@ -579,6 +1011,97 @@ describe('analysis IR', () => {
     ])
     expect(result.diagnostics.map(({ code }) => code)).toContain('monitor-variable-missing')
     expect(result.diagnostics.map(({ code }) => code)).toContain('asset-checksum-mismatch')
+  })
+
+  it('links non-script warnings to the actual variable, monitor and asset evidence', () => {
+    const project = structuredClone(fullEntitiesExample as CanonicalProject)
+    project.stage.variables.push({ name: 'cloud-private', value: 0, cloud: true })
+    project.stage.costumes[0].assetIssue = 'missing-archive-entry'
+    project.monitors = [
+      {
+        id: 'private-monitor-id',
+        opcode: 'data_variable',
+        params: { VARIABLE: 'missing-var' },
+        spriteName: null,
+        mode: 'default',
+        value: 0,
+        visible: true,
+      },
+    ]
+    const analysis = analyzeCanonicalProject(project)
+    const map = createProjectMap(project, analysis)
+    const feedback = createProjectFeedback(analysis, map)
+    for (const [code, path] of [
+      ['cloud-variable-offline', '/stage/variables/'],
+      ['monitor-variable-missing', '/monitors/'],
+      ['asset-missing-archive-entry', '/stage/costumes/'],
+    ]) {
+      const item = feedback.items.find(({ id }) => id.includes(code))
+      expect(item?.evidenceIds.length).toBeGreaterThan(0)
+      expect(
+        item?.evidenceIds.every((id) => map.evidence.find((source) => source.id === id)?.path.startsWith(path)),
+      ).toBe(true)
+    }
+  })
+
+  it('keeps distinct warning identities for multiple cloud variables', () => {
+    const project = structuredClone(fullEntitiesExample as CanonicalProject)
+    project.stage.variables.push(
+      { name: 'first-cloud', value: 0, cloud: true },
+      { name: 'second-cloud', value: 0, cloud: true },
+    )
+    const analysis = analyzeCanonicalProject(project)
+    const map = createProjectMap(project, analysis)
+    const warnings = createProjectFeedback(analysis, map).items.filter(({ id }) =>
+      id.includes('cloud-variable-offline'),
+    )
+    expect(warnings).toHaveLength(2)
+    expect(new Set(warnings.map(({ id }) => id)).size).toBe(2)
+    expect(new Set(warnings.flatMap(({ evidenceIds }) => evidenceIds)).size).toBe(2)
+  })
+
+  it('links missing procedures, broadcasts, graph issues and extension warnings to relevant sources', () => {
+    const project = structuredClone(broadcastExample as CanonicalProject)
+    project.extensions = ['vendor-private']
+    project.stage.scripts = [
+      {
+        blocks: [
+          { opcode: 'event_whenflagclicked' },
+          { opcode: 'procedures_call', procedure: { name: 'missing-private' } },
+          { opcode: 'event_broadcast', inputs: { BROADCAST_INPUT: { type: 'broadcast', name: 'notice-private' } } },
+        ],
+      },
+    ]
+    const graphs = [
+      {
+        targetIndex: 0,
+        targetName: project.stage.name,
+        isStage: true,
+        blocks: {},
+        issues: [{ code: 'missing-block' as const, blockId: 'private-block-id', message: 'missing block' }],
+      },
+    ]
+    const analysis = analyzeCanonicalProject(project, graphs)
+    const map = createProjectMap(project, analysis, graphs)
+    const feedback = createProjectFeedback(analysis, map)
+    for (const [code, predicate] of [
+      ['procedure-no-definition', (source: (typeof map.evidence)[number]) => source.opcode === 'procedures_call'],
+      ['broadcast-no-receiver', (source: (typeof map.evidence)[number]) => source.opcode === 'event_broadcast'],
+      ['block-graph-missing-block', (source: (typeof map.evidence)[number]) => source.blockId === 'private-block-id'],
+      [
+        'extension-runtime-unavailable',
+        (source: (typeof map.evidence)[number]) => source.reference?.kind === 'extension',
+      ],
+    ] as const) {
+      const item = feedback.items.find(({ id }) => id.includes(code))
+      expect(item?.evidenceIds.length).toBeGreaterThan(0)
+      expect(
+        item?.evidenceIds.every((id) => {
+          const source = map.evidence.find((entry) => entry.id === id)
+          return source && predicate(source)
+        }),
+      ).toBe(true)
+    }
   })
 
   it('explains whether extensions can execute in this Bridge runtime', () => {

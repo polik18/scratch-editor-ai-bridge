@@ -264,6 +264,7 @@ const readProject = async (file: File): Promise<void> => {
       currentAnalysis,
       result.rawBlockGraphs,
       result.canonicalBlockMappings,
+      result.rawArchive.projectJson,
     )
     renderProjectMap(currentMap)
     renderFirstHint(questionInput.value)

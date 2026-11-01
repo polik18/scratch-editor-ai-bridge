@@ -15,13 +15,14 @@ type Caller = 'codex' | 'hermes' | 'opencode' | 'antigravity'
  * @param session Current Scratch session.
  * @param caller Agent namespace used by the shared browser.
  * @param address Local Scratch GUI URL.
+ * @param sb3Path Optional path to an .sb3 file to load directly.
  */
-export async function openInCamofox(session: ScratchSession, caller: Caller, address: string): Promise<void> {
+export async function openInCamofox(session: ScratchSession, caller: Caller, address: string, sb3Path?: string): Promise<void> {
   const url = new URL(address)
   if (url.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) || url.username || url.password) {
     throw new Error('Camoufox Scratch GUI URL must be a local HTTP address.')
   }
-  const archive = await session.compile()
+  const archive = sb3Path ? await importSB3(sb3Path) : await session.compile()
   const task = `scratch-open-${randomUUID()}`
   const common = ['--caller', caller, '--task', task]
   const call = async (args: string[]) => {
@@ -52,6 +53,7 @@ export async function openInCamofox(session: ScratchSession, caller: Caller, add
     temp = await mkdtemp(path.join(os.tmpdir(), 'scratch-camofox-'))
     const scriptPath = path.join(temp, 'import.js')
     const base64 = Buffer.from(archive).toString('base64')
+    const filename = sb3Path ? path.basename(sb3Path) : 'scratch-session.sb3'
     const script = `(() => {
       window.__scratchImportErrors = [];
       window.addEventListener('error', e => window.__scratchImportErrors.push(String(e.message)));
@@ -66,7 +68,7 @@ export async function openInCamofox(session: ScratchSession, caller: Caller, add
         if (!input) throw Error('Scratch GUI project file input not found');
         const bytes = Uint8Array.from(atob(${JSON.stringify(base64)}), c => c.charCodeAt(0));
         const transfer = new DataTransfer();
-        transfer.items.add(new File([bytes], 'scratch-session.sb3', {type:'application/zip'}));
+        transfer.items.add(new File([bytes], ${JSON.stringify(filename)}, {type:'application/zip'}));
         input.files = transfer.files;
         input.dispatchEvent(new Event('change', {bubbles:true}));
         return true;
@@ -77,7 +79,7 @@ export async function openInCamofox(session: ScratchSession, caller: Caller, add
     if (imported.success !== true) throw new Error('Scratch GUI did not accept the project import.')
     let loaded = false
     for (let attempt = 0; attempt < 30; attempt++) {
-      const state = await call([...guarded, 'eval', `document.querySelector('input[placeholder="Project title here"]')?.value === 'scratch-session'`])
+      const state = await call([...guarded, 'eval', `document.querySelector('input[placeholder="Project title here"]')?.value === '${sb3Path ? path.basename(sb3Path).replace(/\.sb3$/, '') : 'scratch-session'}'`])
       if (state.result === true) { loaded = true; break }
       await new Promise((resolve) => setTimeout(resolve, 1000))
     }
@@ -91,4 +93,10 @@ export async function openInCamofox(session: ScratchSession, caller: Caller, add
     if (temp) await rm(temp, { recursive: true, force: true })
     await call([...guarded, 'lease', 'release'])
   }
+}
+
+/** Import an external .sb3 file and return its content. */
+async function importSB3(sb3Path: string): Promise<Buffer> {
+  const fs = await import('fs/promises');
+  return await fs.readFile(sb3Path);
 }

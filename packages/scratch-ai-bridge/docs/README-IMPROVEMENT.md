@@ -99,5 +99,41 @@
 | `docs/CLI-REFERENCE.md` | CLI 命令參考 |
 | `docs/gemini-structured-output-schema.json` | Gemini JSON Schema |
 | `docs/gemini-structured-output-example.json` | Gemini 範例 |
+| `docs/analysis-improvement-status.md` | 分析改善計畫執行狀態 |
+| `docs/analysis-improvement-plan.md` | 分析改善計畫 |
+| `docs/analysis-improvement-status.md` | 分析改善計畫執行狀態 |
+| `docs/gemini-structured-output-schema.json` | Gemini JSON Schema |
 | `research/sb3-failure-corpus/README.md` | 失敗 corpus 格式 |
 | `research/sb3-failure-corpus/f-001.json` 至 `f-009.json` | 9 種失敗樣本 |
+
+## 分析改善計畫
+
+### 已完成項目
+
+| 階段 | 目標 | 狀態 |
+|------|------|------|
+| **P0** | 學生導向診斷語氣 | ✅ 完成 |
+| **P1** | 診斷聚合與主題化 | ✅ 完成 |
+| **P2** | 診斷優先級與嚴重度標示 | ✅ 完成 |
+
+**診斷模組結構**：
+```
+src/core/diagnostics/
+├── catalog.ts      # 類型與分類定義
+├── messages.ts     # 提示模板（中英雙語）
+├── aggregator.ts   # 聚合與主題化
+├── format.ts       # CLI 與 Web 輸出格式
+└── convert.ts      # 診斷轉換工具
+```
+
+**測試結果**：
+- Tests 7 passed (7)
+- Diagnostic messages: 100 types
+- Diagnostic categories: 9 (structure, variable, asset, block, logic, sprite, stage, extension, best-practice)
+- Diagnostic severities: 3 (high, medium, low)
+
+## 下一步建議
+
+1. **CLI 整合**：修改 `inspect.ts` 使用新的診斷系統
+2. **Web UI**：在診斷清單中增加分區與嚴重度標示
+3. **測試**：執行學生可用性測試腳本 (`docs/student-usability-plan.md`)

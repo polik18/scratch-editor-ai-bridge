@@ -49,7 +49,7 @@ Node CLI adapter 讀取檔案為 `Uint8Array`，依序呼叫或封裝下列既�
 ### 第一版命令
 
 ```text
-scratch-ai-bridge inspect <file.sb3> [--format json|markdown]
+scratch-ai-bridge inspect <file.sb3> [--format json|markdown|student-markdown]
 scratch-ai-bridge batch <directory> --out <new-directory> [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
 ```
 

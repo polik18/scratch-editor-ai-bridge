@@ -1,4 +1,6 @@
 import type { ProjectMap, ProjectScore } from '../analyzer'
+import { safeOpcode } from '../analyzer/safe-opcode'
+import { hideTargetNames, restoreTargetNames } from './target-placeholders'
 
 /**
  * Build a student-facing Gemini prompt from the local score and anonymized evidence.
@@ -15,7 +17,8 @@ export const createScoringFeedbackPrompt = (score: ProjectScore, map: ProjectMap
       id: `E${index + 1}`,
       target: item.targetIndex === 0 ? '舞台' : `角色 ${item.targetIndex}`,
       script: item.scriptIndex === null ? null : item.scriptIndex + 1,
-      opcode: item.opcode,
+      opcode: safeOpcode(item.opcode),
+      ...(item.symbol ? { symbol: item.symbol } : {}),
     }))
   const evidenceIds = new Map(
     map.evidence
@@ -30,10 +33,19 @@ export const createScoringFeedbackPrompt = (score: ProjectScore, map: ProjectMap
     ]),
   )
   const observations = map.facts.slice(0, 24).map((fact) => {
-    let claim = fact.claim
-    for (const [target, anonymous] of [...anonymousNames].sort(([a], [b]) => b.length - a.length))
-      claim = claim.replaceAll(target, anonymous)
-    claim = claim.replaceAll(/「[^」]*」/g, '「作品文字已省略」').slice(0, 500)
+    const source = fact.evidence.at(0)
+    if (source?.symbol)
+      return {
+        type: fact.kind,
+        observation: `這段程式包含「${source.studentLabel}（${source.symbol}）」積木。`,
+        evidence: fact.evidence.map(({ id }) => evidenceIds.get(id)).filter(Boolean),
+      }
+    const hidden = hideTargetNames(fact.claim, anonymousNames)
+    let claim = hidden.text.replaceAll(/「([^」]*)」/g, (_match, content: string) =>
+      /^__SCRATCH_TARGET_\d+__$/.test(content) ? `「${content}」` : '「作品文字已省略」',
+    )
+    claim = restoreTargetNames(claim, hidden.placeholders)
+    claim = claim.slice(0, 500)
     return {
       type: fact.kind,
       observation: claim,

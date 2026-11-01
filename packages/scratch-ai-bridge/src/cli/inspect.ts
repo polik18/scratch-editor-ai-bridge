@@ -4,10 +4,13 @@ import {
   createProjectFeedback,
   createProjectMap,
   createProjectScore,
+  diagnosticFeedbackId,
 } from '../core/analyzer'
+import { safeOpcode } from '../core/analyzer/safe-opcode'
 import { importLosslessSb3 } from '../core/archive'
 import { projectJsonToCanonicalWithReport } from '../core/decompiler/project-json'
 import { extractProjectBlockGraphs } from '../core/graph'
+import { hideTargetNames, restoreTargetNames } from '../core/prompt/target-placeholders'
 
 export interface CliInspection {
   readonly format: 'scratch-ai-bridge/inspection'
@@ -75,6 +78,7 @@ export interface CliInspection {
     readonly message: string
     readonly target?: string
     readonly script?: number
+    readonly evidenceIds?: readonly string[]
   }[]
   readonly limitations: readonly string[]
 }
@@ -82,7 +86,7 @@ export interface CliInspection {
 const redactQuotedContent = (value: string): string =>
   value
     .replace(/「([^」]*)」/g, (_match, content: string) =>
-      content.startsWith('__SCRATCH_TARGET_') ? `「${content}」` : '「內容已隱去」',
+      /^__SCRATCH_(TARGET|SYMBOL)_\d+__$/.test(content) ? `「${content}」` : '「內容已隱去」',
     )
     .replace(/“[^”]*”/g, '「內容已隱去」')
     .replace(/"[^"\n]*"/g, '「內容已隱去」')
@@ -113,15 +117,57 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
   const project = conversion.canonical
   const rawGraphs = extractProjectBlockGraphs(archive.projectJson)
   const analysis = analyzeCanonicalProject(project, rawGraphs)
-  const projectMap = createProjectMap(project, analysis, rawGraphs, conversion.canonicalBlockMappings)
+  const projectMap = createProjectMap(
+    project,
+    analysis,
+    rawGraphs,
+    conversion.canonicalBlockMappings,
+    archive.projectJson,
+  )
   const projectFeedback = createProjectFeedback(analysis, projectMap)
-  const projectScore = createProjectScore(project, analysis, projectMap)
+  const projectScore = createProjectScore(project, analysis, projectMap, projectFeedback)
   const publicEvidenceId = new Map(projectMap.evidence.map((item, index) => [item.id, `E${index + 1}`]))
   const targetLabels = new Map<string, string>([
     [project.stage.name, '舞台'],
     ...project.sprites.map((sprite, index) => [sprite.name, `角色 ${index + 1}`] as [string, string]),
   ])
+  const targetSymbols = [project.stage, ...project.sprites].map(() => new Map<string, string>())
+  let variableNumber = 0
+  for (const [index, target] of [project.stage, ...project.sprites].entries()) {
+    for (const variable of target.variables) targetSymbols[index].set(variable.name, `變數 V${++variableNumber}`)
+  }
+  const symbols = targetSymbols[0]
+  const messages = new Map(analysis.dependencies.broadcasts.map(({ name }, index) => [name, `訊息 M${index + 1}`]))
   const rawTargets = Array.isArray(archive.projectJson.targets) ? archive.projectJson.targets : []
+  const variableIds = new Map<string, string>()
+  const ambiguousVariableIds = new Set<string>()
+  rawTargets.forEach((raw: unknown) => {
+    if (
+      !raw ||
+      typeof raw !== 'object' ||
+      !('variables' in raw) ||
+      !('name' in raw) ||
+      !('isStage' in raw) ||
+      !raw.variables ||
+      typeof raw.variables !== 'object'
+    )
+      return
+    const index = [project.stage, ...project.sprites].findIndex(
+      (target) => target.name === raw.name && (target.kind === 'stage') === raw.isStage,
+    )
+    for (const [id, value] of Object.entries(raw.variables)) {
+      if (Array.isArray(value) && typeof value[0] === 'string') {
+        const label = targetSymbols.at(index < 0 ? targetSymbols.length : index)?.get(value[0])
+        if (label && !ambiguousVariableIds.has(id)) {
+          const existing = variableIds.get(id)
+          if (existing && existing !== label) {
+            variableIds.delete(id)
+            ambiguousVariableIds.add(id)
+          } else variableIds.set(id, label)
+        }
+      }
+    }
+  })
   const allBlockIds = rawTargets.flatMap((target: unknown) =>
     target && typeof target === 'object' && 'blocks' in target && target.blocks && typeof target.blocks === 'object'
       ? Object.keys(target.blocks)
@@ -131,67 +177,101 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
     if (!target || typeof target !== 'object' || !('blocks' in target)) return count
     const blocks = (target as { blocks?: unknown }).blocks
     if (!blocks || typeof blocks !== 'object') return count
-    return count + Object.values(blocks).filter(
-      (block) => block && typeof block === 'object' && (block as { shadow?: unknown }).shadow === true,
-    ).length
+    return (
+      count +
+      Object.values(blocks).filter(
+        (block) => block && typeof block === 'object' && (block as { shadow?: unknown }).shadow === true,
+      ).length
+    )
   }, 0)
+  const unknownOpcodes = [
+    ...new Set(
+      rawGraphs
+        .flatMap(({ blocks }) => Object.values(blocks).map(({ opcode }) => opcode))
+        .filter((opcode) => safeOpcode(opcode) === 'unknown-extension'),
+    ),
+  ].sort((a, b) => b.length - a.length)
   const redact = (value: string, code?: string): string => {
     let output = value
+    for (const opcode of unknownOpcodes) if (opcode) output = output.replaceAll(opcode, '未辨識的積木')
     for (const id of allBlockIds) {
       if (id.length >= 8) output = output.replaceAll(id, '積木')
     }
-    const targetPlaceholders: string[] = []
-    for (const [index, [name]] of [...targetLabels.entries()]
-      .sort(([left], [right]) => right.length - left.length)
-      .entries()) {
-      const placeholder = `__SCRATCH_TARGET_${index}__`
-      if (name) output = output.replaceAll(name, placeholder)
-      targetPlaceholders.push(placeholder)
-    }
-    output = redactQuotedContent(output)
+    const hidden = hideTargetNames(output, targetLabels)
+    output = redactQuotedContent(hidden.text)
     if (code === 'forever-reinitialize') output = output.replace(/（[^）]*）/g, '（變數名稱已隱去）')
-    for (const [index, label] of [...targetLabels.values()].entries()) {
-      const placeholder = targetPlaceholders[index]
-      if (placeholder) output = output.replaceAll(placeholder, label)
-    }
+    output = restoreTargetNames(output, hidden.placeholders)
     return output
+  }
+  const sourceBlock = (path: string): Record<string, unknown> | undefined => {
+    let current: unknown = project
+    for (const part of path.split('/').slice(1)) {
+      if (!current || typeof current !== 'object') return undefined
+      current = (current as Record<string, unknown>)[part.replaceAll('~1', '/').replaceAll('~0', '~')]
+    }
+    return current && typeof current === 'object' ? (current as Record<string, unknown>) : undefined
+  }
+  const evidenceLabel = (item: (typeof projectMap.evidence)[number]): string => {
+    const block = sourceBlock(item.path)
+    const fields = block?.fields as Record<string, unknown> | undefined
+    const inputs = block?.inputs as Record<string, { type?: string; name?: string; value?: unknown }> | undefined
+    const variable = fields?.VARIABLE
+    const localSymbols = targetSymbols.at(item.targetIndex)
+    const rawField = item.blockId
+      ? rawGraphs.find(
+          ({ targetName, isStage }) => targetName === item.targetName && isStage === (item.targetIndex === 0),
+        )?.blocks[item.blockId]?.fields?.VARIABLE
+      : undefined
+    const variableId = Array.isArray(rawField) && typeof rawField[1] === 'string' ? rawField[1] : undefined
+    const variableLabel = variableId
+      ? variableIds.get(variableId)
+      : typeof variable === 'string'
+        ? (localSymbols?.get(variable) ?? symbols.get(variable))
+        : undefined
+    const broadcastInput = inputs?.BROADCAST_INPUT
+    const broadcastName =
+      fields?.BROADCAST_OPTION ?? (broadcastInput?.type === 'broadcast' ? broadcastInput.name : broadcastInput?.value)
+    const messageLabel = typeof broadcastName === 'string' ? messages.get(broadcastName) : undefined
+    const label = redact(item.studentLabel)
+    const symbol = item.symbol ?? variableLabel ?? messageLabel
+    return symbol ? `${label}（${symbol}）` : label
   }
   const evidenceId = (id: string): string => publicEvidenceId.get(id) ?? 'E-unknown'
   const evidenceById = new Map(projectMap.evidence.map((item) => [item.id, item]))
-  const warnings = projectFeedback.items.filter((item) => item.severity === 'warning')
-  const seenTargets = new Set<number>()
-  const diverseFacts = projectFeedback.items.filter((item) => {
-    const targetIndex = item.evidenceIds
-      .map((id) => evidenceById.get(id)?.targetIndex)
-      .find((index): index is number => index !== undefined)
-    if (targetIndex === undefined || seenTargets.has(targetIndex)) return false
-    seenTargets.add(targetIndex)
-    return true
-  })
-  const selectedFeedback = [...new Set([...warnings, ...diverseFacts, ...projectFeedback.items])].slice(0, 60)
+  const priorityFeedback = projectFeedback.items.filter(
+    (item) => item.severity === 'warning' || item.kind === 'design-question',
+  )
+  const structuralFeedback = projectFeedback.items.filter((item) => item.kind === 'confirmed-structure').slice(0, 10)
+  const selectedFeedback = [...priorityFeedback, ...structuralFeedback]
   const selectedEvidenceIds = new Set(
     selectedFeedback
-      .flatMap((item) => item.evidenceIds.slice(0, 2))
+      .flatMap((item) => item.evidenceIds.slice(0, 4))
       .concat(projectScore.criteria.flatMap((criterion) => criterion.evidenceIds)),
   )
   const selectedEvidence = [...selectedEvidenceIds]
     .map((id) => evidenceById.get(id))
     .filter((item): item is NonNullable<typeof item> => item !== undefined)
-    .slice(0, 240)
+
   const evidence = selectedEvidence.map((item) => ({
     id: evidenceId(item.id),
     target: targetLabels.get(item.targetName) ?? `角色 ${item.targetIndex}`,
     script: item.scriptIndex == null ? null : item.scriptIndex + 1,
-    opcode: item.opcode,
-    label: redact(item.studentLabel),
-    path: item.path,
+    opcode: safeOpcode(item.opcode),
+    label: evidenceLabel(item),
+    path:
+      item.blockId && item.path.includes('/blocks/') && !item.path.includes('/scripts/')
+        ? `/targets/${item.targetIndex}/blocks/已隱去`
+        : item.path,
   }))
   const diagnostics = analysis.diagnostics.map((item) => {
     const message = localizedDiagnostic(item.code) ?? redact(item.message, item.code)
+    const matching = projectFeedback.items.find(({ id }) => id === diagnosticFeedbackId(item))
+    const references = matching?.evidenceIds.slice(0, 4).map(evidenceId) ?? []
     return {
       severity: item.severity,
       code: item.code,
       message,
+      ...(references.length > 0 ? { evidenceIds: references } : {}),
       ...(item.target ? { target: targetLabels.get(item.target) ?? '角色' } : {}),
       ...(item.script ? { script: item.script } : {}),
     }
@@ -244,6 +324,9 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
     },
     coverage: {
       ...projectMap.coverage,
+      extensions: projectMap.coverage.extensions.map((item, index) =>
+        item.extensionName === '未辨識的擴充' ? { ...item, extensionId: `unknown-extension-${index + 1}` } : item,
+      ),
       scripts: projectMap.coverage.scripts.map(({ targetName, ...script }) => ({
         ...script,
         target: targetLabels.get(targetName) ?? '角色',
@@ -260,6 +343,36 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
         title: item.title,
         message: (() => {
           const code = item.id.startsWith('diagnostic:') ? item.id.split(':')[1] : undefined
+          if (code === 'condition-variable-mismatch-in-loop') {
+            const sources = item.evidenceIds
+              .map((id) => evidenceById.get(id))
+              .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined)
+            const condition = sources.find(({ opcode }) => opcode === 'control_if')
+            const write = sources.find(
+              ({ opcode }) => opcode === 'data_setvariableto' || opcode === 'data_changevariableby',
+            )
+            const readLabel = condition && /變數 V\d+/.exec(evidenceLabel(condition))?.[0]
+            const writeLabel = write && /變數 V\d+/.exec(evidenceLabel(write))?.[0]
+            if (readLabel && writeLabel)
+              return `迴圈條件讀取${readLabel}，分支卻更新${writeLabel}；請確認是否符合設計。`
+          }
+          const source =
+            item.kind === 'confirmed-structure'
+              ? item.evidenceIds
+                  .map((id) => evidenceById.get(id))
+                  .find(
+                    (entry) =>
+                      entry &&
+                      [
+                        'data_setvariableto',
+                        'data_changevariableby',
+                        'event_broadcast',
+                        'event_broadcastandwait',
+                        'event_whenbroadcastreceived',
+                      ].includes(entry.opcode),
+                  )
+              : undefined
+          if (source) return `這段程式包含「${evidenceLabel(source)}」積木；是否執行取決於作品的條件與狀態。`
           return (code ? localizedDiagnostic(code) : undefined) ?? redact(item.message, code)
         })(),
         nextStep: (() => {
@@ -277,7 +390,7 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
           }
           return (code ? nextSteps[code] : undefined) ?? redact(item.nextStep, code)
         })(),
-        evidenceIds: item.evidenceIds.slice(0, 2).map(evidenceId),
+        evidenceIds: item.evidenceIds.slice(0, 4).map(evidenceId),
       })),
     },
     evidence,
@@ -292,6 +405,21 @@ const studentIssueText = (
   diagnosticMessage: string,
 ): { title: string; message: string; nextStep: string } | undefined => {
   const messages: Record<string, { title: string; message: string; nextStep: string }> = {
+    'condition-variable-mismatch-in-loop': {
+      title: '檢查條件和變數',
+      message: '這段迴圈檢查一個變數，卻更新了另一個變數；這可能是刻意的設計。',
+      nextStep: '對照條件與分支的變數名稱，想想冷卻或狀態是否會依照預期改變，再實際測試。',
+    },
+    'duplicate-script-in-target': {
+      title: '檢查重複的程式',
+      message: '這個角色有兩段結構和內容相同的事件程式，事件發生時可能都會執行。',
+      nextStep: '比較兩段程式；如果不需要重複執行，可以先保留一段，然後在 Scratch 測試。',
+    },
+    'delete-clone-under-non-clone-hat': {
+      title: '檢查分身刪除的位置',
+      message: '綠旗啟動的程式中有「刪除此分身」積木。',
+      nextStep: '確認是否要刪除分身；如果是，檢查這個積木是否應放在分身啟動的程式中。',
+    },
     'detached-script': {
       title: '檢查這段程式怎麼開始',
       message: '這一段沒有接著綠旗或按鍵等開始積木；也可能是你故意留下的草稿。',

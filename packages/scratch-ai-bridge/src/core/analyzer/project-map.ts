@@ -13,6 +13,11 @@ export interface ProjectEvidence {
   readonly blockId?: string
   readonly opcode: string
   readonly studentLabel: string
+  readonly symbol?: string
+  readonly reference?: {
+    readonly kind: 'variable' | 'asset' | 'monitor' | 'extension' | 'procedure' | 'broadcast'
+    readonly key: string
+  }
   readonly path: string
 }
 
@@ -202,7 +207,11 @@ const extensionArgumentSummary = (
     if (typeof value === 'object' && value !== null && 'broadcast' in value) return `${label}由訊息提供`
     if (type === 'string') return `${label}已設定（文字內容隱去）`
     if (typeof value === 'number' && Number.isFinite(value)) return `${label}為 ${value}`
-    if (typeof value === 'string' && value.length <= 48) return `${label}為「${value}」`
+    if (
+      typeof value === 'string' &&
+      ['on', 'off', 'on-flipped', 'motion', 'direction', 'this sprite', 'stage'].includes(value)
+    )
+      return `${label}為「${value}」`
     return `${label}已設定`
   })
   return parts.length > 0 ? `（${parts.join('；')}）` : ''
@@ -261,6 +270,47 @@ const studentBlockLabel = (block: CanonicalBlock): string => {
       return '當舞台被點擊'
     case 'control_start_as_clone':
       return '當分身建立'
+    case 'control_create_clone_of':
+      return literalValue(inputs.CLONE_OPTION) === '_myself_' ? '建立自己的分身' : '建立角色分身'
+    case 'control_delete_this_clone':
+      return '刪除此分身'
+    case 'control_stop':
+      return block.fields?.STOP_OPTION === 'all'
+        ? '停止全部程式'
+        : block.fields?.STOP_OPTION === 'this script'
+          ? '停止這段程式'
+          : block.fields?.STOP_OPTION === 'other scripts in sprite' ||
+              block.fields?.STOP_OPTION === 'other scripts in stage'
+            ? '停止角色的其他程式'
+            : '停止程式'
+    case 'looks_switchcostumeto':
+      return '切換造型'
+    case 'looks_nextcostume':
+      return '切換下一個造型'
+    case 'looks_switchbackdropto':
+      return '切換背景'
+    case 'looks_show':
+      return '顯示角色'
+    case 'looks_hide':
+      return '隱藏角色'
+    case 'looks_setsizeto':
+      return '設定角色大小'
+    case 'looks_changesizeby':
+      return '改變角色大小'
+    case 'looks_seteffectto':
+      return '設定視覺效果'
+    case 'looks_changeeffectby':
+      return '改變視覺效果'
+    case 'motion_pointtowards':
+      return '面向指定方向或角色'
+    case 'motion_glidesecstoxy':
+      return '滑行到指定座標'
+    case 'motion_ifonedgebounce':
+      return '碰到邊緣就反彈'
+    case 'sound_play':
+      return '播放音效'
+    case 'sound_playuntildone':
+      return '播放音效直到結束'
     case 'motion_gotoxy':
       return `定位到 x：${safeNumber(inputs.X)}、y：${safeNumber(inputs.Y)}${xPositionHint(inputs.X)}`
     case 'motion_setx':
@@ -293,6 +343,8 @@ const studentBlockLabel = (block: CanonicalBlock): string => {
       return '看看有沒有碰到另一個角色'
     case 'event_broadcast':
       return '送出角色訊息'
+    case 'event_broadcastandwait':
+      return '送出角色訊息並等待'
     case 'operator_equals':
       return '比較兩個值是否相同'
     case 'operator_gt':
@@ -329,17 +381,55 @@ const triggerText = (block: CanonicalBlock): string | undefined => {
 const actionText = (block: CanonicalBlock): { kind: ProjectMapFact['kind']; text: string } | undefined => {
   const inputs = block.inputs ?? {}
   switch (block.opcode) {
+    case 'control_create_clone_of':
+      return { kind: 'action', text: studentBlockLabel(block) }
+    case 'control_delete_this_clone':
+      return { kind: 'action', text: '刪除此分身' }
+    case 'control_stop':
+      return { kind: 'action', text: studentBlockLabel(block) }
+    case 'looks_switchcostumeto':
+      return { kind: 'action', text: '切換造型' }
+    case 'looks_nextcostume':
+      return { kind: 'action', text: '切換下一個造型' }
+    case 'looks_switchbackdropto':
+      return { kind: 'action', text: '切換背景' }
+    case 'looks_show':
+      return { kind: 'action', text: '顯示角色' }
+    case 'looks_hide':
+      return { kind: 'action', text: '隱藏角色' }
+    case 'looks_setsizeto':
+      return { kind: 'action', text: '設定角色大小' }
+    case 'looks_changesizeby':
+      return { kind: 'action', text: '改變角色大小' }
+    case 'looks_seteffectto':
+      return { kind: 'action', text: '設定視覺效果' }
+    case 'looks_changeeffectby':
+      return { kind: 'action', text: '改變視覺效果' }
+    case 'motion_pointtowards':
+      return { kind: 'action', text: '面向指定方向或角色' }
+    case 'motion_glidesecstoxy':
+      return { kind: 'action', text: '滑行到指定座標' }
+    case 'motion_ifonedgebounce':
+      return { kind: 'action', text: '碰到邊緣就反彈' }
+    case 'sound_play':
+      return { kind: 'action', text: '播放音效' }
+    case 'sound_playuntildone':
+      return { kind: 'action', text: '播放音效直到結束' }
+    case 'motion_setx':
+      return { kind: 'action', text: `把 x 設成 ${safeNumber(inputs.X)}` }
+    case 'motion_sety':
+      return { kind: 'action', text: `把 y 設成 ${safeNumber(inputs.Y)}` }
     case 'motion_movesteps':
-      return { kind: 'action', text: `移動 ${String(literalValue(inputs.STEPS) ?? '指定步數')} 步` }
+      return { kind: 'action', text: `移動 ${safeNumber(inputs.STEPS)} 步` }
     case 'motion_gotoxy':
       return {
         kind: 'action',
-        text: `移到座標（${String(literalValue(inputs.X) ?? '?')}，${String(literalValue(inputs.Y) ?? '?')}）`,
+        text: `移到座標（${safeNumber(inputs.X)}，${safeNumber(inputs.Y)}）`,
       }
     case 'motion_changexby':
-      return { kind: 'action', text: `水平移動 ${String(literalValue(inputs.DX) ?? '指定距離')}` }
+      return { kind: 'action', text: `水平移動 ${safeNumber(inputs.DX)}` }
     case 'motion_changeyby':
-      return { kind: 'action', text: `垂直移動 ${String(literalValue(inputs.DY) ?? '指定距離')}` }
+      return { kind: 'action', text: `垂直移動 ${safeNumber(inputs.DY)}` }
     case 'looks_say': {
       const message = literalValue(inputs.MESSAGE)
       return { kind: 'action', text: typeof message === 'string' ? `說出「${message.slice(0, 80)}」` : '顯示對話' }
@@ -348,7 +438,8 @@ const actionText = (block: CanonicalBlock): { kind: ProjectMapFact['kind']; text
       return { kind: 'state', text: `設定變數「${String(block.fields?.VARIABLE ?? '未命名')}」` }
     case 'data_changevariableby':
       return { kind: 'state', text: `更新變數「${String(block.fields?.VARIABLE ?? '未命名')}」` }
-    case 'event_broadcast': {
+    case 'event_broadcast':
+    case 'event_broadcastandwait': {
       const name = inputs.BROADCAST_INPUT
       return {
         kind: 'broadcast',
@@ -374,6 +465,7 @@ const extensionRuntime = (opcode: string): ProjectScriptCoverage['runtime'] => {
  * @param analysis - Static analysis generated from the project.
  * @param rawGraphs - Original block graphs retained during import.
  * @param mappings - Canonical-to-original block ID mapping.
+ * @param rawProject - Optional SB3 JSON used to resolve same-named variable scopes.
  * @returns Evidence-linked facts and structural coverage.
  */
 export const createProjectMap = (
@@ -381,6 +473,7 @@ export const createProjectMap = (
   analysis: AnalysisIR,
   rawGraphs: readonly ScratchTargetBlockGraph[] = [],
   mappings: readonly CanonicalBlockMappingEntry[] = [],
+  rawProject?: Record<string, unknown>,
 ): ProjectMap => {
   const facts: ProjectMapFact[] = []
   const evidence: ProjectEvidence[] = []
@@ -388,6 +481,88 @@ export const createProjectMap = (
   let recognizedBlocks = 0
   let opaqueBlocks = 0
   const targets = [project.stage, ...project.sprites]
+
+  let variableNumber = 0
+  const variableSymbols = targets.map(
+    (target) => new Map(target.variables.map(({ name }) => [name, `變數 V${++variableNumber}`])),
+  )
+  const messageSymbols = new Map(
+    analysis.dependencies.broadcasts.map(({ name }, index) => [name, `訊息 M${index + 1}`]),
+  )
+  const mappingByPath = new Map(mappings.map((mapping) => [mapping.irPath, mapping]))
+  const graphByIndex = new Map(rawGraphs.map((graph) => [graph.targetIndex, graph]))
+  const rawVariableSymbols = new Map<string, string>()
+  const ambiguousVariableIds = new Set<string>()
+  const rawTargets: readonly unknown[] = Array.isArray(rawProject?.targets) ? rawProject.targets : []
+  for (const raw of rawTargets) {
+    if (
+      !raw ||
+      typeof raw !== 'object' ||
+      !('name' in raw) ||
+      !('isStage' in raw) ||
+      !('variables' in raw) ||
+      !raw.variables ||
+      typeof raw.variables !== 'object'
+    )
+      continue
+    const index = targets.findIndex((target) => target.name === raw.name && (target.kind === 'stage') === raw.isStage)
+    if (index < 0) continue
+    for (const [id, entry] of Object.entries(raw.variables)) {
+      if (!Array.isArray(entry) || typeof entry[0] !== 'string') continue
+      const symbol = variableSymbols[index]?.get(entry[0])
+      if (symbol && !ambiguousVariableIds.has(id)) {
+        const existing = rawVariableSymbols.get(id)
+        if (existing && existing !== symbol) {
+          rawVariableSymbols.delete(id)
+          ambiguousVariableIds.add(id)
+        } else rawVariableSymbols.set(id, symbol)
+      }
+    }
+  }
+  const variableSymbol = (name: string, targetIndex: number, paths: readonly string[]): string | undefined => {
+    const local = variableSymbols[targetIndex]?.get(name)
+    const global = variableSymbols[0].get(name)
+    if (targetIndex === 0 || !local || !global) return local ?? global
+    if (paths.length === 0 || rawVariableSymbols.size === 0) return undefined
+    const ids = new Set<string>()
+    const collect = (value: unknown): void => {
+      if (!Array.isArray(value)) return
+      if (value[0] === 12 && value[1] === name && typeof value[2] === 'string') ids.add(value[2])
+      else value.forEach(collect)
+    }
+    for (const path of paths) {
+      const mapping = mappingByPath.get(path)
+      if (mapping?.targetIndex === undefined) continue
+      const node = graphByIndex.get(mapping.targetIndex)?.blocks[mapping.blockId]
+      const field = node?.fields?.VARIABLE
+      if (Array.isArray(field) && field[0] === name && typeof field[1] === 'string') ids.add(field[1])
+      for (const input of Object.values(node?.inputs ?? {})) collect(input)
+    }
+    return ids.size === 1 ? rawVariableSymbols.get([...ids][0]) : undefined
+  }
+  const symbolFor = (block: CanonicalBlock, targetIndex: number, path: string): string | undefined => {
+    const variable = block.fields?.VARIABLE
+    if (typeof variable === 'string') return variableSymbol(variable, targetIndex, [path])
+    const names = new Set<string>()
+    const paths: string[] = []
+    const inspectReporter = (candidate: CanonicalBlock, candidatePath: string): void => {
+      paths.push(candidatePath)
+      const field = candidate.fields?.VARIABLE
+      if (candidate.opcode === 'data_variable' && typeof field === 'string') names.add(field)
+      for (const [inputName, input] of Object.entries(candidate.inputs ?? {})) {
+        if (input.type === 'variable') names.add(input.name)
+        if (input.type === 'block')
+          inspectReporter(input.block, `${candidatePath}/inputs/${pointerPart(inputName)}/block`)
+      }
+    }
+    inspectReporter(block, path)
+    if (names.size === 1) return variableSymbol([...names][0], targetIndex, paths)
+    const input = block.inputs?.BROADCAST_INPUT
+    const message =
+      block.fields?.BROADCAST_OPTION ??
+      (input?.type === 'broadcast' ? input.name : input?.type === 'literal' ? input.value : undefined)
+    return typeof message === 'string' ? messageSymbols.get(message) : undefined
+  }
 
   targets.forEach((target, targetIndex) => {
     const targetId = `${target.kind}:${encodeURIComponent(target.name)}`
@@ -421,9 +596,10 @@ export const createProjectMap = (
         })),
       )
       const scriptEvidence = allBlocks.map(({ block, path }) => {
-        const mapping = mappings.find((entry) => entry.irPath === path)
+        const mapping = mappingByPath.get(path)
         const rawId = mapping?.blockId
         const sourceId = rawId ?? path
+        const symbol = symbolFor(block, targetIndex, path)
         return {
           id: `evidence:${targetId}:${encodeURIComponent(sourceId)}`,
           targetId,
@@ -433,6 +609,10 @@ export const createProjectMap = (
           ...(rawId ? { blockId: rawId } : {}),
           opcode: block.opcode,
           studentLabel: studentBlockLabel(block),
+          ...(block.opcode === 'procedures_call' && block.procedure?.name
+            ? { reference: { kind: 'procedure' as const, key: block.procedure.name } }
+            : {}),
+          ...(symbol ? { symbol } : {}),
           path,
         } satisfies ProjectEvidence
       })
@@ -452,7 +632,11 @@ export const createProjectMap = (
         })
       }
       const actions = allBlocks.flatMap(({ block }, index) => {
-        const description = actionText(block)
+        const description =
+          actionText(block) ??
+          (block.opcode === 'control_if' && scriptEvidence[index]?.symbol
+            ? { kind: 'state' as const, text: '檢查條件中的變數' }
+            : undefined)
         const source = scriptEvidence[index]
         return description ? [{ ...description, source }] : []
       })
@@ -524,6 +708,136 @@ export const createProjectMap = (
     })
   })
 
+  const usedVariables = new Set(
+    analysis.targets.flatMap((target) =>
+      [...target.scripts, ...target.procedures].flatMap(({ reads, writes }) => [...reads, ...writes]),
+    ),
+  )
+  for (const monitor of analysis.dependencies.monitors) if (monitor.variable) usedVariables.add(monitor.variable)
+  targets.forEach((target, targetIndex) => {
+    const root = targetIndex === 0 ? '/stage' : `/sprites/${targetIndex - 1}`
+    const targetId = `${target.kind}:${encodeURIComponent(target.name)}`
+    const add = (
+      path: string,
+      opcode: string,
+      studentLabel: string,
+      reference: NonNullable<ProjectEvidence['reference']>,
+    ): void => {
+      evidence.push({
+        id: `evidence:${targetId}:${encodeURIComponent(path)}`,
+        targetId,
+        targetName: target.name,
+        targetIndex,
+        scriptIndex: null,
+        opcode,
+        studentLabel,
+        reference,
+        path,
+      })
+    }
+    target.variables.forEach((variable, index) => {
+      if (variable.cloud || !usedVariables.has(variable.name)) {
+        add(
+          `${root}/variables/${index}`,
+          'variable-declaration',
+          variable.cloud ? '雲端變數宣告' : '未見讀寫的變數宣告',
+          {
+            kind: 'variable',
+            key: variable.name,
+          },
+        )
+        const last = evidence.at(-1)
+        if (last) evidence[evidence.length - 1] = { ...last, symbol: variableSymbols[targetIndex].get(variable.name) }
+      }
+    })
+    target.costumes.forEach((asset, index) => {
+      if (
+        asset.assetIssue ||
+        (target.costumes.length === 1 &&
+          analysis.diagnostics.some(
+            (diagnostic) =>
+              diagnostic.code === 'single-costume-nextcostume-loop' && diagnostic.target === target.name,
+          ))
+      )
+        add(
+          `${root}/costumes/${index}`,
+          'asset-costume',
+          asset.assetIssue ? '需要確認的造型素材' : '角色的唯一造型',
+          {
+            kind: 'asset',
+            key: `costume:${asset.name}`,
+          },
+        )
+    })
+    target.sounds.forEach((asset, index) => {
+      if (asset.assetIssue)
+        add(`${root}/sounds/${index}`, 'asset-sound', '需要確認的音效素材', {
+          kind: 'asset',
+          key: `sound:${asset.name}`,
+        })
+    })
+    target.procedures.forEach((procedure, procedureIndex) => {
+      procedure.body.forEach((block, blockIndex) => {
+        for (const nested of nestedBlocks(block)) {
+          const path = `${root}/procedures/${procedureIndex}/body/${blockIndex}${nested.suffix}`
+          if (nested.block.opcode === 'procedures_call' && nested.block.procedure?.name) {
+            add(path, 'procedures_call', '呼叫自製積木', { kind: 'procedure', key: nested.block.procedure.name })
+          } else if (['event_broadcast', 'event_broadcastandwait'].includes(nested.block.opcode)) {
+            const input = nested.block.inputs?.BROADCAST_INPUT
+            const name =
+              input?.type === 'broadcast' ? input.name : input?.type === 'literal' ? String(input.value) : undefined
+            if (name !== undefined) {
+              add(path, nested.block.opcode, studentBlockLabel(nested.block), { kind: 'broadcast', key: name })
+              const last = evidence.at(-1)
+              if (last) evidence[evidence.length - 1] = { ...last, symbol: messageSymbols.get(name) }
+            }
+          }
+        }
+      })
+    })
+  })
+  for (const [index, monitor] of (project.monitors ?? []).entries()) {
+    if (!analysis.diagnostics.some((diagnostic) => diagnostic.monitorId === monitor.id)) continue
+    const targetIndex = Math.max(
+      0,
+      targets.findIndex(({ name }) => name === monitor.spriteName),
+    )
+    const target = targets[targetIndex]
+    const path = `/monitors/${index}`
+    const targetId = `${target.kind}:${encodeURIComponent(target.name)}`
+    evidence.push({
+      id: `evidence:monitor:${index}`,
+      targetId,
+      targetName: monitor.spriteName ?? target.name,
+      targetIndex,
+      scriptIndex: null,
+      opcode: 'monitor-declaration',
+      studentLabel: '需要確認的監視器',
+      reference: { kind: 'monitor', key: monitor.id },
+      path,
+    })
+  }
+  for (const [index, extension] of (project.extensions ?? []).entries()) {
+    if (
+      !analysis.diagnostics.some(
+        (diagnostic) => diagnostic.extensionId === extension && diagnostic.severity === 'warning',
+      )
+    )
+      continue
+    const target = project.stage
+    evidence.push({
+      id: `evidence:extension:${index}`,
+      targetId: `stage:${encodeURIComponent(target.name)}`,
+      targetName: target.name,
+      targetIndex: 0,
+      scriptIndex: null,
+      opcode: 'extension-declaration',
+      studentLabel: '擴充功能宣告',
+      reference: { kind: 'extension', key: extension },
+      path: `/extensions/${index}`,
+    })
+  }
+
   for (const graph of rawGraphs) {
     const targetIndex = targets.findIndex(
       (target) => target.name === graph.targetName && (target.kind === 'stage') === graph.isStage,
@@ -533,7 +847,10 @@ export const createProjectMap = (
       if (
         block.shadow === true ||
         knownOpcodes.has(block.opcode) ||
-        evidence.some((entry) => entry.blockId === blockId)
+        evidence.some(
+          (entry) =>
+            entry.targetIndex === (targetIndex < 0 ? graph.targetIndex : targetIndex) && entry.blockId === blockId,
+        )
       )
         continue
       const extensionDescription = getScratchExtensionBlockDescription(block.opcode)
@@ -573,7 +890,11 @@ export const createProjectMap = (
       }
     }
     for (const issue of graph.issues) {
-      const existing = evidence.find((entry) => entry.blockId === issue.blockId)
+      const existing = evidence.find(
+        (entry) =>
+          entry.targetIndex === (targetIndex < 0 ? graph.targetIndex : targetIndex) &&
+          entry.blockId === issue.blockId,
+      )
       const issueBlock = Object.entries(graph.blocks).find(([blockId]) => blockId === issue.blockId)?.[1]
       const source =
         existing ??
@@ -659,7 +980,7 @@ export const createProjectMap = (
     version: 1,
     projectName: project.name,
     facts,
-    evidence,
+    evidence: [...new Map(evidence.map((item) => [item.id, item])).values()],
     coverage: {
       scripts: scriptsCoverage,
       extensions: [...extensionCounts.values()].sort((left, right) =>

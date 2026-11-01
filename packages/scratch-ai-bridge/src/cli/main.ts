@@ -1,12 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { runBatch } from './batch'
-import { inspectSb3Bytes, inspectionToMarkdown } from './inspect'
+import { inspectSb3Bytes, inspectionToMarkdown, inspectionToStudentMarkdown } from './inspect'
 
 const VERSION = '0.1.0'
 const USAGE = `Scratch AI Bridge CLI ${VERSION}
 
 Usage:
-  scratch-ai-bridge inspect <file.sb3> [--format json|markdown]
+  scratch-ai-bridge inspect <file.sb3> [--format json|markdown|student-markdown]
   scratch-ai-bridge batch <directory> --out <new-directory> [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
   scratch-ai-bridge generate <design.json> --out <new-file.sb3> [--report <report.json>] [--preview <stage.png>] [--force]
   scratch-ai-bridge --help
@@ -33,7 +33,7 @@ if (command === '--help' || command === '-h' || command === '') {
     const argument = args[index]
     if (argument === '--format') {
       const value = args[index + 1]
-      if (value !== 'json' && value !== 'markdown') {
+      if (value !== 'json' && value !== 'markdown' && value !== 'student-markdown') {
         argumentError = true
         break
       }
@@ -55,6 +55,7 @@ if (command === '--help' || command === '-h' || command === '') {
       const bytes = await readFile(positionals[0] ?? '')
       const result = await inspectSb3Bytes(bytes)
       if (format === 'markdown') process.stdout.write(`${inspectionToMarkdown(result)}\n`)
+      else if (format === 'student-markdown') process.stdout.write(`${inspectionToStudentMarkdown(result)}\n`)
       else writeJson(result)
     } catch {
       writeJson({
@@ -182,7 +183,12 @@ if (command === '--help' || command === '-h' || command === '') {
       process.stderr.write(chunk as string, ...(args as []))) as typeof process.stdout.write
     let result
     try {
-      result = await generateGame(positionals[0]!, { outputFile, ...(reportPath ? { reportPath } : {}), ...(previewPath ? { previewPath } : {}), force })
+      result = await generateGame(positionals[0]!, {
+        outputFile,
+        ...(reportPath ? { reportPath } : {}),
+        ...(previewPath ? { previewPath } : {}),
+        force,
+      })
     } finally {
       console.log = originalConsoleLog
       console.warn = originalConsoleWarn
