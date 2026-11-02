@@ -94,7 +94,7 @@ const redactQuotedContent = (value: string): string =>
 const localizedDiagnostic = (code: string): string | undefined => {
   const messages: Record<string, string> = {
     'block-graph-invalid-argument-reporter':
-      'Bridge 找到一個自製積木的參數積木，但無法確認它對應哪個輸入；請檢查積木定義和參數名稱。',
+      'Bridge 找到一個不在對應自製積木定義內的參數積木（常見於拆下或複製積木後留下的草稿）；請檢查積木定義或未接上的草稿積木。',
     'extension-runtime-disabled': '作品使用相機或感測器 extension；CLI 不會啟動這些功能，請在原 Scratch 環境確認。',
     'extension-runtime-unverified':
       '作品使用額外的 Scratch extension；CLI 只分析積木結構，無法確認裝置或瀏覽器中的實際行為。',
@@ -265,7 +265,13 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
   }))
   const diagnostics = analysis.diagnostics.map((item) => {
     const message = localizedDiagnostic(item.code) ?? redact(item.message, item.code)
-    const matching = projectFeedback.items.find(({ id }) => id === diagnosticFeedbackId(item))
+    const matching =
+      projectFeedback.items.find(({ id }) => id === diagnosticFeedbackId(item)) ??
+      (item.code === 'detached-script'
+        ? projectFeedback.items.find(({ id }) =>
+            id.startsWith(`diagnostic:detached-script:${encodeURIComponent(item.target ?? '')}:`),
+          )
+        : undefined)
     const references = matching?.evidenceIds.slice(0, 4).map(evidenceId) ?? []
     return {
       severity: item.severity,
@@ -373,6 +379,12 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
                   )
               : undefined
           if (source) return `這段程式包含「${evidenceLabel(source)}」積木；是否執行取決於作品的條件與狀態。`
+          if (code === 'detached-script') {
+            const countMatch = /同一角色共有 (\d+) 段/.exec(item.message)
+            if (countMatch) {
+              return `同一角色共有 ${countMatch[1]} 段程式沒有事件積木（例如綠旗或按鍵），一般情況下可能不會自動開始，也可能是留下的草稿。`
+            }
+          }
           return (code ? localizedDiagnostic(code) : undefined) ?? redact(item.message, code)
         })(),
         nextStep: (() => {

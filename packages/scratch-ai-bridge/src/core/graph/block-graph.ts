@@ -92,6 +92,33 @@ const isRecordArray = (value: unknown): value is Record<string, unknown>[] =>
 const isBlockNode = (value: unknown): value is ScratchBlockGraphNode =>
   isRecord(value) && typeof value.opcode === 'string'
 
+// SB3 stores detached variable/list reporters as compact top-level tuples.
+const isTopLevelDataPrimitive = (value: unknown): value is [number, string, string, number, number] =>
+  Array.isArray(value) && value.length === 5 && (value[0] === 12 || value[0] === 13) &&
+  typeof value[1] === 'string' && typeof value[2] === 'string' &&
+  typeof value[3] === 'number' && Number.isFinite(value[3]) &&
+  typeof value[4] === 'number' && Number.isFinite(value[4])
+
+const retainDataPrimitives = (original: unknown, graph: ScratchBlockGraph): Record<string, unknown> => {
+  if (!isRecord(original)) throw new Error('Original blocks must be an object')
+  const entries: [string, unknown][] = []
+  const retained = new Set<string>()
+  for (const [id, value] of Object.entries(original)) {
+    if (isTopLevelDataPrimitive(value)) {
+      if (Object.hasOwn(graph, id)) throw new Error(`Block ${id} conflicts with a preserved data primitive`)
+      entries.push([id, structuredClone(value)])
+      retained.add(id)
+    } else if (Object.hasOwn(graph, id)) {
+      entries.push([id, graph[id]])
+      retained.add(id)
+    } else if (!isBlockNode(value)) {
+      throw new Error(`Cannot safely replace invalid block ${id}`)
+    }
+  }
+  for (const [id, block] of Object.entries(graph)) if (!retained.has(id)) entries.push([id, block])
+  return Object.fromEntries(entries)
+}
+
 const parsePatchPath = (path: string): string[] => {
   if (!path.startsWith('/') || path.length > 512) throw new Error('must be a JSON Pointer under a node property')
   const parts = path
@@ -646,7 +673,7 @@ export const extractProjectBlockGraphs = (project: unknown): ScratchTargetBlockG
     const targetName = target.name
     const rawBlocks = target.blocks ?? {}
     if (!isRecord(rawBlocks)) throw new Error(`Scratch target ${targetName} blocks must be an object`)
-    const malformedEntries = Object.entries(rawBlocks).filter(([, value]) => !isBlockNode(value))
+    const malformedEntries = Object.entries(rawBlocks).filter(([, value]) => !isBlockNode(value) && !isTopLevelDataPrimitive(value))
     const blocks = copyScratchBlockGraph(
       Object.fromEntries(Object.entries(rawBlocks).filter(([, value]) => isBlockNode(value))),
     )
@@ -700,7 +727,7 @@ export const replaceProjectBlockGraphs = (
         `Replacement block graph for target ${index} is invalid: ${issues.map(({ code }) => code).join(', ')}`,
       )
     }
-    return graph
+    return retainDataPrimitives(target.blocks ?? {}, graph)
   })
 
   const result: unknown = structuredClone(project)
@@ -729,7 +756,7 @@ export const patchProjectBlockGraphs = (
   }
   const targets = project.targets
   const seen = new Set<number>()
-  const patchedGraphs = new Map<number, ScratchBlockGraph>()
+  const patchedGraphs = new Map<number, Record<string, unknown>>()
   for (const patch of patches) {
     const { targetIndex } = patch
     const target = targets[targetIndex]
@@ -744,7 +771,14 @@ export const patchProjectBlockGraphs = (
       throw new Error(`Block patch does not match project target ${targetIndex}`)
     }
     seen.add(targetIndex)
-    patchedGraphs.set(targetIndex, mergeScratchBlockGraph(copyScratchBlockGraph(target.blocks ?? {}), patch.blocks))
+    const rawBlocks = target.blocks ?? {}
+    if (!isRecord(rawBlocks)) throw new Error(`Scratch target ${target.name} blocks must be an object`)
+    const entries = Object.entries(rawBlocks)
+    if (entries.some(([, value]) => !isBlockNode(value) && !isTopLevelDataPrimitive(value))) {
+      throw new Error(`Scratch target ${target.name} contains invalid block entries`)
+    }
+    const graph = copyScratchBlockGraph(Object.fromEntries(entries.filter(([, value]) => isBlockNode(value))))
+    patchedGraphs.set(targetIndex, retainDataPrimitives(rawBlocks, mergeScratchBlockGraph(graph, patch.blocks)))
   }
 
   const result: unknown = structuredClone(project)

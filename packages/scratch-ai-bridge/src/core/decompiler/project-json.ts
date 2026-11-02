@@ -299,6 +299,8 @@ const decodeProcedures = (
     })
   }
   const procedures = parsed.map(({ procedure }) => procedure)
+  const bodyGraph = copyImportedBlockGraph(blocks)
+  for (const block of Object.values(bodyGraph)) block.topLevel = false
   for (const [procedureIndex, { definition, definitionId, prototypeId, procedure }] of parsed.entries()) {
     mapping.push(
       {
@@ -315,27 +317,30 @@ const decodeProcedures = (
       },
     )
     if (typeof definition.next !== 'string') continue
-    const bodyGraph = copyImportedBlockGraph(blocks)
-    for (const block of Object.values(bodyGraph)) block.topLevel = false
-    if (Object.hasOwn(bodyGraph, definition.next)) bodyGraph[definition.next].topLevel = true
-    procedure.body =
-      decodeBlockGraphToCanonicalScripts(bodyGraph, procedures, comments, {
-        mapping,
-        target: targetIdentity,
-        procedureScope: procedure,
-        onArgumentReporterFallback: ({ blockId, opcode, argumentName }) => {
-          normalizationItems.push({
-            targetName: target.name,
-            blockId,
-            opcode,
-            argumentName,
-            code: 'out-of-scope-argument-reporter',
-            outcome: 'normalized',
-            message: `Argument reporter "${argumentName}" is outside its matching custom procedure and uses Scratch's default value.`,
-          })
-        },
-        pathForScript: () => `${targetPath}/procedures/${procedureIndex}/body`,
-      })[0]?.blocks ?? []
+    const hasNext = Object.hasOwn(bodyGraph, definition.next)
+    if (hasNext) bodyGraph[definition.next].topLevel = true
+    try {
+      procedure.body =
+        decodeBlockGraphToCanonicalScripts(bodyGraph, procedures, comments, {
+          mapping,
+          target: targetIdentity,
+          procedureScope: procedure,
+          onArgumentReporterFallback: ({ blockId, opcode, argumentName }) => {
+            normalizationItems.push({
+              targetName: target.name,
+              blockId,
+              opcode,
+              argumentName,
+              code: 'out-of-scope-argument-reporter',
+              outcome: 'normalized',
+              message: `Argument reporter "${argumentName}" is outside its matching custom procedure and uses Scratch's default value.`,
+            })
+          },
+          pathForScript: () => `${targetPath}/procedures/${procedureIndex}/body`,
+        })[0]?.blocks ?? []
+    } finally {
+      if (hasNext) bodyGraph[definition.next].topLevel = false
+    }
   }
   return procedures
 }

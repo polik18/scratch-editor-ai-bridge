@@ -9,6 +9,7 @@ import {
   encodeCanonicalScriptsToBlockGraph,
   extractProjectBlockGraphs,
   mergeScratchBlockGraph,
+  patchProjectBlockGraphs,
   replaceProjectBlockGraphs,
   validateScratchBlockGraph,
 } from '../../src/core/graph'
@@ -47,7 +48,7 @@ describe('generic Scratch block graph', () => {
           isStage: true,
           blocks: {
             valid: { opcode: 'event_whenflagclicked', next: null, parent: null, inputs: {} },
-            legacyMetadata: [13, 'legacy procedure', 'prototype-id', 2562, 85],
+            legacyMetadata: [99, 'invalid', 'id', 2562, 85],
           },
         },
       ],
@@ -61,6 +62,39 @@ describe('generic Scratch block graph', () => {
         relatedId: 'opcode',
       }),
     )
+  })
+
+  it('preserves valid top-level variable and list primitives through unrelated edits', () => {
+    const project = {
+      targets: [
+        {
+          name: 'Stage',
+          isStage: true,
+          blocks: {
+            variable: [12, 'score', 'var-id', 10, 20],
+            list: [13, 'items', 'list-id', -4, 5],
+            hat: { opcode: 'event_whenflagclicked', next: null, parent: null, inputs: {}, fields: {}, topLevel: true },
+          },
+        },
+      ],
+    }
+    const graph = extractProjectBlockGraphs(project)
+    expect(graph[0].issues).toEqual([])
+    expect(replaceProjectBlockGraphs(project, graph)).toEqual(project)
+    const patched = patchProjectBlockGraphs(project, [
+      {
+        targetIndex: 0,
+        targetName: 'Stage',
+        isStage: true,
+        blocks: { hat: { x: 12 } },
+      },
+    ])
+    expect((patched.targets as typeof project.targets)[0].blocks).toMatchObject({
+      variable: project.targets[0].blocks.variable,
+      list: project.targets[0].blocks.list,
+      hat: { x: 12 },
+    })
+    expect(project.targets[0].blocks.hat).not.toHaveProperty('x')
   })
 
   it('preserves deterministic generated chains and opaque node data across patches', () => {
@@ -806,6 +840,86 @@ describe('generic Scratch block graph', () => {
     })
 
     expect(validateScratchBlockGraph(graph)).toEqual([])
+  })
+
+  it('distinguishes declared procedure body argument reporters from undeclared and detached stack reporters', () => {
+    const validBodyGraph = copyScratchBlockGraph({
+      definition: {
+        opcode: 'procedures_definition',
+        next: 'bodyIf',
+        parent: null,
+        topLevel: true,
+        inputs: { custom_block: [1, 'prototype'] },
+      },
+      prototype: {
+        opcode: 'procedures_prototype',
+        next: null,
+        parent: 'definition',
+        inputs: {},
+        shadow: true,
+        mutation: {
+          proccode: 'Spawn %n',
+          argumentids: '["arg1"]',
+          argumentnames: '["waterLevel"]',
+          argumentdefaults: '[0]',
+        },
+      },
+      bodyIf: {
+        opcode: 'control_if',
+        next: null,
+        parent: 'definition',
+        inputs: { CONDITION: [2, 'cmp'] },
+      },
+      cmp: {
+        opcode: 'operator_equals',
+        next: null,
+        parent: 'bodyIf',
+        inputs: { OPERAND1: [3, 'argRep', [10, '0']], OPERAND2: [1, [10, '64']] },
+      },
+      argRep: {
+        opcode: 'argument_reporter_string_number',
+        next: null,
+        parent: 'cmp',
+        inputs: {},
+        fields: { VALUE: ['waterLevel', null] },
+      },
+    })
+    expect(validateScratchBlockGraph(validBodyGraph)).toEqual([])
+
+    const undeclaredBodyGraph = copyScratchBlockGraph({
+      ...validBodyGraph,
+      argRep: {
+        ...validBodyGraph.argRep,
+        fields: { VALUE: ['wrongName', null] },
+      },
+    })
+    expect(validateScratchBlockGraph(undeclaredBodyGraph)).toEqual([
+      expect.objectContaining({
+        code: 'invalid-argument-reporter',
+        blockId: 'argRep',
+        relatedId: 'wrongName',
+      }),
+    ])
+
+    const detachedStackGraph = copyScratchBlockGraph({
+      ...validBodyGraph,
+      definition: {
+        ...validBodyGraph.definition,
+        next: null,
+      },
+      bodyIf: {
+        ...validBodyGraph.bodyIf,
+        parent: null,
+        topLevel: true,
+      },
+    })
+    expect(validateScratchBlockGraph(detachedStackGraph)).toEqual([
+      expect.objectContaining({
+        code: 'invalid-argument-reporter',
+        blockId: 'argRep',
+        relatedId: 'waterLevel',
+      }),
+    ])
   })
 
   it('extracts graphs per target without losing unknown project blocks', () => {

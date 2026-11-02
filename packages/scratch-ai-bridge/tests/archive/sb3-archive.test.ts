@@ -518,6 +518,28 @@ describe('lossless SB3 archive path', () => {
     )
   })
 
+  it('retains compact data reporters and assets after an unrelated raw block edit', async () => {
+    const zip = new JSZip()
+    const project = { targets: [{ name: 'Stage', isStage: true, blocks: {
+      variable: [12, 'score', 'score-id', 12, 34],
+      list: [13, 'items', 'items-id', -20, 30],
+      hat: { opcode: 'event_whenflagclicked', next: null, parent: null, inputs: {}, fields: {}, topLevel: true },
+    } }] }
+    zip.file('project.json', JSON.stringify(project))
+    zip.file('fixture.dat', new Uint8Array([1, 2, 3]))
+    const original = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
+    const patched = patchLosslessSb3BlockGraphs(original, [{ targetIndex: 0, targetName: 'Stage', isStage: true,
+      blocks: { hat: { x: 42 } } }])
+    const restored = await importLosslessSb3(await (await exportLosslessSb3(patched)).arrayBuffer())
+    const target = (restored.projectJson.targets as typeof project.targets)[0]
+    expect(target.blocks.variable).toEqual(project.targets[0].blocks.variable)
+    expect(target.blocks.list).toEqual(project.targets[0].blocks.list)
+    expect(target.blocks.hat).toMatchObject({ x: 42 })
+    expect(restored.entries.find((entry) => entry.name === 'fixture.dat')?.sha256).toBe(
+      original.entries.find((entry) => entry.name === 'fixture.dat')?.sha256,
+    )
+  })
+
   it('round-trips and patches an unknown-opcode SB3 without losing opaque graph data', async () => {
     const zip = new JSZip()
     const project = {

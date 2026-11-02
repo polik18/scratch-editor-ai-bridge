@@ -47,6 +47,41 @@ describe('raw SB3 AI proposal', () => {
       proposeRawLivePatch(project, JSON.stringify({ ...patch, change: { ...patch.change, property: '__proto__' } })),
     ).toThrow(/Unsupported/)
   })
+  it('provides a bounded, explicit summary for large projects without cloud values', async () => {
+    const zip = new JSZip()
+    const targets = Array.from({ length: 30 }, (_, i) => ({
+      name: `Sprite ${i}`, isStage: false, x: 0,
+      variables: Object.fromEntries(Array.from({ length: 30 }, (_, j) => [`v${j}`, [`variable-${j}`, 'x'.repeat(512)]])),
+    }))
+    targets[0].variables.cloud = ['☁ secret', 'do-not-disclose', true] as unknown as string[]
+    zip.file('project.json', JSON.stringify({ targets }))
+    const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
+    const summary = inspectRawProjectForAi(project)
+    expect(new TextEncoder().encode(summary).byteLength).toBeLessThanOrEqual(24000)
+    expect(summary).toContain(rawSb3Revision(project))
+    expect(summary).toMatch(/省略|截斷/)
+    expect(summary).not.toContain('do-not-disclose')
+  })
+
+  it('allows read-only inspection of problematic targets while rejecting block edits', async () => {
+    const zip = new JSZip()
+    zip.file('project.json', JSON.stringify({ targets: [{ name: 'Cat', isStage: false, blocks: {
+      orphan: { opcode: 'argument_reporter_string_number', parent: null, next: null,
+        fields: { VALUE: ['unknown'] }, inputs: {}, topLevel: true },
+    } }] }))
+    const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
+    const revision = rawSb3Revision(project)
+    const page = inspectRawBlocks(project, revision, 0)
+    expect(page.blocks).toHaveProperty('orphan')
+    expect(page.graphIssueCount).toBeGreaterThan(0)
+    const patch = { format: 'scratch-ai-bridge/raw-patch', version: 1, baseRevision: revision,
+      summary: 'attempt edit', change: { kind: 'blocks', graphPatch: {
+        format: 'scratch-ai-bridge/block-graph-patch', version: 1,
+        patches: [{ targetIndex: 0, targetName: 'Cat', isStage: false, blocks: { orphan: { x: 1 } } }],
+      } } }
+    expect(() => proposeRawLivePatch(project, JSON.stringify(patch))).toThrow(/existing issues/)
+  })
+
   it('pages raw blocks and preserves assets and unrelated graph nodes when proposing edits', async () => {
     const zip = new JSZip()
     const blocks = {
@@ -76,6 +111,11 @@ describe('raw SB3 AI proposal', () => {
     zip.file('asset.svg', '<svg/>')
     const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
     const revision = rawSb3Revision(project)
+    const selected = inspectRawBlocks(project, revision, 0, 0, 10, { opcode: 'motion_movesteps' })
+    expect(Object.keys(selected.blocks)).toEqual(['move'])
+    expect(selected.total).toBe(1)
+    const byId = inspectRawBlocks(project, revision, 0, 0, 10, { blockId: 'move' })
+    expect(Object.keys(byId.blocks)).toEqual(['move'])
     const first = inspectRawBlocks(project, revision, 0, 0, 1)
     expect(first.nextOffset).toBe(1)
     expect(Object.keys(first.blocks)).toEqual(['hat'])
@@ -104,8 +144,9 @@ describe('raw SB3 AI proposal', () => {
     expect(candidate.requiresVmValidation).toBe(true)
     expect(candidate.changes[0]).toContain('20')
     let calls = 0
-    const fetchImpl: typeof fetch = async (_url, init) => {
-      const request = JSON.parse(String(init?.body)) as {
+    const fetchImpl: typeof fetch = (_url, init) => {
+      const bodyText = typeof init?.body === 'string' ? init.body : '{}'
+      const request = JSON.parse(bodyText) as {
         tools: { function: { name: string } }[]
         messages: { role: string; content?: string }[]
       }
@@ -135,9 +176,11 @@ describe('raw SB3 AI proposal', () => {
             (message) => message.role === 'tool' && message.content?.includes('motion_movesteps'),
           ),
         ).toBe(true)
-      return new Response(JSON.stringify({ choices: [{ message: { content: null, tool_calls: [call] } }] }), {
-        status: 200,
-      })
+      return Promise.resolve(
+        new Response(JSON.stringify({ choices: [{ message: { content: null, tool_calls: [call] } }] }), {
+          status: 200,
+        }),
+      )
     }
     const output = await requestOpenAiCompatiblePatch({
       baseUrl: 'http://127.0.0.1:1234/v1',
@@ -187,5 +230,54 @@ describe('raw SB3 AI proposal', () => {
     expect(variables.variables.map((item) => item.id)).toEqual(['v30', 'v31', 'v32', 'v33', 'v34'])
     expect(JSON.stringify(variables)).not.toContain('☁ secret')
     expect(() => inspectRawTargets(project, 'old')).toThrow(/revision/)
+  })
+
+  it('filters duplicate target names and locates broadcast or procedure blocks by query', async () => {
+    const zip = new JSZip()
+    zip.file(
+      'project.json',
+      JSON.stringify({
+        targets: [
+          { name: 'Stage', isStage: true, blocks: {} },
+          { name: 'Tiles', isStage: false, x: 1, blocks: {} },
+          {
+            name: 'Tiles',
+            isStage: false,
+            x: 2,
+            blocks: {
+              recv: {
+                opcode: 'event_whenbroadcastreceived',
+                parent: null,
+                next: null,
+                topLevel: true,
+                fields: { BROADCAST_OPTION: ['Update Tiles', 'b1'] },
+                inputs: {},
+              },
+              call: {
+                opcode: 'procedures_call',
+                parent: null,
+                next: null,
+                topLevel: false,
+                fields: {},
+                inputs: {},
+                mutation: { proccode: 'Render Tile %s', argumentids: '["a1"]' },
+              },
+            },
+          },
+        ],
+      }),
+    )
+    const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
+    const revision = rawSb3Revision(project)
+    const matchedTargets = inspectRawTargets(project, revision, 0, 10, { query: 'tiles' })
+    expect(matchedTargets.total).toBe(2)
+    expect(matchedTargets.targets.map((item) => item.targetIndex)).toEqual([1, 2])
+    const broadcastBlocks = inspectRawBlocks(project, revision, 2, 0, 10, {
+      opcode: 'event_whenbroadcastreceived',
+      query: 'Update Tiles',
+    })
+    expect(Object.keys(broadcastBlocks.blocks)).toEqual(['recv'])
+    const procBlocks = inspectRawBlocks(project, revision, 2, 0, 10, { query: 'Render Tile' })
+    expect(Object.keys(procBlocks.blocks)).toEqual(['call'])
   })
 })

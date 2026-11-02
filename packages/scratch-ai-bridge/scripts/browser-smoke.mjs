@@ -3085,7 +3085,7 @@ try {
         : [{ op: 'set-stage-property', property: 'backdropIndex', value: nextBackdrop }]),
     ],
   }
-  await page.locator('.student-live-patch summary').click()
+  await page.locator('#live-patch-panel > summary').click()
   const livePatchInput = page.locator('#live-patch-editor')
   await livePatchInput.fill(JSON.stringify(livePatch))
   await page.getByRole('button', { name: '檢查修改' }).click()
@@ -3168,7 +3168,7 @@ try {
   await page.getByRole('button', { name: '套用到執行中的遊戲' }).click()
   await page.waitForFunction(
     () => {
-      const status = document.querySelector('.student-live-patch [role="status"]')
+      const status = document.querySelector('#live-patch-status')
       return (
         status?.textContent?.includes('已套用「browser smoke script reload」') || status?.dataset.kind === 'error'
       )
@@ -3176,7 +3176,7 @@ try {
     null,
     { timeout: 50_000 },
   )
-  const structuralStatus = await page.locator('.student-live-patch [role="status"]').textContent()
+  const structuralStatus = await page.locator('#live-patch-status').textContent()
   if (!structuralStatus?.includes('已套用「browser smoke script reload」')) {
     throw new Error(`Structural patch did not reload successfully: ${structuralStatus}`)
   }
@@ -3228,7 +3228,7 @@ try {
   await page.getByRole('button', { name: '檢查修改' }).click()
   await page.getByText(/修改內容合法/).waitFor()
   await page.getByRole('button', { name: '套用到執行中的遊戲' }).click()
-  await page.locator('.student-live-patch [data-kind="error"]').waitFor()
+  await page.locator('#live-patch-status[data-kind="error"]').waitFor()
   if ((await page.locator('#student-preview iframe.student-preview-animation').count()) !== 1) {
     throw new Error('A rejected structural patch stopped or replaced the current preview')
   }
@@ -5618,7 +5618,7 @@ try {
     try {
       const violations = await page.evaluate(() => window.__cspViolations ?? [])
       if (violations.length > 0) failures.push(`CSP details: ${JSON.stringify(violations)}`)
-      const livePatchStatus = await page.locator('.student-live-patch [role="status"]').textContent().catch(() => null)
+      const livePatchStatus = await page.locator('#live-patch-status').textContent().catch(() => null)
       if (livePatchStatus) failures.push(`Live patch status: ${livePatchStatus}`)
     } catch {
       // Preserve the original browser failure if the page has already closed.

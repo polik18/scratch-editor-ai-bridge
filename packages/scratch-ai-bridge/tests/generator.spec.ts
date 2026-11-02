@@ -54,6 +54,22 @@ describe('Generator', () => {
       await fs.rm(tempDir, { recursive: true, force: true });
     }, 10000);
 
+    it('warns when names are rendered as automatic visuals rather than library assets', async () => {
+      const tempDir = await fs.mkdtemp('/tmp/scratch-asset-warning-');
+      try {
+        const input = path.join(tempDir, 'design.json');
+        await fs.writeFile(input, JSON.stringify({ title: 'Test', stage: { costumes: ['Arctic'] },
+          spritesDef: [{ name: 'Abby', costumes: ['Abby-a'] }] }));
+        const result = await generateGame(input, { outputDir: tempDir });
+        expect(result.success).toBe(true);
+        const warnings = result.diagnostics.filter((diagnostic) => diagnostic.code === 'AUTOMATIC_ASSET');
+        expect(warnings.map((warning) => warning.message).join(' ')).toContain('Arctic');
+        expect(warnings.map((warning) => warning.message).join(' ')).toContain('Abby-a');
+      } finally {
+        await fs.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
     it('reports the invalid rotation value and the allowed schema values', async () => {
       const tempDir = await fs.mkdtemp('/tmp/scratch-invalid-rotation-');
       try {

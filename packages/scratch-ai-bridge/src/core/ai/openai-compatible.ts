@@ -108,7 +108,7 @@ export const requestOpenAiCompatiblePatch = async ({
     { role: 'user', content: request.trim() },
   ]
   let toolCallCount = 0
-  for (let round = 0; round < 4; round += 1) {
+  for (let round = 0; round < 6; round += 1) {
     const endpoint = endpointFor(baseUrl)
     const payload = {
       model: model.trim(),
@@ -147,6 +147,7 @@ export const requestOpenAiCompatiblePatch = async ({
                         baseRevision: { type: 'string' },
                         offset: { type: 'integer', minimum: 0 },
                         limit: { type: 'integer', minimum: 1, maximum: 30 },
+                        query: { type: 'string', minLength: 1, maxLength: 256 },
                       },
                       required: ['baseRevision'],
                       additionalProperties: false,
@@ -183,6 +184,9 @@ export const requestOpenAiCompatiblePatch = async ({
                         targetIndex: { type: 'integer', minimum: 0 },
                         offset: { type: 'integer', minimum: 0 },
                         limit: { type: 'integer', minimum: 1, maximum: 20 },
+                        blockId: { type: 'string', minLength: 1, maxLength: 256 },
+                        opcode: { type: 'string', minLength: 1, maxLength: 256 },
+                        query: { type: 'string', minLength: 1, maxLength: 256 },
                       },
                       required: ['baseRevision', 'targetIndex'],
                       additionalProperties: false,
@@ -265,5 +269,5 @@ export const requestOpenAiCompatiblePatch = async ({
       messages.push({ role: 'tool', tool_call_id: callId, content: output.output.slice(0, 12_000) })
     }
   }
-  throw new Error('模型超過 4 輪工具呼叫仍未提出可用 patch。')
+  throw new Error('模型超過 6 輪工具呼叫仍未提出可用 patch。')
 }

@@ -616,7 +616,7 @@ app.innerHTML = `
 
 
 
-          <div class="step-heading"><span>1</span><div><h2>你想做什麼作品？</h2><p>一句主題或角色也可以。先用精簡指令和 AI 確認玩法，再貼回 brief 製作；也可直接讓 AI 自行設計。</p></div></div>
+          <div class="step-heading"><span>1</span><div><h2>你想做什麼作品？</h2><p>一句主題或角色也可以。先和 AI 討論玩法，再把確認的玩法貼回來；也可以請 AI 自行設計。</p></div></div>
 
 
 
@@ -672,13 +672,13 @@ app.innerHTML = `
               <option value="simulation">模擬／經營</option>
             </select>
 
-            <label for="game-brief" class="field-label">把討論後確認的玩法 brief 貼在這裡</label>
+            <label for="game-brief" class="field-label">把討論後確認的玩法貼在這裡</label>
 
             <textarea id="game-brief" class="request-input brief-input" maxlength="3000" placeholder="例如：玩家操控小魚游動，收集氧氣泡泡並躲避水母；每救到一隻海龜就解鎖新海域，碰到水母會失去氧氣，耗盡後可立即重來。"></textarea>
 
             <div class="button-row"><button id="copy-build-instruction" class="button primary" disabled>用已確認玩法複製製作指令</button></div>
 
-            <p id="build-prompt-status" class="inline-status" role="status" aria-live="polite">討論完成後貼上 brief，再複製製作指令。你也可以直接選擇「讓 AI 自行設計並製作」。</p>
+            <p id="build-prompt-status" class="inline-status" role="status" aria-live="polite">討論完成後貼上確認的玩法，再複製製作指令。你也可以直接選擇「讓 AI 自行設計並製作」。</p>
 
           </div>
 
@@ -1747,6 +1747,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   >()
   const livePatchPanel = document.createElement('details')
   livePatchPanel.className = 'student-live-patch'
+  livePatchPanel.id = 'live-patch-panel'
   const livePatchSummary = document.createElement('summary')
   livePatchSummary.textContent = '邊玩邊調整（變數、角色與舞台）'
   const livePatchHelp = document.createElement('p')
@@ -1770,7 +1771,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   localAiSettingsSummary.textContent = '設定本機模型 API（不需要 OpenAI key）'
   const localAiHelp = document.createElement('p')
   localAiHelp.textContent =
-    '填入這台電腦上的 OpenAI-compatible 模型 API 網址（localhost、127.0.0.1 或 ::1）與模型 ID。API key 可留空；若需要，僅保留在目前頁面記憶體，不會存檔。模型服務需允許本網站跨來源連線（CORS）。目前不連外部付費 API。'
+    '填入這台電腦上的 OpenAI-compatible 模型 API 網址（localhost 或 127.0.0.1）與模型 ID。API key 可留空；若需要，僅保留在目前頁面記憶體，不會存檔。模型服務需允許本網站跨來源連線（CORS）。目前不連外部付費 API。'
   const gatewayHelp = document.createElement('p')
   gatewayHelp.textContent =
     '若模型在另一台區網電腦，先啟動本機 model gateway 指向該電腦，再於此配對。使用 HTTP 時作品文字和憑證會在區網明文傳輸。'
@@ -1998,6 +1999,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   livePatchActions.append(previewPatchButton, applyPatchButton, undoPatchButton, redoPatchButton)
   const livePatchStatus = document.createElement('p')
   livePatchStatus.className = 'inline-status'
+  livePatchStatus.id = 'live-patch-status'
   livePatchStatus.setAttribute('role', 'status')
   livePatchStatus.setAttribute('aria-live', 'polite')
   const canPatchLiveProject = !rawSource
@@ -2600,14 +2602,15 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
       inspect: () => inspectRawProjectForAi(currentRaw),
       inspectTargets: (args) => {
         if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('角色查詢格式無效。')
-        const item = args as { baseRevision?: unknown; offset?: unknown; limit?: unknown }
+        const item = args as { baseRevision?: unknown; offset?: unknown; limit?: unknown; query?: unknown }
         if (
           typeof item.baseRevision !== 'string' ||
           (item.offset !== undefined && typeof item.offset !== 'number') ||
-          (item.limit !== undefined && typeof item.limit !== 'number')
+          (item.limit !== undefined && typeof item.limit !== 'number') ||
+          (item.query !== undefined && typeof item.query !== 'string')
         )
           throw new Error('角色查詢欄位無效。')
-        return inspectRawTargets(currentRaw, item.baseRevision, item.offset, item.limit)
+        return inspectRawTargets(currentRaw, item.baseRevision, item.offset, item.limit, { query: item.query })
       },
       inspectVariables: (args) => {
         if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('變數查詢格式無效。')
@@ -2623,15 +2626,30 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
       },
       inspectBlocks: (args) => {
         if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('積木查詢格式無效。')
-        const item = args as { baseRevision?: unknown; targetIndex?: unknown; offset?: unknown; limit?: unknown }
+        const item = args as {
+          baseRevision?: unknown
+          targetIndex?: unknown
+          offset?: unknown
+          limit?: unknown
+          blockId?: unknown
+          opcode?: unknown
+          query?: unknown
+        }
         if (
           typeof item.baseRevision !== 'string' ||
           typeof item.targetIndex !== 'number' ||
           (item.offset !== undefined && typeof item.offset !== 'number') ||
-          (item.limit !== undefined && typeof item.limit !== 'number')
+          (item.limit !== undefined && typeof item.limit !== 'number') ||
+          (item.blockId !== undefined && typeof item.blockId !== 'string') ||
+          (item.opcode !== undefined && typeof item.opcode !== 'string') ||
+          (item.query !== undefined && typeof item.query !== 'string')
         )
           throw new Error('積木查詢欄位無效。')
-        return inspectRawBlocks(currentRaw, item.baseRevision, item.targetIndex, item.offset, item.limit)
+        return inspectRawBlocks(currentRaw, item.baseRevision, item.targetIndex, item.offset, item.limit, {
+          blockId: item.blockId,
+          opcode: item.opcode,
+          query: item.query,
+        })
       },
       validate: (json) => proposeRawLivePatch(currentRaw, json),
       present: (json) => {
@@ -2642,6 +2660,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
         candidateDiff.textContent = [
           candidate.summary,
           ...candidate.changes,
+          ...candidate.warnings,
           '確認後若遊戲執行中將重載並重置進度。',
         ].join('\n')
         candidateDiff.hidden = false
@@ -4521,7 +4540,7 @@ const updateStudentInstruction = (): void => {
     const size = estimatePromptSize(prompt)
     buildPromptStatus.textContent = brief
       ? `製作指令約 ${size.characters.toLocaleString()} 字元、${size.estimatedTokens.toLocaleString()} tokens（粗估；各 AI tokenizer 不同）。`
-      : '討論完成後貼上 brief，再複製製作指令。也可跳過討論，讓 AI 自行規劃並製作。'
+      : '討論完成後貼上確認的玩法，再複製製作指令。也可跳過討論，讓 AI 自行規劃並製作。'
   } else {
     buildPromptStatus.textContent = '先輸入作品想法。'
   }
@@ -5528,6 +5547,14 @@ const renderAnalysis = () => {
   if (!canonical || !analysis || !projectMap || !projectFeedback || !projectScore) return
 
   const currentProjectMap = projectMap
+  const evidenceById = new Map(currentProjectMap.evidence.map((entry) => [entry.id, entry]))
+  const evidenceByScript = new Map<string, (typeof currentProjectMap.evidence)[number][]>()
+  for (const entry of currentProjectMap.evidence) {
+    const key = `${entry.targetIndex}:${entry.scriptIndex ?? 'raw'}`
+    const bucket = evidenceByScript.get(key)
+    if (bucket) bucket.push(entry)
+    else evidenceByScript.set(key, [entry])
+  }
 
   const summary = analysis.summary
 
@@ -5548,7 +5575,7 @@ const renderAnalysis = () => {
       item.append(heading, detail)
 
       for (const evidenceId of criterion.evidenceIds.slice(0, 4)) {
-        const source = currentProjectMap.evidence.find(({ id }) => id === evidenceId)
+        const source = evidenceById.get(evidenceId)
 
         if (!source) continue
 
@@ -5705,7 +5732,7 @@ const renderAnalysis = () => {
         item.append(title, message, nextStep)
 
         for (const evidenceId of feedback.evidenceIds) {
-          const source = currentProjectMap.evidence.find(({ id }) => id === evidenceId)
+          const source = evidenceById.get(evidenceId)
 
           if (!source) continue
 
@@ -5810,9 +5837,7 @@ const renderAnalysis = () => {
 
           item.textContent = `程式 ${index + 1}`
 
-          const scriptEvidence = currentProjectMap.evidence.filter(
-            (entry) => entry.targetIndex === targetIndex && entry.scriptIndex === index,
-          )
+          const scriptEvidence = evidenceByScript.get(`${targetIndex}:${index}`) ?? []
 
           if (scriptEvidence.length > 0) {
             const source = document.createElement('small')
@@ -5850,23 +5875,21 @@ const renderAnalysis = () => {
         section.append(procedures)
       }
 
-      const rawEvidence = currentProjectMap.evidence.filter(
-        (entry) => entry.targetIndex === targetIndex && entry.scriptIndex === null,
-      )
+      const rawEvidence = evidenceByScript.get(`${targetIndex}:raw`) ?? []
 
       if (rawEvidence.length > 0) {
         const rawList = document.createElement('ul')
 
         rawList.setAttribute('aria-label', '無法投影至 Canonical 腳本的原始積木')
 
-        for (const source of rawEvidence) {
+        for (const [rawIndex, source] of rawEvidence.entries()) {
           const rawItem = document.createElement('li')
 
           rawItem.id = `raw-block-${targetIndex}-${encodeURIComponent(source.blockId ?? source.id)}`
 
           rawItem.tabIndex = -1
 
-          rawItem.textContent = `第 ${rawEvidence.indexOf(source) + 1} 個積木目前無法解讀；它的效果需要在 Scratch 原始作品中確認。`
+          rawItem.textContent = `第 ${rawIndex + 1} 個積木目前無法解讀；它的效果需要在 Scratch 原始作品中確認。`
 
           rawList.append(rawItem)
         }

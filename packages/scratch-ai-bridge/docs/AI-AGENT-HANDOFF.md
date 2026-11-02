@@ -2,6 +2,8 @@
 
 > **Start here.** This file is the current handoff and execution index for an AI CLI agent. Read it before changing files. Follow links only when the task needs the detailed contract. Update this file when verified project status or the next action changes.
 
+> **2026-11-02 新交接**：本檔下方是 2026-10-29 歷史快照；本次使用者要求的 Bridge 總體改善與實際執行狀態，請先讀 [總體計畫](../../../docs/BRIDGE-IMPROVEMENT-PLAN-2026-11-02.md) 與 [執行狀態](../../../docs/BRIDGE-EXECUTION-STATUS.md)。現行程式、最新測試與工作樹優先於舊結論；本提示不代表改善已實施。
+
 ## Project in one paragraph
 
 Scratch AI Bridge is a browser-first tool inside the Scratch Editor monorepo. Its intended workflow is to turn a structured or AI-authored project into an `.sb3`, validate it with Scratch tooling, preview it in a Scratch VM, and let users inspect or preserve existing SB3 projects. The package now includes an optional local stdio MCP server for read-only Canonical IR inspection and validated patch proposals; it does not attach to unsaved browser state. The website has a local Scratch VM preview; it does not live-sync projects to the Scratch website or embed the official block editor.

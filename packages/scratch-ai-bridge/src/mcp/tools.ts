@@ -43,6 +43,7 @@ export const createBridgeMcpFactory = (relay: BrowserBridgeRelay): (() => McpSer
           baseRevision: z.string().min(1).max(100),
           offset: z.number().int().min(0).optional(),
           limit: z.number().int().min(1).max(30).optional(),
+          query: z.string().min(1).max(256).optional(),
         }),
       },
       async (args) => {
@@ -85,6 +86,9 @@ export const createBridgeMcpFactory = (relay: BrowserBridgeRelay): (() => McpSer
           targetIndex: z.number().int().min(0),
           offset: z.number().int().min(0).optional(),
           limit: z.number().int().min(1).max(20).optional(),
+          blockId: z.string().min(1).max(256).optional(),
+          opcode: z.string().min(1).max(256).optional(),
+          query: z.string().min(1).max(256).optional(),
         }),
       },
       async (args) => {

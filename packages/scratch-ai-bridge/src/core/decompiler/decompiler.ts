@@ -328,8 +328,9 @@ export const decompileSb3WithBlockGraphs = async (
   const { vm, cleanupRenderer } = await loadProjectVm(safeInput.input, safeInput.projectJson)
   try {
     const vmProject = projectJsonToCanonicalWithReport(getProjectJson(vm), projectName)
+    const sourceProject = projectJsonToCanonicalWithReport(archive.projectJson, projectName)
     const canonical = vmProject.canonical
-    retainProjectMetadata(canonical, projectJsonToCanonical(archive.projectJson, projectName))
+    retainProjectMetadata(canonical, sourceProject.canonical)
     await retainAssetData(canonical, archive.projectJson, archive.entries)
     return {
       canonical,
@@ -337,8 +338,7 @@ export const decompileSb3WithBlockGraphs = async (
       rawBlockGraphs: extractProjectBlockGraphs(archive.projectJson),
       rawArchive: archive,
       archiveWarnings: [...archive.warnings],
-      procedureNormalizationReport: projectJsonToCanonicalWithReport(archive.projectJson, projectName)
-        .procedureNormalizationReport,
+      procedureNormalizationReport: sourceProject.procedureNormalizationReport,
     }
   } finally {
     vm.quit()

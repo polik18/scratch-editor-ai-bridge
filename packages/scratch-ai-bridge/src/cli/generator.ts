@@ -210,6 +210,20 @@ export async function generateGame(input: string, options: GeneratorOptions = {}
     const compiled = await compileCanonicalProjectToSb3(canonical);
     const bytes = new Uint8Array(await compiled.arrayBuffer());
     gates.push({ name: 'scratch-vm-compile-save', status: 'pass' });
+    const targets = [canonical.stage, ...canonical.sprites];
+    const automaticVisuals = targets.flatMap((target) => target.costumes.length === 0
+      ? [`${target.name}/預設造型`]
+      : target.costumes.filter((costume) => !costume.data).map((costume) => `${target.name}/${costume.name}`));
+    const silentSounds = targets.flatMap((target) => target.sounds
+      .filter((sound) => !sound.data)
+      .map((sound) => `${target.name}/${sound.name}`));
+    for (const [items, description] of [[automaticVisuals, '自動生成的圖像'], [silentSounds, '靜音替代']] as const) {
+      if (items.length) diagnostics.push({
+        type: 'warning', stage: 'scratch-vm-compile-save', code: 'AUTOMATIC_ASSET',
+        message: `${items.length} 個素材未提供內容，使用${description}：${items.slice(0, 10).join('、')}${items.length > 10 ? '…' : ''}`,
+        suggestion: '素材名稱不會自動對應 Scratch 素材庫；若需要指定素材，請提供實際素材資料並檢查授權。',
+      });
+    }
     if (options.previewPath) {
       failureStage = 'renderer-preview';
       const { captureRendererPreview } = await import('./renderer-preview.js');
@@ -300,7 +314,7 @@ export async function generateGame(input: string, options: GeneratorOptions = {}
     return result;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    diagnostics.push({ type: 'error', stage: failureStage, code: 'GENERATE_ERROR', message, suggestion: 'Review the stage and JSON path in the diagnostic, then correct the design before retrying.' });
+    diagnostics.unshift({ type: 'error', stage: failureStage, code: 'GENERATE_ERROR', message, suggestion: 'Review the stage and JSON path in the diagnostic, then correct the design before retrying.' });
     gates.push({ name: failureStage, status: 'fail', message });
     if (!gates.some(({ name }) => name === 'runtime-behavior')) {
       gates.push({ name: 'runtime-behavior', status: 'not-run', message: 'Generation failed before runtime verification.' });

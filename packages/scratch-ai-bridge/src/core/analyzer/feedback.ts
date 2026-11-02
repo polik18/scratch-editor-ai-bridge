@@ -68,6 +68,8 @@ export const createProjectFeedback = (analysis: AnalysisIR, map: ProjectMap): Pr
     evidenceIds: fact.evidence.map(({ id }) => id),
   }))
 
+  const detachedByTarget = new Map<string, { index: number; count: number; firstLabel?: string }>()
+
   for (const diagnostic of analysis.diagnostics) {
     if (
       [
@@ -183,20 +185,52 @@ export const createProjectFeedback = (analysis: AnalysisIR, map: ProjectMap): Pr
       ? [firstBlock]
       : [...matched.slice(0, duplicateEvidence.length ? 1 : 2), ...duplicateEvidence]
     if (warningEvidence.length === 0) continue
+    if (diagnostic.code === 'detached-script') {
+      const targetKey = diagnostic.target ?? ''
+      const existing = detachedByTarget.get(targetKey)
+      if (existing) {
+        existing.count += 1
+        const current = items[existing.index]
+        const mergedEvidenceIds = [...new Set([...current.evidenceIds, ...warningEvidence.map(({ id }) => id)])]
+        items[existing.index] = {
+          ...current,
+          message: existing.firstLabel
+            ? `這段程式一開始是「${existing.firstLabel}」，同一角色共有 ${existing.count} 段沒有接上綠旗或按鍵等開始積木的程式（也可能是留下的草稿），按綠旗時可能不會自行啟動。`
+            : `同一角色共有 ${existing.count} 段程式沒有事件積木（例如綠旗或按鍵），一般情況下可能不會自動開始，也可能是留下的草稿。`,
+          evidenceIds: mergedEvidenceIds,
+        }
+        continue
+      }
+      detachedByTarget.set(targetKey, {
+        index: items.length,
+        count: 1,
+        firstLabel: firstBlock?.studentLabel,
+      })
+    }
+    const isInvalidArgReporter = diagnostic.code === 'block-graph-invalid-argument-reporter'
     items.push({
       id: diagnosticFeedbackId(diagnostic),
       kind: 'likely-behavior',
       severity: 'warning',
       confidence: 'limited',
-      title: diagnostic.code === 'detached-script' ? '這段程式可能少了開始積木' : '建議確認',
+      title:
+        diagnostic.code === 'detached-script'
+          ? '這段程式可能少了開始積木'
+          : isInvalidArgReporter
+            ? '自製積木參數積木不在對應定義中'
+            : '建議確認',
       message:
         firstBlock && diagnostic.code === 'detached-script'
           ? `這段程式一開始是「${firstBlock.studentLabel}」，前面沒有綠旗或按鍵等開始積木，所以按綠旗時可能不會自行啟動。`
-          : diagnostic.message,
+          : isInvalidArgReporter
+            ? `${diagnostic.message} 這常發生於拆下或複製自製積木後留下的游離草稿積木，不一定代表正式程式有錯。`
+            : diagnostic.message,
       nextStep:
         diagnostic.code === 'detached-script'
           ? '如果你希望它按綠旗就開始，先接上「當綠旗被點擊」，再按綠旗測試；若這是自製積木或刻意保留的積木，先不要更動。'
-          : '在 Scratch 中執行作品，或檢查相關角色的事件與程式，再確認是否符合你的設計。',
+          : isInvalidArgReporter
+            ? '在 Scratch 編輯器中檢查該角色是否有未接上的參數積木草稿，或確認「我的積木」定義中的參數名稱是否一致。'
+            : '在 Scratch 中執行作品，或檢查相關角色的事件與程式，再確認是否符合你的設計。',
       evidenceIds: warningEvidence.map(({ id }) => id),
     })
   }
