@@ -37,6 +37,7 @@ import {
   createAuthoringInstruction,
   createGameDesignDiscussionInstruction,
   createProjectFragmentInstruction,
+  createProjectIterationInstruction,
   createStudentProjectInstruction,
   estimatePromptSize,
   type GameGenreProfile,
@@ -658,9 +659,32 @@ app.innerHTML = `
 
           <p id="copy-status" class="inline-status" role="status" aria-live="polite">先寫下作品想法，或選一個範例。</p>
 
-          <div class="game-brief-panel">
+        </article>
 
-            <label for="game-genre" class="field-label">想做哪一類？（可讓 AI 從點子判斷）</label>
+        <article class="card iteration-card">
+
+          <div class="step-heading"><span>2</span><div><h2>讓 AI 根據需求修改作品</h2><p>輸入修改需求，AI 會生成新版作品。支援多輪迭代。</p></div></div>
+
+          <div class="iteration-inputs">
+            <label for="iteration-request" class="field-label">修改需求</label>
+            <textarea id="iteration-request" class="request-input" maxlength="1000" data-placeholder="例如：讓玩家跳得更高，並把移動速度稍微降低。"></textarea>
+
+            <label for="iteration-paste" class="field-label">貼上 AI 產生的版本（可選）</label>
+            <textarea id="iteration-paste" class="request-input" maxlength="10000" data-placeholder="貼上 AI 產生的 Scratch 作品 JSON..."></textarea>
+          </div>
+
+          <div class="button-row"><button id="iteration-generate" class="button primary">請 AI 生成新版作品</button></div>
+
+          <p id="iteration-status" class="inline-status" role="status" aria-live="polite">輸入修改需求，或貼上 AI 產生的版本（用於多輪迭代）。</p>
+
+          <div class="iteration-actions" style="display:none;">
+            <button id="iteration-apply" class="button secondary">套用新版作品</button>
+          </div>
+        </article>
+
+        <article class="card game-brief-panel">
+
+          <label for="game-genre" class="field-label">想做哪一類？（可讓 AI 從點子判斷）</label>
 
             <select id="game-genre" class="request-input genre-select">
               <option value="auto">讓 AI 依玩法決定</option>
@@ -1178,6 +1202,14 @@ const copyDesignInstruction = byId<HTMLButtonElement>('copy-design-instruction')
 const copyBuildInstruction = byId<HTMLButtonElement>('copy-build-instruction')
 
 const copyDirectInstruction = byId<HTMLButtonElement>('copy-direct-instruction')
+
+const iterationRequest = byId<HTMLTextAreaElement>('iteration-request')
+
+const iterationPaste = byId<HTMLTextAreaElement>('iteration-paste')
+
+const iterationGenerate = byId<HTMLButtonElement>('iteration-generate')
+
+const iterationStatus = byId<HTMLParagraphElement>('iteration-status')
 
 const buildPromptStatus = byId<HTMLParagraphElement>('build-prompt-status')
 
@@ -4619,6 +4651,84 @@ copyDirectInstruction.addEventListener('click', () => {
     copyStatus,
     '已複製完整製作指令；AI 會先自行規劃核心循環、挑戰、回饋、進展與勝敗',
   )
+})
+
+// AI Iteration Panel Event
+iterationGenerate.addEventListener('click', async () => {
+  const request = iterationRequest.value.trim()
+  const paste = iterationPaste.value.trim()
+
+  if (!request && !paste) {
+    iterationStatus.textContent = '請輸入修改需求或貼上 AI 產生的版本'
+    iterationStatus.dataset.kind = 'error'
+    return
+  }
+
+  iterationStatus.textContent = '正在請 AI 生成新版作品...'
+  iterationStatus.dataset.kind = 'neutral'
+
+  try {
+    let prompt: string
+
+    if (paste) {
+      // 多輪迭代：使用 currentProjectJson + modificationRequest
+      prompt = createProjectIterationInstruction({
+        currentProjectName: 'My Project',
+        currentProjectJson: paste,
+        modificationRequest: request,
+      })
+    } else {
+      // 新作品：只使用 request
+      prompt = createStudentProjectInstruction(request, { genre: gameGenre.value as GameGenreProfile })
+    }
+
+    const controller = new AbortController()
+
+    const response = await fetch('http://localhost:8000/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'qwen3-coder-next-80b-local',
+        messages: [{ role: 'user', content: prompt }],
+        signal: controller.signal,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`AI 回應失敗：${response.status}`)
+    }
+
+    const data = await response.json()
+    const content = data.choices[0].message.content
+
+    // 解析 AI 回應中的 JSON
+    const match = content.match(/```json\s*([\s\S]*?)\s*```/)
+    if (!match) {
+      throw new Error('AI 回應不含 JSON')
+    }
+
+    const newProject = JSON.parse(match[1])
+
+    // 驗證作品
+    validateCanonicalProject(newProject)
+
+    // 編譯成 SB3
+    const sb3Blob = await compileCanonicalProjectToSb3(newProject)
+    const sb3Url = URL.createObjectURL(sb3Blob)
+    const a = document.createElement('a')
+    a.href = sb3Url
+    a.download = `project-iteration-${Date.now()}.sb3`
+    a.click()
+
+    iterationStatus.textContent = '新版作品已下載！可貼上到下方繼續修改（多輪迭代）。'
+    iterationStatus.dataset.kind = 'ok'
+
+    // 預設貼上到 iteration-paste 以支援多輪迭代
+    iterationPaste.value = JSON.stringify(newProject, null, 2)
+  } catch (error) {
+    iterationStatus.textContent = `錯誤：${error instanceof Error ? error.message : String(error)}`
+    iterationStatus.dataset.kind = 'error'
+  }
 })
 
 const fragmentProjectName = (): string =>

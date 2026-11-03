@@ -367,6 +367,32 @@ h1 {
 .idea-card {
   grid-column: span 2;
 }
+
+.iteration-card {
+  grid-column: span 2;
+}
+
+.iteration-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.iteration-inputs textarea {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.iteration-actions {
+  margin: 12px 0;
+  display: flex;
+  gap: 8px;
+}
+
 .card.wide {
   grid-column: span 2;
 }
