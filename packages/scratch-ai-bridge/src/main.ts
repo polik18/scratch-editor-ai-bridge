@@ -37,7 +37,6 @@ import {
   createAuthoringInstruction,
   createGameDesignDiscussionInstruction,
   createProjectFragmentInstruction,
-  createProjectIterationInstruction,
   createMultiRoundIterationInstruction,
   createStudentProjectInstruction,
   estimatePromptSize,
@@ -4745,11 +4744,21 @@ iterationGenerate.addEventListener('click', async () => {
     validateCanonicalProject(newProject)
 
     // 根據 immediate-preview 開關決定行為
-    if (immediatePreview.checked) {
+    if (immediatePreview) {
       // 開啟：直接載入到 VM 預覽
-      await bootstrapVm.loadProject(newProject)
-      iterationStatus.textContent = '新版作品已載入預覽！'
-      iterationStatus.dataset.kind = 'ok'
+      try {
+        await bootstrapVm.loadProject(newProject)
+        iterationStatus.textContent = '新版作品已載入預覽！'
+        iterationStatus.dataset.kind = 'ok'
+      } catch (previewError) {
+        // 預覽失敗：顯示明確錯誤訊息並保留 JSON 貼上
+        const errorMessage = `❌ 預覽失敗：${previewError instanceof Error ? previewError.message : String(previewError)}（已貼上 JSON，請手動貼回）`
+        iterationStatus.textContent = errorMessage
+        iterationStatus.dataset.kind = 'error'
+        
+        // 保留貼回 JSON 作為備用方案
+        iterationPaste.value = JSON.stringify(newProject, null, 2)
+      }
     } else {
       // 關閉：保留現有「下載 + 貼上 JSON」流程
       // 編譯成 SB3
