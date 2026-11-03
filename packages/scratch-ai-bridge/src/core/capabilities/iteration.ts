@@ -1,5 +1,5 @@
 // AI project iteration instruction template
-// Usage: import { createProjectIterationInstruction } from '@scratch/scratch-ai-bridge/core/capabilities/registry';
+// Usage: import { createProjectIterationInstruction, createMultiRoundIterationInstruction } from '@scratch/scratch-ai-bridge/core/capabilities/iteration';
 
 export interface ProjectIterationInstructionParams {
   currentProjectName: string;
@@ -94,5 +94,101 @@ Return a complete Scratch 3.0 project JSON with the following structure:
 - Do NOT include any explanations or notes outside the JSON code block
 - Return ONLY the complete project JSON, nothing else
 
-Please modify the project now.`;
+Please modify the project now.
+`;
+}
+
+// Multi-round iteration instruction with conversation history
+export interface MultiRoundIterationParams {
+  conversationHistory: string[];
+  currentProjectJson: string;
+  modificationRequest: string;
+}
+
+export function createMultiRoundIterationInstruction(params: MultiRoundIterationParams): string {
+  const { conversationHistory, currentProjectJson, modificationRequest } = params;
+
+  // Use last 3 rounds for context
+  const recentHistory = conversationHistory.slice(-3);
+  const historySummary = recentHistory.length > 0
+    ? `## Conversation History (最近 ${recentHistory.length} 輪)\n${recentHistory.join('\n\n')}\n`
+    : '';
+
+  return `# Scratch AI Bridge - Multi-Round Iteration Instruction
+
+<IMPORTANT:沿用本 AI 對話前文>
+以上所有指令、範例、格式都沿用前文，不要重複說明。
+
+${historySummary}## Current Project
+\`\`\`json
+${currentProjectJson}
+\`\`\`
+
+## Task
+Please modify the project according to this request: "${modificationRequest}"
+
+## Important Rules
+1. **Follow conversation history**: Use the context from previous rounds to understand the user's intent
+2. **Preserve existing structure**: Keep all working scripts, variables, and sprites that are not affected by the modification request
+3. **Use official Scratch opcodes only**: Do not invent new opcodes; use only those defined in Scratch 3.0
+4. **Preserve data**: Keep all variable values, list contents, and sprite properties that are not explicitly changed by the modification
+5. **Output full project**: Return the complete modified project JSON in the same format as the original
+
+## Output Format
+Return a complete Scratch 3.0 project JSON with the following structure:
+
+\`\`\`json
+{
+  "targets": [
+    {
+      "isStage": true,
+      "name": "Stage",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [],
+      "sounds": [],
+      "volume": 100,
+      "visible": true
+    },
+    {
+      "isStage": false,
+      "name": "Sprite1",
+      "variables": {},
+      "lists": {},
+      "broadcasts": {},
+      "blocks": {},
+      "comments": {},
+      "currentCostume": 0,
+      "costumes": [],
+      "sounds": [],
+      "volume": 100,
+      "visible": true,
+      "x": 0,
+      "y": 0,
+      "size": 100,
+      "rotationStyle": "all around"
+    }
+  ],
+  "meta": {
+    "semver": "3.0.0",
+    "vm": "0.2.3",
+    "agent": "scratch-ai-bridge"
+  }
+}
+\`\`\`
+
+## Important Notes
+- This is an ITERATION - you are modifying an EXISTING project based on previous discussion
+- The user wants to keep most of the project unchanged and only modify what's requested
+- If the modification request is unclear, ask clarifying questions before proceeding
+- Do NOT include any markdown formatting outside the JSON code block
+- Do NOT include any explanations or notes outside the JSON code block
+- Return ONLY the complete project JSON, nothing else
+
+Please modify the project now.
+`;
 }
