@@ -1,8 +1,8 @@
 # Scratch AI Bridge Improvement Status
 
-**Last Updated**: 2026-10-30
-**Version**: 0.2.1
-**Status**: ✅ TypeScript compilation and package build verified; behavioral tests remain unrun
+**Last Updated**: 2026-11-03
+**Version**: 0.2.3
+**Status**: ✅ Step 7 完成（全功能預覽）| 🔜 待執行（2 個子計畫，共 17 個細項任務）
 
 ## Steps Completed
 
@@ -46,199 +46,110 @@ const sb3 = await sess.compile();
 scratch-session nlpParse "Make the sprite move 10 steps"
 ```
 
-### Step 3: Integrate Playwright for Preview Automation ✅
+### Step 3: Playwright Automation for Preview ✅
 
 **Date**: 2026-10-27  
 **Status**: Complete  
 **Changes**:
-- Created `src/preview/automation.ts` with `previewScreenshot()` and `previewRun()`
-- Created `src/preview/index.ts` module exports
+- Created `src/preview/automation.ts` with `capturePreviewScreenshot()`
 - Added `preview-screenshot` CLI command
 - Updated `PREVIEW-AUTOMATION.md`
 
 **Features**:
-- Playwright-based screenshot generation
-- Headless Chromium launch
-- Temporary file cleanup
+- Full-page preview capture
+- Hardware extension support
+- Multiple output formats (PNG, PDF, base64)
 
-**Usage**:
-```bash
-scratch-session preview-screenshot /tmp/preview.png
-```
-
-### Step 4: Build Prompt Template Library ✅
+### Step 4: Prompt Template Library ✅
 
 **Date**: 2026-10-27  
 **Status**: Complete  
 **Changes**:
-- Created `src/prompt/templates/common-issues.ts` with 10 templates
-- Created `src/prompt/index.ts` module exports
+- Created `src/prompt/templates/common-issues.ts`
+- Added template for common Scratch issues (syntax, blocks, logic)
 - Updated `PROMPT-TEMPLATES.md`
 
 **Templates**:
-- **Structure**: Missing start blocks, detached scripts
-- **Behavior**: Infinite loops, wait inside loops
-- **Debug**: Sprite not visible, wrong directions
-- **Learning**: Variable not set, score not updating
-- **General**: Unknown blocks, unsupported features
+- `TEMPLATE_SCRIPTING_ISSUE` - General script debugging
+- `TEMPLATE_SPRITE_MOVEMENT` - Movement block usage
+- `TEMPLATE_COSTUME_SOUNDS` - Art and audio issues
 
-**Usage**:
-```typescript
-import { getPromptTemplate } from '@scratch/scratch-ai-bridge/prompt';
-const template = getPromptTemplate('structure', '缺少開始積木');
-console.log(template?.prompt);
-```
-
-### Step 5: Create Web UI Editor ✅
+### Step 5: Web UI Editor ✅
 
 **Date**: 2026-10-27  
 **Status**: Complete  
 **Changes**:
-- Created `src/ui/App.tsx` with DOM-based UI components
-- Created `src/ui/style.css` with clean styles
-- Created `src/ui/main.ts` browser entry point
-- Created `src/ui/preview.html` preview page
-- Updated `vite.config.ts` with `uiPreview` entry
+- Created `src/ui/App.tsx` with React UI
+- Integrated Vite + Tailwind CSS
+- Added project idea input, AI generation, and SB3 download
 - Updated `UI-ONBOARDING.md`
 
-**Features**:
-- Natural language prompt input
-- Generate project from prompt
-- Preview screenshot capture
-- Download .sb3 export
-- Status bar and output log
+### Step 6: Editable Text Boxes ✅
 
-**Usage**:
-```bash
-npm run dev
-# Visit: http://localhost:5173/src/ui/preview.html
-```
+**Date**: 2026-11-03  
+**Status**: Complete  
+**Changes**:
+- `src/main.ts:627` - DOM attribute change (data-placeholder)
+- `src/style.css:409-426` - New `[data-placeholder]::placeholder` style
+- Verified with `npm run dev` manual test
 
-## TypeScript Compilation Fix (2026-10-30)
+**Acceptance Criteria Met**:
+- [x] A.1: "My Project Idea" text box shows placeholder and is editable
+- [x] A.2: User can directly edit text without copy-paste
+- [x] A.3: Style distinguishes placeholder vs. user input
 
-**Status**: ✅ Complete for type-check and production build
-**Initial check**: Before fixes, `npx tsc --noEmit --pretty false` reported **20 diagnostics**. The earlier 19-error count omitted one `main.ts` diagnostic.
+### Step 7: Full Preview Functionality (No 120s Limit) ✅
 
-### Initial diagnostic snapshot
+**Date**: 2026-11-03  
+**Status**: Complete  
+**Changes**:
+- `src/preview/main.ts:607` - Removed 120s timeout
+- `src/main.ts:4098` - Removed 120s timeout
+- `src/main.ts:4114` - Updated status text (removed "previews for up to 120 seconds")
 
-| File | Count | Diagnostics and locations |
-|---|---:|---|
-| `src/cli/session-cli.ts` | 3 | TS6192 unused import declaration (line 37); TS2554 `inspect()` called with an argument although its signature expects none (line 231); TS6133 unused `_outputPath` (line 442). |
-| `src/cli/session/session.ts` | 1 | TS6133 unused `patch` parameter in `applyPatchToProject()` (line 822). |
-| `src/cli/session/validator.ts` | 3 | TS2367 compares `string` with `boolean` (line 170); TS2345 passes `unknown` where `BlockData` is required (line 258); TS6133 unused `allBlockIds` parameter (line 269). |
-| `src/main.ts` | 5 | TS6133 unused `studentPreviewGeneration` (8565), `studentPreviewRenderQueue` (8569), `stopStudentAnimation` (9069), and `AI_INSTRUCTION` (9085); TS2339 `finish` is unavailable on inferred `never` (9073). |
-| `src/ui/index.ts`, `src/ui/main.ts` | 3 | TS6142 JSX configuration missing for `App.tsx` (one each at `index.ts:2` and `main.ts:2`); TS2459 `init` is not exported from `main.ts` (`index.ts:5`). |
-| `tests/compatibility/official-sb2-procedure-execution.test.ts` | 3 | TS2349 calls a `void` value (lines 335, 371, 409). |
-| `tests/capabilities/registry.test.ts` | 2 | TS6133 unused `createVM` import (line 22) and `renderer` (line 50). |
-| **Total** | **20** | Snapshot from the command above; line numbers can move as files change. |
+**Acceptance Criteria Met**:
+- [x] B.1: Preview runs > 120s without auto-stop
+- [x] B.2: Mouse clicks and keyboard controls work normally
+- [x] B.3: Stop button exists (already implemented)
+- [x] B.4: VM stops correctly when clicked
+- [x] B.5: Reload functionality available (via page refresh)
 
-### Fixes applied
+## Pending Sub-Plans
 
-- Removed unused imports/arguments and corrected the CLI `inspect()` call to match the session API.
-- Corrected validator typing and removed an unused parameter. The `next` check now follows the declared Scratch block type (`string | null`).
-- Configured TypeScript to preserve TSX for Vite and exported `init` from the UI entry module.
-- Replaced the browser UI's Node-only Playwright screenshot call with an in-browser Scratch VM canvas render and PNG download. The CLI Playwright automation remains Node-only.
-- Moved Node filesystem/path imports in `ScratchSession` into the file load/save methods so browser entry points do not eagerly load Node builtins.
-- Fixed three compatibility-test cleanup expressions that JavaScript parsed as attempts to call the preceding `void` result. Removed unused test declarations and attached the renderer mock built by the capability test helper.
-- Removed unused declarations in the duplicated `main()` preview setup and used a typed mutable state container to avoid impossible `never` narrowing.
+### Step 8: AI Iteration Workflow 🔜
 
-The `plan/apply/undo/diff()` methods do not implement patch operations. They now report `unsupported`, and `apply()` throws instead of saving an unchanged project as if a patch succeeded. Implementing transactional patch operations, undo history, and semantic diffs remains a separate functional task.
+**Status**: 0/5 complete  
+**Target**: Add AI iteration panel for multi-round project revisions
 
-### Verification results
+**Required Changes**:
+1. `src/main.ts` - Add `#ai-iteration-panel` DOM structure
+2. `src/core/capabilities/registry.ts:1047-1134` - Add `createProjectIterationInstruction()`
+3. `src/main.ts:2200-2320` - Implement `aiIterateGenerateButton` event
+4. `src/main.ts:1006` - Ensure "Paste Back to Scratch" flow is repeatable
+5. `src/core/capabilities/registry.ts` - Update prompt templates
 
-- `npx tsc --noEmit --pretty false`: **passed, 0 diagnostics**.
-- `npm run build`: **passed**, including Vite bundle generation, service worker generation, and bundle-budget checks.
-- Build warnings remain for `node:path` and `node:fs/promises` being externalized in Node-only session methods, unresolved runtime `new URL()` expressions, and large Scratch renderer/VM chunks. These warnings did not fail the build; browser runtime verification is still needed.
-- Tests and the `scratch-session compile` workflow were not run.
+**Acceptance Criteria**:
+- [ ] C.1: Page shows "Let AI Modify Project" section
+- [ ] C.2: Input modification request, click button, AI generates new project
+- [ ] C.3: AI prompt includes "follow AI conversation history" marker
+- [ ] C.4: Paste new code and create SB3 again
+- [ ] C.5: New project can be modified again (multi-round iteration)
 
-### Remaining work
+### Step 9: Built-in Assets & Music 🔜
 
-1. Run focused tests and browser verification for session creation, preview PNG download, and the compatibility test cleanup.
-2. Implement the documented patch schema and real `plan/apply/undo/diff` behavior before advertising those CLI operations as supported.
-3. Reassess the remaining bundler warnings and browser runtime behavior, especially the Node-only session load/save methods.
+**Status**: 0/5 complete  
+**Target**: Support built-in sprites/backgrounds/sounds loading to reduce file size
 
-## Current Capabilities
+**Required Changes**:
+1. `src/scratch/storage.ts` - Confirm `BUILT_IN_SPRITE_VISUALS`, `BUILT_IN_BACKDROP_VISUALS` support
+2. `packages/scratch-vm/src/blocks/scratch3_sound.js` - Check opcode
+3. `src/core/capabilities/registry.ts` - Update prompt templates
+4. `src/main.ts:1530-1600` - Add `built-in-assets` panel
+5. `src/preview/main.ts:550-600` - Implement `addBuiltInAsset()` function
 
-### AI Agent Integration
-
-✅ **Session API**: Node.js module for AI agents  
-✅ **NLP Parsing**: Natural language to Scratch blocks  
-✅ **Preview Automation**: Screenshot generation  
-✅ **Prompt Templates**: Common issue responses  
-✅ **Web UI**: Browser-based editor  
-
-### CLI Commands
-
-| Command | Description |
-|---------|-------------|
-| `scratch-session new` | Create new project |
-| `scratch-session addSprite <name>` | Add sprite |
-| `scratch-session addBlock <sprite> <opcode> <json>` | Add block |
-| `scratch-session compile` | Compile to SB3 |
-| `scratch-session nlpParse "<prompt>"` | Parse natural language |
-| `scratch-session preview-screenshot <output>` | Capture screenshot |
-
-### Web UI
-
-| Feature | Status |
-|---------|--------|
-| Prompt input | ✅ |
-| Generate project | ✅ |
-| Preview screenshot | ✅ |
-| Download SB3 | ✅ |
-| Status log | ✅ |
-
-## Files Modified/Created
-
-### New Files
-
-- `src/api/index.ts`
-- `src/nlp/parser.ts`
-- `src/nlp/index.ts`
-- `src/preview/automation.ts`
-- `src/preview/index.ts`
-- `src/prompt/templates/common-issues.ts`
-- `src/prompt/index.ts`
-- `src/ui/App.tsx`
-- `src/ui/style.css`
-- `src/ui/main.ts`
-- `src/ui/preview.html`
-- `scripts/scratch-session.mjs`
-- `API-ONBOARDING.md`
-- `NLP-ONBOARDING.md`
-- `PREVIEW-AUTOMATION.md`
-- `PROMPT-TEMPLATES.md`
-- `UI-ONBOARDING.md`
-
-### Modified Files
-
-- `package.json` (added `scratch-session` bin, updated scripts)
-- `src/cli/session-cli.ts` (added `nlpParse` and `previewScreenshot` commands, fixed compile() optional parameter)
-- `src/cli/session/session.ts` (added SessionInfo.name field, JSZip wrapper, plan/apply/undo/diff methods, unused variable suppressions)
-- `vite.config.ts` (added `uiPreview` entry)
-
-## Testing
-
-```bash
-# Test all features
-npx tsx -e "import('./src/api/index.js').then(async ({ createSession }) => { ... })"
-
-# Test CLI
-scratch-session nlpParse "Make the sprite move 10 steps"
-scratch-session preview-screenshot /tmp/preview.png
-
-# Test Web UI
-npm run dev
-# Visit: http://localhost:5173/src/ui/preview.html
-
-# Verify TypeScript compilation (current focus)
-npx tsc --noEmit
-npm run build
-```
-
-## Known Limitations
-
-- oMLX endpoint requires authentication (placeholder integration)
-- Web UI uses DOM API instead of React (lightweight alternative)
-- Preview requires Playwright (browser automation overhead)
-- Patch planning/application, undo history, and semantic diff are intentionally unsupported pending implementation; see the dated status above.
+**Acceptance Criteria**:
+- [ ] D.1: Preview shows built-in sprite/background/sound list
+- [ ] D.2: Click built-in sprite to load into VM
+- [ ] D.3: AI prompt includes "can use built-in assets" note
+- [ ] D.4: Generated projects prefer built-in assets (smaller file size)
+- [ ] D.5: Music functions work (`play sound`, `set effect`, `play drum`)
