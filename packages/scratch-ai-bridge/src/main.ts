@@ -38,6 +38,7 @@ import {
   createGameDesignDiscussionInstruction,
   createProjectFragmentInstruction,
   createProjectIterationInstruction,
+  createMultiRoundIterationInstruction,
   createStudentProjectInstruction,
   estimatePromptSize,
   type GameGenreProfile,
@@ -1215,6 +1216,8 @@ const iterationPaste = byId<HTMLTextAreaElement>('iteration-paste')
 
 const iterationGenerate = byId<HTMLButtonElement>('iteration-generate')
 
+const immediatePreview = byId<HTMLInputElement>('immediate-preview')
+
 const iterationStatus = byId<HTMLParagraphElement>('iteration-status')
 
 const buildPromptStatus = byId<HTMLParagraphElement>('build-prompt-status')
@@ -1259,6 +1262,25 @@ const progressSteps = [...document.querySelectorAll<HTMLElement>('.progress-step
 instruction.value = AI_INSTRUCTION
 
 editor.value = ''
+
+// Load immediate-preview state from localStorage
+try {
+  const saved = localStorage.getItem('scratch-ai-bridge.immediate-preview.v1')
+  if (saved) {
+    immediatePreview.checked = saved === 'true'
+  }
+} catch {
+  // Ignore localStorage errors (e.g., private mode)
+}
+
+// Save immediate-preview state on change
+immediatePreview.addEventListener('change', () => {
+  try {
+    localStorage.setItem('scratch-ai-bridge.immediate-preview.v1', String(immediatePreview.checked))
+  } catch {
+    // Ignore localStorage errors
+  }
+})
 
 const setStatus = (element: HTMLElement, text: string, kind: 'ok' | 'error' | 'neutral' = 'neutral') => {
   element.textContent = text
@@ -4663,6 +4685,7 @@ copyDirectInstruction.addEventListener('click', () => {
 iterationGenerate.addEventListener('click', async () => {
   const request = iterationRequest.value.trim()
   const paste = iterationPaste.value.trim()
+  const immediatePreview = (document.getElementById('immediate-preview') as HTMLInputElement).checked
 
   if (!request && !paste) {
     iterationStatus.textContent = '請輸入修改需求或貼上 AI 產生的版本'
@@ -4677,11 +4700,14 @@ iterationGenerate.addEventListener('click', async () => {
     let prompt: string
 
     if (paste) {
-      // 多輪迭代：使用 currentProjectJson + modificationRequest
-      prompt = createProjectIterationInstruction({
-        currentProjectName: 'My Project',
+      // 多輪迭代：使用 currentProjectJson + modificationRequest + conversationHistory
+      // 從 iteration-paste 中提取最近的 request 作為conversation history
+      const conversationHistory = request ? [`User: ${request}`] : []
+      prompt = createMultiRoundIterationInstruction({
         currentProjectJson: paste,
         modificationRequest: request,
+        conversationHistory,
+        immediatePreview,
       })
     } else {
       // 新作品：只使用 request
@@ -4718,19 +4744,28 @@ iterationGenerate.addEventListener('click', async () => {
     // 驗證作品
     validateCanonicalProject(newProject)
 
-    // 編譯成 SB3
-    const sb3Blob = await compileCanonicalProjectToSb3(newProject)
-    const sb3Url = URL.createObjectURL(sb3Blob)
-    const a = document.createElement('a')
-    a.href = sb3Url
-    a.download = `project-iteration-${Date.now()}.sb3`
-    a.click()
+    // 根據 immediate-preview 開關決定行為
+    if (immediatePreview.checked) {
+      // 開啟：直接載入到 VM 預覽
+      await bootstrapVm.loadProject(newProject)
+      iterationStatus.textContent = '新版作品已載入預覽！'
+      iterationStatus.dataset.kind = 'ok'
+    } else {
+      // 關閉：保留現有「下載 + 貼上 JSON」流程
+      // 編譯成 SB3
+      const sb3Blob = await compileCanonicalProjectToSb3(newProject)
+      const sb3Url = URL.createObjectURL(sb3Blob)
+      const a = document.createElement('a')
+      a.href = sb3Url
+      a.download = `project-iteration-${Date.now()}.sb3`
+      a.click()
 
-    iterationStatus.textContent = '新版作品已下載！可貼上到下方繼續修改（多輪迭代）。'
-    iterationStatus.dataset.kind = 'ok'
+      iterationStatus.textContent = '新版作品已下載！可貼上到下方繼續修改（多輪迭代）。'
+      iterationStatus.dataset.kind = 'ok'
 
-    // 預設貼上到 iteration-paste 以支援多輪迭代
-    iterationPaste.value = JSON.stringify(newProject, null, 2)
+      // 預設貼上到 iteration-paste 以支援多輪迭代
+      iterationPaste.value = JSON.stringify(newProject, null, 2)
+    }
   } catch (error) {
     iterationStatus.textContent = `錯誤：${error instanceof Error ? error.message : String(error)}`
     iterationStatus.dataset.kind = 'error'
