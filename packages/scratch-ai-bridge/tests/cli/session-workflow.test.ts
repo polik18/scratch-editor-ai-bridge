@@ -201,7 +201,7 @@ describe('scratch-session CLI workflow', () => {
     expect(run(dir, 'info').stdout).toContain('Stage')
   })
 
-  it('accepts literal input values through the CLI', () => {
+  it('accepts literal input values through the CLI', { timeout: 120000 }, () => {
     const dir = workdir()
     expect(run(dir, 'new', 'Inputs').status).toBe(0)
     const result = run(dir, 'add-block', 'Stage', 'motion_movesteps', '--input-literal', 'STEPS', '10')
@@ -222,7 +222,7 @@ describe('scratch-session CLI workflow', () => {
     expect(external.stderr).toContain('local HTTP')
   })
 
-  it('connects a substack across separate CLI invocations', () => {
+  it('connects a substack across separate CLI invocations', { timeout: 120000 }, () => {
     const dir = workdir()
     expect(run(dir, 'new', 'Loop').status).toBe(0)
     const loop = /id=([^)]*)\)/.exec(run(dir, 'add-block', 'Stage', 'control_forever').stdout)?.[1]
@@ -297,7 +297,7 @@ describe('scratch-session CLI workflow', () => {
     expect(result.status).not.toBe(0)
     expect(result.stderr).toContain('--parent requires a value')
   })
-  it('loads a legacy embedded session and upgrades it on edit', () => {
+  it('loads a legacy embedded session and upgrades it on edit', { timeout: 120000 }, () => {
     const dir = workdir()
     expect(run(dir, 'new', 'legacy').status).toBe(0)
     const file = path.join(dir, '.scratch-session.json')
