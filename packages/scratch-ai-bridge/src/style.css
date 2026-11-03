@@ -417,6 +417,13 @@ h1 {
   line-height: 1.6;
   resize: vertical;
 }
+.request-input::placeholder {
+  color: #999;
+  font-style: italic;
+}
+.request-input:not(:placeholder-shown) {
+  color: #333;
+}
 .game-brief-panel {
   display: grid;
   gap: 8px;

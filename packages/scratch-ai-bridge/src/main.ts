@@ -624,7 +624,7 @@ app.innerHTML = `
 
 
 
-          <textarea id="project-request" class="request-input" maxlength="1000" placeholder="例如：我想做一個關於深海探險的遊戲，主角是一條小魚。"></textarea>
+          <textarea id="project-request" class="request-input" maxlength="1000" data-placeholder="例如：我想做一個關於深海探險的遊戲，主角是一條小魚。"></textarea>
 
 
 
@@ -4095,7 +4095,8 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
 
           if (timer !== null) window.clearTimeout(timer)
 
-          timer = window.setTimeout(() => animation.finish('動畫預覽已達 120 秒上限，已自動停止。'), 120_000)
+          // 移除 120 秒自動停止限制
+          // timer = window.setTimeout(() => animation.finish('動畫預覽已達 120 秒上限，已自動停止。'), 120_000)
 
           setLivePatchReady(true)
 
@@ -4111,7 +4112,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
 
           stageStatus.hidden = false
 
-          stageStatus.textContent = `動畫執行中。${prepared.fallbackCount > 0 ? `已將 ${prepared.fallbackCount} 個損壞造型替換為示意素材。` : ''}點擊舞台後可用方向鍵、空白鍵或作品中的滑鼠操作；預覽最多 120 秒。`
+          stageStatus.textContent = `動畫執行中。${prepared.fallbackCount > 0 ? `已將 ${prepared.fallbackCount} 個損壞造型替換為示意素材。` : ''}點擊舞台後可用方向鍵、空白鍵或作品中的滑鼠操作。`
 
           if (hardwareExtensions.length > 0) hardwareControls.hidden = false
 
