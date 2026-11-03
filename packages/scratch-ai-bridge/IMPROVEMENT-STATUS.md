@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-11-03
 **Version**: 0.2.3
-**Status**: ✅ Step 7 完成（全功能預覽）| 🔜 待執行（2 個子計畫，共 17 個細項任務）
+**Status**: ✅ Step 7 完成（全功能預覽）| 🔜 Step 8 待執行（5 個細項）| 🔜 Step 9 待執行（5 個細項）
 
 ## Steps Completed
 
@@ -114,18 +114,31 @@ scratch-session nlpParse "Make the sprite move 10 steps"
 - [x] B.4: VM stops correctly when clicked
 - [x] B.5: Reload functionality available (via page refresh)
 
+### Step 8: AI Project Iteration Instruction ✅
+
+**Date**: 2026-11-03  
+**Status**: Complete  
+**Changes**:
+- Created `src/core/capabilities/iteration.ts` with `createProjectIterationInstruction()`
+- Updated `src/core/capabilities/index.ts` exports
+
+**Features**:
+- Generates iteration instruction for AI to modify existing project
+- Preserves existing structure while applying modifications
+- Follows Scratch 3.0 specification
+
 ## Pending Sub-Plans
 
-### Step 8: AI Iteration Workflow 🔜
+### Step 8: AI Iteration Workflow (Continued) 🔜
 
-**Status**: 0/5 complete  
+**Status**: 1/5 complete  
 **Target**: Add AI iteration panel for multi-round project revisions
 
-**Required Changes**:
+**Remaining Tasks**:
 1. `src/main.ts` - Add `#ai-iteration-panel` DOM structure
-2. `src/core/capabilities/registry.ts:1047-1134` - Add `createProjectIterationInstruction()`
-3. `src/main.ts:2200-2320` - Implement `aiIterateGenerateButton` event
-4. `src/main.ts:1006` - Ensure "Paste Back to Scratch" flow is repeatable
+2. `src/main.ts` - Implement `aiIterateGenerateButton` event handler
+3. `src/main.ts` - Ensure "Paste Back to Scratch" flow is repeatable
+4. `src/main.ts:1006` - Update to support multiple iterations
 5. `src/core/capabilities/registry.ts` - Update prompt templates
 
 **Acceptance Criteria**:
