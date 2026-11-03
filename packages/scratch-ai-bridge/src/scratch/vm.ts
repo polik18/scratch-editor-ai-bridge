@@ -22,6 +22,7 @@ export type ScratchProjectJson = Record<string, unknown>
  */
 export interface ScratchVMHandle {
   quit(): void
+  loadProject(input: string | object | ArrayBuffer | ArrayBufferView): Promise<void>
 }
 
 export interface ScratchVariableSnapshot {

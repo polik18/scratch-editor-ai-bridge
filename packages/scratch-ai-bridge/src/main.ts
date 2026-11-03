@@ -4684,7 +4684,7 @@ copyDirectInstruction.addEventListener('click', () => {
 iterationGenerate.addEventListener('click', async () => {
   const request = iterationRequest.value.trim()
   const paste = iterationPaste.value.trim()
-  const immediatePreview = (document.getElementById('immediate-preview') as HTMLInputElement).checked
+  const isImmediatePreview = (document.getElementById('immediate-preview') as HTMLInputElement).checked
 
   if (!request && !paste) {
     iterationStatus.textContent = '請輸入修改需求或貼上 AI 產生的版本'
@@ -4706,7 +4706,7 @@ iterationGenerate.addEventListener('click', async () => {
         currentProjectJson: paste,
         modificationRequest: request,
         conversationHistory,
-        immediatePreview,
+        immediatePreview: isImmediatePreview,
       })
     } else {
       // 新作品：只使用 request
@@ -4744,7 +4744,7 @@ iterationGenerate.addEventListener('click', async () => {
     validateCanonicalProject(newProject)
 
     // 根據 immediate-preview 開關決定行為
-    if (immediatePreview) {
+    if (isImmediatePreview) {
       // 開啟：直接載入到 VM 預覽
       try {
         await bootstrapVm.loadProject(newProject)

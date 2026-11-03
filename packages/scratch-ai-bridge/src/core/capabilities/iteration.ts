@@ -103,15 +103,21 @@ export interface MultiRoundIterationParams {
   conversationHistory: string[];
   currentProjectJson: string;
   modificationRequest: string;
+  immediatePreview: boolean;
 }
 
 export function createMultiRoundIterationInstruction(params: MultiRoundIterationParams): string {
-  const { conversationHistory, currentProjectJson, modificationRequest } = params;
+  const { conversationHistory, currentProjectJson, modificationRequest, immediatePreview } = params;
 
   // Use last 3 rounds for context
   const recentHistory = conversationHistory.slice(-3);
   const historySummary = recentHistory.length > 0
     ? `## Conversation History (最近 ${recentHistory.length} 輪)\n${recentHistory.join('\n\n')}\n`
+    : '';
+
+  // Immediate preview提示
+  const immediatePreviewNote = immediatePreview
+    ? '\n<IMPORTANT: 此版本已支援立即預覽，請直接套用，無需手動貼回>\n'
     : '';
 
   return `# Scratch AI Bridge - Multi-Round Iteration Instruction
@@ -127,7 +133,7 @@ ${currentProjectJson}
 ## Task
 Please modify the project according to this request: "${modificationRequest}"
 
-## Important Rules
+${immediatePreviewNote}## Important Rules
 1. **Follow conversation history**: Use the context from previous rounds to understand the user's intent
 2. **Preserve existing structure**: Keep all working scripts, variables, and sprites that are not affected by the modification request
 3. **Use official Scratch opcodes only**: Do not invent new opcodes; use only those defined in Scratch 3.0

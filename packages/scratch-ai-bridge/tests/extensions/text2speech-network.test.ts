@@ -10,7 +10,7 @@ describe('Text to Speech network boundary', () => {
       Promise.resolve({ status: 503 } as Response),
     )
     Reflect.set(globalThis, 'fetch', fetchWithTimeoutMock)
-    let vm: { quit(): void } | undefined
+    let vm: { quit(): void; loadProject(input: string | object | ArrayBuffer | ArrayBufferView): Promise<void> } | undefined
     try {
       const { createVM, loadSb3 } = await import('../../src/scratch/vm')
       Reflect.set(globalThis, 'window', {
