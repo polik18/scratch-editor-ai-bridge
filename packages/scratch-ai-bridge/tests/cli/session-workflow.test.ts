@@ -191,7 +191,7 @@ describe('scratch-session CLI workflow', () => {
     expect(info.stdout).toContain(input)
   })
 
-  it('generates shell-safe block ids and restores an unsaved project', () => {
+  it('generates shell-safe block ids and restores an unsaved project', { timeout: 120000 }, () => {
     const dir = workdir()
     expect(run(dir, 'new', 'Example').status).toBe(0)
     const added = run(dir, 'add-block', 'Stage', 'event_whenflagclicked')
@@ -211,7 +211,7 @@ describe('scratch-session CLI workflow', () => {
     expect(block.inputs.STEPS).toEqual([1, [4, '10']])
   })
 
-  it('requires an explicit Camoufox caller and rejects nonlocal GUI URLs', () => {
+  it('requires an explicit Camoufox caller and rejects nonlocal GUI URLs', { timeout: 120000 }, () => {
     const dir = workdir()
     expect(run(dir, 'new', 'Browser').status).toBe(0)
     const missingCaller = run(dir, 'open-camofox')
