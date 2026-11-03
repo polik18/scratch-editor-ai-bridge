@@ -673,7 +673,13 @@ app.innerHTML = `
             <textarea id="iteration-paste" class="request-input" maxlength="10000" data-placeholder="貼上 AI 產生的 Scratch 作品 JSON..."></textarea>
           </div>
 
-          <div class="button-row"><button id="iteration-generate" class="button primary">請 AI 生成新版作品</button></div>
+          <div class="iteration-actions">
+            <label class="toggle-label">
+              <input type="checkbox" id="immediate-preview">
+              <span>立即預覽（所見即所得）</span>
+            </label>
+            <button id="iteration-generate" class="button primary">AI 修改作品</button>
+          </div>
 
           <p id="iteration-status" class="inline-status" role="status" aria-live="polite">輸入修改需求，或貼上 AI 產生的版本（用於多輪迭代）。</p>
 
