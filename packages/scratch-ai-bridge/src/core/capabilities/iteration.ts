@@ -12,6 +12,9 @@ export function createProjectIterationInstruction(params: ProjectIterationInstru
 
   return `# Scratch AI Bridge - Project Iteration Instruction
 
+<IMPORTANT:沿用本 AI 對話前文>
+以上所有指令、範例、格式都沿用前文，不要重複說明。
+
 You are an AI assistant helping a student modify their Scratch project.
 
 ## Background
