@@ -2,7 +2,7 @@
 
 **Last Updated**: 2026-11-03
 **Version**: 0.2.3
-**Status**: ✅ Step 7 完成（全功能預覽）| 🔜 Step 8 待執行（5 個細項）| 🔜 Step 9 待執行（5 個細項）
+**Status**: ✅ Step 7 完成（全功能預覽）| ✅ Step 8 完成（迭代面板 A.1-A.2）| 🔜 Step 8 待執行（A.3-A.5）| 🔜 Step 9 待執行（5 個細項）
 
 ## Steps Completed
 
