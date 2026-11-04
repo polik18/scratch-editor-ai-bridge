@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' data: blob: https://synthesis-service.scratch.mit.edu https://translate-service.scratch.mit.edu ws://127.0.0.1:20111 wss://device-manager.scratch.mit.edu:20110; frame-src 'self'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'"
+    />
+    <title>Scratch isolated preview</title>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background: #fff;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        touch-action: none;
+        outline: none;
+      }
+    </style>
+    <script type="module" crossorigin src="./assets/preview-BR_LV8uM.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-CXK8biUa.js">
+    <link rel="modulepreload" crossorigin href="./assets/preload-helper-CjWs-_sd.js">
+    <link rel="modulepreload" crossorigin href="./assets/chunk-Tjgt1bVo.js">
+    <link rel="modulepreload" crossorigin href="./assets/legacy-DSPdZdeX.js">
+    <link rel="modulepreload" crossorigin href="./assets/events-Bgd3mdsT.js">
+    <link rel="modulepreload" crossorigin href="./assets/jszip.min-769Lad5H.js">
+    <link rel="modulepreload" crossorigin href="./assets/scratch-svg-renderer-DnggnMJw.js">
+    <link rel="modulepreload" crossorigin href="./assets/__vite-browser-external-WlZv0icA.js">
+    <link rel="modulepreload" crossorigin href="./assets/vm-DxppWxRy.js">
+    <link rel="modulepreload" crossorigin href="./assets/sha256-DgogJPt2.js">
+    <link rel="modulepreload" crossorigin href="./assets/self-hosted-DjKKkr24.js">
+  </head>
+  <body>
+    <canvas id="stage" width="480" height="360" tabindex="0" aria-label="Scratch 動畫預覽舞台"></canvas>
+  </body>
+</html>

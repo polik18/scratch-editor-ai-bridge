@@ -1,7 +1,0 @@
-coverage/
-dist/
-audit-dist/
-node_modules/
-test-results/
-*.sb3
-scratch-session.json

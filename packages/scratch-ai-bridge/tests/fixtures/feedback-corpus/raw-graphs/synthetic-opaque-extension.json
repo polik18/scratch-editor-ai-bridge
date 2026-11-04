@@ -1,9 +1,0 @@
-[
-  {
-    "targetIndex": 1,
-    "targetName": "Sample sprite",
-    "isStage": false,
-    "blocks": { "opaqueExtension": { "opcode": "thirdparty_sensor_read", "shadow": false } },
-    "issues": []
-  }
-]

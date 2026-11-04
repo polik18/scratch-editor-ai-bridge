@@ -1,0 +1,1 @@
+import{t as e}from"./scratch-storage-B6ib-_Vn.js";export default e();
