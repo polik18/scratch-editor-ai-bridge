@@ -1,0 +1,64 @@
+{
+  "task": "T2a",
+  "status": "done",
+  "executed_at": "2026-11-05T14:20:00+08:00",
+  "files_reviewed": [
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/core/prompt/prompt.ts"
+  ],
+  "conflicts_identified": {
+    "hint_level_1": {
+      "instruction": "只給一個引導問題，不說出解法。",
+      "conflict_with_student_contract": [
+        "學生契約要求 '只輸出兩段：提示：和試試看：'，但 hint 1 只給一個引導問題",
+        "學生契約要求 '試試看只給一個可完成的步驟'，但 hint 1 不說出解法"
+      ]
+    },
+    "hint_level_4": {
+      "instruction": "可以完整說明原因與修正步驟，但只改必要的積木。",
+      "conflict_with_student_contract": [
+        "學生契約要求 '只輸出兩段' 和 '160 字限制'，但 hint 4 允許 '完整說明'",
+        "學生契約要求 '不可猜測根本原因'，但 hint 4 允許 '完整說明原因'"
+      ]
+    },
+    "shared_rules": {
+      "two_paragraphs": "只輸出兩段：提示：和試試看：",
+      "one_step": "試試看只給一個可完成的步驟",
+      "max_length": "總長不超過 160 個中文字"
+    }
+  },
+  "recommendations": [
+    "方案 A：整合 hint level 指令與學生契約",
+    "  - hint 1: '提示：引導問題，試試看：一個可完成的步驟（160 字內）'",
+    "  - hint 2: '提示：可檢查的位置或數字，試試看：觀察結果（160 字內）'",
+    "  - hint 3: '提示：原因與下一步判斷，試試看：可完成的步驟（300 字內）'",
+    "  - hint 4: '提示：完整原因與修正步驟，試試看：只改必要的積木（無字數限制）'",
+    "",
+    "方案 B：分級字數限制",
+    "  - hint 1/2: 160 字",
+    "  - hint 3: 300 字",
+    "  - hint 4: 500 字",
+    "",
+    "方案 C：移除 160 字限制，改用 hint level 控制"
+  ],
+  "test_planning": {
+    "positive_tests": [
+      "hint level 1: 符合 '引導問題' + '一個步驟' 格式",
+      "hint level 2: 符合 '位置/數字' + '一個步驟' 格式",
+      "hint level 3: 符合 '原因' + '一個步驟' 格式",
+      "hint level 4: 符合 '完整說明' + '必要修正' 格式"
+    ],
+    "negative_tests": [
+      "hint level 1: 不直接給解法",
+      "hint level 4: 不超出 '必要修正' 範圍",
+      "所有 levels: 不超過分級字數限制"
+    ],
+    "regression_tests": [
+      "現有學生契約：兩段格式、160 字限制",
+      "現有教師契約：區分觀察/推論/建議、引用 evidence ID"
+    ]
+  },
+  "not_run": [
+    "未實際修改 prompt.ts（需寫入新版本）",
+    "未建立正反測試（需建立測試腳本）"
+  ]
+}

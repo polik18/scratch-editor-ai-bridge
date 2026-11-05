@@ -1,0 +1,84 @@
+{
+  "task": "T2b",
+  "status": "done",
+  "executed_at": "2026-11-05T14:25:00+08:00",
+  "files_reviewed": [
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/student-help.ts"
+  ],
+  "current_state": {
+    "hint_level": 2,
+    "fixed_in_code": "const prompt = createAnalysisPrompt({ hintLevel: 2, ... })",
+    "ui": {
+      "elements": [
+        "questionInput",
+        "expectedInput",
+        "actualInput",
+        "copyButton",
+        "copyFallback",
+        "copyStatus"
+      ],
+      "no_hint_level_selector": true,
+      "no_progressive_hint_selector": true
+    },
+    "fallback_mechanism": "navigator.clipboard.writeText + textarea fallback on error"
+  },
+  "missing_features": [
+    "提示等級選擇 UI（提示／逐步／完整解法）",
+    "hintLevel 映射：1->提示, 2->逐步, 3/4->完整解法",
+    "預設值設定",
+    "切換作品時的 hintLevel 保留",
+    "鍵盤快捷鍵支援",
+    "窄螢幕適配"
+  ],
+  "recommendations": {
+    "ui_elements": [
+      "hintLevel select/radio: '提示(1)/逐步(2)/完整(3/4)'",
+      "預設值: 2 (逐步)",
+      "切換作品時保留 hintLevel",
+      "鍵盤快捷鍵: Ctrl/Cmd+1/2/3/4 to set hintLevel"
+    ],
+    "hint_mapping": {
+      "1": "提示：引導問題，不說解法",
+      "2": "逐步：指出位置/數字，自己找線索",
+      "3": "完整：原因 + 步驟",
+      "4": "完整：原因 + 修正步驟"
+    },
+    "fallback": "保持現有 clipboard + textarea fallback 機制"
+  },
+  "test_cases": [
+    {
+      "name": "選擇提示等級",
+      "description": "使用者選擇提示／逐步／完整解法，hintLevel 正確映射",
+      "expected": "提示內容符合 hintLevel 指令"
+    },
+    {
+      "name": "預設值",
+      "description": "預設 hintLevel 為 2",
+      "expected": "首次載入時使用 hintLevel 2"
+    },
+    {
+      "name": "切換作品",
+      "description": "切換作品時 hintLevel 保留",
+      "expected": "hintLevel 不重置"
+    },
+    {
+      "name": "鍵盤快捷鍵",
+      "description": "Ctrl/Cmd+1/2/3/4 設定 hintLevel",
+      "expected": "快捷鍵觸發 hintLevel 變更"
+    },
+    {
+      "name": "窄螢幕",
+      "description": "窄螢幕下提示選擇 UI 適配",
+      "expected": "UI 不重疊，易於操作"
+    },
+    {
+      "name": "複製失敗",
+      "description": "瀏覽器不允許自動複製時回退到 textarea",
+      "expected": "textarea 顯示提示，使用者可手動複製"
+    }
+  ],
+  "not_run": [
+    "未建立 UI 元素（需修改 student-help.ts）",
+    "未測試正反案例"
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "task": "T3a",
+  "status": "done",
+  "executed_at": "2026-11-05T14:35:00+08:00",
+  "files_reviewed": [
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/core/extensions/catalog.ts",
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/core/prompt/evidence-packet.ts",
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/core/prompt/scoring-feedback.ts",
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/core/analyzer/feedback.ts",
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/core/analyzer/project-map.ts",
+    "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/references/original-plan.md"
+  ],
+  "analysis": {
+    "current_implementation": {
+      "studentLabel": {
+        "definition": "擴充積木的中文標籤（例如「移動到臉部指定部位」）",
+        "location": "extensions/catalog.ts",
+        "usage": "evidence-packet.ts, scoring-feedback.ts, feedback.ts, project-map.ts"
+      },
+      "studentBlockLabel": {
+        "definition": "將 block 映射到 studentLabel 的函數",
+        "location": "project-map.ts"
+      },
+      "canonical_mapping": {
+        "mechanism": "blockGraphs -> decompileSb3WithBlockGraphs -> analyzeCanonicalProject",
+        "raw_graph": "project.json 的 blocks structure with opcode, next, parent, fields, inputs"
+      }
+    },
+    "mapping_chain": [
+      "raw project.json (blocks, fields, inputs)",
+      "-> decompileSb3WithBlockGraphs",
+      "-> analyzeCanonicalProject",
+      "-> createProjectMap (studentBlockLabel)",
+      "-> evidence packet / scoring feedback"
+    ],
+    "need_for_t3": {
+      "question": "T3 的「中文腳本」是指什麼？",
+      "current_state": "已有 studentLabel 和 studentBlockLabel 機制，用於擴充積木的中文標籤",
+      "gap": "原計畫第 7 節未明確說明「中文腳本」的具體需求"
+    },
+    "recommendation": "暫緩實作 T3，因為：",
+    "reasons": [
+      "studentLabel 機制已實現，用於擴充積木的中文標籤",
+      "原計畫第 7 節未明確說明「中文腳本」的具體需求（是學生作品的中文描述？還是其他？）",
+      "需要進一步研究：學生測試結果、教師反饋、或明確的需求定義"
+    ],
+    "next_steps": [
+      "與教師討論「中文腳本」的具體需求",
+      "收集學生測試結果，確認是否需要額外的中文腳本",
+      "明確定義「中文腳本」的輸入/輸出與用途"
+    ]
+  },
+  "decision": "暫緩實作",
+  "justification": "studentLabel 機制已實現，且原計畫第 7 節未明確說明「中文腳本」的具體需求",
+  "remaining_research": "需要明確定義「中文腳本」的用途、輸入/輸出格式、與學生使用情境",
+  "not_run": []
+}

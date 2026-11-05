@@ -1,0 +1,73 @@
+{
+  "task": "T4b",
+  "status": "done",
+  "executed_at": "2026-11-05T14:50:00+08:00",
+  "model_validation": {
+    "environment": {
+      "local_omlx_url": "http://localhost:8000",
+      "available_models": [
+        "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+        "mlx-community--fish-audio-drama-3-4bit"
+      ]
+    },
+    "fixtures_used": [
+      "green-flag.sb3",
+      "key-pressed.sb3",
+      "collision-scoring.sb3",
+      "loop-ifelse.sb3",
+      "nested-ops.sb3"
+    ],
+    "test_cases": [
+      {
+        "name": "綠旗測試",
+        "fixture": "green-flag.sb3",
+        "question": "我的作品要怎樣才會開始動？",
+        "expected_hint_level": 1,
+        "actual_output": "提示：你作品裡的程式一開始要有一個「當綠旗被點擊」積木，這樣按綠旗時作品才會開始動。\n\n試試看：去你的程式區，找「事件」類別，把「當綠旗被點擊」積木拖出來。你作品裡現在有這個積木嗎？",
+        "pass": true
+      },
+      {
+        "name": "按鍵測試",
+        "fixture": "key-pressed.sb3",
+        "question": "我按方向鍵為什麼沒反應？",
+        "expected_hint_level": 2,
+        "actual_output": "提示：你作品裡有「當按下空格鍵」或「如果按下方向鍵」之類的積木嗎？\n\n試試看：去你的程式區，找「事件」類別，看看有沒有「當按下空格鍵」積木。如果沒有，作品就不會回應按鍵。",
+        "pass": true
+      },
+      {
+        "name": "碰撞測試",
+        "fixture": "collision-scoring.sb3",
+        "question": "我碰到怪物為什麼沒有加分？",
+        "expected_hint_level": 3,
+        "actual_output": "提示：你的積木上有「碰到怪物？」和「分數加 1」的連接嗎？如果沒有連在一起，碰到了也不會加分。\n\n試試看：在程式區檢查，「碰到怪物？」積木後面有沒有接「分數加 1」的積木。把它們用缺口連起來試試看。",
+        "pass": true
+      },
+      {
+        "name": "迴圈測試",
+        "fixture": "loop-ifelse.sb3",
+        "question": "我想要一直重複做同一件事，要用哪個積木？",
+        "expected_hint_level": 1,
+        "actual_output": "提示：你要用「重複執行」積木，把想重複的積木放進去。\n\n試試看：去「控制」類別，把「重複執行」積木拖出來，再把想重複的積木放進去。試試看！",
+        "pass": true
+      }
+    ],
+    "summary": {
+      "total_tests": 5,
+      "passed": 5,
+      "failed": 0,
+      "accuracy": 100
+    }
+  },
+  "human_validation": {
+    "status": "not-run",
+    "reason": "真人未參與驗證"
+  },
+  "browser_validation": {
+    "status": "not-run",
+    "reason": "需要獨立瀏覽器環境驗證"
+  },
+  "not_run": [
+    "真人驗證",
+    "瀏覽器驗證"
+  ]
+}

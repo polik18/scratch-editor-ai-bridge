@@ -1,0 +1,64 @@
+{
+  "task": "T0b",
+  "status": "done",
+  "executed_at": "2026-11-05T13:55:00+08:00",
+  "fixtures": [
+    {
+      "name": "green-flag.sb3",
+      "size": 633,
+      "description": "Green flag event block"
+    },
+    {
+      "name": "key-pressed.sb3",
+      "size": 868,
+      "description": "When key pressed event block"
+    },
+    {
+      "name": "collision-scoring.sb3",
+      "size": 1019,
+      "description": "Collision detection and scoring"
+    },
+    {
+      "name": "loop-ifelse.sb3",
+      "size": 898,
+      "description": "Repeat and if-else blocks"
+    },
+    {
+      "name": "nested-ops.sb3",
+      "size": 702,
+      "description": "Nested mathematical operations"
+    },
+    {
+      "name": "broadcast.sb3",
+      "size": 824,
+      "description": "Broadcast and receive blocks"
+    },
+    {
+      "name": "custom-block.sb3",
+      "size": 680,
+      "description": "Custom block with parameters"
+    },
+    {
+      "name": "unknown-ext.sb3",
+      "size": 638,
+      "description": "Unknown extension blocks"
+    },
+    {
+      "name": "missing-evidence.sb3",
+      "size": 709,
+      "description": "Blocks without comments or labels"
+    },
+    {
+      "name": "duplicate-name.sb3",
+      "size": 720,
+      "description": "Sprites with duplicate names"
+    },
+    {
+      "name": "large-project.sb3",
+      "size": 1150,
+      "description": "Large project with 6 targets"
+    }
+  ],
+  "fixture_dir": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/fixtures",
+  "generation_script": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/scripts/generate_fixtures.py"
+}

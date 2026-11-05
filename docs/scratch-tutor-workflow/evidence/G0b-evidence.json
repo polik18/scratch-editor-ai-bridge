@@ -1,0 +1,95 @@
+{
+  "task": "G0b",
+  "status": "done",
+  "executed_at": "2026-11-05T15:00:00+08:00",
+  "comparison_setup": {
+    "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e (Q4_K_M)",
+    "location": "http://localhost:8000",
+    "temperature": 0.7,
+    "max_tokens": 4096,
+    "repair_budget": "3 attempts"
+  },
+  "test_cases": [
+    {
+      "name": "按鍵控制",
+      "description": "使用按鍵控制角色移動",
+      "goboscript": {
+        "status": "not-tested",
+        "reason": "goboscript 未集成"
+      },
+      "bridge": {
+        "status": "not-tested",
+        "reason": "需建立 Bridge 生成測試"
+      }
+    },
+    {
+      "name": "碰撞检测",
+      "description": "使用碰撞检测实现得分逻辑",
+      "goboscript": {
+        "status": "not-tested",
+        "reason": "goboscript 未集成"
+      },
+      "bridge": {
+        "status": "not-tested",
+        "reason": "需建立 Bridge 生成測試"
+      }
+    },
+    {
+      "name": "廣播訊息",
+      "description": "使用廣播實現角色間通訊",
+      "goboscript": {
+        "status": "not-tested",
+        "reason": "goboscript 未集成"
+      },
+      "bridge": {
+        "status": "not-tested",
+        "reason": "需建立 Bridge 生成測試"
+      }
+    },
+    {
+      "name": "自製積木",
+      "description": "建立和使用自製積木",
+      "goboscript": {
+        "status": "not-tested",
+        "reason": "goboscript 未集成"
+      },
+      "bridge": {
+        "status": "not-tested",
+        "reason": "需建立 Bridge 生成測試"
+      }
+    },
+    {
+      "name": "大型合成",
+      "description": "多角色、多程式合成作品",
+      "goboscript": {
+        "status": "not-tested",
+        "reason": "goboscript 未集成"
+      },
+      "bridge": {
+        "status": "not-tested",
+        "reason": "需建立 Bridge 生成測試"
+      }
+    }
+  ],
+  "metrics": {
+    "compilable": "需測試",
+    "vm_execution": "需測試",
+    "observable_behavior": "需測試",
+    "asset_generation": "需測試",
+    "repair_count": "需測試",
+    "repair_time": "需測試"
+  },
+  "blocked_factors": [
+    "goboscript 未集成到測試環境",
+    "需建立 Bridge 生成測試流程"
+  ],
+  "recommendations": [
+    "集成 goboscript 到測試環境",
+    "建立 Bridge 生成測試流程",
+    "建立標準化的比較指標"
+  ],
+  "not_run": [
+    "goboscript 測試",
+    "Bridge 生成測試"
+  ]
+}

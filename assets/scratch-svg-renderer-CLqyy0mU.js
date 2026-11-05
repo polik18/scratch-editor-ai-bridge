@@ -1,0 +1,1 @@
+import{t as e}from"./scratch-svg-renderer-B3iCJaOJ.js";export default e();

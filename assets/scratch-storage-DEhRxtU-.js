@@ -1,0 +1,1 @@
+import{t as e}from"./scratch-storage-D3fL8Ppm.js";export default e();

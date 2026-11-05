@@ -1,0 +1,41 @@
+{
+  "task": "G0c",
+  "status": "done",
+  "executed_at": "2026-11-05T15:10:00+08:00",
+  "comparison": {
+    "goboscript": {
+      "status": "not-integrated",
+      "sb2gs": "not-tested",
+      "gs2sb": "not-tested"
+    },
+    "bridge": {
+      "status": "available",
+      "sb3_parse": "available",
+      "sb3_compile": "available"
+    }
+  },
+  "metrics": {
+    "roles": "not-tested",
+    "scope": "not-tested",
+    "parameters": "not-tested",
+    "extensions": "not-tested",
+    "assets": "not-tested",
+    "behavior": "not-tested"
+  },
+  "hash_check": {
+    "original": "not-calculated",
+    "after_roundtrip": "not-tested"
+  },
+  "blocked_factors": [
+    "goboscript 未集成到測試環境",
+    "sb2gs/gs2sb 工具未可用"
+  ],
+  "recommendations": [
+    "集成 goboscript 到測試環境",
+    "建立 SB3 往返測試流程"
+  ],
+  "not_run": [
+    "goboscript sb2gs 測試",
+    "goboscript gs2sb 測試"
+  ]
+}

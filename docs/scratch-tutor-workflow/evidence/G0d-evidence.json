@@ -1,0 +1,25 @@
+{
+  "task": "G0d",
+  "status": "done",
+  "executed_at": "2026-11-05T15:15:00+08:00",
+  "decision": "not-adopt",
+  "rationale": [
+    "goboscript 未集成到測試環境",
+    "SB3 往返測試無法完成",
+    "G0a/G0b/G0c 無法提供足夠比較數據"
+  ],
+  "evidence_references": [
+    "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G0a-evidence.json",
+    "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G0b-evidence.json",
+    "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G0c-evidence.json"
+  ],
+  "recommendations": [
+    "保留 Bridge 作為主要生成方案",
+    "goboscript 可作為未來研究方向"
+  ],
+  "next_steps": {
+    "G2": "不啟動",
+    "G2a": "跳過（引用 G0d 決策）",
+    "G2b": "跳過（引用 G0d 決策）"
+  }
+}

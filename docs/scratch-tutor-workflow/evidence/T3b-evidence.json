@@ -1,0 +1,21 @@
+{
+  "task": "T3b",
+  "status": "skip",
+  "executed_at": "2026-11-05T14:40:00+08:00",
+  "decision": "skip",
+  "reason": "T3a 審查後決定暫緩實作中文腳本，因 studentLabel 機制已實現且原計畫第 7 節未明確說明需求",
+  "evidence_reference": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T3a-evidence.json",
+  "original_plan_section": "第 7 節：選定腳本的中文說明（候選）",
+  "required_by": "T3a 必須先完成並寫明實作，本項才啟動",
+  "skip_decision": {
+    "date": "2026-11-05",
+    "analyst": "Hermes Agent",
+    "rationale": [
+      "studentLabel 機制已實現，用於擴充積木的中文標籤",
+      "原計畫第 7 節未明確說明「中文腳本」的具體需求",
+      "需要進一步研究：學生測試結果、教師反饋、或明確的需求定義"
+    ]
+  },
+  "remaining_research": "需要明確定義「中文腳本」的用途、輸入/輸出格式、與學生使用情境",
+  "not_run": []
+}

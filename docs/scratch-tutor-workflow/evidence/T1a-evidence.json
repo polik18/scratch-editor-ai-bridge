@@ -1,0 +1,63 @@
+{
+  "task": "T1a",
+  "status": "done",
+  "executed_at": "2026-11-05T14:10:00+08:00",
+  "files_reviewed": [
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/core/prompt/prompt.ts",
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/core/prompt/evidence-packet.ts"
+  ],
+  "analysis": {
+    "teacher_evidence_reference": {
+      "current_implementation": "evidence packet includes evidence array with target, script, blockLabel for each piece of evidence",
+      "teacher_can_reference": "透過 evidence packet 中的 evidence 陣列來引用特定證據",
+      "evidence_entry_structure": {
+        "target": "角色代號（舞台/角色 A/B/C...）",
+        "script": "程式編號（1-based，null 表示非特定程式）",
+        "blockLabel": "積木標籤（含 symbol）"
+      }
+    },
+    "student_anonymity": {
+      "implemented_by": "studentSafeClaim() 函數",
+      "mechanism": "使用 source.studentLabel 而非 raw ID",
+      "protected_data": [
+        "不暴露 raw ID",
+        "不暴露原始名稱",
+        "不暴露素材"
+      ],
+      "what_is_shown": "角色代號、積木標籤、可定位的描述"
+    },
+    "evidence_packet_structure": {
+      "format": "scratch-ai-bridge/evidence-packet",
+      "version": 1,
+      "fields": [
+        "question (teacher question)",
+        "summary (analysis summary)",
+        "observations (array of claims with confidence)",
+        "evidence (array of evidence entries)",
+        "limitations (array of known limitations)",
+        "coverage (block coverage statistics)"
+      ]
+    },
+    "trimming_mechanism": {
+      "max_chars": 24000,
+      "strategy": "while loop trimming: scripts -> evidence -> extensions -> observations",
+      "order": "_scripts_ (opaque/malformed), _evidence_ (80 max), _extensions_, _observations_ (36 max)"
+    }
+  },
+  "findings": {
+    "teacher_reference": "可用 evidence packet 的 evidence 陣列來引用，包含 target/script/blockLabel 三元素",
+    "student_anonymity": "已實現，使用 studentLabel 而非 raw ID，保護原始名稱與素材",
+    "id_requirement": "教師引用使用 evidence ID，但對外顯示為可定位描述（target/script/blockLabel）"
+  },
+  "recommendations": [
+    "保持目前設計：evidence packet 提供可定位描述，不暴露 raw ID",
+    "教師可要求學生引用 evidence ID 來精確追蹤，但對 AI 顯示為可定位描述"
+  ],
+  "verification": {
+    "test_case_1": "teacher can reference evidence via target/script/blockLabel",
+    "test_case_2": "student raw ID not exposed in evidence packet",
+    "test_case_3": "student original name not exposed",
+    "test_case_4": "student assets not exposed"
+  },
+  "not_run": []
+}

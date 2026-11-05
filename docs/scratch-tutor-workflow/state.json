@@ -1,0 +1,146 @@
+{
+  "schema": 1,
+  "workflow": "scratch-tutor-20261105",
+  "items": {
+    "T0a": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T0a-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T05:46:02.489959+00:00"
+    },
+    "T0b": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T0b-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T05:56:54.819913+00:00"
+    },
+    "T0c": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T0c-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:03:16.697112+00:00"
+    },
+    "T1a": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T1a-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:05:12.607667+00:00"
+    },
+    "T1b": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T1b-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:07:09.915274+00:00"
+    },
+    "T2a": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T2a-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:09:05.633355+00:00"
+    },
+    "T2b": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T2b-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:11:28.622816+00:00"
+    },
+    "T2c": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T2c-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:13:17.690872+00:00"
+    },
+    "T3a": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T3a-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:18:17.100933+00:00"
+    },
+    "T3b": {
+      "status": "skipped",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T3b-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:19:10.817787+00:00"
+    },
+    "T4a": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T4a-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:23:53.237354+00:00"
+    },
+    "T4b": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/T4b-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:26:35.573371+00:00"
+    },
+    "G0a": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G0a-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:29:27.709160+00:00"
+    },
+    "G0b": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G0b-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:32:12.903413+00:00"
+    },
+    "G0c": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G0c-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:33:24.199573+00:00"
+    },
+    "G0d": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G0d-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:34:27.354509+00:00"
+    },
+    "G1a": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G1a-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:34:27.628207+00:00"
+    },
+    "G1b": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G1b-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:46:35.266903+00:00"
+    },
+    "G2a": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G2a-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:46:35.455246+00:00"
+    },
+    "G2b": {
+      "status": "done",
+      "evidence": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G2b-evidence.json",
+      "reason": null,
+      "retries": 0,
+      "updated_at": "2026-11-05T06:46:35.672956+00:00"
+    }
+  }
+}

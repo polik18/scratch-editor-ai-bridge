@@ -1,0 +1,64 @@
+{
+  "task": "T0c",
+  "status": "done",
+  "executed_at": "2026-11-05T14:00:00+08:00",
+  "files_reviewed": [
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/main.ts",
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/student-help.ts",
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/core/prompt.ts"
+  ],
+  "analysis": {
+    "createAnalysisPrompt": {
+      "location": "prompt.ts",
+      "signature": "createAnalysisPrompt({analysis, canonical, projectMap, question, mode, hintLevel}): string",
+      "behavior": {
+        "mode_student": "用國小生看得懂的繁體中文，提示程度由 hintLevel 控制",
+        "mode_teacher": "分析結構、可能原因和限制，每個可驗證事實引用 evidence ID",
+        "answer_rules_student": "只根據 evidence packet 回答，總長不超過 160 個中文字",
+        "answer_rules_teacher": "區分觀察、推論、建議與無法判斷，不得宣稱作品已執行"
+      }
+    },
+    "student-help.ts": {
+      "features": [
+        "SB3 file upload and parsing",
+        "Project analysis with createAnalysisPrompt",
+        "First hint based on question keywords",
+        "Copy prompt to clipboard with fallback textarea",
+        "Project map visualization"
+      ],
+      "first_hint_behavior": {
+        "keywords_matching": "聲音/音樂 -> sound_play/sound_playuntildone/music_playDrumForBeats/text2speech_speakAndWait"
+      }
+    }
+  },
+  "cases_identified": [
+    {
+      "case": "教師引用缺口",
+      "description": "當問題與作品無關時，AI 應指出目前資料無法確定原因",
+      "code_location": "createAnalysisPrompt answer_rules_student",
+      "expected_behavior": "直接說目前資料無法確定原因，請學生指出某段程式或補充實際看到的現象"
+    },
+    {
+      "case": "同 opcode 多角色",
+      "description": "多個角色有相同 opcode 時，提示需區分哪個角色",
+      "code_location": "projectMap visualization with targetAlias()",
+      "expected_behavior": "使用角色代號（角色 A/B/C...）來區分不同角色"
+    },
+    {
+      "case": "首筆不相關",
+      "description": "首個提示若不相關，應直接說明無法確定",
+      "code_location": "createAnalysisPrompt answer_rules_student",
+      "expected_behavior": "當無相關證據時，直接說目前資料無法確定原因"
+    },
+    {
+      "case": "裁切",
+      "description": "提示長度超過 EVIDENCE_PACKET_MAX_CHARS 時的處理",
+      "code_location": "evidence-packet.ts: EVIDENCE_PACKET_MAX_CHARS constant",
+      "expected_behavior": "需驗證是否有自動裁切機制"
+    }
+  ],
+  "evidence_not_found": [],
+  "not_run": [
+    "未重現案例：需實際執行作品來驗證提示輸出"
+  ]
+}

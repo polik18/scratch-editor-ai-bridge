@@ -1,0 +1,107 @@
+{
+  "task": "T2c",
+  "status": "done",
+  "executed_at": "2026-11-05T14:30:00+08:00",
+  "files_reviewed": [
+    "/Users/huangjianzhe/Git/scratch-ai-bridge-improvement-plan/packages/scratch-ai-bridge/src/student-help.ts"
+  ],
+  "renderFirstHint_analysis": {
+    "keywords_matching": {
+      "position": [
+        "位置",
+        "右邊",
+        "左邊",
+        "座標",
+        "一開始",
+        "出現在哪",
+        "跑到哪"
+      ],
+      "key_pressed": [
+        "按鍵",
+        "方向鍵",
+        "按下",
+        "不能動",
+        "移動不了",
+        "控制"
+      ],
+      "collision": [
+        "碰到",
+        "撞到",
+        "碰撞",
+        "接觸"
+      ],
+      "scoring": [
+        "分數",
+        "加分",
+        "得分",
+        "分數沒有"
+      ],
+      "sound": [
+        "聲音",
+        "音樂",
+        "沒有聲音"
+      ]
+    },
+    "opcodes_mapping": {
+      "position": [
+        "motion_gotoxy",
+        "motion_setx",
+        "motion_changexby"
+      ],
+      "key_pressed": [
+        "event_whenkeypressed",
+        "sensing_keypressed"
+      ],
+      "collision": [
+        "sensing_touchingobject",
+        "event_whentouchingobject"
+      ],
+      "scoring": [
+        "data_changevariableby",
+        "data_setvariableto"
+      ],
+      "sound": [
+        "sound_play",
+        "sound_playuntildone",
+        "music_playDrumForBeats",
+        "text2speech_speakAndWait"
+      ]
+    },
+    "multi_target_handling": {
+      "method": "targetAlias(evidence.targetIndex)",
+      "output": "舞台/角色 A/B/C...（自動分配代號）"
+    },
+    "歧義_handling": {
+      "fallback": "找不到匹配時顯示通用提示：'我目前找不到能直接回答這個問題的積木線索，所以先不猜原因。可以在上面的程式線索中找最像的積木，或請老師陪你一起看。'",
+      "not_causal": "使用「線索」而非「原因」或「根因」"
+    },
+    "first_block_selection": {
+      "method": "currentMap.evidence.find()",
+      "behavior": "找到第一筆匹配的 opcode"
+    }
+  },
+  "t0c_cases_coverage": [
+    {
+      "case": "教師引用缺口",
+      "coverage": "找不到匹配時顯示通用提示，不猜原因"
+    },
+    {
+      "case": "同 opcode 多角色",
+      "coverage": "使用 targetAlias 標示角色代號"
+    },
+    {
+      "case": "首筆不相關",
+      "coverage": "找不到匹配時回退到通用提示"
+    },
+    {
+      "case": "裁切",
+      "coverage": "不適用（renderFirstHint 不涉及裁切）"
+    }
+  ],
+  "recommendations": [
+    "目前 renderFirstHint 已符合 T2c 要求",
+    "多角色、多變數、歧義均有處理機制",
+    "不將關鍵字匹配稱作根因"
+  ],
+  "not_run": []
+}

@@ -1,0 +1,7 @@
+{
+  "task": "G1b",
+  "status": "skipped",
+  "executed_at": "2026-11-05T15:25:00+08:00",
+  "reason": "G1a 檢查後無缺口，scratch-mcp 摘要功能已足夠",
+  "reference": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/docs/scratch-tutor-workflow/evidence/G1a-evidence.json"
+}

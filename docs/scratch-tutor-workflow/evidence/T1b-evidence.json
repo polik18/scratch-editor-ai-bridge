@@ -1,0 +1,81 @@
+{
+  "task": "T1b",
+  "status": "done",
+  "executed_at": "2026-11-05T14:15:00+08:00",
+  "analysis": {
+    "current_implementation": {
+      "evidence_packet": {
+        "max_chars": 24000,
+        "trimming_strategy": "while loop trimming in order: scripts -> evidence -> extensions -> observations"
+      },
+      "observation_limit": 36,
+      "evidence_limit": 80,
+      "evidence_fields": [
+        "target",
+        "script",
+        "blockLabel"
+      ],
+      "coverage_fields": [
+        "scripts",
+        "extensions",
+        "roundTrip",
+        "importedBlocks",
+        "recognizedBlocks",
+        "opaqueBlocks",
+        "malformedGraphIssues"
+      ]
+    },
+    "trimming_logic": {
+      "scripts_trimming": "remove scripts with opaqueBlocks > 0 or malformedGraphIssues > 0 or runtime !== 'core'",
+      "evidence_trimming": "slice evidence array to max 80 entries",
+      "extensions_trimming": "remove extensions from end until size is OK",
+      "observations_trimming": "remove observations from end (keep at least 1)"
+    },
+    "known_issues": [
+      "trimming 未補足已省略數（truncated count）",
+      "trimming 未說明原因（truncated reason）",
+      "trimming 未處理空結果（empty result handling）",
+      "observations 與 evidence 關聯可能不完整（因裁切後 evidence index 可能偏移）"
+    ]
+  },
+  "test_cases": [
+    {
+      "name": "超大作品",
+      "description": "測試大量 targets 和 blocks 的裁切",
+      "expected": "裁切後保留 36 observations, 80 evidence, 省略的 scripts/extensions/observations 應記錄"
+    },
+    {
+      "name": "重名",
+      "description": "測試多個角色同名時的標籤處理",
+      "expected": "使用角色代號（舞台/角色 A/B/C...）來區分"
+    },
+    {
+      "name": "未知擴充",
+      "description": "測試未知擴充積木的處理",
+      "expected": "在 observations 中合併成一句白話限制"
+    },
+    {
+      "name": "隱私",
+      "description": "測試學生匿名保護",
+      "expected": "不暴露 raw ID、原始名稱、素材"
+    },
+    {
+      "name": "缺證據",
+      "description": "測試無相關證據時的回應",
+      "expected": "直接說目前資料無法確定原因"
+    }
+  ],
+  "recommendations": [
+    "補足已省略數：在 evidence packet 中新增 truncated 字段，記錄被裁切的項目數量",
+    "說明原因：在 observations 或 limitations 中說明裁切原因（例如 '因內容過長，已省略部分觀察'）",
+    "空結果處理：若裁切後 observations 為空，保留至少 1 個 observations 或標記為 empty",
+    "關聯完整：確保裁切後的 evidence 陣列與 observations 的 evidence index 保持關聯"
+  ],
+  "verification": {
+    "current_behavior": "evidence-packet.ts 已有 trim loop，但未補足已省略數、原因與空結果",
+    "expected_behavior": "補足已省略數、說明原因、處理空結果、確保觀察與證據關聯完整"
+  },
+  "not_run": [
+    "未實際執行超大作品測試（需建立測試作品）"
+  ]
+}
