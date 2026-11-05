@@ -6,77 +6,77 @@
 
 ```typescript
 interface BehaviorSpec {
-  gameId: string;
-  title: string;
-  version: string;
-  
+  gameId: string
+  title: string
+  version: string
+
   // 輸入定義
   inputs: {
     // 鍵盤輸入
     keyboard: {
-      key: string;
-      duration: number;
-    }[];
-    
+      key: string
+      duration: number
+    }[]
+
     // 滑鼠輸入
     mouse: {
-      x: number;
-      y: number;
-      button: 'left' | 'right' | 'middle';
-      duration: number;
-    }[];
-    
+      x: number
+      y: number
+      button: 'left' | 'right' | 'middle'
+      duration: number
+    }[]
+
     // 事件輸入
     events: {
-      type: 'click' | 'keydown' | 'keyup' | 'touchstart' | 'touchend';
-      target: string;
-      detail?: any;
-    }[];
-  };
-  
+      type: 'click' | 'keydown' | 'keyup' | 'touchstart' | 'touchend'
+      target: string
+      detail?: any
+    }[]
+  }
+
   // 預期輸出
   expectedOutputs: {
     // 變數變化
     variables: {
-      name: string;
-      initialValue: any;
-      expectedValue: any;
-      condition: 'equals' | 'greaterThan' | 'lessThan';
-    }[];
-    
+      name: string
+      initialValue: any
+      expectedValue: any
+      condition: 'equals' | 'greaterThan' | 'lessThan'
+    }[]
+
     // 角色行為
     sprites: {
-      name: string;
+      name: string
       position: {
-        x: number;
-        y: number;
-      };
-      direction: number;
-      visible: boolean;
-      costume: string;
-    }[];
-    
+        x: number
+        y: number
+      }
+      direction: number
+      visible: boolean
+      costume: string
+    }[]
+
     // 音效/視覺效果
     effects: {
-      type: 'sound' | 'visual' | 'message';
-      name: string;
-      triggered: boolean;
-    }[];
-  };
-  
+      type: 'sound' | 'visual' | 'message'
+      name: string
+      triggered: boolean
+    }[]
+  }
+
   // 邊界案例
   edgeCases: {
-    description: string;
-    input: any;
-    expectedBehavior: any;
-  }[];
-  
+    description: string
+    input: any
+    expectedBehavior: any
+  }[]
+
   // 失敗案例
   failureScenarios: {
-    description: string;
-    input: any;
-    expectedError: string;
-  }[];
+    description: string
+    input: any
+    expectedError: string
+  }[]
 }
 ```
 
@@ -90,14 +90,10 @@ interface BehaviorSpec {
   "title": "Minimal Game",
   "version": "1.0",
   "inputs": {
-    "keyboard": [
-      {"key": "space", "duration": 100}
-    ]
+    "keyboard": [{ "key": "space", "duration": 100 }]
   },
   "expectedOutputs": {
-    "variables": [
-      {"name": "Score", "initialValue": 0, "expectedValue": 1, "condition": "equals"}
-    ]
+    "variables": [{ "name": "Score", "initialValue": 0, "expectedValue": 1, "condition": "equals" }]
   },
   "edgeCases": [],
   "failureScenarios": []
@@ -113,15 +109,15 @@ interface BehaviorSpec {
   "version": "1.0",
   "inputs": {
     "keyboard": [
-      {"key": "ArrowRight", "duration": 500},
-      {"key": "Space", "duration": 100}
+      { "key": "ArrowRight", "duration": 500 },
+      { "key": "Space", "duration": 100 }
     ]
   },
   "expectedOutputs": {
     "sprites": [
       {
         "name": "Sprite1",
-        "position": {"x": 100, "y": 0},
+        "position": { "x": 100, "y": 0 },
         "direction": 90,
         "visible": true,
         "costume": "costume1"
@@ -131,14 +127,14 @@ interface BehaviorSpec {
   "edgeCases": [
     {
       "description": "在平台邊緣跳躍",
-      "input": {"key": "Space", "duration": 100},
+      "input": { "key": "Space", "duration": 100 },
       "expectedBehavior": "角色掉出平台"
     }
   ],
   "failureScenarios": [
     {
       "description": "沒有角色時跳躍",
-      "input": {"key": "Space", "duration": 100},
+      "input": { "key": "Space", "duration": 100 },
       "expectedError": "No sprite to jump"
     }
   ]
@@ -167,16 +163,16 @@ interface BehaviorSpec {
 
 ```typescript
 interface BehaviorTestResult {
-  success: boolean;
-  errors: string[];
-  warnings: string[];
+  success: boolean
+  errors: string[]
+  warnings: string[]
   expectedOutputs: {
-    name: string;
-    expected: any;
-    actual: any;
-    status: 'pass' | 'fail';
-  }[];
-  executionTime: number;
-  vmState: any;
+    name: string
+    expected: any
+    actual: any
+    status: 'pass' | 'fail'
+  }[]
+  executionTime: number
+  vmState: any
 }
 ```

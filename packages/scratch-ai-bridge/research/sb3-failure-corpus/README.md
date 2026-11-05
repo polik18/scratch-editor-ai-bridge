@@ -10,6 +10,7 @@
 ## 样本結構
 
 每個樣本包含：
+
 1. `id`: 去識別化 ID (e.g., `f-001`)
 2. `source`: 來源 (e.g., `gemini-platformer-shorthand`)
 3. `format`: 回覆格式 (e.g., `canonical-ir`, `ai-response`)
@@ -28,6 +29,7 @@
 ## 樣本列表
 
 ### f-001: Gemini 平台遊戲短格式
+
 - **來源**: `tests/fixtures/gemini-platformer-shorthand.json`
 - **格式**: `scratch-ai-bridge/canonical-ir`
 - **結果**:
@@ -44,6 +46,7 @@
 - **修正提示**: 補上 `stage.variables`, `stage.costumes`, `sprites[].x`, `sprites[].y` 等必要欄位
 
 ### f-002: Markdown 包裝
+
 - **來源**: `markdown-wrapped-response`
 - **格式**: `scratch-ai-bridge/canonical-ir`
 - **結果**:
@@ -55,11 +58,12 @@
   - `vm_reload`: ❌
   - `preview`: ❌
 - **錯誤碼**: `MARKDOWN_WRAPPED_JSON`
-- **錯誤訊息**: AI 回覆包含 Markdown code fence (```json ... ```)，需先提取 JSON 內容
+- **錯誤訊息**: AI 回覆包含 Markdown code fence (`json ... `)，需先提取 JSON 內容
 - **錯誤位置**: `/meta/origin`
-- **修正提示**: 移除 Markdown code fence (```json ... ```)，直接輸出純 JSON
+- **修正提示**: 移除 Markdown code fence (`json ... `)，直接輸出純 JSON
 
 ### f-003: 截斷輸出
+
 - **來源**: `truncated-output`
 - **格式**: `scratch-ai-bridge/canonical-ir`
 - **結果**:
@@ -76,6 +80,7 @@
 - **修正提示**: 增加 token 限制或使用多輪對話分段輸出；若已截斷，補全缺失的括號與欄位
 
 ### f-004: 簡寫 fields/inputs
+
 - **來源**: `shorthand-fields`
 - **格式**: `scratch-ai-bridge/canonical-ir`
 - **結果**:
@@ -92,6 +97,7 @@
 - **修正提示**: 補上 stage.variables, stage.costumes, sprites[].x, sprites[].y, sprites[].currentCostumeIndex
 
 ### f-005: 未知積木
+
 - **來源**: `unknown-blocks`
 - **格式**: `scratch-ai-bridge/canonical-ir`
 - **結果**:
@@ -108,6 +114,7 @@
 - **修正提示**: 替換未支援積木為 equivalent Scratch 3.0 積木；或移除該功能
 
 ### f-006: 未宣告變數
+
 - **來源**: `undefined-variables`
 - **格式**: `scratch-ai-bridge/canonical-ir`
 - **結果**:
@@ -124,6 +131,7 @@
 - **修正提示**: 在 stage 或 sprites[0].variables 中新增 'score' 變數
 
 ### f-007: 缺少 assets
+
 - **來源**: `missing-assets`
 - **格式**: `scratch-ai-bridge/canonical-ir`
 - **結果**:
@@ -140,6 +148,7 @@
 - **修正提示**: 新增對應的 md5 'abc123' 與 'def456' 的 costume 檔案至 archive
 
 ### f-008: 錯誤 parent/next graph
+
 - **來源**: `broken-parent-next-graph`
 - **格式**: `scratch-ai-bridge/canonical-ir`
 - **結果**:
@@ -156,6 +165,7 @@
 - **修正提示**: 修正 next 與 parent 指向：block1.next 指向 block2；block2.parent 指向 block1
 
 ### f-009: 大型多角色遊戲
+
 - **來源**: `large-multi-sprite-game`
 - **格式**: `scratch-ai-bridge/canonical-ir`
 - **結果**:

@@ -50,8 +50,12 @@ describe('raw SB3 AI proposal', () => {
   it('provides a bounded, explicit summary for large projects without cloud values', async () => {
     const zip = new JSZip()
     const targets = Array.from({ length: 30 }, (_, i) => ({
-      name: `Sprite ${i}`, isStage: false, x: 0,
-      variables: Object.fromEntries(Array.from({ length: 30 }, (_, j) => [`v${j}`, [`variable-${j}`, 'x'.repeat(512)]])),
+      name: `Sprite ${i}`,
+      isStage: false,
+      x: 0,
+      variables: Object.fromEntries(
+        Array.from({ length: 30 }, (_, j) => [`v${j}`, [`variable-${j}`, 'x'.repeat(512)]]),
+      ),
     }))
     targets[0].variables.cloud = ['☁ secret', 'do-not-disclose', true] as unknown as string[]
     zip.file('project.json', JSON.stringify({ targets }))
@@ -65,20 +69,46 @@ describe('raw SB3 AI proposal', () => {
 
   it('allows read-only inspection of problematic targets while rejecting block edits', async () => {
     const zip = new JSZip()
-    zip.file('project.json', JSON.stringify({ targets: [{ name: 'Cat', isStage: false, blocks: {
-      orphan: { opcode: 'argument_reporter_string_number', parent: null, next: null,
-        fields: { VALUE: ['unknown'] }, inputs: {}, topLevel: true },
-    } }] }))
+    zip.file(
+      'project.json',
+      JSON.stringify({
+        targets: [
+          {
+            name: 'Cat',
+            isStage: false,
+            blocks: {
+              orphan: {
+                opcode: 'argument_reporter_string_number',
+                parent: null,
+                next: null,
+                fields: { VALUE: ['unknown'] },
+                inputs: {},
+                topLevel: true,
+              },
+            },
+          },
+        ],
+      }),
+    )
     const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
     const revision = rawSb3Revision(project)
     const page = inspectRawBlocks(project, revision, 0)
     expect(page.blocks).toHaveProperty('orphan')
     expect(page.graphIssueCount).toBeGreaterThan(0)
-    const patch = { format: 'scratch-ai-bridge/raw-patch', version: 1, baseRevision: revision,
-      summary: 'attempt edit', change: { kind: 'blocks', graphPatch: {
-        format: 'scratch-ai-bridge/block-graph-patch', version: 1,
-        patches: [{ targetIndex: 0, targetName: 'Cat', isStage: false, blocks: { orphan: { x: 1 } } }],
-      } } }
+    const patch = {
+      format: 'scratch-ai-bridge/raw-patch',
+      version: 1,
+      baseRevision: revision,
+      summary: 'attempt edit',
+      change: {
+        kind: 'blocks',
+        graphPatch: {
+          format: 'scratch-ai-bridge/block-graph-patch',
+          version: 1,
+          patches: [{ targetIndex: 0, targetName: 'Cat', isStage: false, blocks: { orphan: { x: 1 } } }],
+        },
+      },
+    }
     expect(() => proposeRawLivePatch(project, JSON.stringify(patch))).toThrow(/existing issues/)
   })
 

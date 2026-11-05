@@ -1,3 +1,4 @@
+/* global document -- Browser globals used in Playwright page evaluations */
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import JSZip from 'jszip'

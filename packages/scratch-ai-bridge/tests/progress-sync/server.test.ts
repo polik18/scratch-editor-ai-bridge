@@ -35,12 +35,13 @@ describe('self-hosted encrypted progress storage', () => {
       expect(races.filter((result) => result.status === 'rejected')).toHaveLength(1)
       const stored = await store.get(key)
       expect(stored).not.toBeNull()
+      if (!stored) throw new Error('stored progress record was null')
       const directory = join(root, 'scratch-ai-bridge-sync-v1')
       const body = await readFile(join(directory, `${key}.json`), 'utf8')
       expect(body).not.toContain('secret-value')
       expect((await stat(join(directory, `${key}.json`))).mode & 0o077).toBe(0)
       await expect(store.delete(key, initial)).rejects.toThrow('SAVE_CONFLICT')
-      await store.delete(key, stored!.etag)
+      await store.delete(key, stored.etag)
       expect(await store.get(key)).toBeNull()
       expect((await readdir(directory)).filter((name) => name.endsWith('.json'))).toEqual([])
     } finally {
@@ -85,7 +86,9 @@ describe('self-hosted encrypted progress storage', () => {
         body: JSON.stringify(encrypted),
       })
       expect(created.status).toBe(200)
-      const etag = created.headers.get('etag')!
+      const etag = created.headers.get('etag')
+      expect(etag).toBeTruthy()
+      if (!etag) throw new Error('etag header missing')
       expect(
         (
           await fetch(url, {

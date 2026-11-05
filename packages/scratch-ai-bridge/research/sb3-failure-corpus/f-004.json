@@ -50,6 +50,17 @@
   },
   "missing_fields": {
     "/stage": ["variables", "costumes"],
-    "/sprites/0": ["x", "y", "currentCostumeIndex", "costumes", "visible", "size", "rotation", "direction", "draggable", "rotationStyle"]
+    "/sprites/0": [
+      "x",
+      "y",
+      "currentCostumeIndex",
+      "costumes",
+      "visible",
+      "size",
+      "rotation",
+      "direction",
+      "draggable",
+      "rotationStyle"
+    ]
   }
 }

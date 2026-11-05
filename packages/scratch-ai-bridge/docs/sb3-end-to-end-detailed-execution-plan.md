@@ -47,17 +47,20 @@
    - 任何驗證失敗時 exit code = 1 且輸出 JSON diagnostic report
 
 **需修改檔案：**
+
 - `src/cli/archive-validator.ts` (新建)
 - `src/cli/graph-validator.ts` (新建)
 - `src/cli/session-cli.ts` (修改)
 
 **測試案例：**
+
 - `cyber-duel.sb3`：驗證缺少素材 entry
 - `star-collector.sb3`：驗證缺少素材 entry
 - `space-shooter.sb3`：驗證腳本未建立
 - 自製 SB3：缺少 `project.json`、重複 entry、壞 MD5 hash
 
 **阻斷條件：**
+
 - 無法建立 archive validator 前，不得宣稱「完整 SB3」
 - 無法建立 graph validator 前，不得驗證 block graph 正確性
 
@@ -74,6 +77,7 @@
    - 需補足：scripts、lists、costumes、sprites 定義、blocks 數量
 
 2. 建立設計檔轉 Canonical IR 的轉換器
+
    ```typescript
    // src/cli/design-to-ir.ts
    export function designToCanonicalIR(design: GameDesign): CanonicalProject
@@ -94,6 +98,7 @@
    - 提供最小範例與錯誤診斷
 
 **需修改檔案：**
+
 - `src/cli/game-cli.ts` (修改)
 - `src/cli/design-to-ir.ts` (新建)
 - `src/cli/session/session.ts` (可能修改 addSprite/addVariable)
@@ -101,11 +106,13 @@
 - `docs/game-design-example.json` (新建)
 
 **測試案例：**
+
 - 最小設計 (1 sprite, 1 script, 1 variable)
 - 平台遊戲設計 (多 sprites, 多 scripts, 多 variables)
 - 設計宣告 8 sprites, 120 blocks → 驗證 SB3 有相同數量
 
 **阻斷條件：**
+
 - 無法正確轉換 design → Canonical IR 前，不得建立完整遊戲
 - 變數格式不正確會導致後續 Canonical IR validation 失敗
 
@@ -136,18 +143,21 @@
    - 支援從 Raw Archive IR 取回素材 bytes
 
 **需修改檔案：**
+
 - `src/cli/session/session.ts` (修改 loadSb3/compile/saveSb3)
 - `src/core/ir/raw-archive.ts` (新建)
 - `src/core/compiler/project-json.ts` (修改)
 - `src/core/ir/assets.ts` (新建)
 
 **測試案例：**
+
 - 載入含 PNG/SVG/WAV/MP3 的 SB3 → 編譯 → 保存 → 重新載入
 - 驗證所有素材 bytes SHA-256 不變
 - 驗證素材 md5ext 不變
 - 驗證素材引用不變
 
 **阻斷條件：**
+
 - 無法保留素材 bytes 前，不得使用 session CLI 編輯既有 SB3
 - 自動生成素材會導致作品失真
 
@@ -181,17 +191,20 @@
    - `moveBlockToParent(blockId, parentId, nextId?)`：設定 parent 與 next
 
 **需修改檔案：**
+
 - `src/cli/session/session.ts` (修改 addBlock/attachBlockToHat/removeBlock)
 - `src/cli/graph-validator.ts` (修改：增加 graph validation functions)
 - `src/cli/session/graph-api.ts` (新建：block graph patch API)
 
 **測試案例：**
+
 - 建立 stack of 3 blocks → 驗證 next/parent 互反
 - 建立 reporter with parent → 驗證 parent = reporter
 - 建立 if-reporter → 驗證 input 連線正確
 - 移除 middle block → 驗證 next/parent 重新連線
 
 **阻斷條件：**
+
 - 無法確保 graph reciprocity 前，session CLI 產生的 SB3 不可靠
 
 ---
@@ -225,17 +238,20 @@
    - 新增 `verify` 命令：只驗證不輸出
 
 **需修改檔案：**
+
 - `src/cli/verification.ts` (新建)
 - `src/cli/session-cli.ts` (修改 compile/preview 命令)
 - `src/cli/session/session.ts` (修改 compile 方法)
 
 **測試案例：**
+
 - 驗證有效 SB3：所有 gate pass
 - 驗證缺少素材 SB3：archive check fail
 - 驗證壞 graph SB3：graph check fail
 - 驗證 VM reject SB3：VM load fail
 
 **阻斷條件：**
+
 - 無法定義「成功」門檻前，CLI 會繼續產生 false-success
 
 ---
@@ -270,15 +286,18 @@
    - 確保轉換後的 Canonical IR 可編譯為有效 SB3
 
 **需修改檔案：**
+
 - `src/cli/design-to-ir.ts` (新建)
 - `docs/game-design-schema.json` (修改)
 - `docs/game-design-example.json` (新建)
 
 **測試案例：**
+
 - 設計 → Canonical IR → compile → SB3 → load → 驗證語意等價
 - 比對設計檔與 SB3 的 sprites/scripts/variables 數量
 
 **阻斷條件：**
+
 - 無法完整轉換設計資料前，新遊戲會缺少功能
 
 ---
@@ -310,15 +329,18 @@
    - 檢查所有 blocks graph 正確
 
 **需修改檔案：**
+
 - `src/cli/session.ts` (修改 target/variable/list format)
 - `src/cli/session-validator.ts` (新建)
 
 **測試案例：**
+
 - 建立 Session → addSprite → addVariable → addList
 - 驗證 Session → JSON 轉換格式正確
 - 驗證 Session → Canonical IR → compile → SB3 成功
 
 **阻斷條件：**
+
 - Session 格式錯誤會導致後續所有轉換失敗
 
 ---
@@ -349,12 +371,14 @@
    - 檢查 MD5 hash
 
 **需修改檔案：**
+
 - `src/cli/asset-store.ts` (新建)
 - `src/cli/auto-asset.ts` (新建)
 - `src/cli/asset-validator.ts` (新建)
 - `src/cli/session.ts` (修改 addSprite/addSound/setCostume)
 
 **測試案例：**
+
 - 新增 Sprite with custom SVG costume
 - 新增 Sprite with default auto-generated costume
 - 新增 Sound with custom WAV file
@@ -362,6 +386,7 @@
 - 驗證 SB3 包含正確素材 bytes
 
 **阻斷條件：**
+
 - 無法支援素材時，遊戲會缺少視覺與音效
 
 ---
@@ -393,14 +418,17 @@
    - 每個測試：design → Canonical IR → compile → SB3 → VM round-trip
 
 **需修改檔案：**
+
 - `src/core/compiler/diagnostics.ts` (新建)
 - `research/compiler-corpus/` (新建)
 
 **測試案例：**
+
 - 每個 corpus 項目必須通過完整編譯與 VM round-trip
 - 驗證 SB3 可由 Scratch 網站匯入
 
 **阻斷條件：**
+
 - 無法編譯為有效 SB3 前，所有 AI 生成的遊戲都無法使用
 
 ---
@@ -429,15 +457,18 @@
    - 每個失敗案例：SB3、錯誤訊息、診斷
 
 **需修改檔案：**
+
 - `src/test/vm-roundtrip.ts` (新建)
 - `tests/vm-roundtrip.spec.ts` (新建)
 - `research/vm-failure-corpus/` (新建)
 
 **測試案例：**
+
 - 每個 corpus 項目必須通過 VM round-trip
 - 驗證語意等價 (targets、scripts、variables、costumes、sounds 數量與內容)
 
 **阻斷條件：**
+
 - 無法通過 VM round-trip 的 SB3 不可靠
 
 ---
@@ -472,16 +503,19 @@
      - 失敗案例 (game-over、error handling)
 
 **需修改檔案：**
+
 - `docs/game-behavior-spec.md` (新建)
 - `src/test/behavior-test.ts` (新建)
 - `research/behavior-test-corpus/` (新建)
 
 **測試案例：**
+
 - space-shooter：玩家移動、射擊、敵人生成／移動、命中、得分、生命及結束條件都有可重現的測試
 - platform-game：跳躍、移動、平台碰撞、得分
 - puzzle-game：方塊移動、拼圖規則、勝利條件
 
 **阻斷條件：**
+
 - 無法驗證遊戲行為前，不能宣稱遊戲功能正確
 
 ---
@@ -517,17 +551,20 @@
    - 提供範例與常見問題
 
 **需修改檔案：**
+
 - `docs/function-matrix.md` (新建)
 - `docs/USAGE-GUIDE.md` (修改)
 - `docs/cli-reference.md` (新建)
 - `README.md` (修改)
 
 **測試案例：**
+
 - 新手能依文件找到正確入口
 - 實驗性功能有明顯標記
 - 功能矩陣完整且準確
 
 **阻斷條件：**
+
 - 無法清楚標記實驗性功能前，使用者可能誤用不穩定功能
 
 ---
@@ -565,6 +602,7 @@
    - 測試失敗案例
 
 **需修改檔案：**
+
 - `src/cli/generator.ts` (新建)
 - `src/cli/game-cli.ts` (移除或標記為棄用)
 - `src/cli/game-generator.ts` (移除或標記為棄用)
@@ -572,11 +610,13 @@
 - `tests/generator.spec.ts` (新建)
 
 **測試案例：**
+
 - 每個設計檔案必須產生正確 SB3
 - 驗證輸出格式符合 contract
 - 驗證診斷格式一致
 
 **阻斷條件：**
+
 - 重複入口會導致維護困難與不一致
 
 ---
@@ -610,17 +650,20 @@
    - 輸出機器可讀與人類可讀報告
 
 **需修改檔案：**
+
 - `src/cli/manifest.ts` (新建)
 - `src/cli/batch-generator.ts` (新建)
 - `src/cli/aggregate-batch-results.ts` (新建)
 - `tests/batch-generator.spec.ts` (新建)
 
 **測試案例：**
+
 - 10 個成功設計 → 100% 成功率
 - 10 個設計 (3 個失敗) → 70% 成功率 + 失敗診斷
 - 10 個失敗設計 → 0% 成功率 + 各失敗診斷
 
 **阻斷條件：**
+
 - 無法量測成功率前，無法優化流程
 
 ---
@@ -656,17 +699,20 @@
      - 已知問題
 
 **需修改檔案：**
+
 - `docs/failure-corpus-format.md` (新建)
 - `research/sb3-failure-corpus/` (擴充)
 - `src/cli/gate-tracker.ts` (新建)
 - `docs/release-template.md` (新建)
 
 **測試案例：**
+
 - 20 個失敗案例必須能正確分類與診斷
 - 驗證成功率計算正確
 - 驗證各 gate 失敗數統計正確
 
 **阻斷條件：**
+
 - 無法統計成功率前，無法評估改善成效
 
 ---
@@ -713,12 +759,14 @@
 ## 相關檔案與計畫
 
 ### 現有計畫
+
 - `docs/sb3-end-to-end-improvement-plan.md`：原始計畫
 - `docs/sb3-generation-reliability-plan.md`：SB3 產生成功率改善計畫
 - `docs/cli-agent-editing-plan.md`：CLI agent 編輯與視覺驗證改善計畫
 - `docs/ai-repair-feedback-plan.md`：AI 錯誤回饋與修復循環計畫
 
 ### 建議新建計畫
+
 - `docs/vm-roundtrip-test-plan.md`：VM round-trip 測試計畫
 - `docs/behavior-test-plan.md`：遊戲行為測試計畫
 - `docs/batch-generation-plan.md`：批次產生與成功率統計計畫

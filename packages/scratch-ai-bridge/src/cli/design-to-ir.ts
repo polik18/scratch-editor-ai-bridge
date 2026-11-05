@@ -52,7 +52,7 @@ const toBlock = (value: unknown, path: string): CanonicalBlock => {
   }
 
   return {
-    opcode: block.opcode as CanonicalBlock['opcode'],
+    opcode: block.opcode,
     ...(Object.keys(inputs).length ? { inputs } : {}),
     ...(Object.keys(fields).length ? { fields } : {}),
   }
@@ -209,9 +209,14 @@ const assertScopedUniqueNames = (values: readonly { name: string; sprite?: strin
   }
 }
 
-/** Convert a validated GameDesign object to Canonical IR without dropping nested data. */
-export function designToCanonicalIR(design: GameDesign): CanonicalProject {
-  if (!design || typeof design !== 'object') throw new Error('Game design must be an object')
+/**
+ * Convert a validated GameDesign object to Canonical IR without dropping nested data.
+ * @param rawDesign - Game design contract object to convert.
+ * @returns Transformed canonical project structure.
+ */
+export function designToCanonicalIR(rawDesign: unknown): CanonicalProject {
+  if (!rawDesign || typeof rawDesign !== 'object') throw new Error('Game design must be an object')
+  const design = rawDesign as GameDesign
   assertKnownKeys(
     design,
     [
@@ -288,7 +293,7 @@ export function designToCanonicalIR(design: GameDesign): CanonicalProject {
   assertScopedUniqueNames(design.variables ?? [], '/variables')
   assertScopedUniqueNames(design.lists ?? [], '/lists')
 
-  const stageName = design.stage?.name || 'Stage'
+  const stageName = design.stage?.name ?? 'Stage'
   const spriteNames = new Set((design.spritesDef ?? []).map(({ name }) => name))
   if (spriteNames.has(stageName))
     throw new Error(`/spritesDef contains a sprite named "${stageName}", which conflicts with the Stage target`)
@@ -334,7 +339,7 @@ export function designToCanonicalIR(design: GameDesign): CanonicalProject {
   const stageCostumes = stageDef?.costumes?.length ? stageDef.costumes : ['backdrop1']
   const stage: CanonicalStage = {
     kind: 'stage',
-    name: stageDef?.name || 'Stage',
+    name: stageDef?.name ?? 'Stage',
     tempo: stageDef?.tempo ?? 60,
     videoTransparency: stageDef?.videoTransparency ?? 50,
     videoState: stageDef?.videoState,
@@ -345,7 +350,7 @@ export function designToCanonicalIR(design: GameDesign): CanonicalProject {
     sounds: [],
     variables: toVariables(design),
     lists: toLists(design),
-    scripts: toScripts(design, stageDef?.name || 'Stage'),
+    scripts: toScripts(design, stageDef?.name ?? 'Stage'),
     procedures: [],
   }
 
@@ -365,7 +370,7 @@ export function designToCanonicalIR(design: GameDesign): CanonicalProject {
     sprites,
     broadcasts: collectBroadcasts(design),
     extensions: collectExtensions(design),
-    meta: { version: design.version || '1.0', scratch: '3.0', language: 'en' },
+    meta: { version: design.version ?? '1.0', scratch: '3.0', language: 'en' },
     monitors: [],
   }
 }

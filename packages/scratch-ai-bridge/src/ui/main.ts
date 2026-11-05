@@ -1,6 +1,6 @@
 // UI main entry for browser
-import { init } from './App.js';
+import { init } from './App.js'
 
-export { init };
+export { init }
 
-init();
+init()

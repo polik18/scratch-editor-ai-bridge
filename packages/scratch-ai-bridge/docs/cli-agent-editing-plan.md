@@ -11,10 +11,10 @@
 
 Repository 有兩個不同入口，不能混為一談：
 
-| 入口 | 現況 | 適用範圍 |
-| --- | --- | --- |
-| `scratch-ai-bridge inspect` / `batch` | 已實作且有 schema 化輸出；靜態讀取 archive、project JSON 與 raw block graph | 結構檢查、coverage、教學分析；不執行 Scratch VM，不產生視覺預覽 |
-| `session-cli.ts` / `ScratchSession` | 新增的實驗性 stateful CLI；可讀寫 project JSON、做有限 metadata/block 操作、用 JSZip 封裝 | 概念驗證；不是可安全修改任意既有 SB3 的完整編輯器 |
+| 入口                                  | 現況                                                                                      | 適用範圍                                                        |
+| ------------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `scratch-ai-bridge inspect` / `batch` | 已實作且有 schema 化輸出；靜態讀取 archive、project JSON 與 raw block graph               | 結構檢查、coverage、教學分析；不執行 Scratch VM，不產生視覺預覽 |
+| `session-cli.ts` / `ScratchSession`   | 新增的實驗性 stateful CLI；可讀寫 project JSON、做有限 metadata/block 操作、用 JSZip 封裝 | 概念驗證；不是可安全修改任意既有 SB3 的完整編輯器               |
 
 已確認限制：
 
@@ -31,11 +31,11 @@ Repository 有兩個不同入口，不能混為一談：
 
 本專案出現的識別碼至少有三種語意：
 
-| 類型 | 來源 | 能回答什麼 | 不能回答什麼 |
-| --- | --- | --- | --- |
-| Scratch block/target/variable ID | `src/cli/session/uid.ts` 的 20 字元 soup ID；現用 `Math.random()` | 在 project JSON 中連結 block、target、symbol | 不表示素材；不包含語意；非標準 RFC UUID；不提供可依賴的密碼學唯一性保證 |
-| SB3 asset ID / `md5ext` | 通常是資產 bytes 的 MD5 十六進位值及副檔名，如 `hash.svg` | 對應 archive entry；比對內容是否與 metadata 所述一致；同內容可去重 | 不可逆推出圖片內容、角色名稱、用途、外觀或聲音語意；MD5 不應被當成對抗惡意碰撞的安全簽章 |
-| Bridge file/evidence ID | inspect 的 SB3 SHA-256／報告內 evidence index | 識別輸入檔 bytes 或報告內定位 | 不映射 Scratch 素材語意，也不是穩定跨版本的 Scratch block identity |
+| 類型                             | 來源                                                              | 能回答什麼                                                         | 不能回答什麼                                                                             |
+| -------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Scratch block/target/variable ID | `src/cli/session/uid.ts` 的 20 字元 soup ID；現用 `Math.random()` | 在 project JSON 中連結 block、target、symbol                       | 不表示素材；不包含語意；非標準 RFC UUID；不提供可依賴的密碼學唯一性保證                  |
+| SB3 asset ID / `md5ext`          | 通常是資產 bytes 的 MD5 十六進位值及副檔名，如 `hash.svg`         | 對應 archive entry；比對內容是否與 metadata 所述一致；同內容可去重 | 不可逆推出圖片內容、角色名稱、用途、外觀或聲音語意；MD5 不應被當成對抗惡意碰撞的安全簽章 |
+| Bridge file/evidence ID          | inspect 的 SB3 SHA-256／報告內 evidence index                     | 識別輸入檔 bytes 或報告內定位                                      | 不映射 Scratch 素材語意，也不是穩定跨版本的 Scratch block identity                       |
 
 `src/scratch/csp-scratch-parser.ts` 會對可取出的素材 bytes 算 MD5 並正規化 `assetId`/`md5ext`；這是驗證／命名依據，不是圖像辨識。已知 Scratch library 的 asset ID 可透過對照官方/本機 library manifest 找到候選名稱，但只有 manifest 有該 ID 且版本匹配時才可標為 library match；不得對任意 MD5 猜名稱。任意使用者素材需實際讀取 bytes：SVG 可解析安全的向量結構並渲染縮圖，PNG/JPEG 需 bitmap decoder／renderer，聲音需 metadata 及可選波形；若需自然語言描述圖片，再用明確標示為推測的本機 vision model 或使用者輸入名稱。預設不呼叫雲端服務。
 

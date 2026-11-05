@@ -1,34 +1,34 @@
 /**
- * Compiler Diagnostics - Diagnostic types and utilities for compilation
+ * Compiler Diagnostics - Diagnostic types and utilities for compilation.
  */
 
 /**
- * Diagnostic type
+ * Diagnostic record capturing errors, warnings, and suggestions.
  */
 export interface Diagnostic {
-  type: 'error' | 'warning' | 'info';
-  stage: ProjectCompileFailureStage | 'unknown';
-  code: string;
-  message: string;
-  suggestion?: string;
-  location?: DiagnosticLocation;
-  metadata?: Record<string, unknown>;
+  type: 'error' | 'warning' | 'info'
+  stage: ProjectCompileFailureStage | 'unknown'
+  code: string
+  message: string
+  suggestion?: string
+  location?: DiagnosticLocation
+  metadata?: Record<string, unknown>
 }
 
 /**
- * Diagnostic location
+ * Structured coordinates indicating where an issue occurred.
  */
 export interface DiagnosticLocation {
-  target?: string;
-  costumeIndex?: number;
-  soundIndex?: number;
-  blockId?: string;
-  line?: number;
-  column?: number;
+  target?: string
+  costumeIndex?: number
+  soundIndex?: number
+  blockId?: string
+  line?: number
+  column?: number
 }
 
 /**
- * Project compile failure stage
+ * Lifecycle phase where project compilation encountered a problem.
  */
 export type ProjectCompileFailureStage =
   | 'svg-preflight'
@@ -37,48 +37,48 @@ export type ProjectCompileFailureStage =
   | 'archive-generation'
   | 'scratch-vm-load'
   | 'scratch-vm-save'
-  | 'unknown';
+  | 'unknown'
 
 /**
- * Generate human-readable diagnostic message
- * @param diagnostic - Diagnostic
- * @returns Human-readable message
+ * Generate human-readable diagnostic message.
+ * @param diagnostic - Diagnostic entry to convert to string form.
+ * @returns Human-readable formatted message.
  */
 export function formatDiagnostic(diagnostic: Diagnostic): string {
-  const prefix = diagnostic.type === 'error' ? 'ERROR' : diagnostic.type === 'warning' ? 'WARNING' : 'INFO';
-  const location = formatLocation(diagnostic.location);
-  const msg = location ? `[${location}] ${diagnostic.message}` : diagnostic.message;
-  return `${prefix}: ${diagnostic.code} - ${msg}`;
+  const prefix = diagnostic.type === 'error' ? 'ERROR' : diagnostic.type === 'warning' ? 'WARNING' : 'INFO'
+  const location = formatLocation(diagnostic.location)
+  const msg = location ? `[${location}] ${diagnostic.message}` : diagnostic.message
+  return `${prefix}: ${diagnostic.code} - ${msg}`
 }
 
 /**
- * Format diagnostic location
- * @param location - Diagnostic location
- * @returns Formatted location string
+ * Format diagnostic location into a URI-like path.
+ * @param location - Source target or block offset.
+ * @returns Formatted location string.
  */
 export function formatLocation(location?: DiagnosticLocation): string {
-  if (!location) return '';
-  
-  const parts: string[] = [];
-  if (location.target) parts.push(`target:${location.target}`);
-  if (location.costumeIndex !== undefined) parts.push(`costume:${location.costumeIndex}`);
-  if (location.soundIndex !== undefined) parts.push(`sound:${location.soundIndex}`);
-  if (location.blockId) parts.push(`block:${location.blockId}`);
+  if (!location) return ''
+
+  const parts: string[] = []
+  if (location.target) parts.push(`target:${location.target}`)
+  if (location.costumeIndex !== undefined) parts.push(`costume:${location.costumeIndex}`)
+  if (location.soundIndex !== undefined) parts.push(`sound:${location.soundIndex}`)
+  if (location.blockId) parts.push(`block:${location.blockId}`)
   if (location.line !== undefined && location.column !== undefined) {
-    parts.push(`line:${location.line},col:${location.column}`);
+    parts.push(`line:${location.line},col:${location.column}`)
   }
-  
-  return parts.length > 0 ? parts.join('/') : '';
+
+  return parts.length > 0 ? parts.join('/') : ''
 }
 
 /**
- * Create an error diagnostic
- * @param stage - Compile stage
- * @param code - Diagnostic code
- * @param message - Error message
- * @param suggestion - Suggested fix
- * @param location - Location
- * @returns Diagnostic
+ * Create an error diagnostic entry.
+ * @param stage - Lifecycle phase where failure occurred.
+ * @param code - Machine-readable error identifier.
+ * @param message - Explanation of what went wrong.
+ * @param suggestion - Actionable guidance for resolution.
+ * @param location - Source target or block offset.
+ * @returns Constructed diagnostic object.
  */
 export function createErrorDiagnostic(
   stage: ProjectCompileFailureStage,
@@ -94,17 +94,17 @@ export function createErrorDiagnostic(
     message,
     suggestion,
     location,
-  };
+  }
 }
 
 /**
- * Create a warning diagnostic
- * @param stage - Compile stage
- * @param code - Diagnostic code
- * @param message - Warning message
- * @param suggestion - Suggested fix
- * @param location - Location
- * @returns Diagnostic
+ * Create a warning diagnostic entry.
+ * @param stage - Lifecycle phase where failure occurred.
+ * @param code - Machine-readable error identifier.
+ * @param message - Explanation of what went wrong.
+ * @param suggestion - Actionable guidance for resolution.
+ * @param location - Source target or block offset.
+ * @returns Constructed diagnostic object.
  */
 export function createWarningDiagnostic(
   stage: ProjectCompileFailureStage,
@@ -120,16 +120,16 @@ export function createWarningDiagnostic(
     message,
     suggestion,
     location,
-  };
+  }
 }
 
 /**
- * Create an info diagnostic
- * @param stage - Compile stage
- * @param code - Diagnostic code
- * @param message - Info message
- * @param location - Location
- * @returns Diagnostic
+ * Create an info diagnostic entry.
+ * @param stage - Lifecycle phase where failure occurred.
+ * @param code - Machine-readable error identifier.
+ * @param message - Explanation of what went wrong.
+ * @param location - Source target or block offset.
+ * @returns Constructed diagnostic object.
  */
 export function createInfoDiagnostic(
   stage: ProjectCompileFailureStage,
@@ -143,44 +143,44 @@ export function createInfoDiagnostic(
     code,
     message,
     location,
-  };
+  }
 }
 
 /**
- * Aggregate diagnostics into a summary
- * @param diagnostics - Diagnostics
- * @returns Summary string
+ * Aggregate diagnostics into a human-readable summary.
+ * @param diagnostics - Collection of issues to summarize.
+ * @returns Summary string formatted for console output.
  */
 export function aggregateDiagnostics(diagnostics: Diagnostic[]): string {
-  if (diagnostics.length === 0) return 'No diagnostics';
-  
-  const errors = diagnostics.filter(d => d.type === 'error');
-  const warnings = diagnostics.filter(d => d.type === 'warning');
-  const infos = diagnostics.filter(d => d.type === 'info');
-  
-  const lines: string[] = [];
-  lines.push(`Diagnostics Summary: ${errors.length} errors, ${warnings.length} warnings, ${infos.length} infos`);
-  
+  if (diagnostics.length === 0) return 'No diagnostics'
+
+  const errors = diagnostics.filter((d) => d.type === 'error')
+  const warnings = diagnostics.filter((d) => d.type === 'warning')
+  const infos = diagnostics.filter((d) => d.type === 'info')
+
+  const lines: string[] = []
+  lines.push(`Diagnostics Summary: ${errors.length} errors, ${warnings.length} warnings, ${infos.length} infos`)
+
   if (errors.length > 0) {
-    lines.push('\nErrors:');
+    lines.push('\nErrors:')
     for (const error of errors) {
-      lines.push(`  - ${formatDiagnostic(error)}`);
+      lines.push(`  - ${formatDiagnostic(error)}`)
     }
   }
-  
+
   if (warnings.length > 0) {
-    lines.push('\nWarnings:');
+    lines.push('\nWarnings:')
     for (const warning of warnings) {
-      lines.push(`  - ${formatDiagnostic(warning)}`);
+      lines.push(`  - ${formatDiagnostic(warning)}`)
     }
   }
-  
+
   if (infos.length > 0) {
-    lines.push('\nInfos:');
+    lines.push('\nInfos:')
     for (const info of infos) {
-      lines.push(`  - ${formatDiagnostic(info)}`);
+      lines.push(`  - ${formatDiagnostic(info)}`)
     }
   }
-  
-  return lines.join('\n');
+
+  return lines.join('\n')
 }

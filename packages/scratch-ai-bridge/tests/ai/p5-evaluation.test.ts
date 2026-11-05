@@ -3,7 +3,6 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import { analyzeCanonicalProject, createProjectFeedback, createProjectMap } from '../../src/core/analyzer'
 import { requestOpenAiCompatiblePatch } from '../../src/core/ai/openai-compatible'
 import {
   inspectRawBlocks,
@@ -12,6 +11,7 @@ import {
   inspectRawVariables,
   proposeRawLivePatch,
 } from '../../src/core/ai/raw-tool-core'
+import { analyzeCanonicalProject, createProjectFeedback, createProjectMap } from '../../src/core/analyzer'
 import { exportLosslessSb3, importLosslessSb3, rawSb3Revision } from '../../src/core/archive'
 import { decompileSb3WithBlockGraphs } from '../../src/core/decompiler'
 import { createVM, loadSb3, runForTicks } from '../../src/scratch/vm'
@@ -217,7 +217,9 @@ describe('P5 end-to-end AI tool & runtime evaluation', () => {
     })
     const simpleRaw = await importLosslessSb3(simpleBytes)
     const simpleRev = rawSb3Revision(simpleRaw)
-    expect(inspectRawVariables(simpleRaw, simpleRev, 1).variables).toEqual([{ id: 'v_speed', name: 'speed', value: 5 }])
+    expect(inspectRawVariables(simpleRaw, simpleRev, 1).variables).toEqual([
+      { id: 'v_speed', name: 'speed', value: 5 },
+    ])
     const simpleDecompiled = await decompileSb3WithBlockGraphs(simpleBytes, 'SimpleCat')
     const simpleAnalysis = analyzeCanonicalProject(simpleDecompiled.canonical, simpleDecompiled.rawBlockGraphs)
     const simpleMap = createProjectMap(
@@ -743,7 +745,9 @@ describe('P5 end-to-end AI tool & runtime evaluation', () => {
           patchJson?: string
         }
         if (name === 'inspect_raw_targets') {
-          return { output: JSON.stringify(inspectRawTargets(largeRaw, args.baseRevision, 0, 10, { query: args.query })) }
+          return {
+            output: JSON.stringify(inspectRawTargets(largeRaw, args.baseRevision, 0, 10, { query: args.query })),
+          }
         }
         if (name === 'inspect_raw_blocks') {
           return {
@@ -773,7 +777,8 @@ describe('P5 end-to-end AI tool & runtime evaluation', () => {
     expect(largeAfter[11]?.x).toBe(10)
     expect(largeAfter[31]?.x).toBe(36)
 
-    // Real Local Model Evaluation (oMLX on 127.0.0.1:8000) when available
+    // The local model is a separate, explicitly requested evaluation, not a unit-test dependency.
+    if (process.env.SCRATCH_BRIDGE_REAL_MODEL_EVAL !== '1') return
     const settingsPath = join(homedir(), '.omlx/settings.json')
     let apiKey = process.env.OMLX_API_KEY ?? ''
     if (!apiKey && existsSync(settingsPath)) {
@@ -795,7 +800,9 @@ describe('P5 end-to-end AI tool & runtime evaluation', () => {
       modelId = ''
     }
 
-    if (apiKey && modelId) {
+    if (!apiKey || !modelId)
+      throw new Error('Real model evaluation requested, but the local model or credentials are unavailable.')
+    {
       const runRealModelCase = async (
         id: string,
         rawProject: Awaited<ReturnType<typeof importLosslessSb3>>,
@@ -960,7 +967,9 @@ describe('P5 end-to-end AI tool & runtime evaluation', () => {
             paperRaw,
             '這是 Paper Minecraft 專案。請用 inspect_raw_targets（query: "Tiles"）找到 Tiles 角色（targetIndex 8），再用 inspect_raw_blocks（targetIndex: 8, opcode: "control_wait"）找到等待 0.5 秒的積木，將其 DURATION 輸入從 [1, [5, "0.5"]] 改為 [1, [5, "0.75"]]，並呼叫 propose_live_patch 提交。',
             (patched) => {
-              const target8 = (patched.projectJson.targets as { blocks: Record<string, { inputs?: { DURATION?: unknown } }> }[])[8]
+              const target8 = (
+                patched.projectJson.targets as { blocks: Record<string, { inputs?: { DURATION?: unknown } }> }[]
+              )[8]
               return Promise.resolve(
                 Object.values(target8.blocks).some(
                   (b) => JSON.stringify(b.inputs?.DURATION) === JSON.stringify([1, [5, '0.75']]),
@@ -971,8 +980,8 @@ describe('P5 end-to-end AI tool & runtime evaluation', () => {
         )
       }
 
-      const reportPath = '/Users/huangjianzhe/Projects/paper-minecraft-bridge-audit/p5-evaluation.json'
-      if (existsSync('/Users/huangjianzhe/Projects/paper-minecraft-bridge-audit')) {
+      const reportPath = process.env.SCRATCH_BRIDGE_REAL_MODEL_REPORT
+      if (reportPath) {
         writeFileSync(
           reportPath,
           JSON.stringify(

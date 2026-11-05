@@ -172,7 +172,23 @@
           "enum": ["all around", "left-right", "don't rotate"]
         }
       },
-      "required": ["kind", "name", "variables", "lists", "costumes", "sounds", "scripts", "procedures", "x", "y", "direction", "size", "visible", "draggable", "rotationStyle"]
+      "required": [
+        "kind",
+        "name",
+        "variables",
+        "lists",
+        "costumes",
+        "sounds",
+        "scripts",
+        "procedures",
+        "x",
+        "y",
+        "direction",
+        "size",
+        "visible",
+        "draggable",
+        "rotationStyle"
+      ]
     },
     "CanonicalVariable": {
       "type": "object",
@@ -342,7 +358,13 @@
         },
         "status": {
           "type": "string",
-          "enum": ["implemented-structure", "approximated", "not-implemented", "runtime-unavailable", "not-verifiable-from-ir"]
+          "enum": [
+            "implemented-structure",
+            "approximated",
+            "not-implemented",
+            "runtime-unavailable",
+            "not-verifiable-from-ir"
+          ]
         },
         "evidencePointers": {
           "type": "array",

@@ -1,9 +1,6 @@
 # Scratch AI Bridge release checklist
 
-This checklist applies to the GitHub Pages deployment configured by
-`.github/workflows/deploy-scratch-ai-bridge.yml`. The workflow builds the private workspace, runs tests and lint, enforces
-the production bundle budget, enforces the performance benchmark ceilings, runs exact-cap Chromium/Firefox/WebKit smoke,
-stores benchmark and browser JSON evidence, then uploads and deploys the Pages artifact on `develop` or `main`.
+This checklist applies to `.github/workflows/deploy-scratch-ai-bridge.yml`. At the 2026-11-05 baseline, the workflow runs package tests, build, benchmark and native Safari, but lint and Chromium/Firefox/WebKit smoke and evidence steps are disabled. They remain required checks below; disabled checks are **not run**, not passed. Inspect the actual candidate workflow before release.
 
 The user waived live teacher review, student usability sessions, and teacher review of extension wording on 2026-10-19.
 Record these as **waived / not performed**, never as passed. Automated CI, hosted Safari, and deployed-site checks remain
@@ -14,7 +11,7 @@ required. A local Safari administrator setting is not required when the hosted m
 - [ ] Confirm the intended source branch and commit SHA; Pages deployment is limited to `main` and `develop`, including manual dispatch.
 - [ ] Review `docs/status.md` and `docs/completeness-roadmap.md`; make sure known limits are represented in the release notes.
 - [ ] Confirm package tests, lint, production build, bundle-size check, and benchmark ceilings are current for the candidate
-      commit. The Pages workflow runs all three browser smokes with an exact 256 MiB SB3 import and stores the performance
+      commit. When restored, the Pages workflow must run all three browser smokes with an exact 256 MiB SB3 import and store the performance
       report plus per-engine JSON for 90 days; inspect Ubuntu PSS fields and the fourteen AI repair recovery assertions
       (schema type, schema extra property, schema enum, schema const, schema required input, schema minLength, costume index, unknown sprite, unknown variable, unknown broadcast, unknown list, unknown procedure, unknown procedure argument, duplicate procedure argument) in a completed workflow run. The broader package CI lane also runs
       these cross-browser checks. Each browser artifact must also pass the compile-repair recovery assertions for SVG,

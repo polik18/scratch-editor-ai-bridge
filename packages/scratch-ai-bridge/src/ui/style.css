@@ -25,7 +25,7 @@
   background: #fff;
   border-radius: 8px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .prompt-input {
@@ -42,7 +42,7 @@
 .prompt-input:focus {
   outline: none;
   border-color: #174f3c;
-  box-shadow: 0 0 0 2px rgba(23,79,60,0.2);
+  box-shadow: 0 0 0 2px rgba(23, 79, 60, 0.2);
 }
 
 .button-group {

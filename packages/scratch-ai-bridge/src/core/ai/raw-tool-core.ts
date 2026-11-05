@@ -38,11 +38,20 @@ export const inspectRawProjectForAi = (project: RawSb3Project): string => {
             ]
           })
       : []
-    return [{ targetIndex, name: typeof target.name === 'string' ? target.name.slice(0, 256) : '', isStage: target.isStage, fields, variables: vars }]
+    return [
+      {
+        targetIndex,
+        name: typeof target.name === 'string' ? target.name.slice(0, 256) : '',
+        isStage: target.isStage,
+        fields,
+        variables: vars,
+      },
+    ]
   })
   const variablePages = inventory.map((target) => target.variables.splice(0))
   const revision = rawSb3Revision(project)
-  const buildInstruction = () => `你是 Scratch 遊戲修改助手。僅提出一項修改，不可修改雲端變數。輸出 JSON：{"format":"scratch-ai-bridge/raw-patch","version":1,"baseRevision":"${revision}","summary":"簡述","change":{"kind":"property","targetName":"角色名稱","property":"x","expected":原值,"value":新值}}。變數使用 change {"kind":"variable","targetName":"角色名稱","variableId":"清單中的 ID","expected":原值,"value":新值}。積木先呼叫 inspect_raw_blocks（baseRevision 填 "${revision}"）讀取目標圖，可依 blockId、opcode 或 query 篩選；graphEditable 為 false 時只能讀取，不可提出積木修改。再使用 change {"kind":"blocks","graphPatch":{"format":"scratch-ai-bridge/block-graph-patch","version":1,"patches":[{"targetIndex":0,"targetName":"Stage","isStage":true,"blocks":{"block-id":{"fields":{}}}}]}}。既有 block 只提供要替換的頂層屬性；inputs/fields/mutation 會整個替換。可用 inspect_raw_targets（支援 query 篩選角色名）和 inspect_raw_variables 分頁讀取未顯示的角色和變數。不可猜測省略的內容，必須維持 parent、next 和 inputs 圖結構。只提案，使用者會確認。\nrevision: ${revision}\n清單（最多 30 角色，每個最多 30 個變數；可能省略）：${JSON.stringify(inventory)}`
+  const buildInstruction = () =>
+    `你是 Scratch 遊戲修改助手。僅提出一項修改，不可修改雲端變數。輸出 JSON：{"format":"scratch-ai-bridge/raw-patch","version":1,"baseRevision":"${revision}","summary":"簡述","change":{"kind":"property","targetName":"角色名稱","property":"x","expected":原值,"value":新值}}。變數使用 change {"kind":"variable","targetName":"角色名稱","variableId":"清單中的 ID","expected":原值,"value":新值}。積木先呼叫 inspect_raw_blocks（baseRevision 填 "${revision}"）讀取目標圖，可依 blockId、opcode 或 query 篩選；graphEditable 為 false 時只能讀取，不可提出積木修改。再使用 change {"kind":"blocks","graphPatch":{"format":"scratch-ai-bridge/block-graph-patch","version":1,"patches":[{"targetIndex":0,"targetName":"Stage","isStage":true,"blocks":{"block-id":{"fields":{}}}}]}}。既有 block 只提供要替換的頂層屬性；inputs/fields/mutation 會整個替換。可用 inspect_raw_targets（支援 query 篩選角色名）和 inspect_raw_variables 分頁讀取未顯示的角色和變數。不可猜測省略的內容，必須維持 parent、next 和 inputs 圖結構。只提案，使用者會確認。\nrevision: ${revision}\n清單（最多 30 角色，每個最多 30 個變數；可能省略）：${JSON.stringify(inventory)}`
   // Keep target identities first, then add variable details within the byte budget.
   const encoder = new TextEncoder()
   let instruction = buildInstruction()
@@ -187,8 +196,10 @@ export const inspectRawBlocks = (
     !Number.isSafeInteger(limit) ||
     limit < 1 ||
     limit > 20 ||
-    (filter.blockId !== undefined && (typeof filter.blockId !== 'string' || !filter.blockId || filter.blockId.length > 256)) ||
-    (filter.opcode !== undefined && (typeof filter.opcode !== 'string' || !filter.opcode || filter.opcode.length > 256)) ||
+    (filter.blockId !== undefined &&
+      (typeof filter.blockId !== 'string' || !filter.blockId || filter.blockId.length > 256)) ||
+    (filter.opcode !== undefined &&
+      (typeof filter.opcode !== 'string' || !filter.opcode || filter.opcode.length > 256)) ||
     (filter.query !== undefined && (typeof filter.query !== 'string' || !filter.query || filter.query.length > 256))
   )
     throw new Error('Invalid raw block page request.')
@@ -199,13 +210,14 @@ export const inspectRawBlocks = (
   const rawBlocks = record(rawTarget) && record(rawTarget.blocks) ? rawTarget.blocks : {}
   const omittedRawEntries = Object.keys(rawBlocks).length - Object.keys(target.blocks).length
   const queryLower = filter.query?.toLowerCase()
-  const all = Object.entries(target.blocks).filter(([id, block]) =>
-    (filter.blockId === undefined || id === filter.blockId) &&
-    (filter.opcode === undefined || block.opcode === filter.opcode) &&
-    (queryLower === undefined ||
-      JSON.stringify({ fields: block.fields, inputs: block.inputs, mutation: block.mutation })
-        .toLowerCase()
-        .includes(queryLower)),
+  const all = Object.entries(target.blocks).filter(
+    ([id, block]) =>
+      (filter.blockId === undefined || id === filter.blockId) &&
+      (filter.opcode === undefined || block.opcode === filter.opcode) &&
+      (queryLower === undefined ||
+        JSON.stringify({ fields: block.fields, inputs: block.inputs, mutation: block.mutation })
+          .toLowerCase()
+          .includes(queryLower)),
   )
   const page: [string, unknown][] = []
   for (const [id, block] of all.slice(offset, offset + limit)) {
@@ -286,9 +298,15 @@ export const proposeRawLivePatch = (project: RawSb3Project, patchJson: string) =
       `${change.targetName}/${change.property}：${JSON.stringify(change.expected)} → ${JSON.stringify(change.value)}`,
     ]
     const overwriteOpcodes = PROPERTY_OVERWRITE_OPCODES[change.property] ?? []
-    const matchedTarget = rawTargets.find((item): item is Record<string, unknown> => record(item) && item.name === change.targetName)
+    const matchedTarget = rawTargets.find(
+      (item): item is Record<string, unknown> => record(item) && item.name === change.targetName,
+    )
     const blocks = matchedTarget && record(matchedTarget.blocks) ? Object.values(matchedTarget.blocks) : []
-    if (blocks.some((block) => record(block) && typeof block.opcode === 'string' && overwriteOpcodes.includes(block.opcode))) {
+    if (
+      blocks.some(
+        (block) => record(block) && typeof block.opcode === 'string' && overwriteOpcodes.includes(block.opcode),
+      )
+    ) {
       warnings.push(
         `注意：${change.targetName} 的腳本含有設定 ${change.property} 的積木（如綠旗初始化），執行時可能會覆寫此初始屬性。`,
       )
@@ -313,15 +331,20 @@ export const proposeRawLivePatch = (project: RawSb3Project, patchJson: string) =
     changes = [
       `${change.targetName}/${change.variableId}：${JSON.stringify(change.expected)} → ${JSON.stringify(change.value)}`,
     ]
-    const matchedTarget = rawTargets.find((item): item is Record<string, unknown> => record(item) && item.name === change.targetName)
-    const varTuple = matchedTarget && record(matchedTarget.variables) ? matchedTarget.variables[change.variableId] : undefined
+    const matchedTarget = rawTargets.find(
+      (item): item is Record<string, unknown> => record(item) && item.name === change.targetName,
+    )
+    const varTuple =
+      matchedTarget && record(matchedTarget.variables) ? matchedTarget.variables[change.variableId] : undefined
     const varName = Array.isArray(varTuple) && typeof varTuple[0] === 'string' ? varTuple[0] : undefined
     const hasVariableSetter = rawTargets.some((target) => {
       if (!record(target) || !record(target.blocks)) return false
       return Object.values(target.blocks).some((block) => {
         if (!record(block) || block.opcode !== 'data_setvariableto' || !record(block.fields)) return false
         const field = block.fields.VARIABLE
-        return Array.isArray(field) && (field[1] === change.variableId || (varName !== undefined && field[0] === varName))
+        return (
+          Array.isArray(field) && (field[1] === change.variableId || (varName !== undefined && field[0] === varName))
+        )
       })
     })
     if (hasVariableSetter) {

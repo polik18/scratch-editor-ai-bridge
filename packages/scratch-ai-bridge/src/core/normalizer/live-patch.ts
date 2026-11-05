@@ -66,9 +66,9 @@ const findVariable = (project: CanonicalProject, targetName: string, variableNam
   const targets = [project.stage, ...project.sprites]
   const matchingTargets = targets.filter((target) => target.name === targetName)
   if (matchingTargets.length !== 1) throw new Error(`找不到唯一 target「${targetName}」。`)
-  const matches = matchingTargets[0]!.variables.filter((variable) => variable.name === variableName)
+  const matches = matchingTargets[0].variables.filter((variable) => variable.name === variableName)
   if (matches.length !== 1) throw new Error(`target「${targetName}」中找不到唯一變數「${variableName}」。`)
-  const variable = matches[0]!
+  const variable = matches[0]
   if (variable.cloud) throw new Error(`雲端變數「${targetName}/${variableName}」不可即時修改。`)
   if (!isScalar(variable.value)) throw new Error(`變數「${targetName}/${variableName}」不是 scalar。`)
   return variable
@@ -77,7 +77,7 @@ const findVariable = (project: CanonicalProject, targetName: string, variableNam
 const findTarget = (project: CanonicalProject, targetName: string) => {
   const matches = [project.stage, ...project.sprites].filter((target) => target.name === targetName)
   if (matches.length !== 1) throw new Error(`找不到唯一 target「${targetName}」。`)
-  return matches[0]!
+  return matches[0]
 }
 
 const stableJson = (value: unknown): string => {
@@ -129,7 +129,7 @@ const findScriptIndex = (target: ReturnType<typeof findTarget>, selector: string
   )
   if (matches.length !== 1)
     throw new Error(`target「${targetName}」的 script selector 找到 ${matches.length} 個結果；必須唯一。`)
-  return matches[0]!
+  return matches[0]
 }
 
 const parseScriptOperation = (
@@ -214,7 +214,6 @@ const parsePropertyOperation = (
       throw new Error(`currentCostume 必須是有效造型索引（0–${Math.max(0, target.costumes.length - 1)}）。`)
     }
     const beforeValue = property === 'currentCostume' ? (target.currentCostume ?? 0) : target[property]
-    if (beforeValue === undefined) throw new Error(`target「${item.target}」沒有 ${property}。`)
     return { op: 'set-target-property', target: item.target, property, value: value as CanonicalScalar, beforeValue }
   }
   if (item.op === 'set-stage-property') {
@@ -376,7 +375,8 @@ export const createLiveVariablePatchInstruction = (project: CanonicalProject, ba
       selected.push(compactLine)
       length += compactLine.length + 1
     }
-    if (selected.length < lines.length) selected.push(`- （其餘 ${lines.length - selected.length} 項省略；請先要求列出目標）`)
+    if (selected.length < lines.length)
+      selected.push(`- （其餘 ${lines.length - selected.length} 項省略；請先要求列出目標）`)
     return selected.length > 0 ? selected.join('\n') : '（無）'
   }
   const targets = [project.stage, ...project.sprites]

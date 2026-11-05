@@ -28,23 +28,25 @@
 
 ```typescript
 // Step 1: API exposes ScratchSession
-import { createSession } from '@scratch/scratch-ai-bridge/api';
+import { createSession } from '@scratch/scratch-ai-bridge/api'
 
-const sess = await createSession();
-await sess.newProject('My Project');
-await sess.addSprite('Sprite1');
+const sess = await createSession()
+await sess.newProject('My Project')
+await sess.addSprite('Sprite1')
 await sess.addBlock('Sprite1', 'motion_movesteps', {
-  inputs: { STEPS: { type: 'literal', value: 10 } }
-});
-const sb3 = await sess.compile(); // Export as .sb3
+  inputs: { STEPS: { type: 'literal', value: 10 } },
+})
+const sb3 = await sess.compile() // Export as .sb3
 ```
 
 **Test Result**:
+
 ```
 ✓ Project compiled, size: 803 bytes
 ```
 
 **CLI Command**:
+
 ```bash
 scratch-session new --name "My Project"
 scratch-session addSprite "Sprite1"
@@ -63,7 +65,7 @@ scratch-session compile --output "project.sb3"
 - Blocks reference `targetId` to associate with sprites
 
 ```typescript
-await sess.addSprite('Sprite1'); // Returns targetId
+await sess.addSprite('Sprite1') // Returns targetId
 // Sprite1 has:
 // - name: "Sprite1"
 // - targetId: "abc123..."
@@ -72,6 +74,7 @@ await sess.addSprite('Sprite1'); // Returns targetId
 ```
 
 **Project Structure**:
+
 ```json
 {
   "targets": [
@@ -94,9 +97,9 @@ await sess.addSprite('Sprite1'); // Returns targetId
 **Step 2**: NLP parser with `parseNaturalLanguage()`:
 
 ```typescript
-import { parseNaturalLanguage } from '@scratch/scratch-ai-bridge/nlp';
+import { parseNaturalLanguage } from '@scratch/scratch-ai-bridge/nlp'
 
-const result = await parseNaturalLanguage('Make the sprite move 10 steps');
+const result = await parseNaturalLanguage('Make the sprite move 10 steps')
 // Returns:
 // {
 //   commands: [{ opcode: 'motion_movesteps', inputs: { STEPS: 10 } }],
@@ -107,20 +110,22 @@ const result = await parseNaturalLanguage('Make the sprite move 10 steps');
 
 **Supported Patterns**:
 
-| Input | Output |
-|-------|--------|
-| "move 10 steps" | `motion_movesteps { STEPS: 10 }` |
-| "turn right" | `motion_turnright { DEGREES: 15 }` |
-| "say hello" | `looks_say { MESSAGE: "hello" }` |
-| "wait 2 seconds" | `control_wait { DURATION: 2 }` |
+| Input            | Output                             |
+| ---------------- | ---------------------------------- |
+| "move 10 steps"  | `motion_movesteps { STEPS: 10 }`   |
+| "turn right"     | `motion_turnright { DEGREES: 15 }` |
+| "say hello"      | `looks_say { MESSAGE: "hello" }`   |
+| "wait 2 seconds" | `control_wait { DURATION: 2 }`     |
 | "repeat 5 times" | `control_repeat { SUBSTACK: ... }` |
 
 **Confidence Scoring**:
+
 - 0.9: Pattern matching succeeded
 - 0.5: No patterns matched (fallback)
 - 0.95: LLM parsing succeeded (if oMLX endpoint available)
 
 **CLI Test**:
+
 ```bash
 $ scratch-session nlpParse "Make the sprite move 10 steps and say hello"
 Summary: Parsed 7 command(s) from "Make the sprite move 10 steps and say hello"
@@ -139,13 +144,14 @@ Commands:
 **A. Screenshot Preview (Playwright)**:
 
 ```typescript
-import { previewScreenshot } from '@scratch/ai-bridge/preview';
+import { previewScreenshot } from '@scratch/ai-bridge/preview'
 
-const filePath = await previewScreenshot(sess, '/tmp/preview.png');
+const filePath = await previewScreenshot(sess, '/tmp/preview.png')
 // Captures project execution as PNG
 ```
 
 **Test Result**:
+
 ```
 ✓ Screenshot saved to /tmp/preview.png
 ```
@@ -158,6 +164,7 @@ npm run dev
 ```
 
 **Features**:
+
 - Natural language prompt input
 - Generate project from prompt
 - Preview screenshot capture
@@ -168,38 +175,39 @@ npm run dev
 
 ```typescript
 // 1. Parse ambiguous natural language
-import { parseNaturalLanguage } from '@scratch/ai-bridge/nlp';
-const result = await parseNaturalLanguage('讓角色前進 10 步並說「你好」');
-
 // 2. Create project and add blocks
-import { createSession } from '@scratch/ai-bridge/api';
-const sess = await createSession();
-await sess.newProject('AI 生成專案');
-await sess.addSprite('Sprite1');
+import { createSession } from '@scratch/ai-bridge/api'
+import { parseNaturalLanguage } from '@scratch/ai-bridge/nlp'
+// 3. Preview and capture screenshot
+import { previewScreenshot } from '@scratch/ai-bridge/preview'
+
+const result = await parseNaturalLanguage('讓角色前進 10 步並說「你好」')
+
+const sess = await createSession()
+await sess.newProject('AI 生成專案')
+await sess.addSprite('Sprite1')
 
 for (const cmd of result.commands) {
   await sess.addBlock('Sprite1', cmd.opcode, {
     inputs: cmd.inputs,
     fields: cmd.fields,
-  });
+  })
 }
 
-// 3. Preview and capture screenshot
-import { previewScreenshot } from '@scratch/ai-bridge/preview';
-const filePath = await previewScreenshot(sess, '/tmp/preview.png');
+const filePath = await previewScreenshot(sess, '/tmp/preview.png')
 
 // 4. Export as .sb3
-const sb3 = await sess.compile();
-await Bun.file('project.sb3').write(sb3);
+const sb3 = await sess.compile()
+await Bun.file('project.sb3').write(sb3)
 ```
 
 ## Summary
 
-| Question | Answer | Evidence |
-|----------|--------|----------|
-| Can AI agent create/modify Scratch? | ✅ YES | `createSession()`, `addBlock()`, `compile()` |
-| Does it know sprite-to-program mapping? | ✅ YES | `targetId` in project JSON structure |
-| Can it understand ambiguous language? | ✅ YES | NLP parser with pattern matching + confidence |
-| Is there visualization? | ✅ YES | Playwright screenshots + Web UI |
+| Question                                | Answer | Evidence                                      |
+| --------------------------------------- | ------ | --------------------------------------------- |
+| Can AI agent create/modify Scratch?     | ✅ YES | `createSession()`, `addBlock()`, `compile()`  |
+| Does it know sprite-to-program mapping? | ✅ YES | `targetId` in project JSON structure          |
+| Can it understand ambiguous language?   | ✅ YES | NLP parser with pattern matching + confidence |
+| Is there visualization?                 | ✅ YES | Playwright screenshots + Web UI               |
 
 **Final Status**: ✅ **ALL REQUIREMENTS MET**

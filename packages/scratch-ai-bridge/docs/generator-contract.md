@@ -46,14 +46,14 @@ are checked against their `assetId` MD5; ZIP asset presence alone is not treated
 
 ```typescript
 export interface GeneratorOptions {
-  outputFile?: string;
-  outputDir?: string;
-  reportPath?: string;
-  previewPath?: string;
-  force?: boolean;
+  outputFile?: string
+  outputDir?: string
+  reportPath?: string
+  previewPath?: string
+  force?: boolean
 }
 
-export async function generateGame(input: string, options?: GeneratorOptions): Promise<GeneratorResult>;
+export async function generateGame(input: string, options?: GeneratorOptions): Promise<GeneratorResult>
 ```
 
 CLI stdout contains only the versioned JSON result. CLI argument errors use exit code 2, generation failures use

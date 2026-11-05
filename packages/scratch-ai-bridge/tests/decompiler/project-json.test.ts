@@ -1175,7 +1175,7 @@ describe('Scratch project JSON decompiler', () => {
       archiveNormalized.vm.quit()
     }
 
-    const vm: any = await createVM()
+    const vm = await createVM()
     const renderer = new Proxy(
       {},
       {
@@ -1275,7 +1275,7 @@ describe('Scratch project JSON decompiler', () => {
     if (!nestedCall) return
     nestedCall.inputs = {}
 
-    const vm: any = await createVM()
+    const vm = await createVM()
     const renderer = new Proxy(
       {},
       {
@@ -1426,7 +1426,7 @@ describe('Scratch project JSON decompiler', () => {
       if (!booleanArgument) return
       delete recursiveCall.inputs[booleanArgument]
 
-      const vm: any = await createVM()
+      const vm = await createVM()
       const renderer = new Proxy(
         {},
         {
@@ -1576,7 +1576,7 @@ describe('Scratch project JSON decompiler', () => {
     if (!booleanArgument) return
     delete recursiveCall.inputs[booleanArgument]
 
-    const vm: any = await createVM()
+    const vm = await createVM()
     const renderer = new Proxy(
       {},
       {
@@ -1842,7 +1842,7 @@ describe('Scratch project JSON decompiler', () => {
         normalized.vm.quit()
       }
 
-      const vm: any = await createVM()
+      const vm = await createVM()
       ;(vm as unknown as { attachRenderer(value: typeof renderer): void }).attachRenderer(renderer)
       try {
         await loadProjectJson(scratchProject as unknown as ScratchProjectJson, vm)
@@ -2065,7 +2065,7 @@ describe('Scratch project JSON decompiler', () => {
       },
     )
     const executeAndAssert = async (project: typeof scratch): Promise<void> => {
-      const vm: any = await createVM()
+      const vm = await createVM()
       ;(vm as unknown as { attachRenderer(value: typeof renderer): void }).attachRenderer(renderer)
       try {
         await loadProjectJson(project as unknown as ScratchProjectJson, vm)

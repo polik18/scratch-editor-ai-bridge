@@ -1,3 +1,4 @@
+/* global document, window, location, parent -- Browser globals used in Playwright page evaluations */
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'

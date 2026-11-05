@@ -68,10 +68,13 @@ describe('guarded Scratch VM cloud session with fake transport', () => {
   it('receives a real Scratch script cloud update through the fake transport', async () => {
     const fixture = fileURLToPath(new URL('../../../scratch-vm/test/fixtures/draggable.sb3', import.meta.url))
     const zip = await JSZip.loadAsync(await readFile(fixture))
-    const project = JSON.parse(await zip.file('project.json')!.async('string')) as {
+    const projectFile = zip.file('project.json')
+    if (!projectFile) throw new Error('project.json missing in fixture')
+    const project = JSON.parse(await projectFile.async('string')) as {
       targets: { isStage: boolean; variables: Record<string, unknown>; blocks: Record<string, unknown> }[]
     }
-    const stage = project.targets.find((target) => target.isStage)!
+    const stage = project.targets.find((target) => target.isStage)
+    if (!stage) throw new Error('stage missing in fixture')
     stage.variables.cloudTest = ['☁ cloudTest', 0, true]
     stage.blocks.cloudHat = {
       opcode: 'event_whenflagclicked',

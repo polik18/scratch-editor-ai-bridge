@@ -9,6 +9,28 @@ import { normalizeAiDraft } from '../../src/core/normalizer/ai-draft'
 import { validateCanonicalProject } from '../../src/core/validator/canonical-ir'
 import geminiPlatformer from '../fixtures/gemini-platformer-shorthand.json'
 
+interface CompiledCostume {
+  assetId: string
+  name: string
+  md5ext: string
+  dataFormat: string
+  rotationCenterX?: number
+  rotationCenterY?: number
+}
+
+interface CompiledTarget {
+  name: string
+  isStage: boolean
+  costumes: CompiledCostume[]
+  blocks: Record<string, unknown>
+  variables: Record<string, unknown>
+  lists: Record<string, unknown>
+}
+
+interface CompiledProject {
+  targets: CompiledTarget[]
+}
+
 describe('Scratch project JSON compiler', () => {
   it('creates visible themed assets instead of a white stage and transparent sprites', async () => {
     const archive = await buildScratchProjectArchive(emptyVisuals as CanonicalProject)
@@ -16,7 +38,7 @@ describe('Scratch project JSON compiler', () => {
     const projectFile = zip.file('project.json')
     expect(projectFile).not.toBeNull()
     if (!projectFile) return
-    const project = JSON.parse(await projectFile.async('string')) as any
+    const project = JSON.parse(await projectFile.async('string')) as CompiledProject
     const stage = project.targets[0]
     const sprite = project.targets[1]
     const stageFile = zip.file(stage.costumes[0].md5ext)
@@ -47,9 +69,9 @@ describe('Scratch project JSON compiler', () => {
     const projectFile = zip.file('project.json')
     expect(projectFile).not.toBeNull()
     if (!projectFile) return
-    const project = JSON.parse(await projectFile.async('string')) as any
+    const project = JSON.parse(await projectFile.async('string')) as CompiledProject
     const presets = await Promise.all(
-      project.targets.map(async (target: any) => {
+      project.targets.map(async (target: CompiledTarget) => {
         const costumeFile = zip.file(target.costumes[0].md5ext)
         expect(costumeFile).not.toBeNull()
         return costumeFile ? /data-sab-preset="([^"]+)"/.exec(await costumeFile.async('string'))?.[1] : undefined
@@ -90,9 +112,9 @@ describe('Scratch project JSON compiler', () => {
     const projectFile = zip.file('project.json')
     expect(projectFile).not.toBeNull()
     if (!projectFile) return
-    const compiled = JSON.parse(await projectFile.async('string')) as any
+    const compiled = JSON.parse(await projectFile.async('string')) as CompiledProject
     const visuals = await Promise.all(
-      compiled.targets.slice(1).map(async (target: any) => {
+      compiled.targets.slice(1).map(async (target: CompiledTarget) => {
         const asset = zip.file(target.costumes[0].md5ext)
         expect(asset).not.toBeNull()
         return asset ? await asset.async('string') : ''

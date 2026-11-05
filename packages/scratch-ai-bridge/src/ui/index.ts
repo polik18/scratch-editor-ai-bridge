@@ -1,5 +1,5 @@
 // UI module entry
-import createApp, { bindEvents } from './App.js';
+import createApp, { bindEvents } from './App.js'
 
-export { createApp, bindEvents };
-export { init } from './main.js';
+export { createApp, bindEvents }
+export { init } from './main.js'

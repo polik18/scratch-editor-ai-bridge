@@ -1,18 +1,17 @@
 /**
  * Gate Tracker - Track gate failures and success rates
  */
-
-import type { BatchManifest, GateResult } from './manifest.js';
+import type { BatchManifest, GateResult } from './manifest.js'
 
 /**
  * Gate statistics
  */
 export interface GateStats {
-  total: number;
-  success: number;
-  fail: number;
-  successRate: number;
-  gateFailureCounts: Record<string, number>;
+  total: number
+  success: number
+  fail: number
+  successRate: number
+  gateFailureCounts: Record<string, number>
 }
 
 /**
@@ -21,26 +20,26 @@ export interface GateStats {
  * @returns Gate statistics
  */
 export function trackGates(results: GateResult[]): GateStats {
-  const total = results.length;
-  const success = results.filter(r => r.status === 'pass').length;
-  const fail = results.filter(r => r.status === 'fail').length;
-  
-  const successRate = total > 0 ? success / total : 1.0;
-  
-  const gateFailureCounts: Record<string, number> = {};
+  const total = results.length
+  const success = results.filter((r) => r.status === 'pass').length
+  const fail = results.filter((r) => r.status === 'fail').length
+
+  const successRate = total > 0 ? success / total : 1.0
+
+  const gateFailureCounts: Record<string, number> = {}
   for (const result of results) {
     if (result.status === 'fail' && result.name) {
-      gateFailureCounts[result.name] = (gateFailureCounts[result.name] || 0) + 1;
+      gateFailureCounts[result.name] = (gateFailureCounts[result.name] || 0) + 1
     }
   }
-  
+
   return {
     total,
     success,
     fail,
     successRate,
     gateFailureCounts,
-  };
+  }
 }
 
 /**
@@ -49,15 +48,15 @@ export function trackGates(results: GateResult[]): GateStats {
  * @returns Gate statistics
  */
 export function trackGatesFromManifest(manifest: BatchManifest): GateStats {
-  const gateResults: GateResult[] = [];
-  
+  const gateResults: GateResult[] = []
+
   for (const entry of manifest.entries) {
     for (const result of entry.gateResults) {
-      gateResults.push(result);
+      gateResults.push(result)
     }
   }
-  
-  return trackGates(gateResults);
+
+  return trackGates(gateResults)
 }
 
 /**
@@ -66,27 +65,27 @@ export function trackGatesFromManifest(manifest: BatchManifest): GateStats {
  * @returns Report string
  */
 export function generateGateStatsReport(stats: GateStats): string {
-  const lines: string[] = [];
-  
-  lines.push('Gate Statistics Report');
-  lines.push('======================');
-  lines.push('');
-  lines.push('Summary:');
-  lines.push(`  - Total gates: ${stats.total}`);
-  lines.push(`  - Passed: ${stats.success}`);
-  lines.push(`  - Failed: ${stats.fail}`);
-  lines.push(`  - Success rate: ${(stats.successRate * 100).toFixed(1)}%`);
-  lines.push('');
-  
+  const lines: string[] = []
+
+  lines.push('Gate Statistics Report')
+  lines.push('======================')
+  lines.push('')
+  lines.push('Summary:')
+  lines.push(`  - Total gates: ${stats.total}`)
+  lines.push(`  - Passed: ${stats.success}`)
+  lines.push(`  - Failed: ${stats.fail}`)
+  lines.push(`  - Success rate: ${(stats.successRate * 100).toFixed(1)}%`)
+  lines.push('')
+
   if (Object.keys(stats.gateFailureCounts).length > 0) {
-    lines.push('Gate failure counts:');
+    lines.push('Gate failure counts:')
     for (const [gate, count] of Object.entries(stats.gateFailureCounts)) {
-      lines.push(`  - ${gate}: ${count}`);
+      lines.push(`  - ${gate}: ${count}`)
     }
-    lines.push('');
+    lines.push('')
   }
-  
-  return lines.join('\n');
+
+  return lines.join('\n')
 }
 
 /**
@@ -105,5 +104,5 @@ export function generateGateStatsJson(stats: GateStats): string {
     },
     null,
     2,
-  );
+  )
 }

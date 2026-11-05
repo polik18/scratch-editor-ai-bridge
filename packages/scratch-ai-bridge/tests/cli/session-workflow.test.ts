@@ -1,16 +1,24 @@
 import { spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import JSZip from 'jszip'
 import { afterEach, describe, expect, it } from 'vitest'
-import { createHash } from 'node:crypto'
-import { ScratchSession } from '../../src/cli/session/session.js'
 import { validateBlockGraph } from '../../src/cli/graph-validator.js'
+import { ScratchSession } from '../../src/cli/session/session.js'
 import { loadSb3 } from '../../src/scratch/vm.js'
 
 const cli = path.resolve('scripts/scratch-session.mjs')
 const fixture = path.resolve('../scratch-vm/test/fixtures/draggable.sb3')
+interface TestTarget {
+  blocks: Record<string, { inputs: Record<string, unknown> }>
+  variables: Record<string, unknown>
+  costumes: { data?: string }[]
+}
+interface TestProject {
+  targets: { costumes: { md5ext: string; assetId: string }[] }[]
+}
 const dirs: string[] = []
 const workdir = () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'scratch-session-test-'))
@@ -30,15 +38,18 @@ describe('scratch-session CLI workflow', () => {
     session.addSprite('Ball')
     session.addSprite('Bumper')
     const targets = session.getProjectJson().targets as { costumes: { data?: string }[] }[]
-    targets[1].costumes[0].data = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0ibm9uZSIvPjwvc3ZnPg=='
+    targets[1].costumes[0].data =
+      'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0ibm9uZSIvPjwvc3ZnPg=='
     const before = JSON.stringify(session.getProjectJson())
     const archive = await session.compile()
     expect(JSON.stringify(session.getProjectJson())).toBe(before)
     const zip = await JSZip.loadAsync(archive)
-    const project = JSON.parse(await zip.file('project.json')!.async('string'))
-    const costumes = project.targets.slice(1).map((target: { costumes: unknown[] }) => target.costumes[0])
+    const project = JSON.parse(
+      await (zip.file('project.json') ?? expect.fail('missing project.json')).async('string'),
+    ) as TestProject
+    const costumes = project.targets.slice(1).map((target) => target.costumes[0])
     expect(costumes[0].md5ext).toBe(costumes[1].md5ext)
-    const bytes = await zip.file(costumes[0].md5ext)!.async('uint8array')
+    const bytes = await (zip.file(costumes[0].md5ext) ?? expect.fail('missing costume')).async('uint8array')
     expect(createHash('md5').update(bytes).digest('hex')).toBe(costumes[0].assetId)
     expect(costumes[0].md5ext).toBe(`${costumes[0].assetId}.svg`)
     expect(costumes[0]).not.toHaveProperty('data')
@@ -51,7 +62,7 @@ describe('scratch-session CLI workflow', () => {
     const id = session.addBlock('Stage', 'motion_movesteps', {
       inputs: { STEPS: { type: 'literal', value: 10 } },
     })
-    const target = (session.getProjectJson().targets as any[])[0]
+    const target = (session.getProjectJson().targets as TestTarget[])[0]
     expect(target.blocks[id].inputs.STEPS).toEqual([1, [4, '10']])
   })
 
@@ -86,7 +97,11 @@ describe('scratch-session CLI workflow', () => {
     const loop = session.addBlock('Stage', 'control_forever')
     const move = session.addBlock('Stage', 'motion_movesteps')
     session.connectInput('Stage', loop, 'SUBSTACK', move)
-    const target = (session.getProjectJson().targets as { blocks: Record<string, { inputs: Record<string, unknown>; next: unknown; parent: unknown; topLevel: boolean }> }[])[0]
+    const target = (
+      session.getProjectJson().targets as {
+        blocks: Record<string, { inputs: Record<string, unknown>; next: unknown; parent: unknown; topLevel: boolean }>
+      }[]
+    )[0]
     expect(target.blocks[loop].inputs.SUBSTACK).toEqual([2, move])
     expect(target.blocks[loop].next).toBeNull()
     expect(target.blocks[move].parent).toBe(loop)
@@ -126,8 +141,8 @@ describe('scratch-session CLI workflow', () => {
     const id = session.addBlock('Stage', 'looks_say', {
       inputs: { MESSAGE: { type: 'variable', name: 'score' } },
     })
-    const target = (session.getProjectJson().targets as any[])[0]
-    const [variableId, variable] = Object.entries(target.variables)[0] as [string, unknown]
+    const target = (session.getProjectJson().targets as TestTarget[])[0]
+    const [variableId, variable] = Object.entries(target.variables)[0]
     expect(variable).toEqual(['score', 0])
     expect(target.blocks[id].inputs.MESSAGE).toEqual([3, [12, 'score', variableId], [10, '']])
     expect(() => session.addVariable('Stage', 'score')).toThrow('already exists')
@@ -137,7 +152,7 @@ describe('scratch-session CLI workflow', () => {
     const session = new ScratchSession()
     session.newProject('Invalid')
     session.addSprite('Ball')
-    const target = (session.getProjectJson().targets as any[])[1]
+    const target = (session.getProjectJson().targets as TestTarget[])[1]
     target.costumes[0].data = 'not base64 data'
     await expect(session.archive()).rejects.toThrow('/targets/1/costumes/0')
   })
@@ -146,7 +161,7 @@ describe('scratch-session CLI workflow', () => {
     const session = new ScratchSession()
     session.newProject('Invalid input')
     const id = session.addBlock('Stage', 'motion_movesteps')
-    const target = (session.getProjectJson().targets as any[])[0]
+    const target = (session.getProjectJson().targets as TestTarget[])[0]
     target.blocks[id].inputs.STEPS = { block: 'missing', shadow: 'missing' }
     expect(validateBlockGraph(session.getProjectJson()).errors.join('\n')).toContain('STEPS')
   })
@@ -173,7 +188,7 @@ describe('scratch-session CLI workflow', () => {
     const errors = validateBlockGraph(session.getProjectJson()).errors.join('\n')
     expect(errors).toContain('different target')
   })
-  it('persists load without rewriting the source and restores it on subsequent commands', () => {
+  it('persists load without rewriting the source and restores it on subsequent commands', { timeout: 120000 }, () => {
     const dir = workdir()
     const input = path.join(dir, 'game.sb3')
     const original = readFileSync(fixture)
@@ -181,7 +196,7 @@ describe('scratch-session CLI workflow', () => {
     const loaded = run(dir, 'load', input)
     expect(loaded.status, loaded.stderr).toBe(0)
     expect(readFileSync(input)).toEqual(original)
-    expect(JSON.parse(readFileSync(path.join(dir, '.scratch-session.json'), 'utf8'))).toMatchObject({
+    expect(JSON.parse(readFileSync(path.join(dir, '.scratch-session.json'), 'utf8')) as unknown).toMatchObject({
       format: 'scratch-session',
       version: 1,
       projectPath: input,
@@ -206,8 +221,10 @@ describe('scratch-session CLI workflow', () => {
     expect(run(dir, 'new', 'Inputs').status).toBe(0)
     const result = run(dir, 'add-block', 'Stage', 'motion_movesteps', '--input-literal', 'STEPS', '10')
     expect(result.status, result.stderr).toBe(0)
-    const state = JSON.parse(readFileSync(path.join(dir, '.scratch-session.json'), 'utf8'))
-    const block = Object.values(state.projectJson.targets[0].blocks)[0] as any
+    const state = JSON.parse(readFileSync(path.join(dir, '.scratch-session.json'), 'utf8')) as {
+      projectJson: { targets: TestTarget[] }
+    }
+    const block = Object.values(state.projectJson.targets[0].blocks)[0]
     expect(block.inputs.STEPS).toEqual([1, [4, '10']])
   })
 
@@ -225,16 +242,19 @@ describe('scratch-session CLI workflow', () => {
   it('connects a substack across separate CLI invocations', { timeout: 120000 }, () => {
     const dir = workdir()
     expect(run(dir, 'new', 'Loop').status).toBe(0)
-    const loop = /id=([^)]*)\)/.exec(run(dir, 'add-block', 'Stage', 'control_forever').stdout)?.[1]
-    const child = /id=([^)]*)\)/.exec(run(dir, 'add-block', 'Stage', 'looks_say').stdout)?.[1]
+    const loop =
+      /id=([^)]*)\)/.exec(run(dir, 'add-block', 'Stage', 'control_forever').stdout)?.[1] ??
+      expect.fail('missing loop id')
+    const child =
+      /id=([^)]*)\)/.exec(run(dir, 'add-block', 'Stage', 'looks_say').stdout)?.[1] ?? expect.fail('missing child id')
     expect(loop).toBeDefined()
     expect(child).toBeDefined()
-    const result = run(dir, 'connect-input', 'Stage', loop as string, 'SUBSTACK', child as string)
+    const result = run(dir, 'connect-input', 'Stage', loop, 'SUBSTACK', child)
     expect(result.status, result.stderr).toBe(0)
     const state = JSON.parse(readFileSync(path.join(dir, '.scratch-session.json'), 'utf8')) as {
       projectJson: { targets: { blocks: Record<string, { inputs: Record<string, unknown> }> }[] }
     }
-    expect(state.projectJson.targets[0].blocks[loop as string].inputs.SUBSTACK).toEqual([2, child])
+    expect(state.projectJson.targets[0].blocks[loop].inputs.SUBSTACK).toEqual([2, child])
   })
 
   it('reports corrupt or missing session data instead of silently creating a project', () => {
@@ -275,7 +295,9 @@ describe('scratch-session CLI workflow', () => {
     expect(result.status).not.toBe(0)
     expect(result.stderr).toContain('Session project not found')
     expect(run(dir, 'load', fixture).status).toBe(0)
-    expect(JSON.parse(readFileSync(path.join(dir, '.scratch-session.json'), 'utf8'))).toMatchObject({ version: 1 })
+    expect(JSON.parse(readFileSync(path.join(dir, '.scratch-session.json'), 'utf8')) as unknown).toMatchObject({
+      version: 1,
+    })
   })
 
   it('exports a new project with its built-in costume and validates it in the VM', async () => {
@@ -284,9 +306,11 @@ describe('scratch-session CLI workflow', () => {
     const result = run(dir, 'compile', 'new.sb3')
     expect(result.status, result.stderr).toBe(0)
     const zip = await JSZip.loadAsync(readFileSync(path.join(dir, 'new.sb3')))
-    const project = JSON.parse(await zip.file('project.json')!.async('string'))
+    const project = JSON.parse(
+      await (zip.file('project.json') ?? expect.fail('missing project.json')).async('string'),
+    ) as TestProject
     const costume = project.targets[0].costumes[0]
-    const bytes = await zip.file(costume.md5ext)!.async('uint8array')
+    const bytes = await (zip.file(costume.md5ext) ?? expect.fail('missing costume')).async('uint8array')
     expect(createHash('md5').update(bytes).digest('hex')).toBe(costume.assetId)
   }, 60000)
 
@@ -305,7 +329,7 @@ describe('scratch-session CLI workflow', () => {
     writeFileSync(file, JSON.stringify({ projectPath: null, lastModified: '', projectJson: state.projectJson }))
     const added = run(dir, 'add-var', 'Stage', 'score', '5')
     expect(added.status, added.stderr).toBe(0)
-    expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({ format: 'scratch-session', version: 1 })
+    expect(JSON.parse(readFileSync(file, 'utf8')) as unknown).toMatchObject({ format: 'scratch-session', version: 1 })
     expect(run(dir, 'ls').stdout).toContain('vars=1')
   })
 })

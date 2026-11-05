@@ -9,6 +9,7 @@
 **目標**：每則診斷使用「觀察 → 影響 → 建議」結構，並加入學生可理解的比喻
 
 **完成項目**：
+
 - ✅ 建立診斷分類系統 (`src/core/diagnostics/catalog.ts`)
 - ✅ 建立學生導向提示模板 (`src/core/diagnostics/messages.ts`)
   - 10 類問題 × 10 個模板 = 100 個診斷類型
@@ -17,6 +18,7 @@
   - 將內部診斷轉換為學生診斷
 
 **修改檔案**：
+
 - `src/core/diagnostics/catalog.ts` - 診斷類型與分類
 - `src/core/diagnostics/messages.ts` - 學生導向提示模板
 - `src/core/diagnostics/convert.ts` - 診斷轉換工具
@@ -28,6 +30,7 @@
 **目標**：自動將分散診斷歸類為「主題式警告」，減少學生 overwhelm
 
 **完成項目**：
+
 - ✅ 建立診斷聚合引擎 (`src/core/diagnostics/aggregator.ts`)
   - 按分類與嚴重度聚合診斷
   - 生成主題式診斷群組
@@ -36,6 +39,7 @@
   - 最多聚合 5 個子項目
 
 **修改檔案**：
+
 - `src/core/diagnostics/aggregator.ts` - 聚合與主題化引擎
 
 ### P2：診斷優先級與嚴重度標示 ✅
@@ -43,11 +47,13 @@
 **目標**：標示「高/中/低」嚴重度，讓學生知道先修哪個問題
 
 **完成項目**：
+
 - ✅ 每則診斷標示 `severity: 'high' | 'medium' | 'low'`
 - ✅ CLI 與 Web 報告預設依嚴格度排序
 - ✅ 高 → 中 → 低 排序
 
 **修改檔案**：
+
 - `src/core/diagnostics/catalog.ts` - 診斷嚴重度定義
 
 ### P3：診斷格式化工具 ✅
@@ -55,11 +61,13 @@
 **目標**：為 CLI 與 Web 輸出提供多種格式
 
 **完成項目**：
+
 - ✅ JSON 格式 (`formatDiagnosticsJSON`)
 - ✅ Markdown 格式 (`formatDiagnosticsMarkdown`)
 - ✅ 學生 Markdown 格式 (`formatDiagnosticsStudentMarkdown`)
 
 **修改檔案**：
+
 - `src/core/diagnostics/format.ts` - 診斷格式化工具
 
 ## 剩餘工作

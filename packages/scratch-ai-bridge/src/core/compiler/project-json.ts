@@ -1,4 +1,3 @@
-import type { DataFormat } from '@scratch/scratch-storage'
 import JSZip from 'jszip'
 import { createOfflineScratchStorage } from '../../scratch/storage'
 import { getBlockCapability } from '../capabilities/registry'
@@ -129,7 +128,7 @@ const createAssetRegistry = async () => {
         : dataFormat === 'svg'
           ? storage.AssetType.ImageVector
           : storage.AssetType.ImageBitmap
-    const asset = storage.createAsset(assetType, dataFormat as DataFormat, data, '', true)
+    const asset = storage.createAsset(assetType, dataFormat, data, '', true)
     const assetId = String(asset.assetId)
     assets.set(`${assetId}.${dataFormat}`, data)
     return assetId
@@ -230,14 +229,14 @@ const createTargetSymbols = (target: CanonicalTargetBase, targetKey: string): Ta
   lists: new Map(target.lists.map((list) => [list.name, stableId('list', `${targetKey}:${list.name}`)])),
 })
 
-const compileTarget = async (
+const compileTarget = (
   target: CanonicalTargetBase,
   isStage: boolean,
   targetIndex: number,
   projectName: string,
   symbols: SymbolTable,
   registry: AssetRegistry,
-): Promise<ScratchTargetJson> => {
+): ScratchTargetJson => {
   const targetKey = isStage ? 'stage' : `sprite:${target.name}`
   const local = createTargetSymbols(target, targetKey)
   let blockSequence = 0
@@ -468,9 +467,9 @@ const inferExtensions = (project: CanonicalProject): string[] => {
 const buildScratchProjectBundle = async (project: CanonicalProject): Promise<ScratchProjectBundle> => {
   const symbols = createSymbolTable(project)
   const registry = await createAssetRegistry()
-  const stage = await compileTarget(project.stage, true, 0, project.name, symbols, registry)
-  const sprites = await Promise.all(
-    project.sprites.map((sprite, index) => compileTarget(sprite, false, index + 1, project.name, symbols, registry)),
+  const stage = compileTarget(project.stage, true, 0, project.name, symbols, registry)
+  const sprites = project.sprites.map((sprite, index) =>
+    compileTarget(sprite, false, index + 1, project.name, symbols, registry),
   )
 
   // A sprite may introduce a broadcast that was not declared at the top level. Refresh the
@@ -498,6 +497,10 @@ export const buildScratchProjectJson = async (project: CanonicalProject): Promis
 /**
  * Build a Scratch project archive from a Canonical Project.
  * Optionally retain original ZIP entries (costumes, sounds, etc.) from the source SB3.
+ * @param project - The canonical project representation to build from.
+ * @param opts - Build configuration options.
+ * @param opts.retainOriginalEntries - Map of raw entry file names to binary data to keep from source.
+ * @returns Serialized SB3 archive as Uint8Array.
  */
 export const buildScratchProjectArchive = async (
   project: CanonicalProject,

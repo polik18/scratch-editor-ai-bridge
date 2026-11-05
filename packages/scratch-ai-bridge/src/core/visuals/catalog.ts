@@ -54,10 +54,7 @@ export interface AssetLibraryReference {
 }
 
 export type AssetProvenanceKind =
-  | 'scratch-catalog-exact'
-  | 'embedded-non-catalog'
-  | 'missing-archive-entry'
-  | 'checksum-mismatch'
+  'scratch-catalog-exact' | 'embedded-non-catalog' | 'missing-archive-entry' | 'checksum-mismatch'
 
 export interface ProjectAssetProvenanceItem {
   readonly targetIndex: number
@@ -304,7 +301,9 @@ export const resolveVerifiedCatalogAsset = async (
         entry.name === reference.name && (reference.md5ext === undefined || entry.md5ext === reference.md5ext),
     )
     if (matches.length === 0) {
-      throw new Error(`Catalog sound "${reference.name}"${reference.md5ext ? ` (${reference.md5ext})` : ''} was not found`)
+      throw new Error(
+        `Catalog sound "${reference.name}"${reference.md5ext ? ` (${reference.md5ext})` : ''} was not found`,
+      )
     }
     if (matches.length > 1) {
       throw new Error(`Catalog sound "${reference.name}" is ambiguous; specify md5ext`)

@@ -13,15 +13,15 @@
 
 `cyber-duel.sb3` 與 `star-collector.sb3` 均是 ZIP 結構可讀、CRC 檢查通過，且 `project.json` 可解析；但 ZIP 內只有 `project.json`。每份專案有 6 個 costume 宣告，全部引用 `cd21514d0531fdffb22204e0ec5ed84a.svg`，ZIP 中沒有該資產，因此它們不是完整的 Scratch 專案封裝。
 
-| 檢查項目 | Cyber Duel | Star Collector |
-| --- | ---: | ---: |
-| Targets | 6 | 6 |
-| 專案 JSON block records | 63 | 61 |
-| 有效的 `next` 連線數 | 0 | 0 |
-| 子積木有 `parent`、但父層沒有相應連線 | 27 | 23 |
-| 非 Scratch tuple 的 typed 欄位值 | 8 | 12 |
-| `inputs` 中仍是 AI／應用層 wrapper | 3 | 6 |
-| 缺少的 costume 資產引用 | 6 個引用／1 個唯一檔案 | 6 個引用／1 個唯一檔案 |
+| 檢查項目                              |             Cyber Duel |         Star Collector |
+| ------------------------------------- | ---------------------: | ---------------------: |
+| Targets                               |                      6 |                      6 |
+| 專案 JSON block records               |                     63 |                     61 |
+| 有效的 `next` 連線數                  |                      0 |                      0 |
+| 子積木有 `parent`、但父層沒有相應連線 |                     27 |                     23 |
+| 非 Scratch tuple 的 typed 欄位值      |                      8 |                     12 |
+| `inputs` 中仍是 AI／應用層 wrapper    |                      3 |                      6 |
+| 缺少的 costume 資產引用               | 6 個引用／1 個唯一檔案 | 6 個引用／1 個唯一檔案 |
 
 兩份作品都沒有由 `next` 或 input edge 串成的事件腳本。變數積木將 `{type:"variable", value:...}`、`{type:"literal", value:...}` 放在 `fields`；多個 reporter/control input 也直接寫入 `{type, value}` wrapper。這些是 Canonical／AI draft 層概念，不是可直接存進 SB3 `project.json` 的序列化 block 欄位。
 

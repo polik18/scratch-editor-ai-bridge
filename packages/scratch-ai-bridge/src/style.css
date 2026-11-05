@@ -225,6 +225,15 @@ h1 {
   border-radius: 50%;
   background: #2fb36f;
 }
+.teacher-share {
+  margin: 0 0 20px;
+}
+.teacher-share > summary {
+  cursor: pointer;
+  color: var(--forest);
+  font-weight: 700;
+  padding: 10px 0;
+}
 .student-share-panel {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

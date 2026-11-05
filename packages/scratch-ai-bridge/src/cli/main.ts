@@ -176,14 +176,16 @@ if (command === '--help' || command === '-h' || command === '') {
     const { generateGame } = await import('./generator')
     const originalConsoleLog = console.log
     const originalConsoleWarn = console.warn
-    const originalStdoutWrite = process.stdout.write
+    const originalStdoutWrite = process.stdout.write.bind(process.stdout)
     console.log = (...values: unknown[]) => process.stderr.write(`${values.map(String).join(' ')}\n`)
     console.warn = (...values: unknown[]) => process.stderr.write(`${values.map(String).join(' ')}\n`)
-    process.stdout.write = ((chunk: string | Uint8Array, ...args: unknown[]) =>
-      process.stderr.write(chunk as string, ...(args as []))) as typeof process.stdout.write
+    const redirectStdout: typeof process.stdout.write = (chunk: string | Uint8Array, ...args: unknown[]) =>
+      (process.stderr.write as (...params: unknown[]) => boolean)(chunk, ...args)
+    process.stdout.write = redirectStdout
+    const inputPath = positionals[0] ?? ''
     let result
     try {
-      result = await generateGame(positionals[0]!, {
+      result = await generateGame(inputPath, {
         outputFile,
         ...(reportPath ? { reportPath } : {}),
         ...(previewPath ? { previewPath } : {}),

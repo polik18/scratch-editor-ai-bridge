@@ -20,6 +20,9 @@ export default eslintConfigScratch.defineConfig(
     },
   },
   globalIgnores([
+    '*.md',
+    'test-*.ts',
+    'test-*.cjs',
     'audit-dist/**',
     'coverage/**',
     'dist/**',

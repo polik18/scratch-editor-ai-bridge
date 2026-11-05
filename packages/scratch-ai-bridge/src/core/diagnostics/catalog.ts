@@ -1,17 +1,16 @@
-/** 
+/**
  * Diagnostic Catalog - Types and categories for diagnostics
- * 
+ *
  * This module defines:
  * - DiagnosticType: The specific diagnostic codes
  * - DiagnosticCategory: Logical grouping for aggregation
  * - DiagnosticSeverity: Priority levels (high/medium/low)
  */
-
 // Import Diagnostic from compiler/diagnostics.ts
-import type { Diagnostic } from '../compiler/diagnostics';
+import type { Diagnostic } from '../compiler/diagnostics'
 
 /** Diagnostic type - specific code for each diagnostic issue */
-export type DiagnosticType = 
+export type DiagnosticType =
   // Structure issues
   | 'missing-start-block'
   | 'script-disconnected'
@@ -45,43 +44,35 @@ export type DiagnosticType =
   // Best practice
   | 'performance-concern'
   | 'maintainability-concern'
-  | 'code-smell';
+  | 'code-smell'
 
 /** Diagnostic category - for aggregation and grouping */
-export type DiagnosticCategory = 
-  | 'structure'
-  | 'variable'
-  | 'asset'
-  | 'block'
-  | 'logic'
-  | 'sprite'
-  | 'stage'
-  | 'extension'
-  | 'best-practice';
+export type DiagnosticCategory =
+  'structure' | 'variable' | 'asset' | 'block' | 'logic' | 'sprite' | 'stage' | 'extension' | 'best-practice'
 
 /** Diagnostic severity - priority for ordering and display */
-export type DiagnosticSeverity = 'high' | 'medium' | 'low';
+export type DiagnosticSeverity = 'high' | 'medium' | 'low'
 
 /**
  * Extended diagnostic interface with student-facing information
  */
 export interface StudentDiagnostic extends Diagnostic {
   /** Category for aggregation */
-  category: DiagnosticCategory;
+  category: DiagnosticCategory
   /** Severity level */
-  severity: DiagnosticSeverity;
+  severity: DiagnosticSeverity
   /** Student-friendly title */
-  title: string;
+  title: string
   /** Detailed explanation with analogy */
-  explanation: string;
+  explanation: string
   /** Impact on the project */
-  impact: string;
+  impact: string
   /** Step-by-step fix instructions */
-  fix: string;
+  fix: string
   /** Optional code example */
-  example?: string;
+  example?: string
   /** Category ID for aggregation */
-  categoryId: string;
+  categoryId: string
 }
 
 /**
@@ -89,30 +80,33 @@ export interface StudentDiagnostic extends Diagnostic {
  */
 export interface DiagnosticGroup {
   /** Category of diagnostics in this group */
-  category: DiagnosticCategory;
+  category: DiagnosticCategory
   /** Severity level */
-  severity: DiagnosticSeverity;
+  severity: DiagnosticSeverity
   /** Number of diagnostics in this group */
-  count: number;
+  count: number
   /** List of diagnostics */
-  diagnostics: StudentDiagnostic[];
+  diagnostics: StudentDiagnostic[]
   /** Category ID for display */
-  categoryId: string;
+  categoryId: string
 }
 
 /**
  * Diagnostic summary for CLI/Web output
  */
 export interface DiagnosticSummary {
-  total: number;
-  high: number;
-  medium: number;
-  low: number;
-  categories: Record<DiagnosticCategory, {
-    high: number;
-    medium: number;
-    low: number;
-  }>;
+  total: number
+  high: number
+  medium: number
+  low: number
+  categories: Record<
+    DiagnosticCategory,
+    {
+      high: number
+      medium: number
+      low: number
+    }
+  >
 }
 
 /**
@@ -121,8 +115,8 @@ export interface DiagnosticSummary {
 export const SEVERITY_ORDER: Record<DiagnosticSeverity, number> = {
   high: 0,
   medium: 1,
-  low: 2
-};
+  low: 2,
+}
 
 /**
  * Category display names (for student-facing output)
@@ -136,8 +130,8 @@ export const CATEGORY_DISPLAY_NAMES: Record<DiagnosticCategory, string> = {
   sprite: '角色問題',
   stage: '舞台問題',
   extension: '擴充功能',
-  'best-practice': '最佳實踐'
-};
+  'best-practice': '最佳實踐',
+}
 
 /**
  * Severity display names
@@ -145,5 +139,5 @@ export const CATEGORY_DISPLAY_NAMES: Record<DiagnosticCategory, string> = {
 export const SEVERITY_DISPLAY_NAMES: Record<DiagnosticSeverity, string> = {
   high: '高優先',
   medium: '中優先',
-  low: '低優先'
-};
+  low: '低優先',
+}

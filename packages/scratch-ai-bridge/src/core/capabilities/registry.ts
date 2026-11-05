@@ -1019,7 +1019,11 @@ export interface ProjectFragmentPromptOptions {
   readonly reuseCapabilityContract?: boolean
 }
 
-/** Produces one independently generated, mergeable target so large projects fit across AI turns. */
+/**
+ * Produces one independently generated, mergeable target so large projects fit across AI turns.
+ * @param options - Prompt configuration options.
+ * @returns Formatted prompt instruction string.
+ */
 export const createProjectFragmentInstruction = (options: ProjectFragmentPromptOptions): string => {
   const targetKind = options.targetKind
   const opcodes = CANONICAL_OPCODES.filter((opcode) =>
@@ -1040,8 +1044,8 @@ export const createProjectFragmentInstruction = (options: ProjectFragmentPromptO
 設計 brief：
 ${options.designBrief.trim()}
 
-已存在的 targets：${options.existingTargets?.join('、') || '尚無；若本片段為 sprite，Stage 必須已先加入。'}
-共享廣播/變數等名稱：${options.sharedNames?.join('、') || '尚未指定；請沿用 brief 的命名並避免自行另造同義名稱。'}
+已存在的 targets：${options.existingTargets?.join('、') ?? '尚無；若本片段為 sprite，Stage 必須已先加入。'}
+共享廣播/變數等名稱：${options.sharedNames?.join('、') ?? '尚未指定；請沿用 brief 的命名並避免自行另造同義名稱。'}
 
 輸出根物件格式：{"format":"scratch-ai-bridge/project-fragment","version":1,"projectName":${JSON.stringify(options.projectName)},"fragmentId":${JSON.stringify(options.fragmentId)},"target":${targetShape},"broadcasts":[],"extensions":[]}
 target 必須符合上述完整形狀；scripts 每項是 {"blocks":[...]}，空集合也要輸出 []。需要加入共享變數、廣播或擴充時，分別放在 target.variables、broadcasts、extensions；同名共享資料必須內容一致。已存在的同一 sprite 可用不同 fragmentId 再提供增量 scripts，但不要重複宣告不同值的同名變數/造型/自訂積木。
@@ -1054,7 +1058,12 @@ ${capabilityContract}
 只輸出一個 JSON 物件。`
 }
 
-/** A compact prompt for concept development; it intentionally contains no block catalog or JSON schema. */
+/**
+ * A compact prompt for concept development; it intentionally contains no block catalog or JSON schema.
+ * @param request - Raw student request text.
+ * @param genre - Preferred game genre profile.
+ * @returns Discussion prompt for ideation.
+ */
 export const createGameDesignDiscussionInstruction = (
   request: string,
   genre: GameGenreProfile = 'auto',
@@ -1107,7 +1116,7 @@ export const createStudentProjectInstruction = (
 ${request.trim()}
 
 已確認遊戲設計 brief：
-${brief || '尚未提供。請先自行完成一份精簡設計：確定玩家角色與目標、核心循環（操作→挑戰→回饋）、至少一種有趣障礙、逐步進展/獎勵、成功/失敗與快速重玩；採用合理預設並在 requirementCoverage 中標明近似或未實作項目，不要退化成只有移動和說話的空殼示範。'}
+${brief && brief.length > 0 ? brief : '尚未提供。請先自行完成一份精簡設計：確定玩家角色與目標、核心循環（操作→挑戰→回饋）、至少一種有趣障礙、逐步進展/獎勵、成功/失敗與快速重玩；採用合理預設並在 requirementCoverage 中標明近似或未實作項目，不要退化成只有移動和說話的空殼示範。'}
 
 指定類型：${genreNames[genre]}
 

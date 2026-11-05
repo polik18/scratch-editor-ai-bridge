@@ -73,7 +73,14 @@ describe('generic Scratch block graph', () => {
           blocks: {
             variable: [12, 'score', 'var-id', 10, 20],
             list: [13, 'items', 'list-id', -4, 5],
-            hat: { opcode: 'event_whenflagclicked', next: null, parent: null, inputs: {}, fields: {}, topLevel: true },
+            hat: {
+              opcode: 'event_whenflagclicked',
+              next: null,
+              parent: null,
+              inputs: {},
+              fields: {},
+              topLevel: true,
+            },
           },
         },
       ],

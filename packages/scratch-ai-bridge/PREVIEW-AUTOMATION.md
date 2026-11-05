@@ -15,22 +15,23 @@ Playwright-based preview automation for Scratch projects.
 Capture screenshot of Scratch project execution.
 
 ```typescript
-import { ScratchSession, createSession } from '@scratch/scratch-ai-bridge/api';
-import { previewScreenshot } from '@scratch/scratch-ai-bridge/preview';
+import { ScratchSession, createSession } from '@scratch/scratch-ai-bridge/api'
+import { previewScreenshot } from '@scratch/scratch-ai-bridge/preview'
 
-const session = await createSession();
-await session.newProject('My Project');
-await session.addSprite('Sprite1');
-await session.addBlock('Sprite1', 'motion_movesteps', { 
-  inputs: { STEPS: { type: 'literal', value: 10 } } 
-});
+const session = await createSession()
+await session.newProject('My Project')
+await session.addSprite('Sprite1')
+await session.addBlock('Sprite1', 'motion_movesteps', {
+  inputs: { STEPS: { type: 'literal', value: 10 } },
+})
 
-const filePath = await previewScreenshot(session);
-console.log('Screenshot saved:', filePath);
+const filePath = await previewScreenshot(session)
+console.log('Screenshot saved:', filePath)
 // Output: screenshot saved: /path/to/preview.png
 ```
 
 **Parameters**:
+
 - `session`: `ScratchSession` instance
 - `outputPath`: Optional output file path (default: `process.cwd() + '/preview.png'`)
 
@@ -41,21 +42,22 @@ console.log('Screenshot saved:', filePath);
 Run preview for specified duration.
 
 ```typescript
-import { ScratchSession, createSession } from '@scratch/scratch-ai-bridge/api';
-import { previewRun } from '@scratch/scratch-ai-bridge/preview';
+import { ScratchSession, createSession } from '@scratch/scratch-ai-bridge/api'
+import { previewRun } from '@scratch/scratch-ai-bridge/preview'
 
-const session = await createSession();
-await session.newProject('My Project');
-await session.addSprite('Sprite1');
-await session.addBlock('Sprite1', 'motion_movesteps', { 
-  inputs: { STEPS: { type: 'literal', value: 10 } } 
-});
+const session = await createSession()
+await session.newProject('My Project')
+await session.addSprite('Sprite1')
+await session.addBlock('Sprite1', 'motion_movesteps', {
+  inputs: { STEPS: { type: 'literal', value: 10 } },
+})
 
-await previewRun(session, 5); // Run for 5 seconds
-console.log('Preview completed');
+await previewRun(session, 5) // Run for 5 seconds
+console.log('Preview completed')
 ```
 
 **Parameters**:
+
 - `session`: `ScratchSession` instance
 - `duration`: Run duration in seconds (default: 5)
 
@@ -93,8 +95,8 @@ scratch-session preview-screenshot /tmp/preview.png
 For full preview functionality, integrate with `preview/main.ts`:
 
 ```typescript
-import { previewScreenshot } from '@scratch/ai-bridge/preview';
-import { createProject, resumePreviewAudio } from '@scratch/ai-bridge/preview/main';
+import { previewScreenshot } from '@scratch/ai-bridge/preview'
+import { createProject, resumePreviewAudio } from '@scratch/ai-bridge/preview/main'
 
 // In production, use the actual preview UI:
 // 1. Create VM with `preview/main.ts` functions
@@ -124,6 +126,7 @@ The project may not have any sprites or costumes. Ensure you've added at least o
 **Error: `Browser not found`**
 
 Install Playwright dependencies:
+
 ```bash
 npx playwright install chromium
 ```
@@ -131,6 +134,7 @@ npx playwright install chromium
 **Empty screenshot**
 
 The project may not have any active blocks. Ensure:
+
 1. Block is attached to a hat block (e.g., `event_whenflagclicked`)
 2. Hat block is visible on workspace
 3. Sprite is visible on stage
@@ -138,36 +142,36 @@ The project may not have any active blocks. Ensure:
 ## Example: Full Preview Workflow
 
 ```typescript
-import { ScratchSession, createSession } from '@scratch/scratch-ai-bridge/api';
-import { previewScreenshot } from '@scratch/scratch-ai-bridge/preview';
+import { ScratchSession, createSession } from '@scratch/scratch-ai-bridge/api'
+import { previewScreenshot } from '@scratch/scratch-ai-bridge/preview'
 
 async function createAndPreview() {
   // Create session
-  const session = await createSession();
-  await session.newProject('My Project');
-  
+  const session = await createSession()
+  await session.newProject('My Project')
+
   // Add sprite
-  await session.addSprite('Sprite1');
-  
+  await session.addSprite('Sprite1')
+
   // Add blocks
-  const hatId = await session.addBlock('Sprite1', 'event_whenflagclicked');
+  const hatId = await session.addBlock('Sprite1', 'event_whenflagclicked')
   await session.addBlock('Sprite1', 'motion_movesteps', {
     inputs: { STEPS: { type: 'literal', value: 10 } },
     parent: hatId,
-  });
+  })
   await session.addBlock('Sprite1', 'looks_say', {
     inputs: { MESSAGE: { type: 'literal', value: 'Hello!' } },
     parent: hatId,
-  });
-  
+  })
+
   // Take screenshot
-  const filePath = await previewScreenshot(session);
-  console.log('Preview saved:', filePath);
-  
-  return filePath;
+  const filePath = await previewScreenshot(session)
+  console.log('Preview saved:', filePath)
+
+  return filePath
 }
 
-createAndPreview();
+createAndPreview()
 ```
 
 ## Integration with CI/CD

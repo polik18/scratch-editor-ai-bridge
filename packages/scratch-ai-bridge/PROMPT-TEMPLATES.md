@@ -17,14 +17,15 @@ Prompt template library for common Scratch issues.
 Get prompt template by category and title.
 
 ```typescript
-import { getPromptTemplate } from '@scratch/scratch-ai-bridge/prompt';
+import { getPromptTemplate } from '@scratch/scratch-ai-bridge/prompt'
 
-const template = getPromptTemplate('structure', '缺少開始積木');
-console.log(template?.prompt);
+const template = getPromptTemplate('structure', '缺少開始積木')
+console.log(template?.prompt)
 // Output: 這段程式一開始是「{studentLabel}」，前面沒有綠旗或按鍵等開始積木...
 ```
 
 **Parameters**:
+
 - `category`: `TemplateCategory` ('structure' | 'behavior' | 'debug' | 'learning' | 'general')
 - `title`: Template title (exact match)
 
@@ -35,14 +36,15 @@ console.log(template?.prompt);
 Get all templates in a category.
 
 ```typescript
-import { getTemplatesByCategory } from '@scratch/scratch-ai-bridge/prompt';
+import { getTemplatesByCategory } from '@scratch/scratch-ai-bridge/prompt'
 
-const templates = getTemplatesByCategory('structure');
-console.log(templates.length);
+const templates = getTemplatesByCategory('structure')
+console.log(templates.length)
 // Output: 2 (missing start block, detached script)
 ```
 
 **Parameters**:
+
 - `category`: `TemplateCategory`
 
 **Returns**: `PromptTemplate[]`
@@ -52,10 +54,10 @@ console.log(templates.length);
 Get all templates.
 
 ```typescript
-import { getAllTemplates } from '@scratch/scratch-ai-bridge/prompt';
+import { getAllTemplates } from '@scratch/scratch-ai-bridge/prompt'
 
-const templates = getAllTemplates();
-console.log(templates.length);
+const templates = getAllTemplates()
+console.log(templates.length)
 // Output: 10
 ```
 
@@ -65,12 +67,12 @@ console.log(templates.length);
 
 ```typescript
 interface PromptTemplate {
-  readonly category: TemplateCategory;
-  readonly title: string;
-  readonly description: string;
-  readonly prompt: string;
-  readonly examples: string[];
-  readonly適用场景: string[];
+  readonly category: TemplateCategory
+  readonly title: string
+  readonly description: string
+  readonly prompt: string
+  readonly examples: string[]
+  readonly適用场景: string[]
 }
 ```
 
@@ -86,53 +88,53 @@ interface PromptTemplate {
 ## Usage Example
 
 ```typescript
-import { ScratchSession, createSession } from '@scratch/scratch-ai-bridge/api';
-import { getPromptTemplate } from '@scratch/scratch-ai-bridge/prompt';
+import { ScratchSession, createSession } from '@scratch/scratch-ai-bridge/api'
+import { getPromptTemplate } from '@scratch/scratch-ai-bridge/prompt'
 
 async function analyzeProject() {
-  const session = await createSession();
-  await session.newProject('My Project');
-  await session.addSprite('Sprite1');
-  
+  const session = await createSession()
+  await session.newProject('My Project')
+  await session.addSprite('Sprite1')
+
   // Add blocks without start event
   await session.addBlock('Sprite1', 'motion_movesteps', {
     inputs: { STEPS: { type: 'literal', value: 10 } },
-  });
-  
+  })
+
   // Detect missing start block
-  const template = getPromptTemplate('structure', '缺少開始積木');
-  
+  const template = getPromptTemplate('structure', '缺少開始積木')
+
   if (template) {
-    const prompt = template.prompt.replace('{studentLabel}', 'Sprite1');
-    console.log('提示:', prompt);
+    const prompt = template.prompt.replace('{studentLabel}', 'Sprite1')
+    console.log('提示:', prompt)
   }
 }
 
-analyzeProject();
+analyzeProject()
 ```
 
 ## Integration with Analyzer
 
 ```typescript
-import { parseAnalysis } from '../analyzer';
-import { getPromptTemplate } from '@scratch/scratch-ai-bridge/prompt';
+import { getPromptTemplate } from '@scratch/scratch-ai-bridge/prompt'
+import { parseAnalysis } from '../analyzer'
 
 export function createAnalysisReport(analysis: AnalysisIR): string {
-  const issues: string[] = [];
-  
+  const issues: string[] = []
+
   // Check for missing start blocks
-  const missingStart = getPromptTemplate('structure', '缺少開始積木');
+  const missingStart = getPromptTemplate('structure', '缺少開始積木')
   if (missingStart && hasMissingStartBlock(analysis)) {
-    issues.push(missingStart.prompt);
+    issues.push(missingStart.prompt)
   }
-  
+
   // Check for infinite loops
-  const infiniteLoop = getPromptTemplate('behavior', '無限迴圈');
+  const infiniteLoop = getPromptTemplate('behavior', '無限迴圈')
   if (infiniteLoop && hasInfiniteLoop(analysis)) {
-    issues.push(infiniteLoop.prompt);
+    issues.push(infiniteLoop.prompt)
   }
-  
-  return issues.join('\n\n');
+
+  return issues.join('\n\n')
 }
 ```
 
@@ -140,38 +142,38 @@ export function createAnalysisReport(analysis: AnalysisIR): string {
 
 ### Structure
 
-| Title | Description |
-|-------|-------------|
-| `缺少開始積木` | Missing start event (green flag or key press) |
-| `斷裂的積木群組` | Disconnected scripts or missing inputs |
+| Title            | Description                                   |
+| ---------------- | --------------------------------------------- |
+| `缺少開始積木`   | Missing start event (green flag or key press) |
+| `斷裂的積木群組` | Disconnected scripts or missing inputs        |
 
 ### Behavior
 
-| Title | Description |
-|-------|-------------|
-| `無限迴圈` | Infinite loop that may cause freezing |
-| `迴圈內等待` | Wait block inside loop |
+| Title        | Description                           |
+| ------------ | ------------------------------------- |
+| `無限迴圈`   | Infinite loop that may cause freezing |
+| `迴圈內等待` | Wait block inside loop                |
 
 ### Debug
 
-| Title | Description |
-|-------|-------------|
+| Title        | Description                        |
+| ------------ | ---------------------------------- |
 | `角色不可見` | Sprite is hidden or outside screen |
-| `方向錯誤` | Wrong direction for movement |
+| `方向錯誤`   | Wrong direction for movement       |
 
 ### Learning
 
-| Title | Description |
-|-------|-------------|
+| Title        | Description              |
+| ------------ | ------------------------ |
 | `變數未設定` | Variable not initialized |
-| `分數未更新` | Score not incrementing |
+| `分數未更新` | Score not incrementing   |
 
 ### General
 
-| Title | Description |
-|-------|-------------|
-| `未知的積木` | Unknown block or extension |
-| `不支援的功能` | Unsupported feature |
+| Title          | Description                |
+| -------------- | -------------------------- |
+| `未知的積木`   | Unknown block or extension |
+| `不支援的功能` | Unsupported feature        |
 
 ## Example: Create New Template
 
@@ -184,13 +186,13 @@ const MY_NEW_TEMPLATE: PromptTemplate = {
   prompt: '提示文字 {placeholder}',
   examples: ['範例 1', '範例 2'],
   適用场景: ['适用场景 1', '适用场景 2'],
-};
+}
 
 // Register in TEMPLATES array
 const TEMPLATES: readonly PromptTemplate[] = [
   // ... existing templates
   MY_NEW_TEMPLATE,
-];
+]
 ```
 
 ## CLI Usage

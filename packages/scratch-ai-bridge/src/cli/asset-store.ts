@@ -1,44 +1,43 @@
 /**
  * Asset Store - Store and manage assets (costumes, sounds)
  */
-
-import crypto from 'node:crypto';
+import crypto from 'node:crypto'
 
 /**
  * Asset interface
  */
 export interface Asset {
-  md5: string;
-  name: string;
-  format: string;
-  size: number;
-  data: Uint8Array;
+  md5: string
+  name: string
+  format: string
+  size: number
+  data: Uint8Array
 }
 
 /**
  * Asset Store class
  */
 export class AssetStore {
-  private assets: Map<string, Asset> = new Map();
+  private assets: Map<string, Asset> = new Map<string, Asset>()
 
   /**
-   * Add an asset to the store
-   * @param data - Asset data
-   * @param format - Asset format (png, svg, wav, mp3, etc.)
-   * @param name - Asset name
-   * @returns Asset
+   * Add an asset to the store.
+   * @param data - Raw binary payload of the asset.
+   * @param format - Asset format (png, svg, wav, mp3, etc.).
+   * @param name - Display label or filename prefix.
+   * @returns Stored asset descriptor.
    */
-  addAsset(data: Uint8Array, format: string, name: string = 'asset'): Asset {
-    const md5 = this.calculateMD5(data);
+  addAsset(data: Uint8Array, format: string, name = 'asset'): Asset {
+    const md5 = this.calculateMD5(data)
     const asset: Asset = {
       md5,
       name,
       format,
       size: data.length,
       data,
-    };
-    this.assets.set(md5, asset);
-    return asset;
+    }
+    this.assets.set(md5, asset)
+    return asset
   }
 
   /**
@@ -47,7 +46,7 @@ export class AssetStore {
    * @returns Asset or null
    */
   getAsset(md5: string): Asset | null {
-    return this.assets.get(md5) ?? null;
+    return this.assets.get(md5) ?? null
   }
 
   /**
@@ -56,8 +55,8 @@ export class AssetStore {
    * @returns Uint8Array or null
    */
   getAssetBytes(md5: string): Uint8Array | null {
-    const asset = this.assets.get(md5);
-    return asset ? asset.data : null;
+    const asset = this.assets.get(md5)
+    return asset ? asset.data : null
   }
 
   /**
@@ -66,7 +65,7 @@ export class AssetStore {
    * @returns boolean
    */
   hasAsset(md5: string): boolean {
-    return this.assets.has(md5);
+    return this.assets.has(md5)
   }
 
   /**
@@ -75,7 +74,7 @@ export class AssetStore {
    * @returns boolean
    */
   removeAsset(md5: string): boolean {
-    return this.assets.delete(md5);
+    return this.assets.delete(md5)
   }
 
   /**
@@ -84,16 +83,16 @@ export class AssetStore {
    * @returns MD5 hash string
    */
   private calculateMD5(data: Uint8Array): string {
-    const buffer = Buffer.from(data);
-    return crypto.createHash('md5').update(buffer).digest('hex');
+    const buffer = Buffer.from(data)
+    return crypto.createHash('md5').update(buffer).digest('hex')
   }
 
   /**
-   * Get all assets
-   * @returns Map of assets
+   * Retrieve the complete collection of stored assets.
+   * @returns Map of assets indexed by MD5 hash.
    */
   getAllAssets(): Map<string, Asset> {
-    return this.assets;
+    return this.assets
   }
 }
 
@@ -102,5 +101,5 @@ export class AssetStore {
  * @returns AssetStore instance
  */
 export function createAssetStore(): AssetStore {
-  return new AssetStore();
+  return new AssetStore()
 }

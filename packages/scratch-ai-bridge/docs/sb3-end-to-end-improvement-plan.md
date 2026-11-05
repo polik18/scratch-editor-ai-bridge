@@ -140,16 +140,16 @@
 
 ## 測試矩陣
 
-| 層級 | 必要案例 | 通過證據 |
-| --- | --- | --- |
-| 設計 schema/parser | 欄位缺漏、型別錯誤、重名、未解析 references、JSON/Markdown 邊界 | 有路徑的診斷；錯誤設計不寫 final SB3 |
-| Canonical 轉換 | variables/lists/sprites/scripts/costumes/sounds 完整往返 | 語意等價比較，不以 JSON 字串順序比較 |
-| Block graph | stack、reporter、shadow、控制積木、hat body、procedure | graph validator 互反及 VM compile |
-| Archive/assets | SVG/PNG、WAV/MP3、缺 entry、錯 hash、重複資產 | entry 完整、hash 正確、format 可解碼 |
-| CLI 整合 | `new-game`、`compile` 有/無輸出路徑、`save`、`preview/validate`、batch | 命令退出碼、產物 gate、輸出訊息一致 |
-| VM round-trip | compile → load → save → reload | target/block/variable/list/asset 語意一致 |
-| 行為 smoke | 每款遊戲主要玩家流程與失敗流程 | deterministic state assertions |
-| 網站匯入 | 最小作品、外部素材作品 | 人工 Scratch 網站匯入結果與日期 |
+| 層級               | 必要案例                                                               | 通過證據                                  |
+| ------------------ | ---------------------------------------------------------------------- | ----------------------------------------- |
+| 設計 schema/parser | 欄位缺漏、型別錯誤、重名、未解析 references、JSON/Markdown 邊界        | 有路徑的診斷；錯誤設計不寫 final SB3      |
+| Canonical 轉換     | variables/lists/sprites/scripts/costumes/sounds 完整往返               | 語意等價比較，不以 JSON 字串順序比較      |
+| Block graph        | stack、reporter、shadow、控制積木、hat body、procedure                 | graph validator 互反及 VM compile         |
+| Archive/assets     | SVG/PNG、WAV/MP3、缺 entry、錯 hash、重複資產                          | entry 完整、hash 正確、format 可解碼      |
+| CLI 整合           | `new-game`、`compile` 有/無輸出路徑、`save`、`preview/validate`、batch | 命令退出碼、產物 gate、輸出訊息一致       |
+| VM round-trip      | compile → load → save → reload                                         | target/block/variable/list/asset 語意一致 |
+| 行為 smoke         | 每款遊戲主要玩家流程與失敗流程                                         | deterministic state assertions            |
+| 網站匯入           | 最小作品、外部素材作品                                                 | 人工 Scratch 網站匯入結果與日期           |
 
 測試先補上能重現各項故障的失敗案例，再逐階段修正。此研究輪沒有執行測試；實作時依 repository 規範新增測試後執行 scratch-ai-bridge 的 Vitest、lint、TypeScript build 與相關 browser smoke。
 

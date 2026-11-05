@@ -2775,6 +2775,44 @@ try {
     throw new Error('Student build result did not explain offline cloud-variable behavior')
   }
 
+  const scrollBeforeIteration = await page.evaluate(() => ({ x: window.scrollX, y: window.scrollY }))
+  if (!(await page.locator('#iteration-card').isVisible()))
+    throw new Error('Student iteration is not visible after a successful build')
+  await page.locator('#iteration-request').fill('讓角色跳高一點')
+  await page.locator('#iteration-generate').click()
+  const iterationInstruction = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  if (
+    !iterationInstruction?.includes('讓角色跳高一點') ||
+    !iterationInstruction.includes('Canonical IR') ||
+    !iterationInstruction.includes('Player')
+  ) {
+    throw new Error('Student iteration did not copy the current canonical project and request')
+  }
+  await page.locator('#copy-direct-instruction').click()
+  await page.evaluate(({ x, y }) => window.scrollTo(x, y), scrollBeforeIteration)
+
+  const restorePage = await browser.newPage({ acceptDownloads: true })
+  try {
+    await restorePage.goto(`http://127.0.0.1:${address.port}${sitePrefix}`, { waitUntil: 'networkidle' })
+    await restorePage.locator('#load-sample').click()
+    const originalResponse = await restorePage.locator('#json-editor').inputValue()
+    const firstDownload = restorePage.waitForEvent('download')
+    await restorePage.locator('#student-build').click()
+    await firstDownload
+    await restorePage.locator('#iteration-card').waitFor({ state: 'visible' })
+    await restorePage.locator('#json-editor').fill('{invalid')
+    await restorePage.locator('#student-build').click()
+    await restorePage.locator('#restore-student-project').click()
+    if (
+      (await restorePage.locator('#json-editor').inputValue()) !== originalResponse ||
+      !(await restorePage.locator('#iteration-card').isVisible())
+    ) {
+      throw new Error('A failed revision did not restore the last usable student project')
+    }
+  } finally {
+    await restorePage.close()
+  }
+
   const download = await downloadPromise
   if (download instanceof Error) throw download
 
@@ -3560,14 +3598,13 @@ try {
       null,
       { timeout: 10_000 },
     )
-    await page.waitForFunction(
-      () =>
-        document.querySelector('.student-preview-stage-status')?.textContent?.includes('120 秒上限') === true &&
-        document.querySelector('#student-preview iframe.student-preview-animation') === null,
-      null,
-      { timeout: 135_000 },
-    )
-    livePreviewWatchdog = '120-second live preview watchdog stopped and removed the isolated frame'
+    await page.waitForTimeout(125_000)
+    if (!(await page.locator('#student-preview iframe.student-preview-animation').count())) {
+      throw new Error('Long-running preview stopped before the student chose to stop it')
+    }
+    await page.locator('#student-preview .student-preview-actions button').filter({ hasText: '停止預覽' }).click()
+    await page.locator('#student-preview iframe.student-preview-animation').waitFor({ state: 'detached' })
+    livePreviewWatchdog = 'Preview remained running for 125 seconds and stopped when requested'
   }
 
   const archiveWithProjectJson = async (sourcePath, project) => {
@@ -5618,7 +5655,10 @@ try {
     try {
       const violations = await page.evaluate(() => window.__cspViolations ?? [])
       if (violations.length > 0) failures.push(`CSP details: ${JSON.stringify(violations)}`)
-      const livePatchStatus = await page.locator('#live-patch-status').textContent().catch(() => null)
+      const livePatchStatus = await page
+        .locator('#live-patch-status')
+        .textContent()
+        .catch(() => null)
       if (livePatchStatus) failures.push(`Live patch status: ${livePatchStatus}`)
     } catch {
       // Preserve the original browser failure if the page has already closed.

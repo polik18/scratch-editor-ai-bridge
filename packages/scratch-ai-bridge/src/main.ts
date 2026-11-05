@@ -37,11 +37,11 @@ import {
   createAuthoringInstruction,
   createGameDesignDiscussionInstruction,
   createProjectFragmentInstruction,
-  createMultiRoundIterationInstruction,
   createStudentProjectInstruction,
   estimatePromptSize,
   type GameGenreProfile,
 } from './core/capabilities'
+import { createStudentIterationInstruction } from './core/capabilities/student-iteration'
 import { parseSelfHostedCloudValue, selfHostedCloudKey, validSelfHostedCloudValue } from './core/cloud/self-hosted'
 import { compileCanonicalProjectToSb3, ProjectCompileError } from './core/compiler'
 import { decompileSb3WithBlockGraphs, normalizeThroughVm } from './core/decompiler'
@@ -205,7 +205,7 @@ let activeStudentAnimation: ActiveStudentAnimation | null = null
 let speechConsentPromptQueue: Promise<void> = Promise.resolve()
 
 window.addEventListener('message', (event: MessageEvent<unknown>) => {
-  const active: any = activeStudentAnimation
+  const active = activeStudentAnimation
 
   if (!active || event.origin !== 'null' || typeof event.data !== 'object' || event.data === null) return
 
@@ -396,7 +396,7 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
 })
 
 const stopStudentAnimation = (message: string): void => {
-  ;(activeStudentAnimation as any)?.finish(message)
+  activeStudentAnimation?.finish(message)
 }
 
 const AI_INSTRUCTION = createAuthoringInstruction()
@@ -465,7 +465,7 @@ app.innerHTML = `
 
 
 
-        <div class="eyebrow">不用安裝 · 專案不上傳；外送文字前會先徵求同意</div>
+        <div class="eyebrow">不用安裝 · 作品在本機處理；貼到 AI 的內容會交給該服務</div>
 
 
 
@@ -493,6 +493,8 @@ app.innerHTML = `
 
 
 
+    <details class="teacher-share">
+      <summary>老師分享學生解惑頁</summary>
     <aside class="student-share-panel" aria-labelledby="student-share-title">
 
 
@@ -554,10 +556,7 @@ app.innerHTML = `
 
 
     </aside>
-
-
-
-
+    </details>
 
 
 
@@ -597,15 +596,15 @@ app.innerHTML = `
 
 
 
-          <li><span>2</span>確認玩法</li>
+          <li><span>2</span>請 AI 製作</li>
 
 
 
-          <li><span>3</span>貼 AI 作品</li>
+          <li><span>3</span>貼回並檢查</li>
 
 
 
-          <li><span>4</span>下載作品</li>
+          <li><span>4</span>試玩與下載</li>
 
 
 
@@ -617,7 +616,7 @@ app.innerHTML = `
 
 
 
-          <div class="step-heading"><span>1</span><div><h2>你想做什麼作品？</h2><p>一句主題或角色也可以。先和 AI 討論玩法，再把確認的玩法貼回來；也可以請 AI 自行設計。</p></div></div>
+          <div class="step-heading"><span>1</span><div><h2>你想做什麼作品？</h2><p>一句主題或角色也可以。先寫下想法，再複製訊息給 AI。</p></div></div>
 
 
 
@@ -625,7 +624,7 @@ app.innerHTML = `
 
 
 
-          <textarea id="project-request" class="request-input" maxlength="1000" data-placeholder="例如：我想做一個關於深海探險的遊戲，主角是一條小魚。"></textarea>
+          <textarea id="project-request" class="request-input" maxlength="1000" placeholder="例如：我想做一個關於深海探險的遊戲，主角是一條小魚。"></textarea>
 
 
 
@@ -653,7 +652,10 @@ app.innerHTML = `
 
 
 
-          <div class="button-row"><button id="copy-design-instruction" class="button primary" disabled>先和 AI 討論玩法</button><button id="copy-direct-instruction" class="button secondary" disabled>讓 AI 自行設計並製作</button></div>
+          <div class="button-row"><button id="copy-direct-instruction" class="button primary" disabled>複製製作訊息給 AI</button><button id="copy-design-instruction" class="button secondary" disabled>先和 AI 討論玩法</button></div>
+          <p>不要在想法中填入姓名、班級等個人資料。複製後，打開老師允許的 AI 網頁貼上訊息並送出。</p>
+          <p id="student-draft-status" role="status" aria-live="polite">這個分頁會暫存你的作品；關閉分頁或清除資料後可能無法找回，請下載作品。</p>
+          <p><a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer">開啟 Gemini ↗</a> <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">開啟 ChatGPT ↗</a></p>
 
 
 
@@ -661,34 +663,14 @@ app.innerHTML = `
 
         </article>
 
-        <article class="card iteration-card">
+        <section class="card wide" id="student-ai-guide" aria-labelledby="student-ai-guide-title" hidden>
+          <div class="step-heading"><span>2</span><div><h2 id="student-ai-guide-title">把訊息交給 AI</h2><p>1. 打開老師允許的 AI 網頁。2. 把剛才複製的訊息貼上並送出。3. 等 AI 回答完成，再複製整段回答。</p></div></div>
+          <p>貼到 AI 的內容會交給該服務，請不要放入姓名、班級等個人資料。</p>
+          <div class="button-row"><a class="button secondary" href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer">開啟 Gemini ↗</a><a class="button secondary" href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">開啟 ChatGPT ↗</a><button class="button primary" id="student-ai-answer-ready" type="button">我拿到回答了</button></div>
+        </section>
 
-          <div class="step-heading"><span>2</span><div><h2>讓 AI 根據需求修改作品</h2><p>輸入修改需求，AI 會生成新版作品。支援多輪迭代。</p></div></div>
-
-          <div class="iteration-inputs">
-            <label for="iteration-request" class="field-label">修改需求</label>
-            <textarea id="iteration-request" class="request-input" maxlength="1000" data-placeholder="例如：讓玩家跳得更高，並把移動速度稍微降低。"></textarea>
-
-            <label for="iteration-paste" class="field-label">貼上 AI 產生的版本（可選）</label>
-            <textarea id="iteration-paste" class="request-input" maxlength="10000" data-placeholder="貼上 AI 產生的 Scratch 作品 JSON..."></textarea>
-          </div>
-
-          <div class="iteration-actions">
-            <label class="toggle-label">
-              <input type="checkbox" id="immediate-preview">
-              <span>立即預覽（所見即所得）</span>
-            </label>
-            <button id="iteration-generate" class="button primary">AI 修改作品</button>
-          </div>
-
-          <p id="iteration-status" class="inline-status" role="status" aria-live="polite">輸入修改需求，或貼上 AI 產生的版本（用於多輪迭代）。</p>
-
-          <div class="iteration-actions" style="display:none;">
-            <button id="iteration-apply" class="button secondary">套用新版作品</button>
-          </div>
-        </article>
-
-        <article class="card game-brief-panel">
+        <details class="card game-brief-panel" id="optional-game-brief">
+          <summary>想先和 AI 討論玩法（選用）</summary>
 
           <label for="game-genre" class="field-label">想做哪一類？（可讓 AI 從點子判斷）</label>
 
@@ -708,13 +690,9 @@ app.innerHTML = `
 
             <div class="button-row"><button id="copy-build-instruction" class="button primary" disabled>用已確認玩法複製製作指令</button></div>
 
-            <p id="build-prompt-status" class="inline-status" role="status" aria-live="polite">討論完成後貼上確認的玩法，再複製製作指令。你也可以直接選擇「讓 AI 自行設計並製作」。</p>
+            <p id="build-prompt-status" class="inline-status" role="status" aria-live="polite">討論完成後貼上確認的玩法，再複製製作指令。也可以直接用「複製製作訊息給 AI」。</p>
 
-          </div>
-
-
-
-        </article>
+        </details>
 
 
 
@@ -722,7 +700,7 @@ app.innerHTML = `
 
 
 
-          <div class="step-heading"><span>2</span><div><h2>把 AI 最後做好的作品貼在這裡</h2><p>先回答 AI 的發想問題；等它回傳完整 JSON 作品後，再整段貼上，不需要刪除程式碼框。</p></div></div>
+          <div class="step-heading"><span>3</span><div><h2>把 AI 的回答貼在這裡</h2><p>1. 複製製作訊息。2. 貼到老師允許的 AI 網頁並送出。3. 等回答完成，複製整段回答貼回這裡。</p></div></div>
 
 
 
@@ -730,7 +708,7 @@ app.innerHTML = `
 
 
 
-          <textarea id="json-editor" class="mono editor student-editor" spellcheck="false" placeholder="和 AI 討論完成後，貼上它最後產生的完整作品回覆。"></textarea>
+          <textarea id="json-editor" class="mono editor student-editor" spellcheck="false" placeholder="把 AI 的完整回答貼在這裡。"></textarea>
 
 
 
@@ -754,6 +732,7 @@ app.innerHTML = `
 
 
           <div id="generate-status" class="status-box" role="status" aria-live="polite"></div>
+          <button id="restore-student-project" class="button secondary" type="button" hidden>回到上一個可用作品</button>
 
 
 
@@ -777,6 +756,10 @@ app.innerHTML = `
 
 
 
+            <div id="student-candidate-actions" class="button-row" hidden>
+              <button id="accept-student-candidate" class="button primary" type="button">使用這個新版並下載</button>
+              <button id="discard-student-candidate" class="button secondary" type="button">回到原本的作品</button>
+            </div>
             <button id="download-student-validation-report" class="button secondary" hidden>下載驗證報告.json</button>
 
 
@@ -784,6 +767,14 @@ app.innerHTML = `
           </section>
 
 
+
+        <article class="card iteration-card" id="iteration-card" hidden>
+          <div class="step-heading"><div><h2>我想改一改</h2><p>說出想修改的地方，複製訊息貼給剛才的 AI，再把新回答貼回上方檢查。</p></div></div>
+          <label for="iteration-request" class="field-label">你想改什麼？</label>
+          <textarea id="iteration-request" class="request-input" maxlength="1000" placeholder="例如：讓小貓跳高一點"></textarea>
+          <div class="button-row"><button id="iteration-generate" class="button primary" type="button">複製修改訊息給 AI</button></div>
+          <p id="iteration-status" class="inline-status" role="status" aria-live="polite"></p>
+        </article>
 
           <section id="repair-tools" class="repair-tools" aria-label="AI 修復回饋" hidden>
 
@@ -837,6 +828,8 @@ app.innerHTML = `
 
 
 
+          </section>
+
             <div id="clipboard-fallback" class="clipboard-fallback" hidden>
 
 
@@ -850,10 +843,6 @@ app.innerHTML = `
 
 
             </div>
-
-
-
-          </section>
 
 
 
@@ -1211,11 +1200,7 @@ const copyDirectInstruction = byId<HTMLButtonElement>('copy-direct-instruction')
 
 const iterationRequest = byId<HTMLTextAreaElement>('iteration-request')
 
-const iterationPaste = byId<HTMLTextAreaElement>('iteration-paste')
-
 const iterationGenerate = byId<HTMLButtonElement>('iteration-generate')
-
-const immediatePreview = byId<HTMLInputElement>('immediate-preview')
 
 const iterationStatus = byId<HTMLParagraphElement>('iteration-status')
 
@@ -1262,24 +1247,51 @@ instruction.value = AI_INSTRUCTION
 
 editor.value = ''
 
-// Load immediate-preview state from localStorage
-try {
-  const saved = localStorage.getItem('scratch-ai-bridge.immediate-preview.v1')
-  if (saved) {
-    immediatePreview.checked = saved === 'true'
-  }
-} catch {
-  // Ignore localStorage errors (e.g., private mode)
+let latestStudentProject: CanonicalProject | null = null
+interface StudentSnapshot {
+  project: CanonicalProject
+  source: string
+  sb3: Blob
 }
+let latestStudentSnapshot: StudentSnapshot | null = null
+let previousStudentSnapshot: StudentSnapshot | null = null
+let pendingStudentSnapshot: StudentSnapshot | null = null
+let studentRevisionRequested = false
+const studentCandidateActions = byId<HTMLElement>('student-candidate-actions')
+const restoreStudentProject = byId<HTMLButtonElement>('restore-student-project')
+const iterationCard = byId<HTMLElement>('iteration-card')
+const studentDraftStatus = byId<HTMLElement>('student-draft-status')
+const studentDraftKey = 'scratch-ai-bridge.student-draft.v1'
+let studentDraftTouched = false
 
-// Save immediate-preview state on change
-immediatePreview.addEventListener('change', () => {
+function saveStudentDraft(): void {
+  studentDraftTouched = true
   try {
-    localStorage.setItem('scratch-ai-bridge.immediate-preview.v1', String(immediatePreview.checked))
+    sessionStorage.setItem(
+      studentDraftKey,
+      JSON.stringify({
+        version: 1,
+        request: projectRequest.value,
+        response: editor.value,
+        modification: iterationRequest.value,
+        guideOpen: !byId<HTMLElement>('student-ai-guide').hidden,
+        latest: latestStudentSnapshot
+          ? { project: latestStudentSnapshot.project, source: latestStudentSnapshot.source }
+          : null,
+        previous: previousStudentSnapshot
+          ? { project: previousStudentSnapshot.project, source: previousStudentSnapshot.source }
+          : null,
+        pending: pendingStudentSnapshot
+          ? { project: pendingStudentSnapshot.project, source: pendingStudentSnapshot.source }
+          : null,
+        revisionRequested: studentRevisionRequested,
+      }),
+    )
+    studentDraftStatus.textContent = '已暫存在這個分頁。關閉分頁或清除資料後可能無法找回，請下載作品。'
   } catch {
-    // Ignore localStorage errors
+    studentDraftStatus.textContent = '無法暫存這次內容；請保持分頁開啟，並下載或複製作品備份。'
   }
-})
+}
 
 const setStatus = (element: HTMLElement, text: string, kind: 'ok' | 'error' | 'neutral' = 'neutral') => {
   element.textContent = text
@@ -1682,7 +1694,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   >()
 
   const sendHardwareCommand = (command: Record<string, unknown>): void => {
-    const active: any = activeStudentAnimation
+    const active = activeStudentAnimation
 
     if (!active) return
 
@@ -1769,7 +1781,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
 
   startAnimation.className = 'button secondary'
 
-  startAnimation.textContent = '執行作品（最多 120 秒）'
+  startAnimation.textContent = '🟢 綠旗：開始執行作品'
 
   const stopAnimation = document.createElement('button')
 
@@ -1777,7 +1789,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
 
   stopAnimation.className = 'button secondary'
 
-  stopAnimation.textContent = '停止預覽'
+  stopAnimation.textContent = '🔴 停止預覽'
 
   stopAnimation.hidden = true
 
@@ -1786,6 +1798,13 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
   previewColumn.append(previewActions)
 
   let liveProject = structuredClone(project)
+  const setLiveProject = (val: CanonicalProject): void => {
+    liveProject = val
+  }
+  let patchedPreviewArchive: Blob | null = null
+  const setPatchedPreviewArchive = (val: Blob | null): void => {
+    patchedPreviewArchive = val
+  }
   let currentRawForProgress = rawSource
   let handleSelfHostedCloudMessage: (message: Record<string, unknown>) => void = () => undefined
   let stopSelfHostedCloud: (reason: string) => void = () => undefined
@@ -2101,6 +2120,9 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     livePatchDiff.hidden = false
   }
   let preparedLivePatch: ReturnType<typeof parseLiveVariablePatch> | null = null
+  const setPreparedLivePatch = (val: ReturnType<typeof parseLiveVariablePatch> | null): void => {
+    preparedLivePatch = val
+  }
   const inspectLivePatch = (): void => {
     preparedLivePatch = parseLiveVariablePatch(livePatchInput.value, liveProject, liveRevision)
     showLivePatchDiff(preparedLivePatch.summary, preparedLivePatch.operations)
@@ -2514,7 +2536,13 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     candidateDiff.className = 'live-patch-diff'
     candidateDiff.hidden = true
     let currentRaw = rawSource
+    const setCurrentRaw = (val: RawSb3Project): void => {
+      currentRaw = val
+    }
     let rawCandidate: ReturnType<typeof proposeRawLivePatch> | null = null
+    const setRawCandidate = (val: ReturnType<typeof proposeRawLivePatch> | null): void => {
+      rawCandidate = val
+    }
     let rawBusy = false
     interface RawHistoryEntry {
       project: RawSb3Project
@@ -2633,7 +2661,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
               throw new Error('預覽 VM 傳回無效的舞台復原值。')
             inverse = { ...runtime, value: before } as ScratchRuntimePatchUpdate
             liveRevision += 1
-            patchedPreviewArchive = nextArchive
+            setPatchedPreviewArchive(nextArchive)
           } else {
             await reloadPreviewArchive(nextArchive, liveRevision + 1)
             if (generation !== studentPreviewGeneration || activeStudentAnimation !== animation)
@@ -2644,16 +2672,16 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           try {
             await reloadPreviewArchive(previousArchive, liveRevision + 1)
           } catch {
-            patchedPreviewArchive = previousArchive
+            setPatchedPreviewArchive(previousArchive)
             throw new Error('預覽重載及回復失敗，請重新執行作品；原始作品仍可下載。')
           }
           throw error
         }
       } else {
-        patchedPreviewArchive = nextArchive
+        setPatchedPreviewArchive(nextArchive)
       }
       if (generation !== studentPreviewGeneration) throw new Error('預覽已切換，修改結果已捨棄。')
-      currentRaw = next
+      setCurrentRaw(next)
       currentRawForProgress = next
       return inverse
     }
@@ -2759,7 +2787,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           undoStack.push({ project: previous, runtime: null, animation: activeStudentAnimation })
           if (undoStack.length > 20) undoStack.shift()
           redoStack.length = 0
-          rawCandidate = null
+          setRawCandidate(null)
           candidateDiff.hidden = true
           acceptCandidate.hidden = true
           discardCandidate.hidden = true
@@ -2933,7 +2961,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
             try {
               await reloadPreviewArchive(previousArchive, liveRevision + 1)
             } catch (rollbackError) {
-              patchedPreviewArchive = previousArchive
+              setPatchedPreviewArchive(previousArchive)
               throw new Error(
                 `結構修改重載失敗，舊作品回復載入也失敗；可按「執行作品」重試。修改錯誤：${reloadError instanceof Error ? reloadError.message : String(reloadError)}；回復錯誤：${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`,
               )
@@ -2942,8 +2970,8 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
               `結構修改重載失敗，已重新載入舊作品（進度已重置）：${reloadError instanceof Error ? reloadError.message : String(reloadError)}`,
             )
           }
-          liveProject = validation.data
-          patchedPreviewArchive = nextArchive
+          setLiveProject(validation.data)
+          setPatchedPreviewArchive(nextArchive)
           editor.value = JSON.stringify(liveProject, null, 2)
           liveUndoStack.push({
             projectBefore,
@@ -2955,7 +2983,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           })
           liveRedoStack.length = 0
           if (liveUndoStack.length > 20) liveUndoStack.shift()
-          preparedLivePatch = null
+          setPreparedLivePatch(null)
           livePatchDiff.hidden = true
           livePatchStatus.dataset.kind = 'ok'
           livePatchStatus.textContent = `已套用「${patch.summary}」。作品已安全重載；遊戲進度已重置，可復原。`
@@ -3023,7 +3051,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
               property: change.property,
               value: change.value,
             }
-          return { op: 'set-stage-property', property: change.property, value: change.value as number }
+          return { op: 'set-stage-property', property: change.property, value: change.value }
         })
         liveUndoStack.push({
           projectBefore,
@@ -3035,16 +3063,16 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
         })
         liveRedoStack.length = 0
         if (liveUndoStack.length > 20) liveUndoStack.shift()
-        liveProject = nextProject
-        patchedPreviewArchive = nextArchive
+        setLiveProject(nextProject)
+        setPatchedPreviewArchive(nextArchive)
         liveRevision += 1
         editor.value = JSON.stringify(liveProject, null, 2)
-        preparedLivePatch = null
+        setPreparedLivePatch(null)
         livePatchDiff.hidden = true
         livePatchStatus.dataset.kind = 'ok'
         livePatchStatus.textContent = `已即時套用「${patch.summary}」。作品欄已同步，可繼續遊玩或復原。`
       } catch (error) {
-        preparedLivePatch = null
+        setPreparedLivePatch(null)
         livePatchStatus.dataset.kind = 'error'
         livePatchStatus.textContent = error instanceof Error ? error.message : String(error)
       } finally {
@@ -3065,12 +3093,12 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           const currentProject = liveProject
           const currentArchive = patchedPreviewArchive ?? (await compileProjectToBlob(currentProject))
           const previousArchive = await compileProjectToBlob(last.projectBefore)
-          liveProject = last.projectBefore
+          setLiveProject(last.projectBefore)
           editor.value = JSON.stringify(liveProject, null, 2)
           try {
             await reloadPreviewArchive(previousArchive, liveRevision + 1)
           } catch (reloadError) {
-            liveProject = currentProject
+            setLiveProject(currentProject)
             editor.value = JSON.stringify(liveProject, null, 2)
             try {
               await reloadPreviewArchive(currentArchive, liveRevision + 1)
@@ -3084,8 +3112,8 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           liveUndoStack.pop()
           liveRedoStack.push(last)
           if (liveRedoStack.length > 20) liveRedoStack.shift()
-          patchedPreviewArchive = previousArchive
-          preparedLivePatch = null
+          setPatchedPreviewArchive(previousArchive)
+          setPreparedLivePatch(null)
           livePatchDiff.hidden = true
           livePatchStatus.dataset.kind = 'ok'
           livePatchStatus.textContent = `已復原「${last.summary}」。遊戲已重載，進度已重置；revision ${liveRevision}。`
@@ -3097,11 +3125,11 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
         liveUndoStack.pop()
         liveRedoStack.push(last)
         if (liveRedoStack.length > 20) liveRedoStack.shift()
-        liveProject = last.projectBefore
-        patchedPreviewArchive = previousArchive
+        setLiveProject(last.projectBefore)
+        setPatchedPreviewArchive(previousArchive)
         liveRevision += 1
         editor.value = JSON.stringify(liveProject, null, 2)
-        preparedLivePatch = null
+        setPreparedLivePatch(null)
         livePatchDiff.hidden = true
         livePatchStatus.dataset.kind = 'ok'
         livePatchStatus.textContent = `已復原「${last.summary}」。revision ${liveRevision}。`
@@ -3125,32 +3153,32 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           const currentProject = liveProject
           const currentArchive = patchedPreviewArchive ?? (await compileProjectToBlob(currentProject))
           const redoArchive = await compileProjectToBlob(last.projectAfter)
-          liveProject = last.projectAfter
+          setLiveProject(last.projectAfter)
           editor.value = JSON.stringify(liveProject, null, 2)
           try {
             await reloadPreviewArchive(redoArchive, liveRevision + 1)
           } catch (reloadError) {
-            liveProject = currentProject
+            setLiveProject(currentProject)
             editor.value = JSON.stringify(liveProject, null, 2)
             await reloadPreviewArchive(currentArchive, liveRevision + 1)
             throw reloadError
           }
-          patchedPreviewArchive = redoArchive
+          setPatchedPreviewArchive(redoArchive)
         } else {
           const updates = last.runtimeRedo
           if (!updates) throw new Error('找不到可重做的 runtime patch 資料。')
           const response = await requestRuntimePatch(updates, liveRevision)
           if (response.ok !== true)
             throw new Error(typeof response.error === 'string' ? response.error : '無法重做修改。')
-          liveProject = last.projectAfter
-          patchedPreviewArchive = await compileProjectToBlob(liveProject)
+          setLiveProject(last.projectAfter)
+          setPatchedPreviewArchive(await compileProjectToBlob(liveProject))
           liveRevision += 1
           editor.value = JSON.stringify(liveProject, null, 2)
         }
         liveRedoStack.pop()
         liveUndoStack.push(last)
         if (liveUndoStack.length > 20) liveUndoStack.shift()
-        preparedLivePatch = null
+        setPreparedLivePatch(null)
         livePatchDiff.hidden = true
         livePatchStatus.dataset.kind = 'ok'
         livePatchStatus.textContent = last.requiresReload
@@ -3359,6 +3387,9 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     expiryTimer: number | null
   }
   let cloudState: SelfHostedCloudState | null = null
+  const setCloudState = (val: SelfHostedCloudState | null): void => {
+    cloudState = val
+  }
   let cloudStarting: {
     animation: ActiveStudentAnimation
     controller: AbortController
@@ -3397,7 +3428,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     state.writing = true
     try {
       while (cloudIsCurrent(state) && state.pending.size > 0) {
-        const next = state.pending.entries().next().value as [string, string | number] | undefined
+        const next = state.pending.entries().next().value
         if (!next) break
         const [name, value] = next
         state.pending.delete(name)
@@ -3581,7 +3612,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           response.expiresAt <= Date.now()
         )
           throw new Error(typeof response.error === 'string' ? response.error : '無法連接雲端變數。')
-        const names = response.names as string[]
+        const names = response.names
         const initial: { name: string; etag: string; value: string | number }[] = []
         for (const name of names) {
           const remote = await getSyncedSave(connection, selfHostedCloudKey(projectId, name))
@@ -3594,7 +3625,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
         }
         if (
           controller.signal.aborted ||
-          cloudStarting?.controller !== controller ||
+          cloudStarting.controller !== controller ||
           activeStudentAnimation !== animation ||
           liveRevision !== revision ||
           progressRevision() !== projectId ||
@@ -3622,7 +3653,7 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           pollTimer: null,
           expiryTimer: null,
         }
-        cloudState = state
+        setCloudState(state)
         cloudStarting = null
         for (const item of initial) {
           if (state.pending.has(item.name)) continue
@@ -3982,8 +4013,6 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
       error: error instanceof Error ? error : new Error('無法準備損壞素材的動畫示意圖。'),
     }))
 
-  let patchedPreviewArchive: Blob | null = null
-
   let animationStarting = false
 
   startAnimation.addEventListener('click', () => {
@@ -4153,9 +4182,6 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           if (generation !== studentPreviewGeneration) return
 
           if (timer !== null) window.clearTimeout(timer)
-
-          // 移除 120 秒自動停止限制
-          // timer = window.setTimeout(() => animation.finish('動畫預覽已達 120 秒上限，已自動停止。'), 120_000)
 
           setLivePatchReady(true)
 
@@ -4417,6 +4443,14 @@ const clearStudentResult = (): void => {
 
   studentResult.hidden = true
 
+  pendingStudentSnapshot = null
+
+  studentCandidateActions.hidden = true
+
+  restoreStudentProject.hidden = latestStudentSnapshot === null
+
+  iterationCard.hidden = true
+
   studentResult.removeAttribute('data-kind')
 
   studentResultTitle.textContent = ''
@@ -4588,9 +4622,7 @@ const updateStudentInstruction = (): void => {
     ? createGameDesignDiscussionInstruction(request, gameGenre.value as GameGenreProfile)
     : AI_INSTRUCTION
   copyStatus.removeAttribute('data-kind')
-  copyStatus.textContent = request
-    ? `精簡討論指令 ${estimatePromptSize(instruction.value).characters.toLocaleString()} 字元；不含積木目錄或 JSON 規格。`
-    : '先寫下作品想法，或選一個範例。'
+  copyStatus.textContent = request ? '想法準備好了！按「複製製作訊息給 AI」。' : '先寫下作品想法，或選一個範例。'
   buildPromptStatus.removeAttribute('data-kind')
   if (request) {
     const prompt = createStudentProjectInstruction(request, {
@@ -4607,6 +4639,7 @@ const updateStudentInstruction = (): void => {
 }
 
 projectRequest.addEventListener('input', () => {
+  saveStudentDraft()
   updateStudentInstruction()
   setProgress(1)
 })
@@ -4628,10 +4661,10 @@ for (const example of document.querySelectorAll<HTMLButtonElement>('.idea-chip')
 
 const copyStudentPrompt = (prompt: string, status: HTMLParagraphElement, success: string): void => {
   const size = estimatePromptSize(prompt)
-  void navigator.clipboard
-    .writeText(prompt)
+  void Promise.resolve()
+    .then(() => navigator.clipboard.writeText(prompt))
     .then(() => {
-      status.textContent = `${success}（${size.characters.toLocaleString()} 字元，約 ${size.estimatedTokens.toLocaleString()} tokens；token 數為粗估）`
+      status.textContent = success
       status.dataset.kind = 'ok'
       instruction.value = prompt
       setProgress(2)
@@ -4650,6 +4683,7 @@ const copyStudentPrompt = (prompt: string, status: HTMLParagraphElement, success
 copyDesignInstruction.addEventListener('click', () => {
   const request = projectRequest.value.trim()
   if (!request) return
+  byId<HTMLDetailsElement>('optional-game-brief').open = true
   copyStudentPrompt(
     createGameDesignDiscussionInstruction(request, gameGenre.value as GameGenreProfile),
     copyStatus,
@@ -4673,118 +4707,49 @@ copyBuildInstruction.addEventListener('click', () => {
 copyDirectInstruction.addEventListener('click', () => {
   const request = projectRequest.value.trim()
   if (!request) return
+  studentRevisionRequested = false
+  byId<HTMLElement>('student-ai-guide').hidden = false
+  saveStudentDraft()
   copyStudentPrompt(
     createStudentProjectInstruction(request, { genre: gameGenre.value as GameGenreProfile }),
     copyStatus,
-    '已複製完整製作指令；AI 會先自行規劃核心循環、挑戰、回饋、進展與勝敗',
+    '複製好了！打開 AI 網頁貼上並送出，等回答完成後複製回這個網頁。',
   )
 })
 
-// AI Iteration Panel Event
-iterationGenerate.addEventListener('click', async () => {
-  const request = iterationRequest.value.trim()
-  const paste = iterationPaste.value.trim()
-  const isImmediatePreview = (document.getElementById('immediate-preview') as HTMLInputElement).checked
+byId<HTMLButtonElement>('student-ai-answer-ready').addEventListener('click', () => {
+  setProgress(3)
+  editor.focus()
+  editor.scrollIntoView({ behavior: 'smooth', block: 'center' })
+})
 
-  if (!request && !paste) {
-    iterationStatus.textContent = '請輸入修改需求或貼上 AI 產生的版本'
+iterationRequest.addEventListener('input', saveStudentDraft)
+
+iterationGenerate.addEventListener('click', () => {
+  const request = iterationRequest.value.trim()
+  if (!request || !latestStudentProject) {
+    iterationStatus.textContent = '請先完成作品，再寫下想修改的地方。'
     iterationStatus.dataset.kind = 'error'
     return
   }
-
-  iterationStatus.textContent = '正在請 AI 生成新版作品...'
+  const prompt = createStudentIterationInstruction(
+    JSON.stringify(latestStudentProject),
+    request,
+    projectRequest.value.trim(),
+  )
+  void copyTextWithFallback(prompt, '已複製修改訊息。請貼到原本的 AI 對話，再把新回答貼回上方檢查。')
+  studentRevisionRequested = true
+  byId<HTMLElement>('student-ai-guide').hidden = false
+  setProgress(2)
+  saveStudentDraft()
+  iterationStatus.textContent = '請將修改訊息貼給 AI，然後把 AI 的新回答貼回上方。原本的下載作品不會被覆蓋。'
   iterationStatus.dataset.kind = 'neutral'
-
-  try {
-    let prompt: string
-
-    if (paste) {
-      // 多輪迭代：使用 currentProjectJson + modificationRequest + conversationHistory
-      // 從 iteration-paste 中提取最近的 request 作為conversation history
-      const conversationHistory = request ? [`User: ${request}`] : []
-      prompt = createMultiRoundIterationInstruction({
-        currentProjectJson: paste,
-        modificationRequest: request,
-        conversationHistory,
-        immediatePreview: isImmediatePreview,
-      })
-    } else {
-      // 新作品：只使用 request
-      prompt = createStudentProjectInstruction(request, { genre: gameGenre.value as GameGenreProfile })
-    }
-
-    const controller = new AbortController()
-
-    const response = await fetch('http://localhost:8000/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'qwen3-coder-next-80b-local',
-        messages: [{ role: 'user', content: prompt }],
-        signal: controller.signal,
-      }),
-    })
-
-    if (!response.ok) {
-      throw new Error(`AI 回應失敗：${response.status}`)
-    }
-
-    const data = await response.json()
-    const content = data.choices[0].message.content
-
-    // 解析 AI 回應中的 JSON
-    const match = content.match(/```json\s*([\s\S]*?)\s*```/)
-    if (!match) {
-      throw new Error('AI 回應不含 JSON')
-    }
-
-    const newProject = JSON.parse(match[1])
-
-    // 驗證作品
-    validateCanonicalProject(newProject)
-
-    // 根據 immediate-preview 開關決定行為
-    if (isImmediatePreview) {
-      // 開啟：直接載入到 VM 預覽
-      try {
-        await bootstrapVm.loadProject(newProject)
-        iterationStatus.textContent = '新版作品已載入預覽！'
-        iterationStatus.dataset.kind = 'ok'
-      } catch (previewError) {
-        // 預覽失敗：顯示明確錯誤訊息並保留 JSON 貼上
-        const errorMessage = `❌ 預覽失敗：${previewError instanceof Error ? previewError.message : String(previewError)}（已貼上 JSON，請手動貼回）`
-        iterationStatus.textContent = errorMessage
-        iterationStatus.dataset.kind = 'error'
-        
-        // 保留貼回 JSON 作為備用方案
-        iterationPaste.value = JSON.stringify(newProject, null, 2)
-      }
-    } else {
-      // 關閉：保留現有「下載 + 貼上 JSON」流程
-      // 編譯成 SB3
-      const sb3Blob = await compileCanonicalProjectToSb3(newProject)
-      const sb3Url = URL.createObjectURL(sb3Blob)
-      const a = document.createElement('a')
-      a.href = sb3Url
-      a.download = `project-iteration-${Date.now()}.sb3`
-      a.click()
-
-      iterationStatus.textContent = '新版作品已下載！可貼上到下方繼續修改（多輪迭代）。'
-      iterationStatus.dataset.kind = 'ok'
-
-      // 預設貼上到 iteration-paste 以支援多輪迭代
-      iterationPaste.value = JSON.stringify(newProject, null, 2)
-    }
-  } catch (error) {
-    iterationStatus.textContent = `錯誤：${error instanceof Error ? error.message : String(error)}`
-    iterationStatus.dataset.kind = 'error'
-  }
 })
 
-const fragmentProjectName = (): string =>
-  projectFragmentSession.project?.name ||
-  gameBrief.value.match(/(?:遊戲名稱|作品名稱|名稱)\s*[:：]\s*([^\n，。]+)/)?.[1]?.trim() ||
-  'Scratch 遊戲'
+const fragmentProjectName = (): string => {
+  const briefMatch = /(?:遊戲名稱|作品名稱|名稱)\s*[:：]\s*([^\n，。]+)/.exec(gameBrief.value)
+  return projectFragmentSession.project?.name ?? briefMatch?.[1]?.trim() ?? 'Scratch 遊戲'
+}
 
 const fragmentPrompt = (): string => {
   const project = projectFragmentSession.project
@@ -4860,6 +4825,7 @@ byId<HTMLButtonElement>('reset-fragments').addEventListener('click', () => {
   fragmentEditor.value = ''
   fragmentStatus.dataset.kind = 'ok'
   fragmentStatus.textContent = '片段組合與完整作品欄已清空。'
+  saveStudentDraft()
 })
 
 fragmentKind.addEventListener('change', () => {
@@ -4868,6 +4834,8 @@ fragmentKind.addEventListener('change', () => {
 })
 
 byId<HTMLButtonElement>('load-sample').addEventListener('click', () => {
+  studentDraftTouched = true
+  studentRevisionRequested = false
   editor.value = JSON.stringify(sampleProject, null, 2)
 
   repairUndoSnapshot = null
@@ -4879,6 +4847,7 @@ byId<HTMLButtonElement>('load-sample').addEventListener('click', () => {
   setProgress(3)
 
   setStatus(generateStatus, '已載入平台遊戲範例。按「檢查並製作 Scratch」即可試用。', 'ok')
+  saveStudentDraft()
 })
 
 byId<HTMLButtonElement>('repair').addEventListener('click', () => {
@@ -5288,20 +5257,43 @@ const buildStudentProject = async (): Promise<void> => {
       },
     })
 
-    downloadStudentValidationReport.hidden = false
+    if (editor.value !== sourceResponse) {
+      setStatus(generateStatus, '檢查時內容已變更，請再按一次檢查。', 'error')
+      setProgress(3)
+      return
+    }
 
-    download(sb3, `${validation.data.name.replace(/[^\w\-\u4e00-\u9fff]+/g, '-') || 'scratch-project'}.sb3`)
+    downloadStudentValidationReport.hidden = false
+    const candidate = { project: validation.data, source: sourceResponse, sb3 }
+    const isCandidate = studentRevisionRequested && latestStudentSnapshot !== null
+    if (isCandidate) {
+      pendingStudentSnapshot = candidate
+      studentCandidateActions.hidden = false
+      restoreStudentProject.hidden = true
+      iterationCard.hidden = true
+    } else {
+      download(sb3, `${validation.data.name.replace(/[^\w\-\u4e00-\u9fff]+/g, '-') || 'scratch-project'}.sb3`)
+      previousStudentSnapshot = latestStudentSnapshot
+      latestStudentSnapshot = candidate
+      latestStudentProject = validation.data
+      restoreStudentProject.hidden = previousStudentSnapshot === null
+      iterationCard.hidden = false
+    }
 
     repairUndoSnapshot = null
 
     clearRepairContext()
 
-    setStatus(generateStatus, '完成！Scratch 專案已開始下載。', 'ok')
+    setStatus(
+      generateStatus,
+      isCandidate ? '新版已準備好，請先試玩，再決定是否使用。' : '完成！Scratch 專案已開始下載。',
+      'ok',
+    )
 
     setStudentResult(
-      `已完成「${validation.data.name}」`,
+      isCandidate ? `新版候選「${validation.data.name}」` : `已完成「${validation.data.name}」`,
 
-      `作品包含 ${validation.data.sprites.length} 個角色。${describeAutomaticVisuals(automaticVisuals)}${describeOfflineCloudVariables(validation.data)}${latestRequirementCoverage ? '下方需求完成度是 AI 自述，Bridge 已檢查引用位置，但不代表已執行驗證。' : 'AI 回覆未提供需求完成度清單；格式與編譯通過不代表原始需求全數完成。'}請開啟下載的 .sb3 檔案繼續創作；本次驗證報告也可以下載。`,
+      `作品包含 ${validation.data.sprites.length} 個角色。${describeAutomaticVisuals(automaticVisuals)}${describeOfflineCloudVariables(validation.data)}${latestRequirementCoverage ? '下方需求完成度是 AI 自述，Bridge 已檢查引用位置，但不代表已執行驗證。' : 'AI 回覆未提供需求完成度清單；格式與編譯通過不代表原始需求全數完成。'}${isCandidate ? '先試玩，再選擇是否使用新版。' : '請開啟下載的 .sb3 檔案繼續創作。'}本次驗證報告也可以下載。`,
 
       'success',
     )
@@ -5331,6 +5323,7 @@ const buildStudentProject = async (): Promise<void> => {
     }
 
     renderStudentPreview(validation.data, sb3)
+    saveStudentDraft()
   } catch (compileError) {
     const compileFailureStage = compileError instanceof ProjectCompileError ? compileError.stage : 'unknown'
 
@@ -5371,12 +5364,82 @@ const buildStudentProject = async (): Promise<void> => {
   }
 }
 
+byId<HTMLButtonElement>('accept-student-candidate').addEventListener('click', () => {
+  if (!pendingStudentSnapshot) return
+  if (editor.value !== pendingStudentSnapshot.source) {
+    setStatus(generateStatus, '回答已變更，請重新檢查後再使用新版。', 'error')
+    return
+  }
+  previousStudentSnapshot = latestStudentSnapshot
+  latestStudentSnapshot = pendingStudentSnapshot
+  latestStudentProject = pendingStudentSnapshot.project
+  pendingStudentSnapshot = null
+  studentRevisionRequested = false
+  studentCandidateActions.hidden = true
+  iterationCard.hidden = false
+  restoreStudentProject.hidden = previousStudentSnapshot === null
+  setStatus(generateStatus, '已使用新版，Scratch 作品已開始下載。', 'ok')
+  studentResultTitle.textContent = `已使用「${latestStudentProject.name}」`
+  studentResultMessage.textContent = '新版已使用，原本下載的作品仍保留在你的裝置。'
+  saveStudentDraft()
+  download(
+    latestStudentSnapshot.sb3,
+    `${latestStudentProject.name.replace(/[^\w\-\u4e00-\u9fff]+/g, '-') || 'scratch-project'}.sb3`,
+  )
+})
+
+byId<HTMLButtonElement>('discard-student-candidate').addEventListener('click', () => {
+  if (!latestStudentSnapshot) return
+  pendingStudentSnapshot = null
+  studentRevisionRequested = false
+  studentCandidateActions.hidden = true
+  latestStudentProject = latestStudentSnapshot.project
+  editor.value = latestStudentSnapshot.source
+  downloadStudentValidationReport.hidden = true
+  clearRepairContext()
+  setStatus(generateStatus, '已回到原本的作品。', 'ok')
+  setStudentResult(`已回到「${latestStudentProject.name}」`, '可以繼續試玩原本的作品。', 'success')
+  renderStudentPreview(latestStudentProject, latestStudentSnapshot.sb3)
+  iterationCard.hidden = false
+  restoreStudentProject.hidden = previousStudentSnapshot === null
+  saveStudentDraft()
+})
+
+restoreStudentProject.addEventListener('click', () => {
+  const snapshot = studentResult.hidden ? latestStudentSnapshot : previousStudentSnapshot
+  if (!snapshot) return
+  const current = latestStudentSnapshot
+  latestStudentSnapshot = snapshot
+  previousStudentSnapshot = current === snapshot ? previousStudentSnapshot : current
+  latestStudentProject = snapshot.project
+  pendingStudentSnapshot = null
+  studentRevisionRequested = false
+  studentCandidateActions.hidden = true
+  downloadStudentValidationReport.hidden = true
+  editor.value = snapshot.source
+  clearRepairContext()
+  setStatus(generateStatus, '已回到上一個可用作品。', 'ok')
+  setStudentResult(`已回到「${snapshot.project.name}」`, '可以繼續試玩，或重新檢查並下載這個作品。', 'success')
+  renderStudentPreview(snapshot.project, snapshot.sb3)
+  iterationCard.hidden = false
+  restoreStudentProject.hidden = previousStudentSnapshot === null
+  setProgress(4)
+  saveStudentDraft()
+})
+
 byId<HTMLButtonElement>('compile').addEventListener('click', () => {
   void compileProject()
 })
 
-byId<HTMLButtonElement>('student-build').addEventListener('click', () => {
-  void buildStudentProject()
+const studentBuildButton = byId<HTMLButtonElement>('student-build')
+studentBuildButton.addEventListener('click', () => {
+  if (studentBuildButton.disabled) return
+  studentBuildButton.disabled = true
+  editor.readOnly = true
+  void buildStudentProject().finally(() => {
+    studentBuildButton.disabled = false
+    editor.readOnly = false
+  })
 })
 
 downloadStudentValidationReport.addEventListener('click', () => {
@@ -5404,7 +5467,8 @@ copyRepairPrompt.addEventListener('click', () => {
     latestRepairContext.repeatedIssues,
   )
 
-  void copyTextWithFallback(prompt, '已複製修正訊息；請貼回 AI 對話。')
+  const handoff = request ? `學生原本的作品想法：${request}\n\n${prompt}` : prompt
+  void copyTextWithFallback(handoff, '已複製修正訊息；請貼回 AI 對話。')
 })
 
 copyRepairReport.addEventListener('click', () => {
@@ -5450,6 +5514,7 @@ undoRepair.addEventListener('click', () => {
 })
 
 editor.addEventListener('input', () => {
+  saveStudentDraft()
   repairUndoSnapshot = null
 
   clearRepairContext()
@@ -6523,6 +6588,68 @@ downloadBlockMapping.addEventListener('click', () => {
     'canonical-block-mapping.json',
   )
 })
+
+const restoreStudentDraft = async (): Promise<void> => {
+  try {
+    const text = sessionStorage.getItem(studentDraftKey)
+    if (!text) return
+    const draft = JSON.parse(text) as {
+      version?: unknown
+      request?: unknown
+      response?: unknown
+      modification?: unknown
+      guideOpen?: unknown
+      revisionRequested?: unknown
+      latest?: { project?: unknown; source?: unknown } | null
+      previous?: { project?: unknown; source?: unknown } | null
+      pending?: { project?: unknown; source?: unknown } | null
+    }
+    if (draft.version !== 1 || typeof draft.request !== 'string' || typeof draft.response !== 'string') return
+    const readSnapshot = async (item: typeof draft.latest): Promise<StudentSnapshot | null> => {
+      if (!item || typeof item.source !== 'string') return null
+      const checked = validateCanonicalProject(item.project)
+      if (!checked.valid || validateCanonicalSemantics(checked.data).some((issue) => issue.severity === 'error'))
+        return null
+      return { project: checked.data, source: item.source, sb3: await compileProjectToBlob(checked.data) }
+    }
+    const [latest, previous, pending] = await Promise.all([
+      readSnapshot(draft.latest),
+      readSnapshot(draft.previous),
+      readSnapshot(draft.pending),
+    ])
+    if (studentDraftTouched) return
+    projectRequest.value = draft.request
+    editor.value = draft.response
+    byId<HTMLElement>('student-ai-guide').hidden = draft.guideOpen !== true
+    iterationRequest.value = typeof draft.modification === 'string' ? draft.modification : ''
+    latestStudentSnapshot = latest
+    previousStudentSnapshot = previous
+    pendingStudentSnapshot = pending
+    latestStudentProject = latest?.project ?? null
+    studentRevisionRequested = draft.revisionRequested === true
+    updateStudentInstruction()
+    const visible = pending?.source === editor.value ? pending : latest?.source === editor.value ? latest : null
+    if (visible) {
+      setStudentResult(
+        pending === visible ? '已恢復未確認的新版' : '已恢復上一個作品',
+        '可以繼續試玩；請記得下載作品。',
+        'success',
+      )
+      renderStudentPreview(visible.project, visible.sb3)
+      studentCandidateActions.hidden = pending !== visible
+      iterationCard.hidden = pending === visible
+      restoreStudentProject.hidden = pending === visible || previous === null
+      setProgress(4)
+    } else {
+      restoreStudentProject.hidden = latest === null
+      setProgress(editor.value.trim() ? 3 : projectRequest.value.trim() ? 2 : 1)
+    }
+    studentDraftStatus.textContent = '已從這個分頁恢復作品。關閉分頁或清除資料後可能無法找回，請下載作品。'
+  } catch {
+    studentDraftStatus.textContent = '無法恢復分頁暫存；請使用下載的作品或重新貼上 AI 回答。'
+  }
+}
+void restoreStudentDraft()
 
 const main = async (): Promise<void> => {
   // Fail early if the official VM cannot initialize in this browser/build.

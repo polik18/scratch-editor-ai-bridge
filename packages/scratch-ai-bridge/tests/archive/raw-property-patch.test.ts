@@ -253,7 +253,9 @@ describe('raw SB3 property patches', () => {
     expect(blockProposal.requiresVmValidation).toBe(true)
     const patchedBytes = await exportLosslessSb3(blockProposal.project)
     const patchedReloaded = await importLosslessSb3(patchedBytes)
-    const patchedTargets = patchedReloaded.projectJson.targets as { blocks: Record<string, Record<string, unknown>> }[]
+    const patchedTargets = patchedReloaded.projectJson.targets as {
+      blocks: Record<string, Record<string, unknown>>
+    }[]
     expect(patchedTargets[1]?.blocks.move?.vendorExtra).toEqual({ preserve: true })
     expect(patchedReloaded.entries.find((e) => e.name === assetFile)?.sha256).toBe(
       original.entries.find((e) => e.name === assetFile)?.sha256,

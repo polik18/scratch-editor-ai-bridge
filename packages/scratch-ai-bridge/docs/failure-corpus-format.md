@@ -6,38 +6,38 @@
 
 ```typescript
 interface FailureCase {
-  id: string;  // 唯一識別碼，例如 f-001
-  title: string;
-  description: string;
-  
+  id: string // 唯一識別碼，例如 f-001
+  title: string
+  description: string
+
   // 輸入
   input: {
-    type: 'sb3' | 'design-json';
-    path: string;
-    hash: string;
-  };
-  
+    type: 'sb3' | 'design-json'
+    path: string
+    hash: string
+  }
+
   // 錯誤訊息
   error: {
-    message: string;
-    stack?: string;
-  };
-  
+    message: string
+    stack?: string
+  }
+
   // 診斷
   diagnostic: {
-    type: 'error' | 'warning';
-    stage: ProjectCompileFailureStage;
-    code: string;
-    message: string;
-    suggestion: string;
-    location?: DiagnosticLocation;
-  };
-  
+    type: 'error' | 'warning'
+    stage: ProjectCompileFailureStage
+    code: string
+    message: string
+    suggestion: string
+    location?: DiagnosticLocation
+  }
+
   // 修正提示
   fix?: {
-    description: string;
-    example?: string;
-  };
+    description: string
+    example?: string
+  }
 }
 ```
 

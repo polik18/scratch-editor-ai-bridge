@@ -1,12 +1,11 @@
 /**
  * Diagnostic converter - Convert internal diagnostics to student-friendly format
- * 
+ *
  * This module provides functions to:
  * - Convert internal AnalysisDiagnostic to StudentDiagnostic
  * - Map diagnostic codes to student-friendly messages
  * - Add category and severity metadata
  */
-
 import type { AnalysisDiagnostic } from '../analyzer/analyzer'
 import type { StudentDiagnostic } from './catalog'
 import { createStudentDiagnostic } from './messages'
@@ -20,7 +19,7 @@ const DIAGNOSTIC_CODE_MAP: Record<string, string> = {
   'monitor-list-missing': 'undefined-variable',
   'asset-missing-archive-entry': 'missing-costume',
   'asset-checksum-mismatch': 'missing-costume',
-  'unsupported-extension-block': 'unsupported-block'
+  'unsupported-extension-block': 'unsupported-block',
 }
 
 /**
@@ -31,11 +30,11 @@ const DIAGNOSTIC_CODE_MAP: Record<string, string> = {
 export function convertToStudentDiagnostic(diagnostic: AnalysisDiagnostic): StudentDiagnostic | undefined {
   // Map code to student diagnostic type
   const type = DIAGNOSTIC_CODE_MAP[diagnostic.code]
-  
+
   if (type) {
     // Create student diagnostic with parameters
     const params: Record<string, string> = {}
-    
+
     if (diagnostic.target) {
       params.name = diagnostic.target
     }
@@ -45,10 +44,10 @@ export function convertToStudentDiagnostic(diagnostic: AnalysisDiagnostic): Stud
     if (diagnostic.assetName) {
       params.name = diagnostic.assetName
     }
-    
+
     return createStudentDiagnostic(type, params)
   }
-  
+
   // For unmapped diagnostics, return undefined
   // These will be handled separately
   return undefined
@@ -61,19 +60,20 @@ export function convertToStudentDiagnostic(diagnostic: AnalysisDiagnostic): Stud
  */
 export function convertDiagnosticsToStudent(diagnostics: AnalysisDiagnostic[]): StudentDiagnostic[] {
   const result: StudentDiagnostic[] = []
-  
+
   for (const diagnostic of diagnostics) {
     const studentDiagnostic = convertToStudentDiagnostic(diagnostic)
     if (studentDiagnostic) {
       result.push(studentDiagnostic)
     }
   }
-  
+
   return result
 }
 
 /**
  * Get all diagnostic codes that can be converted
+ * @returns Array of supported internal diagnostic error codes
  */
 export function getConvertibleDiagnosticCodes(): string[] {
   return Object.keys(DIAGNOSTIC_CODE_MAP)

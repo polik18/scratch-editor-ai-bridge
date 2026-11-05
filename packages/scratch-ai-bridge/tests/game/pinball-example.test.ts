@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { CanonicalProject } from '../../src/core/ir/types'
 import { compileCanonicalProjectToSb3 } from '../../src/core/compiler/compiler'
+import type { CanonicalProject } from '../../src/core/ir/types'
 import { getVariable, loadSb3 } from '../../src/scratch/vm'
 
 interface TestTarget {

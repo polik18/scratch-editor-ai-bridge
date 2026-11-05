@@ -28,8 +28,9 @@ const result = async (response: Response) => {
 
 describe('loopback MCP HTTP for SSH tunnels', () => {
   it('rejects unauthorized and browser requests and routes MCP tool calls', async () => {
+    const mockCall = vi.fn().mockResolvedValue({ instruction: 'test project' })
     const relay = {
-      call: vi.fn().mockResolvedValue({ instruction: 'test project' }),
+      call: mockCall,
     } as unknown as BrowserBridgeRelay
     const server = new TunnelMcpHttp(relay, token)
     const port = await server.listen(0)
@@ -74,7 +75,7 @@ describe('loopback MCP HTTP for SSH tunnels', () => {
         }),
       )
       expect(JSON.stringify(called)).toContain('test project')
-      expect(relay.call).toHaveBeenCalledWith('inspect_project', {})
+      expect(mockCall).toHaveBeenCalledWith('inspect_project', {})
     } finally {
       await server.close()
     }

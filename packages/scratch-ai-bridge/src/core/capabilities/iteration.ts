@@ -2,13 +2,13 @@
 // Usage: import { createProjectIterationInstruction, createMultiRoundIterationInstruction } from '@scratch/scratch-ai-bridge/core/capabilities/iteration';
 
 export interface ProjectIterationInstructionParams {
-  currentProjectName: string;
-  currentProjectJson: string;
-  modificationRequest: string;
+  currentProjectName: string
+  currentProjectJson: string
+  modificationRequest: string
 }
 
 export function createProjectIterationInstruction(params: ProjectIterationInstructionParams): string {
-  const { currentProjectName, currentProjectJson, modificationRequest } = params;
+  const { currentProjectName, currentProjectJson, modificationRequest } = params
 
   return `# Scratch AI Bridge - Project Iteration Instruction
 
@@ -95,30 +95,31 @@ Return a complete Scratch 3.0 project JSON with the following structure:
 - Return ONLY the complete project JSON, nothing else
 
 Please modify the project now.
-`;
+`
 }
 
 // Multi-round iteration instruction with conversation history
 export interface MultiRoundIterationParams {
-  conversationHistory: string[];
-  currentProjectJson: string;
-  modificationRequest: string;
-  immediatePreview: boolean;
+  conversationHistory: string[]
+  currentProjectJson: string
+  modificationRequest: string
+  immediatePreview: boolean
 }
 
 export function createMultiRoundIterationInstruction(params: MultiRoundIterationParams): string {
-  const { conversationHistory, currentProjectJson, modificationRequest, immediatePreview } = params;
+  const { conversationHistory, currentProjectJson, modificationRequest, immediatePreview } = params
 
   // Use last 3 rounds for context
-  const recentHistory = conversationHistory.slice(-3);
-  const historySummary = recentHistory.length > 0
-    ? `## Conversation History (最近 ${recentHistory.length} 輪)\n${recentHistory.join('\n\n')}\n`
-    : '';
+  const recentHistory = conversationHistory.slice(-3)
+  const historySummary =
+    recentHistory.length > 0
+      ? `## Conversation History (最近 ${recentHistory.length} 輪)\n${recentHistory.join('\n\n')}\n`
+      : ''
 
   // Immediate preview提示
   const immediatePreviewNote = immediatePreview
     ? '\n<IMPORTANT: 此版本已支援立即預覽，請直接套用，無需手動貼回>\n'
-    : '';
+    : ''
 
   return `# Scratch AI Bridge - Multi-Round Iteration Instruction
 
@@ -196,5 +197,5 @@ Return a complete Scratch 3.0 project JSON with the following structure:
 - Return ONLY the complete project JSON, nothing else
 
 Please modify the project now.
-`;
+`
 }

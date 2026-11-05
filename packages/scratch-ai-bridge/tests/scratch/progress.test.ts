@@ -20,10 +20,16 @@ describe('Scratch progress variables and lists', () => {
       await loadSb3(await compileCanonicalProjectToSb3(project), vm)
       const snapshot = captureScratchProgress(vm)
       const targets = captureScratchTargetProgress(vm)
-      const player = targets.find((target) => target.name === 'Player')!
+      const player = targets.find((target) => target.name === 'Player')
       expect(snapshot.some((entry) => entry.name === 'private-cloud')).toBe(false)
-      const score = snapshot.find((entry) => entry.name === 'globalScore')!
-      const list = snapshot.find((entry) => entry.name === 'highScores')!
+      const score = snapshot.find((entry) => entry.name === 'globalScore')
+      const list = snapshot.find((entry) => entry.name === 'highScores')
+      expect(player).toBeDefined()
+      expect(score).toBeDefined()
+      expect(list).toBeDefined()
+      if (!player || !score || !list) {
+        throw new Error('Required snapshot entry was not found')
+      }
       expect(list.type).toBe('list')
       setRuntimePatchValues(vm, [
         { op: 'set-variable', targetName: score.targetName, variableName: score.name, value: 88 },

@@ -21,8 +21,12 @@ describe('MCP HTTP launcher', () => {
     const token = 'a'.repeat(64)
     await writeFile(path, token, { mode: 0o600 })
     const httpPort = await reserve()
-    let relayPort = await reserve()
-    while (relayPort === httpPort) relayPort = await reserve()
+    let initialRelayPort = await reserve()
+    while (initialRelayPort === httpPort) {
+      const candidate = await reserve()
+      initialRelayPort = candidate
+    }
+    const relayPort = initialRelayPort
     const run = () =>
       spawn(
         process.execPath,

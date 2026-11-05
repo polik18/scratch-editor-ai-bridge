@@ -604,8 +604,6 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
       }
       startProjectRuntime(vm)
       previewRevision = initialRevision
-      // 移除 120 秒自動停止限制
-      // previewTimeout = window.setTimeout(stop, 120_000)
       send('ready')
     } catch (error) {
       stop(false)

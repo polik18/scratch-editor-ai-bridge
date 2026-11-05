@@ -83,7 +83,7 @@ const createVmSafeProject = async (
       const expectedId = typeof costume.assetId === 'string' ? costume.assetId : path.split('/').at(-1)?.split('.')[0]
       const assetType = dataFormat === DataFormat.SVG ? storage.AssetType.ImageVector : storage.AssetType.ImageBitmap
       const actualId = bytes
-        ? String(storage.createAsset(assetType, dataFormat as DataFormat, bytes, '', true).assetId).toLowerCase()
+        ? String(storage.createAsset(assetType, dataFormat, bytes, '', true).assetId).toLowerCase()
         : ''
       if (bytes && expectedId?.toLowerCase() === actualId) continue
 
@@ -203,7 +203,7 @@ const retainAssetData = async (
             : format === 'svg'
               ? storage.AssetType.ImageVector
               : storage.AssetType.ImageBitmap
-        const actualId = storage.createAsset(assetType, format as DataFormat, asset, '', true).assetId
+        const actualId = storage.createAsset(assetType, format, asset, '', true).assetId
         if (expectedId && String(actualId).toLowerCase() !== expectedId.toLowerCase()) {
           canonicalAsset.assetIssue = 'checksum-mismatch'
         }

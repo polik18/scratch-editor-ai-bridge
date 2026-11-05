@@ -1,3 +1,4 @@
+/* global document -- Browser globals used in Playwright page evaluations */
 import { createServer } from 'node:http'
 import { networkInterfaces } from 'node:os'
 import { fileURLToPath } from 'node:url'

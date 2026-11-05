@@ -67,7 +67,10 @@ describe('feedback corpus governance', () => {
       if (!project.valid) continue
       const graphs = entry.rawGraphFile
         ? (JSON.parse(
-            readFileSync(fileURLToPath(new URL(`../fixtures/feedback-corpus/${entry.rawGraphFile}`, import.meta.url)), 'utf8'),
+            readFileSync(
+              fileURLToPath(new URL(`../fixtures/feedback-corpus/${entry.rawGraphFile}`, import.meta.url)),
+              'utf8',
+            ),
           ) as ScratchTargetBlockGraph[])
         : undefined
       const analysis = analyzeCanonicalProject(project.data, graphs)

@@ -14,6 +14,7 @@ import example05 from '../../src/core/ir/examples/05-full-entities.json'
 import example06 from '../../src/core/ir/examples/06-platformer-core.json'
 import type { CanonicalProject } from '../../src/core/ir/types'
 import { createVM, getProjectJson, runForTicks, saveSb3, type ScratchVMHandle } from '../../src/scratch'
+import cspScratchParser from '../../src/scratch/csp-scratch-parser'
 
 interface VMWithPeripheralRegistry extends ScratchVMHandle {
   runtime: {
@@ -25,7 +26,6 @@ interface VMWithPeripheralRegistry extends ScratchVMHandle {
   deserializeProject(project: Record<string, unknown>, zip: JSZip | null): Promise<void>
   exportSprite(targetId: string, outputType: string): Promise<Uint8Array>
 }
-import cspScratchParser from '../../src/scratch/csp-scratch-parser'
 
 const parseOfficialProject = (input: Buffer): Promise<unknown> =>
   new Promise((resolve, reject) => {
@@ -212,7 +212,7 @@ describe('generated SB3 compatibility', () => {
     })
     assertPayload(parsedSource, 'production ZIP parser payload')
 
-    const vm: VMWithPeripheralRegistry = await createVM() as VMWithPeripheralRegistry
+    const vm: VMWithPeripheralRegistry = (await createVM()) as VMWithPeripheralRegistry
     try {
       const vmProject = structuredClone(parsedSource)
       for (const target of vmProject.targets as { costumes?: unknown[] }[]) target.costumes = []
@@ -627,8 +627,14 @@ describe('generated SB3 compatibility', () => {
 
         const expectedMessage = (operator === 'operator_gt' ? left > right : left < right) ? thenMessage : elseMessage
         const expectedTrace = Array.from({ length: repeatCount }, () => expectedMessage)
-        expect(executeSayTrace(sourceCompilation.vm as VMWithPeripheralRegistry), `source execution seed ${sample}`).toEqual(expectedTrace)
-        expect(executeSayTrace(normalizedVm as VMWithPeripheralRegistry), `normalized execution seed ${sample}`).toEqual(expectedTrace)
+        expect(
+          executeSayTrace(sourceCompilation.vm as VMWithPeripheralRegistry),
+          `source execution seed ${sample}`,
+        ).toEqual(expectedTrace)
+        expect(
+          executeSayTrace(normalizedVm as VMWithPeripheralRegistry),
+          `normalized execution seed ${sample}`,
+        ).toEqual(expectedTrace)
       } finally {
         sourceCompilation.vm.quit()
         normalizedVm?.quit()

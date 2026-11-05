@@ -81,13 +81,15 @@ jobs:
       - run: npm run bench --workspace=@scratch/scratch-ai-bridge
       - run: test -f packages/scratch-ai-bridge/dist/index.html
       - run: npx playwright install --with-deps chromium firefox webkit
+      - name: Verify student create, repair and revision flow
+        run: npm run test:student-flow --workspace=@scratch/scratch-ai-bridge
       - name: Start PulseAudio for Firefox WebAudio
         run: |
           sudo apt-get update
           sudo apt-get install --yes pulseaudio
           pulseaudio --start --exit-idle-time=-1
           pactl info
-      # Temporarily skip browser tests due to pre-existing ESLint errors (window/document not defined)
+      # Full cross-browser smoke and Linux PSS evidence remain disabled pending repair; the focused student flow runs above.
       # - name: Run cross-browser release smoke
       #   working-directory: ./packages/scratch-ai-bridge
       #   env:

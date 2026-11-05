@@ -30,7 +30,7 @@ src/ui/
 ### Editor
 
 - **Prompt Input**: Textarea for natural language instructions
-- **Buttons**: 
+- **Buttons**:
   - `生成專案` (Generate Project)
   - `預覽截圖` (Preview Screenshot)
   - `下載 .sb3` (Download SB3)
@@ -57,11 +57,11 @@ Then visit: `http://localhost:5173/src/ui/preview.html`
 ### Use API in Code
 
 ```typescript
-import createApp, { bindEvents } from '@scratch/scratch-ai-bridge/ui';
+import createApp, { bindEvents } from '@scratch/scratch-ai-bridge/ui'
 
-const app = createApp();
-document.getElementById('app')!.appendChild(app);
-bindEvents(app);
+const app = createApp()
+document.getElementById('app')!.appendChild(app)
+bindEvents(app)
 ```
 
 ## Event Flow

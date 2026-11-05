@@ -66,8 +66,7 @@ describe('local network model gateway', () => {
       .flat()
       .find(
         (item) =>
-          item &&
-          item.family === 'IPv4' &&
+          item?.family === 'IPv4' &&
           !item.internal &&
           /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(item.address),
       )?.address

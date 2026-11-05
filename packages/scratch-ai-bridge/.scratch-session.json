@@ -63,14 +63,8 @@
             "id": "yWsYi_-AZl3knMT9_mLb",
             "opcode": "motion_goto_xy",
             "fields": {
-              "X": [
-                "0",
-                null
-              ],
-              "Y": [
-                "150",
-                null
-              ]
+              "X": ["0", null],
+              "Y": ["150", null]
             },
             "inputs": {},
             "topLevel": false,
@@ -102,10 +96,7 @@
             "id": "Cyw-VpfDllXkQPdcx4rK",
             "opcode": "sense_touchingobject",
             "fields": {
-              "TOUCHINGOBJECTMENU": [
-                "EDGE",
-                null
-              ]
+              "TOUCHINGOBJECTMENU": ["EDGE", null]
             },
             "inputs": {},
             "topLevel": false,

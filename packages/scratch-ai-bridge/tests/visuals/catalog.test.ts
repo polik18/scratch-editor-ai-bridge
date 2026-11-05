@@ -35,9 +35,15 @@ const makeSilentWavBytes = (): Uint8Array => {
 }
 
 describe('Scratch asset library catalog & provenance adapter (A0/A1)', () => {
-  const abbyASvg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" width="62" height="200"><circle cx="31" cy="100" r="20" fill="#ff8800"/></svg>')
-  const abbyBSvg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" width="62" height="200"><rect x="10" y="50" width="42" height="100" fill="#0088ff"/></svg>')
-  const arcticSvg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"><rect width="480" height="360" fill="#eef8ff"/></svg>')
+  const abbyASvg = new TextEncoder().encode(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="200"><circle cx="31" cy="100" r="20" fill="#ff8800"/></svg>',
+  )
+  const abbyBSvg = new TextEncoder().encode(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="62" height="200"><rect x="10" y="50" width="42" height="100" fill="#0088ff"/></svg>',
+  )
+  const arcticSvg = new TextEncoder().encode(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"><rect width="480" height="360" fill="#eef8ff"/></svg>',
+  )
   const popWav = makeSilentWavBytes()
 
   const abbyAId = md5Hex(abbyASvg)
@@ -307,10 +313,8 @@ describe('Scratch asset library catalog & provenance adapter (A0/A1)', () => {
     ).rejects.toThrow(/Catalog revision mismatch/)
 
     await expect(
-      resolveVerifiedCatalogAsset(
-        fixtureCatalog,
-        { kind: 'costume', name: 'Abby-a' },
-        () => Promise.resolve(new Uint8Array([1, 2, 3])),
+      resolveVerifiedCatalogAsset(fixtureCatalog, { kind: 'costume', name: 'Abby-a' }, () =>
+        Promise.resolve(new Uint8Array([1, 2, 3])),
       ),
     ).rejects.toThrow(/MD5 mismatch/)
 

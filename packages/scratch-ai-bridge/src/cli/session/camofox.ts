@@ -17,9 +17,19 @@ type Caller = 'codex' | 'hermes' | 'opencode' | 'antigravity'
  * @param address Local Scratch GUI URL.
  * @param sb3Path Optional path to an .sb3 file to load directly.
  */
-export async function openInCamofox(session: ScratchSession, caller: Caller, address: string, sb3Path?: string): Promise<void> {
+export async function openInCamofox(
+  session: ScratchSession,
+  caller: Caller,
+  address: string,
+  sb3Path?: string,
+): Promise<void> {
   const url = new URL(address)
-  if (url.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) || url.username || url.password) {
+  if (
+    url.protocol !== 'http:' ||
+    !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) ||
+    url.username ||
+    url.password
+  ) {
     throw new Error('Camoufox Scratch GUI URL must be a local HTTP address.')
   }
   const archive = sb3Path ? await importSB3(sb3Path) : await session.compile()
@@ -40,7 +50,8 @@ export async function openInCamofox(session: ScratchSession, caller: Caller, add
     throw new Error('Camoufox status is unhealthy or has duplicate tab IDs; no browser action was taken.')
   }
   const lease = await call([...common, 'lease', 'acquire', '--ttl', '120'])
-  if (lease.success !== true || typeof lease.lease_file !== 'string') throw new Error('Cannot acquire Camoufox lease.')
+  if (lease.success !== true || typeof lease.lease_file !== 'string')
+    throw new Error('Cannot acquire Camoufox lease.')
   const guarded = [...common, '--lease-file', lease.lease_file]
   let temp: string | undefined
   try {
@@ -48,7 +59,11 @@ export async function openInCamofox(session: ScratchSession, caller: Caller, add
     if (navigation.success !== true || navigation.title !== 'Scratch 3.0 GUI') {
       throw new Error('The local URL did not open the Scratch 3.0 GUI.')
     }
-    const menu = await call([...guarded, 'eval', `(() => { const b = document.querySelector('button[aria-label="File menu"]'); if (!b) throw Error('Scratch GUI File menu not found'); b.click(); return true; })()`])
+    const menu = await call([
+      ...guarded,
+      'eval',
+      `(() => { const b = document.querySelector('button[aria-label="File menu"]'); if (!b) throw Error('Scratch GUI File menu not found'); b.click(); return true; })()`,
+    ])
     if (menu.success !== true) throw new Error('Cannot open the Scratch GUI File menu.')
     temp = await mkdtemp(path.join(os.tmpdir(), 'scratch-camofox-'))
     const scriptPath = path.join(temp, 'import.js')
@@ -79,24 +94,39 @@ export async function openInCamofox(session: ScratchSession, caller: Caller, add
     if (imported.success !== true) throw new Error('Scratch GUI did not accept the project import.')
     let loaded = false
     for (let attempt = 0; attempt < 30; attempt++) {
-      const state = await call([...guarded, 'eval', `document.querySelector('input[placeholder="Project title here"]')?.value === '${sb3Path ? path.basename(sb3Path).replace(/\.sb3$/, '') : 'scratch-session'}'`])
-      if (state.result === true) { loaded = true; break }
+      const state = await call([
+        ...guarded,
+        'eval',
+        `document.querySelector('input[placeholder="Project title here"]')?.value === '${sb3Path ? path.basename(sb3Path).replace(/\.sb3$/, '') : 'scratch-session'}'`,
+      ])
+      if (state.result === true) {
+        loaded = true
+        break
+      }
       await new Promise((resolve) => setTimeout(resolve, 1000))
     }
     if (!loaded) {
       const diagnostics = await call([...guarded, 'eval', '(window.__scratchImportErrors || []).slice(0, 5)'])
-      throw new Error(`Scratch GUI did not finish loading the project within 30 seconds (task ${task}). Browser errors: ${JSON.stringify(diagnostics.result)}`)
+      throw new Error(
+        `Scratch GUI did not finish loading the project within 30 seconds (task ${task}). Browser errors: ${JSON.stringify(diagnostics.result)}`,
+      )
     }
     console.log(`✓ Scratch session loaded in Camoufox (${task}) at ${url.origin}.`)
-    console.log('GUI changes are not synchronized to the CLI; save the project and load it again to continue in the CLI.')
+    console.log(
+      'GUI changes are not synchronized to the CLI; save the project and load it again to continue in the CLI.',
+    )
   } finally {
     if (temp) await rm(temp, { recursive: true, force: true })
     await call([...guarded, 'lease', 'release'])
   }
 }
 
-/** Import an external .sb3 file and return its content. */
+/**
+ * Import an external .sb3 file and return its content.
+ * @param sb3Path Path to the target SB3 file.
+ * @returns Buffer containing file payload.
+ */
 async function importSB3(sb3Path: string): Promise<Buffer> {
-  const fs = await import('fs/promises');
-  return await fs.readFile(sb3Path);
+  const fs = await import('node:fs/promises')
+  return fs.readFile(sb3Path)
 }

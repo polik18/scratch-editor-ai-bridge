@@ -1,10 +1,14 @@
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
-import { compileCanonicalProjectToSb3 } from '../../src/core/compiler/compiler'
-import type { CanonicalProject } from '../../src/core/ir/types'
-import { createVM, getVariable, loadSb3 } from '../../src/scratch/vm'
-import { applyLiveVariablePatchToProject, getLivePatchScriptSelector, parseLiveVariablePatch } from '../../src/core/normalizer'
 import { describe, expect, it } from 'vitest'
+import { compileCanonicalProjectToSb3 } from '../../src/core/compiler/compiler'
+import type { CanonicalBlock, CanonicalProject } from '../../src/core/ir/types'
+import {
+  applyLiveVariablePatchToProject,
+  getLivePatchScriptSelector,
+  parseLiveVariablePatch,
+} from '../../src/core/normalizer'
+import { createVM, getVariable, loadSb3 } from '../../src/scratch/vm'
 
 interface TargetHarness {
   drawableID: number | null
@@ -22,7 +26,10 @@ interface RuntimeHarness {
 }
 
 const openStarport = async (projectOverride?: CanonicalProject) => {
-  const designPath = resolve(process.cwd(), '../../research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.canonical.json')
+  const designPath = resolve(
+    process.cwd(),
+    '../../research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.canonical.json',
+  )
   const project = projectOverride ?? (JSON.parse(await readFile(designPath, 'utf8')) as CanonicalProject)
   const archive = await compileCanonicalProjectToSb3(project)
   const vm = (await createVM()) as typeof createVM extends () => Promise<infer T> ? T & RuntimeHarness : never
@@ -30,7 +37,7 @@ const openStarport = async (projectOverride?: CanonicalProject) => {
   let nextDrawableId = 1
   const renderer = {
     setLayerGroupOrdering() {},
-    createSVGSkin: async () => nextDrawableId++,
+    createSVGSkin: () => nextDrawableId++,
     createTextSkin: () => nextDrawableId++,
     getSkinSize: () => [100, 100],
     getBounds: () => null,
@@ -52,10 +59,18 @@ const openStarport = async (projectOverride?: CanonicalProject) => {
       const enemy = target('裂隙掠奪者')
       const player = target('巡防艇')
       if (!bullet || !enemy || !player) return false
-      if (collisionMode === 'projectile' && targetId === bullet.drawableID && candidateIds.includes(enemy.drawableID ?? -1)) {
+      if (
+        collisionMode === 'projectile' &&
+        targetId === bullet.drawableID &&
+        candidateIds.includes(enemy.drawableID ?? -1)
+      ) {
         return Math.abs(bullet.x - enemy.x) < 35 && Math.abs(bullet.y - enemy.y) < 35
       }
-      if (collisionMode === 'enemy' && targetId === enemy.drawableID && candidateIds.includes(player.drawableID ?? -1)) {
+      if (
+        collisionMode === 'enemy' &&
+        targetId === enemy.drawableID &&
+        candidateIds.includes(player.drawableID ?? -1)
+      ) {
         return Math.abs(enemy.x - player.x) < 35 && Math.abs(enemy.y - player.y) < 35
       }
       return false
@@ -72,7 +87,13 @@ const openStarport = async (projectOverride?: CanonicalProject) => {
   }
   vm.attachRenderer(renderer)
   await loadSb3(await archive.arrayBuffer(), vm)
-  return { vm, runtime: vm, setCollisionMode: (mode: typeof collisionMode) => { collisionMode = mode } }
+  return {
+    vm,
+    runtime: vm,
+    setCollisionMode: (mode: typeof collisionMode) => {
+      collisionMode = mode
+    },
+  }
 }
 
 const wait = (ms: number) => new Promise((resolveWait) => setTimeout(resolveWait, ms))
@@ -80,7 +101,11 @@ const wait = (ms: number) => new Promise((resolveWait) => setTimeout(resolveWait
 describe('Starport Rift Expedition runtime smoke', () => {
   it('moves, hits the enemy, loses on three collisions, and resets on green flag', async () => {
     const { vm, runtime, setCollisionMode } = await openStarport()
-    const target = (name: string) => runtime.runtime.targets.find((candidate) => candidate.getName() === name)!
+    const target = (name: string) => {
+      const found = runtime.runtime.targets.find((candidate) => candidate.getName() === name)
+      if (!found) throw new Error(`Target ${name} not found`)
+      return found
+    }
     const step = () => runtime.runtime._step()
     try {
       runtime.start()
@@ -133,10 +158,19 @@ describe('Starport Rift Expedition runtime smoke', () => {
   }, 10_000)
 
   it('applies a structural balance patch to starting shields and can roll back to the original value', async () => {
-    const designPath = resolve(process.cwd(), '../../research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.canonical.json')
+    const designPath = resolve(
+      process.cwd(),
+      '../../research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.canonical.json',
+    )
     const original = JSON.parse(await readFile(designPath, 'utf8')) as CanonicalProject
-    const patchedScript = structuredClone(original.stage.scripts[0]!)
-    patchedScript.blocks[2]!.inputs!.VALUE = { type: 'literal', value: 5 }
+    const stageScripts: ((typeof original.stage.scripts)[number] | undefined)[] = original.stage.scripts
+    const stageScript0 = stageScripts[0]
+    if (!stageScript0) throw new Error('Stage script 0 not found')
+    const patchedScript = structuredClone(stageScript0)
+    const scriptBlocks: (CanonicalBlock | undefined)[] = patchedScript.blocks
+    const valueBlock = scriptBlocks[2]
+    if (!valueBlock) throw new Error('Block at index 2 not found')
+    valueBlock.inputs = { ...valueBlock.inputs, VALUE: { type: 'literal', value: 5 } }
     const patch = parseLiveVariablePatch(
       JSON.stringify({
         format: 'scratch-ai-bridge/live-patch',
@@ -147,7 +181,7 @@ describe('Starport Rift Expedition runtime smoke', () => {
           {
             op: 'replace-target-script',
             target: 'Stage',
-            selector: getLivePatchScriptSelector(original.stage.scripts[0]!),
+            selector: getLivePatchScriptSelector(stageScript0),
             script: patchedScript,
           },
         ],

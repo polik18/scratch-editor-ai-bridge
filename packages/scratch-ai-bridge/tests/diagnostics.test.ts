@@ -1,20 +1,15 @@
 /**
  * Tests for the student diagnostics module
  */
-
 import { describe, it, expect } from 'vitest'
-import {
-  createStudentDiagnostic,
-  getDiagnosticTypes,
-  DIAGNOSTIC_MESSAGES
-} from '../src/core/diagnostics/messages'
 import { convertToStudentDiagnostic } from '../src/core/diagnostics/convert'
+import { createStudentDiagnostic, getDiagnosticTypes, DIAGNOSTIC_MESSAGES } from '../src/core/diagnostics/messages'
 
 describe('Student Diagnostics', () => {
   describe('createStudentDiagnostic', () => {
     it('should create a diagnostic for missing-start-block', () => {
       const diagnostic = createStudentDiagnostic('missing-start-block')
-      
+
       expect(diagnostic).toBeDefined()
       expect(diagnostic?.category).toBe('structure')
       expect(diagnostic?.severity).toBe('high')
@@ -24,7 +19,7 @@ describe('Student Diagnostics', () => {
 
     it('should create a diagnostic for undefined-variable with params', () => {
       const diagnostic = createStudentDiagnostic('undefined-variable', { name: 'score' })
-      
+
       expect(diagnostic).toBeDefined()
       expect(diagnostic?.category).toBe('variable')
       expect(diagnostic?.title).toContain('score')
@@ -32,7 +27,7 @@ describe('Student Diagnostics', () => {
     })
 
     it('should return undefined for unknown diagnostic type', () => {
-      const diagnostic = createStudentDiagnostic('unknown-type' as any)
+      const diagnostic = createStudentDiagnostic('unknown-type')
       expect(diagnostic).toBeUndefined()
     })
   })
@@ -52,9 +47,9 @@ describe('Student Diagnostics', () => {
         severity: 'warning',
         code: 'cloud-variable-offline',
         message: 'Cloud variable not available offline',
-        variable: 'score'
+        variable: 'score',
       })
-      
+
       expect(diagnostic).toBeDefined()
       expect(diagnostic?.type).toBe('error')
       expect(diagnostic?.category).toBe('variable')
@@ -64,9 +59,9 @@ describe('Student Diagnostics', () => {
       const diagnostic = convertToStudentDiagnostic({
         severity: 'warning',
         code: 'unknown-code',
-        message: 'Unknown error'
+        message: 'Unknown error',
       })
-      
+
       expect(diagnostic).toBeUndefined()
     })
   })
@@ -74,10 +69,11 @@ describe('Student Diagnostics', () => {
   describe('Diagnostic Messages', () => {
     it('should have student-friendly explanations', () => {
       const types = getDiagnosticTypes()
-      
+
       for (const type of types) {
         const message = DIAGNOSTIC_MESSAGES[type]
         expect(message).toBeDefined()
+        if (!message) throw new Error(`Missing message for ${type}`)
         expect(message.title).toBeDefined()
         expect(message.explanation).toBeDefined()
         expect(message.impact).toBeDefined()

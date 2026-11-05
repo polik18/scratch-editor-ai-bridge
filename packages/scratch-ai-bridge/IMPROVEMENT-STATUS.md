@@ -11,19 +11,22 @@
 **Date**: 2026-10-27  
 **Status**: Complete  
 **Changes**:
+
 - Created `src/api/index.ts` with `createSession()` helper
 - Created `scripts/scratch-session.mjs` CLI entry
 - Updated `package.json` to include `scratch-session` bin
 - Updated `API-ONBOARDING.md`
 
 **API Usage**:
+
 ```typescript
-import { createSession } from '@scratch/scratch-ai-bridge/api';
-const sess = await createSession();
-await sess.newProject('My Project');
-await sess.addSprite('Sprite1');
-await sess.addBlock('Sprite1', 'motion_movesteps', { inputs: { STEPS: { type: 'literal', value: 10 } } });
-const sb3 = await sess.compile();
+import { createSession } from '@scratch/scratch-ai-bridge/api'
+
+const sess = await createSession()
+await sess.newProject('My Project')
+await sess.addSprite('Sprite1')
+await sess.addBlock('Sprite1', 'motion_movesteps', { inputs: { STEPS: { type: 'literal', value: 10 } } })
+const sb3 = await sess.compile()
 ```
 
 ### Step 2: Integrate oMLX for NLP Parsing ✅
@@ -31,17 +34,20 @@ const sb3 = await sess.compile();
 **Date**: 2026-10-27  
 **Status**: Complete  
 **Changes**:
+
 - Created `src/nlp/parser.ts` with `parseNaturalLanguage()` and `applyCommandsToSession()`
 - Created `src/nlp/index.ts` module exports
 - Added `nlpParse` CLI command
 - Updated `NLP-ONBOARDING.md`
 
 **Features**:
+
 - Pattern matching for common tasks (move, say, wait, etc.)
 - Optional oMLX LLM integration (fallback)
 - Confidence scoring (0.9 pattern match, 0.95 LLM)
 
 **Usage**:
+
 ```bash
 scratch-session nlpParse "Make the sprite move 10 steps"
 ```
@@ -51,11 +57,13 @@ scratch-session nlpParse "Make the sprite move 10 steps"
 **Date**: 2026-10-27  
 **Status**: Complete  
 **Changes**:
+
 - Created `src/preview/automation.ts` with `capturePreviewScreenshot()`
 - Added `preview-screenshot` CLI command
 - Updated `PREVIEW-AUTOMATION.md`
 
 **Features**:
+
 - Full-page preview capture
 - Hardware extension support
 - Multiple output formats (PNG, PDF, base64)
@@ -65,11 +73,13 @@ scratch-session nlpParse "Make the sprite move 10 steps"
 **Date**: 2026-10-27  
 **Status**: Complete  
 **Changes**:
+
 - Created `src/prompt/templates/common-issues.ts`
 - Added template for common Scratch issues (syntax, blocks, logic)
 - Updated `PROMPT-TEMPLATES.md`
 
 **Templates**:
+
 - `TEMPLATE_SCRIPTING_ISSUE` - General script debugging
 - `TEMPLATE_SPRITE_MOVEMENT` - Movement block usage
 - `TEMPLATE_COSTUME_SOUNDS` - Art and audio issues
@@ -79,6 +89,7 @@ scratch-session nlpParse "Make the sprite move 10 steps"
 **Date**: 2026-10-27  
 **Status**: Complete  
 **Changes**:
+
 - Created `src/ui/App.tsx` with React UI
 - Integrated Vite + Tailwind CSS
 - Added project idea input, AI generation, and SB3 download
@@ -89,11 +100,13 @@ scratch-session nlpParse "Make the sprite move 10 steps"
 **Date**: 2026-11-03  
 **Status**: Complete  
 **Changes**:
+
 - `src/main.ts:627` - DOM attribute change (data-placeholder)
 - `src/style.css:409-426` - New `[data-placeholder]::placeholder` style
 - Verified with `npm run dev` manual test
 
 **Acceptance Criteria Met**:
+
 - [x] A.1: "My Project Idea" text box shows placeholder and is editable
 - [x] A.2: User can directly edit text without copy-paste
 - [x] A.3: Style distinguishes placeholder vs. user input
@@ -103,11 +116,13 @@ scratch-session nlpParse "Make the sprite move 10 steps"
 **Date**: 2026-11-03  
 **Status**: Complete  
 **Changes**:
+
 - `src/preview/main.ts:607` - Removed 120s timeout
 - `src/main.ts:4098` - Removed 120s timeout
 - `src/main.ts:4114` - Updated status text (removed "previews for up to 120 seconds")
 
 **Acceptance Criteria Met**:
+
 - [x] B.1: Preview runs > 120s without auto-stop
 - [x] B.2: Mouse clicks and keyboard controls work normally
 - [x] B.3: Stop button exists (already implemented)
@@ -119,10 +134,12 @@ scratch-session nlpParse "Make the sprite move 10 steps"
 **Date**: 2026-11-03  
 **Status**: Complete  
 **Changes**:
+
 - Created `src/core/capabilities/iteration.ts` with `createProjectIterationInstruction()`
 - Updated `src/core/capabilities/index.ts` exports
 
 **Features**:
+
 - Generates iteration instruction for AI to modify existing project
 - Preserves existing structure while applying modifications
 - Follows Scratch 3.0 specification
@@ -135,6 +152,7 @@ scratch-session nlpParse "Make the sprite move 10 steps"
 **Target**: Add AI iteration panel for multi-round project revisions
 
 **Remaining Tasks**:
+
 1. `src/main.ts` - Add `#ai-iteration-panel` DOM structure
 2. `src/main.ts` - Implement `aiIterateGenerateButton` event handler
 3. `src/main.ts` - Ensure "Paste Back to Scratch" flow is repeatable
@@ -142,6 +160,7 @@ scratch-session nlpParse "Make the sprite move 10 steps"
 5. `src/core/capabilities/registry.ts` - Update prompt templates
 
 **Acceptance Criteria**:
+
 - [ ] C.1: Page shows "Let AI Modify Project" section
 - [ ] C.2: Input modification request, click button, AI generates new project
 - [ ] C.3: AI prompt includes "follow AI conversation history" marker
@@ -154,6 +173,7 @@ scratch-session nlpParse "Make the sprite move 10 steps"
 **Target**: Support built-in sprites/backgrounds/sounds loading to reduce file size
 
 **Required Changes**:
+
 1. `src/scratch/storage.ts` - Confirm `BUILT_IN_SPRITE_VISUALS`, `BUILT_IN_BACKDROP_VISUALS` support
 2. `packages/scratch-vm/src/blocks/scratch3_sound.js` - Check opcode
 3. `src/core/capabilities/registry.ts` - Update prompt templates
@@ -161,6 +181,7 @@ scratch-session nlpParse "Make the sprite move 10 steps"
 5. `src/preview/main.ts:550-600` - Implement `addBuiltInAsset()` function
 
 **Acceptance Criteria**:
+
 - [ ] D.1: Preview shows built-in sprite/background/sound list
 - [ ] D.2: Click built-in sprite to load into VM
 - [ ] D.3: AI prompt includes "can use built-in assets" note

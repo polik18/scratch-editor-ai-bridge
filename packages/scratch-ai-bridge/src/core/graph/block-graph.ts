@@ -94,10 +94,15 @@ const isBlockNode = (value: unknown): value is ScratchBlockGraphNode =>
 
 // SB3 stores detached variable/list reporters as compact top-level tuples.
 const isTopLevelDataPrimitive = (value: unknown): value is [number, string, string, number, number] =>
-  Array.isArray(value) && value.length === 5 && (value[0] === 12 || value[0] === 13) &&
-  typeof value[1] === 'string' && typeof value[2] === 'string' &&
-  typeof value[3] === 'number' && Number.isFinite(value[3]) &&
-  typeof value[4] === 'number' && Number.isFinite(value[4])
+  Array.isArray(value) &&
+  value.length === 5 &&
+  (value[0] === 12 || value[0] === 13) &&
+  typeof value[1] === 'string' &&
+  typeof value[2] === 'string' &&
+  typeof value[3] === 'number' &&
+  Number.isFinite(value[3]) &&
+  typeof value[4] === 'number' &&
+  Number.isFinite(value[4])
 
 const retainDataPrimitives = (original: unknown, graph: ScratchBlockGraph): Record<string, unknown> => {
   if (!isRecord(original)) throw new Error('Original blocks must be an object')
@@ -673,7 +678,9 @@ export const extractProjectBlockGraphs = (project: unknown): ScratchTargetBlockG
     const targetName = target.name
     const rawBlocks = target.blocks ?? {}
     if (!isRecord(rawBlocks)) throw new Error(`Scratch target ${targetName} blocks must be an object`)
-    const malformedEntries = Object.entries(rawBlocks).filter(([, value]) => !isBlockNode(value) && !isTopLevelDataPrimitive(value))
+    const malformedEntries = Object.entries(rawBlocks).filter(
+      ([, value]) => !isBlockNode(value) && !isTopLevelDataPrimitive(value),
+    )
     const blocks = copyScratchBlockGraph(
       Object.fromEntries(Object.entries(rawBlocks).filter(([, value]) => isBlockNode(value))),
     )

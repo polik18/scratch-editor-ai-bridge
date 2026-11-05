@@ -31,7 +31,8 @@
     "test:browser": "node scripts/browser-smoke.mjs",
     "test:browser:firefox": "BROWSER=firefox node scripts/browser-smoke.mjs",
     "test:browser:safari": "node scripts/safari-smoke.mjs",
-    "test:browser:webkit": "BROWSER=webkit node scripts/browser-smoke.mjs"
+    "test:browser:webkit": "BROWSER=webkit node scripts/browser-smoke.mjs",
+    "test:student-flow": "node scripts/student-flow-smoke.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.4.0",

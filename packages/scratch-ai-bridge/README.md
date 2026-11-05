@@ -46,12 +46,14 @@ Analyze:
 Canonical IR 規則的提示詞，直接貼回 Gemini；也可只複製／下載報告。剪貼簿權限被拒絕時會顯示可手動全選的內容，
 自動修復後則可一鍵復原修復前的原始回覆。JSON、Repair Report 與分離式檢查／編譯操作均保留在教師／進階工具。
 
+作品完成後可輸入修改需求，複製目前 Canonical IR 與需求到原本的 AI 對話，再把回答貼回檢查。修改後的作品先作為候選供試玩，學生可採用並下載或回到原作。想法、回答與作品版本只暫存在目前分頁的 sessionStorage，重新整理可嘗試恢復；關閉分頁、清除瀏覽器資料或儲存額度不足時可能遺失，請下載 SB3 備份。把訊息貼給外部 AI 時，訊息內容會交給該服務。
+
 目前 strict authoring registry 有 130 個可執行積木能力，涵蓋鍵盤事件、移動與造型、控制流程、清單、廣播、感測、運算與聲音。上游 no-op 的 `sensing_userid` 只保留舊專案資料，不列入 AI authoring。
 全部能力可通過官方 parser 與 VM load/save/reload；runtime 測試涵蓋事件／算術／變數、迴圈／清單／文字與廣播代表流程。
 這不代表每個 opcode 的執行行為或實際畫面都已逐一驗收。網站內建的 `Platformer Core Controls` 範例示範左右移動、跳躍速度、重力及平台碰撞；
 AI 指令的 opcode、必要 input、field、積木形狀與 stage/sprite 限制均由同一份 capability registry 產生。
 
-學生作品結果使用官方 Scratch VM 與 `scratch-render` 顯示初始舞台，也提供「執行作品」動畫預覽。動畫在只允許腳本執行的 opaque-origin iframe 中運作，支援方向鍵、空白鍵與舞台滑鼠輸入；使用者可手動停止，Runtime 最多執行 15 秒。Chromium、Firefox 與 WebKit smoke 覆蓋舞台回應及停止後恢復靜態預覽；官方 `monitors.sb3` 與 `pen-dolphin-3d.sb3` fixture 驗證選取造型、resolution-2 PNG 與混合 PNG/SVG 素材渲染。
+學生作品結果使用官方 Scratch VM 與 `scratch-render` 顯示初始舞台，也提供「執行作品」動畫預覽。動畫在只允許腳本執行的 opaque-origin iframe 中運作，支援方向鍵、空白鍵與舞台滑鼠輸入；使用者可手動停止；預覽目前不設固定執行時限。Chromium、Firefox 與 WebKit smoke 覆蓋舞台回應及停止後恢復靜態預覽；官方 `monitors.sb3` 與 `pen-dolphin-3d.sb3` fixture 驗證選取造型、resolution-2 PNG 與混合 PNG/SVG 素材渲染。
 
 SB3 專案在本機讀取、編譯與分析，不會整份上傳。若動畫執行到 Text to Speech 或 Translate 積木，預覽會先顯示該次文字並詢問是否傳送；Text to Speech 最多 128 字元，Translate 最多 1,024 字元，拒絕或超限都不會送出。獲准的文字只送到 Scratch 對應的合成／翻譯服務。相機相關 extensions 不會自動載入。WeDo 2.0、micro:bit、EV3、Boost 與 GDX for 預覽提供 Scratch Link 搜尋／配對控制；按下搜尋後會連線本機 Scratch Link，或嘗試 Scratch Device Manager 備援，裝置資料與積木控制指令會經該連線傳輸。實際裝置與積木行為尚未實機驗證。
 

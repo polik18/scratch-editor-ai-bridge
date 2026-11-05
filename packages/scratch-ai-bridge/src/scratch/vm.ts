@@ -419,7 +419,7 @@ export const createVM = async (): Promise<ScratchVMHandle> => {
       : Promise.resolve()
 
   vm.attachStorage(await createOfflineScratchStorage())
-  return vm as ScratchVMHandle
+  return vm
 }
 
 /**
@@ -486,9 +486,11 @@ const attachBitmapAdapter = (vm: ScratchVMHandle): Promise<void> => {
     adapterPromise = import('@scratch/scratch-svg-renderer').then((rendererModule) => {
       // The workspace renderer is CommonJS and its interop shape differs
       // between Node, Vite and the published browser bundle.
-      const moduleDefault = rendererModule.default as unknown as
-        { BitmapAdapter?: new () => Parameters<ScratchVMInternal['attachV2BitmapAdapter']>[0] } | undefined
-      const BitmapAdapter = rendererModule.BitmapAdapter ?? moduleDefault?.BitmapAdapter
+      const mod = rendererModule as {
+        BitmapAdapter?: new () => Parameters<ScratchVMInternal['attachV2BitmapAdapter']>[0]
+        default?: { BitmapAdapter?: new () => Parameters<ScratchVMInternal['attachV2BitmapAdapter']>[0] }
+      }
+      const BitmapAdapter = mod.BitmapAdapter ?? mod.default?.BitmapAdapter
       if (typeof BitmapAdapter !== 'function') {
         throw new Error('Scratch SVG renderer does not export a BitmapAdapter constructor')
       }
@@ -502,8 +504,9 @@ const attachBitmapAdapter = (vm: ScratchVMHandle): Promise<void> => {
 /**
  * Load an SB3 into a VM. If no VM is supplied, a new one is created and
  * returned so browser upload flows can simply call `loadSb3(file)`.
- * @param file SB3 bytes or a browser Blob.
- * @param vm Optional existing VM to reuse.
+ * @param file - SB3 bytes or a browser Blob.
+ * @param vm - Optional existing VM to reuse.
+ * @param onProgress - Optional callback for tracking loading progress.
  * @returns The VM containing the loaded project.
  */
 export const loadSb3 = async (
@@ -526,8 +529,7 @@ export const loadSb3 = async (
   } catch (error) {
     if (!vm) {
       try {
-        const resolvedVM = await targetVM
-        resolvedVM.quit()
+        targetVM.quit()
       } catch {
         // Ignore quit errors during cleanup
       }
@@ -572,9 +574,10 @@ export const prepareVmForBitmapAssetImport = async (vm: ScratchVMHandle): Promis
 /**
  * Render an imported SB3's initial stage state through the official Scratch renderer.
  * Project scripts are not started; the canvas shows the saved positions and costumes.
- * @param file Scratch SB3 archive bytes.
- * @param vm Scratch VM instance to reuse.
- * @param canvas Canvas receiving the rendered stage.
+ * @param file - Scratch SB3 archive bytes.
+ * @param vm - Scratch VM instance to reuse.
+ * @param canvas - Canvas receiving the rendered stage.
+ * @param onProgress - Optional callback for tracking stage rendering progress.
  */
 export const renderSb3Preview = async (
   file: Sb3Input,
@@ -799,8 +802,7 @@ export const loadProjectJson = async (
   } catch (error) {
     if (!vm) {
       try {
-        const resolvedVM = await targetVM
-        resolvedVM.quit()
+        targetVM.quit()
       } catch {
         // Ignore quit errors during cleanup
       }
@@ -937,6 +939,9 @@ export type ScratchRuntimePatchChange = ScratchRuntimePatchUpdate & {
 /**
  * Atomically update existing, non-cloud scalar variables in a running preview VM.
  * VM internals stay confined to this adapter and list/broadcast storage is excluded.
+ * @param vm - Scratch VM handle to update.
+ * @param updates - Batch of runtime patch operations.
+ * @returns Array of changes applied to runtime variables or properties.
  */
 export const setRuntimePatchValues = (
   vm: ScratchVMHandle,
@@ -960,10 +965,11 @@ export const setRuntimePatchValues = (
       key = `variable\u0000${update.targetName}\u0000${update.variableName}`
       const targets = runtime.targets.filter((target) => target.isOriginal && target.getName() === update.targetName)
       if (targets.length !== 1) throw new Error(`Could not resolve target ${update.targetName}.`)
-      const matches = Object.values(targets[0]!.variables).filter((variable) => variable.name === update.variableName)
+      const targetObj = targets[0]
+      const matches = Object.values(targetObj.variables).filter((variable) => variable.name === update.variableName)
       if (matches.length !== 1)
         throw new Error(`Could not resolve variable ${update.targetName}/${update.variableName}.`)
-      const variable = matches[0]!
+      const variable = matches[0]
       if (variable.type !== '' || variable.isCloud)
         throw new Error(
           `Only existing non-cloud scalar variables can be changed (${update.targetName}/${update.variableName}).`,
@@ -984,7 +990,7 @@ export const setRuntimePatchValues = (
         (target) => target.isOriginal && !target.isStage && target.getName() === update.targetName,
       )
       if (matches.length !== 1) throw new Error(`Could not resolve unique sprite ${update.targetName}.`)
-      const target = matches[0]!
+      const target = matches[0]
       const property = update.property
       const numberValue = typeof update.value === 'number' ? update.value : NaN
       if (property === 'visible') {
@@ -997,7 +1003,7 @@ export const setRuntimePatchValues = (
         beforeValue = target.currentCostume
         apply = (value) => target.setCostume(value as number)
       } else {
-        const limits =
+        const limits: [number, number] =
           property === 'x'
             ? [-240, 240]
             : property === 'y'
@@ -1005,7 +1011,8 @@ export const setRuntimePatchValues = (
               : property === 'size'
                 ? [1, 500]
                 : [-180, 180]
-        if (!Number.isFinite(numberValue) || numberValue < limits[0]! || numberValue > limits[1]!)
+        const [minLimit, maxLimit] = limits
+        if (!Number.isFinite(numberValue) || numberValue < minLimit || numberValue > maxLimit)
           throw new Error(`${property} is outside the supported range.`)
         beforeValue = target[property]
         apply = (value) => {
@@ -1020,7 +1027,7 @@ export const setRuntimePatchValues = (
       key = `stage\u0000${update.property}`
       const stages = runtime.targets.filter((target) => target.isOriginal && target.isStage)
       if (stages.length !== 1) throw new Error('Could not resolve unique Stage target.')
-      const stage = stages[0]!
+      const stage = stages[0]
       if (!Number.isFinite(update.value)) throw new Error(`${update.property} must be finite.`)
       if (update.property === 'tempo') {
         if (update.value < 20 || update.value > 500) throw new Error('tempo is outside the supported range.')

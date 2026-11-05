@@ -37,12 +37,12 @@ describe('live variable patches', () => {
 
   it('keeps the AI edit prompt compact for large projects and asks before guessing omitted targets', () => {
     const largeProject = structuredClone(project)
-    const score = largeProject.stage.variables[0]!
+    const score = largeProject.stage.variables[0]
     largeProject.stage.variables = Array.from({ length: 500 }, (_, index) => ({
       ...score,
       name: `score ${index}`,
     }))
-    const sourceScript = largeProject.stage.scripts[0]!
+    const sourceScript = largeProject.stage.scripts[0]
     largeProject.stage.scripts = Array.from({ length: 500 }, (_, index) => ({
       ...structuredClone(sourceScript),
       blocks: sourceScript.blocks.map((block, blockIndex) => ({
@@ -69,7 +69,7 @@ describe('live variable patches', () => {
       parseLiveVariablePatch(patch([{ op: 'set-variable', target: 'Stage', name: 'missing', value: 1 }]), project, 3),
     ).toThrow(/找不到唯一變數/)
     const cloudProject = structuredClone(project)
-    cloudProject.stage.variables[0]!.cloud = true
+    cloudProject.stage.variables[0].cloud = true
     expect(() =>
       parseLiveVariablePatch(
         patch([{ op: 'set-variable', target: 'Stage', name: 'score', value: 1 }]),
@@ -117,7 +117,7 @@ describe('live variable patches', () => {
 
   it('adds, replaces and removes scripts by unique structural selector', () => {
     const scriptProject = structuredClone(example) as CanonicalProject
-    const original = scriptProject.stage.scripts[0]!
+    const original = scriptProject.stage.scripts[0]
     const selector = getLivePatchScriptSelector(original)
     const replacement = {
       blocks: [
@@ -160,7 +160,7 @@ describe('live variable patches', () => {
 
   it('rejects ambiguous script selectors, malformed scripts and mixed structure/runtime changes', () => {
     const scriptProject = structuredClone(example) as CanonicalProject
-    const original = scriptProject.stage.scripts[0]!
+    const original = scriptProject.stage.scripts[0]
     const selector = getLivePatchScriptSelector(original)
     scriptProject.stage.scripts.push(structuredClone(original))
     expect(() =>
@@ -174,7 +174,7 @@ describe('live variable patches', () => {
       ),
     ).toThrow(/blocks 必須/)
     const mixedProject = structuredClone(example) as CanonicalProject
-    const mixedSelector = getLivePatchScriptSelector(mixedProject.stage.scripts[0]!)
+    const mixedSelector = getLivePatchScriptSelector(mixedProject.stage.scripts[0])
     expect(() =>
       parseLiveVariablePatch(
         patch([

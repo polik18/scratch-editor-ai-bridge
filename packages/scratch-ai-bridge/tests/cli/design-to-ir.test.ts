@@ -56,8 +56,10 @@ describe('designToCanonicalIR', () => {
       ],
     })
 
-    const forever = project.sprites[0]?.scripts[0]?.blocks[1]
-    expect(forever?.inputs?.SUBSTACK).toEqual({
+    const block = project.sprites[0]?.scripts[0]?.blocks[1]
+    expect(block).toBeDefined()
+    const forever = block as NonNullable<typeof block> & { inputs: Record<string, unknown> }
+    expect(forever.inputs.SUBSTACK).toEqual({
       type: 'stack',
       blocks: [
         { opcode: 'motion_changexby', inputs: { DX: { type: 'literal', value: 5 } } },
