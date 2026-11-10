@@ -1,0 +1,809 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "賽車閃避",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {"name": "score", "value": 0}
+      ],
+      "lists": [],
+      "costumes": [
+        {"name": "Night City", "dataFormat": "svg"}
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked",
+              "next": "block_2",
+              "inputs": {},
+              "fields": {}
+            },
+            {
+              "opcode": "data_setvariableto",
+              "block": "block_2",
+              "next": "block_3",
+              "inputs": {
+                "VALUE": {"type": "literal", "value": 0}
+              },
+              "fields": {
+                "VARIABLE": {"value": "score"}
+              }
+            },
+            {
+              "opcode": "event_broadcast",
+              "block": "block_3",
+              "next": null,
+              "inputs": {
+                "BROADCAST_INPUT": {"type": "broadcast", "name": "start"}
+              },
+              "fields": {
+                "BROADCAST_OPTION": {"value": "start"}
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "玩家車",
+        "x": 0,
+        "y": -120,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Convertible", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Pop", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": "block_2",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "looks_show",
+                "block": "block_2",
+                "next": "block_3",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "event_whengreaterthan",
+                "block": "block_3",
+                "next": "block_4",
+                "inputs": {
+                  "VALUE": {"type": "literal", "value": 0}
+                },
+                "fields": {
+                  "WHENGREATERTHANMENU": {"value": "score"}
+                }
+              },
+              {
+                "opcode": "control_wait",
+                "block": "block_4",
+                "next": "block_5",
+                "inputs": {
+                  "DURATION": {"type": "literal", "value": 0.5}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "motion_changexby",
+                "block": "block_5",
+                "next": "block_6",
+                "inputs": {
+                  "DX": {"type": "literal", "value": 20}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "control_wait",
+                "block": "block_6",
+                "next": null,
+                "inputs": {
+                  "DURATION": {"type": "literal", "value": 0.5}
+                },
+                "fields": {}
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "block": "block_8",
+                "next": null,
+                "inputs": {},
+                "fields": {
+                  "KEY_OPTION": {"value": "left arrow"}
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "block": "block_8",
+                "next": null,
+                "inputs": {
+                  "DX": {"type": "literal", "value": -20}
+                },
+                "fields": {}
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "block": "block_10",
+                "next": null,
+                "inputs": {},
+                "fields": {
+                  "KEY_OPTION": {"value": "right arrow"}
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "block": "block_10",
+                "next": null,
+                "inputs": {
+                  "DX": {"type": "literal", "value": 20}
+                },
+                "fields": {}
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "block": "block_12",
+                "next": "block_13",
+                "inputs": {},
+                "fields": {
+                  "BROADCAST_OPTION": {"value": "start"}
+                }
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "block": "block_13",
+                "next": "block_14",
+                "inputs": {
+                  "X": {"type": "literal", "value": 0},
+                  "Y": {"type": "literal", "value": -120}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "looks_nextcostume",
+                "block": "block_14",
+                "next": null,
+                "inputs": {},
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      },
+      {
+        "kind": "sprite",
+        "name": "敵車",
+        "x": 0,
+        "y": 200,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Truck-a", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Toy Honk", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": "block_18",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "looks_hide",
+                "block": "block_18",
+                "next": "block_19",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "control_forever",
+                "block": "block_19",
+                "next": null,
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "control_wait",
+                        "block": "block_20",
+                        "next": "block_21",
+                        "inputs": {
+                          "DURATION": {"type": "literal", "value": 0.5}
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "motion_changexby",
+                        "block": "block_21",
+                        "next": "block_22",
+                        "inputs": {
+                          "DX": {"type": "literal", "value": 0}
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "motion_changeyby",
+                        "block": "block_22",
+                        "next": "block_23",
+                        "inputs": {
+                          "DY": {"type": "literal", "value": -5}
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "looks_nextcostume",
+                        "block": "block_23",
+                        "next": "block_24",
+                        "inputs": {},
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_if",
+                        "block": "block_24",
+                        "next": "block_25",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_touchingobject",
+                              "inputs": {
+                                "TOUCHINGOBJECTMENU": {
+                                  "type": "literal",
+                                  "value": "玩家車"
+                                }
+                              },
+                              "fields": {}
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "event_broadcast",
+                                "block": "block_26",
+                                "next": null,
+                                "inputs": {
+                                  "BROADCAST_INPUT": {
+                                    "type": "broadcast",
+                                    "name": "gameover"
+                                  }
+                                },
+                                "fields": {
+                                  "BROADCAST_OPTION": {
+                                    "value": "gameover"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        },
+                        "fields": {}
+                      }
+                    ]
+                  }
+                },
+                "fields": {}
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "block": "block_30",
+                "next": "block_31",
+                "inputs": {},
+                "fields": {
+                  "BROADCAST_OPTION": {"value": "start"}
+                }
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "block": "block_31",
+                "next": "block_32",
+                "inputs": {
+                  "X": {"type": "literal", "value": 0},
+                  "Y": {"type": "literal", "value": 200}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "looks_show",
+                "block": "block_32",
+                "next": "block_33",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "control_wait",
+                "block": "block_33",
+                "next": "block_34",
+                "inputs": {
+                  "DURATION": {"type": "literal", "value": 0.5}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "motion_changexby",
+                "block": "block_34",
+                "next": "block_35",
+                "inputs": {
+                  "DX": {"type": "literal", "value": 0}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "motion_changeyby",
+                "block": "block_35",
+                "next": "block_36",
+                "inputs": {
+                  "DY": {"type": "literal", "value": -5}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "looks_nextcostume",
+                "block": "block_36",
+                "next": null,
+                "inputs": {},
+                "fields": {}
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "block": "block_38",
+                "next": "block_39",
+                "inputs": {},
+                "fields": {
+                  "BROADCAST_OPTION": {"value": "gameover"}
+                }
+              },
+              {
+                "opcode": "looks_hide",
+                "block": "block_39",
+                "next": null,
+                "inputs": {},
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      },
+      {
+        "kind": "sprite",
+        "name": "分數顯示",
+        "x": -180,
+        "y": 180,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "don't rotate",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Star", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Collect", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": "block_42",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "looks_show",
+                "block": "block_42",
+                "next": "block_43",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "control_forever",
+                "block": "block_43",
+                "next": null,
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "looks_say",
+                        "block": "block_44",
+                        "next": "block_45",
+                        "inputs": {
+                          "MESSAGE": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_join",
+                              "inputs": {
+                                "STRING1": {"type": "literal", "value": "分數："},
+                                "STRING2": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "data_variable",
+                                    "inputs": {},
+                                    "fields": {
+                                      "VARIABLE": {"value": "score"}
+                                    }
+                                  }
+                                }
+                              },
+                              "fields": {}
+                            }
+                          }
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "block": "block_45",
+                        "next": "block_46",
+                        "inputs": {
+                          "DURATION": {"type": "literal", "value": 0.2}
+                        },
+                        "fields": {}
+                      }
+                    ]
+                  }
+                },
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      },
+      {
+        "kind": "sprite",
+        "name": "遊戲控制器",
+        "x": 0,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": false,
+        "draggable": false,
+        "rotationStyle": "don't rotate",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Button2-a", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Pop", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": "block_50",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "looks_hide",
+                "block": "block_50",
+                "next": "block_51",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "control_forever",
+                "block": "block_51",
+                "next": null,
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "control_if",
+                        "block": "block_52",
+                        "next": "block_53",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_keypressed",
+                              "inputs": {},
+                              "fields": {
+                                "KEY_OPTION": {"value": "left arrow"}
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_changexby",
+                                "block": "block_54",
+                                "next": null,
+                                "inputs": {
+                                  "DX": {"type": "literal", "value": -15}
+                                },
+                                "fields": {}
+                              }
+                            ]
+                          }
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_if",
+                        "block": "block_56",
+                        "next": "block_57",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_keypressed",
+                              "inputs": {},
+                              "fields": {
+                                "KEY_OPTION": {"value": "right arrow"}
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_changexby",
+                                "block": "block_58",
+                                "next": null,
+                                "inputs": {
+                                  "DX": {"type": "literal", "value": 15}
+                                },
+                                "fields": {}
+                              }
+                            ]
+                          }
+                        },
+                        "fields": {}
+                      }
+                    ]
+                  }
+                },
+                "fields": {}
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "block": "block_60",
+                "next": "block_61",
+                "inputs": {},
+                "fields": {
+                  "BROADCAST_OPTION": {"value": "gameover"}
+                }
+              },
+              {
+                "opcode": "sound_play",
+                "block": "block_61",
+                "next": "block_62",
+                "inputs": {
+                  "SOUND_MENU": {"type": "literal", "value": "Lose"}
+                },
+                "fields": {
+                  "SOUND_MENU": {"value": "Lose"}
+                }
+              },
+              {
+                "opcode": "looks_sayforsecs",
+                "block": "block_62",
+                "next": "block_63",
+                "inputs": {
+                  "MESSAGE": {"type": "literal", "value": "遊戲結束！"},
+                  "SECS": {"type": "literal", "value": 2}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "event_broadcast",
+                "block": "block_63",
+                "next": null,
+                "inputs": {
+                  "BROADCAST_INPUT": {"type": "broadcast", "name": "start"}
+                },
+                "fields": {
+                  "BROADCAST_OPTION": {"value": "start"}
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "block": "block_65",
+                "next": "block_66",
+                "inputs": {},
+                "fields": {
+                  "BROADCAST_OPTION": {"value": "start"}
+                }
+              },
+              {
+                "opcode": "sound_play",
+                "block": "block_66",
+                "next": "block_67",
+                "inputs": {
+                  "SOUND_MENU": {"type": "literal", "value": "Coin"}
+                },
+                "fields": {
+                  "SOUND_MENU": {"value": "Coin"}
+                }
+              },
+              {
+                "opcode": "control_wait",
+                "block": "block_67",
+                "next": "block_68",
+                "inputs": {
+                  "DURATION": {"type": "literal", "value": 0.1}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "data_changevariableby",
+                "block": "block_68",
+                "next": "block_69",
+                "inputs": {
+                  "VALUE": {"type": "literal", "value": 1}
+                },
+                "fields": {
+                  "VARIABLE": {"value": "score"}
+                }
+              },
+              {
+                "opcode": "sound_play",
+                "block": "block_69",
+                "next": "block_70",
+                "inputs": {
+                  "SOUND_MENU": {"type": "literal", "value": "Pop"}
+                },
+                "fields": {
+                  "SOUND_MENU": {"value": "Pop"}
+                }
+              },
+              {
+                "opcode": "control_wait",
+                "block": "block_70",
+                "next": null,
+                "inputs": {
+                  "DURATION": {"type": "literal", "value": 0.1}
+                },
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      }
+    ],
+    "broadcasts": [
+      {"name": "start"},
+      {"name": "gameover"}
+    ]
+  },
+  "requirementCoverage": [
+    {
+      "id": "R1",
+      "requirement": "玩家車在下面",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/0/y"
+      ]
+    },
+    {
+      "id": "R2",
+      "requirement": "用左右鍵換車道",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/3/scripts/0/blocks/3",
+        "/sprites/3/scripts/0/blocks/10"
+      ]
+    },
+    {
+      "id": "R3",
+      "requirement": "前面的車一直開下來",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/1/scripts/0/blocks/20",
+        "/sprites/1/scripts/0/blocks/22",
+        "/sprites/1/scripts/0/blocks/23"
+      ]
+    },
+    {
+      "id": "R4",
+      "requirement": "閃過越多分數越高",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/3/scripts/1/blocks/6",
+        "/sprites/2/scripts/0/blocks/4"
+      ]
+    },
+    {
+      "id": "R5",
+      "requirement": "核心循環：操作→挑戰→回饋",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/3/scripts/0/blocks/3",
+        "/sprites/1/scripts/0/blocks/24",
+        "/sprites/3/scripts/1/blocks/6"
+      ]
+    },
+    {
+      "id": "R6",
+      "requirement": "成功/失敗與快速重玩",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/3/scripts/1/blocks/2",
+        "/sprites/3/scripts/1/blocks/4",
+        "/sprites/3/scripts/1/blocks/6"
+      ]
+    },
+    {
+      "id": "R7",
+      "requirement": "逐步進展/獎勵",
+      "status": "approximated",
+      "evidencePointers": []
+    },
+    {
+      "id": "R8",
+      "requirement": "至少一種有趣障礙",
+      "status": "not-implemented",
+      "evidencePointers": []
+    }
+  ]
+}

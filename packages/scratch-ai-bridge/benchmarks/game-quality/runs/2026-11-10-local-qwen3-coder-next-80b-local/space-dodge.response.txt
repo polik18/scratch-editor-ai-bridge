@@ -1,0 +1,829 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "太空船躲隕石",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {"name": "score", "value": 0, "isPersistent": false},
+        {"name": "gameOver", "value": false, "isPersistent": false},
+        {"name": "speedMultiplier", "value": 1, "isPersistent": false}
+      ],
+      "lists": [],
+      "costumes": [
+        {"name": "Space", "dataFormat": "svg"}
+      ],
+      "sounds": [
+        {"name": "Space Ambience", "dataFormat": "wav"}
+      ],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked",
+              "next": "block_2",
+              "inputs": {},
+              "fields": {}
+            },
+            {
+              "opcode": "sound_play",
+              "next": "block_3",
+              "inputs": {
+                "SOUND_MENU": {"type": "literal", "value": "Space Ambience"}
+              },
+              "fields": {}
+            },
+            {
+              "opcode": "control_forever",
+              "next": null,
+              "inputs": {
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "control_if",
+                      "next": null,
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_equals",
+                            "inputs": {
+                              "OPERAND1": {"type": "variable", "name": "gameOver"},
+                              "OPERAND2": {"type": "literal", "value": 0}
+                            },
+                            "fields": {}
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "control_wait",
+                              "next": null,
+                              "inputs": {
+                                "DURATION": {"type": "literal", "value": 0.05}
+                              },
+                              "fields": {}
+                            }
+                          ]
+                        },
+                        "SUBSTACK2": {
+                          "type": "stack",
+                          "blocks": []
+                        }
+                      },
+                      "fields": {}
+                    }
+                  ]
+                }
+              },
+              "fields": {}
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "火箭",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Rocketship-a", "dataFormat": "svg"},
+          {"name": "Rocketship-b", "dataFormat": "svg"},
+          {"name": "Rocketship-c", "dataFormat": "svg"},
+          {"name": "Rocketship-d", "dataFormat": "svg"},
+          {"name": "Rocketship-e", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Laser1", "dataFormat": "wav"},
+          {"name": "Laser2", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": "block_2",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "next": "block_3",
+                "inputs": {
+                  "X": {"type": "literal", "value": 0},
+                  "Y": {"type": "literal", "value": -120}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "looks_show",
+                "next": "block_4",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "control_forever",
+                "next": null,
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "control_if",
+                        "next": "block_7",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_keypressed",
+                              "inputs": {},
+                              "fields": {"KEY_OPTION": "left arrow"}
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_changexby",
+                                "next": "block_6",
+                                "inputs": {
+                                  "DX": {"type": "literal", "value": -5}
+                                },
+                                "fields": {}
+                              }
+                            ]
+                          },
+                          "SUBSTACK2": {
+                            "type": "stack",
+                            "blocks": []
+                          }
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_if",
+                        "next": "block_9",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_keypressed",
+                              "inputs": {},
+                              "fields": {"KEY_OPTION": "right arrow"}
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_changexby",
+                                "next": "block_8",
+                                "inputs": {
+                                  "DX": {"type": "literal", "value": 5}
+                                },
+                                "fields": {}
+                              }
+                            ]
+                          },
+                          "SUBSTACK2": {
+                            "type": "stack",
+                            "blocks": []
+                          }
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "motion_ifonedgebounce",
+                        "next": "block_10",
+                        "inputs": {},
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "looks_nextcostume",
+                        "next": null,
+                        "inputs": {},
+                        "fields": {}
+                      }
+                    ]
+                  }
+                },
+                "fields": {}
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "next": "block_2",
+                "inputs": {
+                  "BROADCAST_INPUT": {"type": "broadcast", "name": "start"}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "data_setvariableto",
+                "next": "block_3",
+                "inputs": {
+                  "VARIABLE": {"type": "variable", "name": "score"},
+                  "VALUE": {"type": "literal", "value": 0}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "data_setvariableto",
+                "next": "block_4",
+                "inputs": {
+                  "VARIABLE": {"type": "variable", "name": "speedMultiplier"},
+                  "VALUE": {"type": "literal", "value": 1}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "data_setvariableto",
+                "next": "block_5",
+                "inputs": {
+                  "VARIABLE": {"type": "variable", "name": "gameOver"},
+                  "VALUE": {"type": "literal", "value": 0}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "looks_sayforsecs",
+                "next": null,
+                "inputs": {
+                  "MESSAGE": {"type": "literal", "value": "按空格鍵開始"},
+                  "SECS": {"type": "literal", "value": 2}
+                },
+                "fields": {}
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "next": null,
+                "inputs": {
+                  "KEY_OPTION": {"type": "literal", "value": "space"}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "event_broadcast",
+                "next": null,
+                "inputs": {
+                  "BROADCAST_INPUT": {"type": "broadcast", "name": "start"}
+                },
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": -120,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "隕石",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Rocks", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Pop", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": null,
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "next": "block_2",
+                "inputs": {
+                  "BROADCAST_INPUT": {"type": "broadcast", "name": "start"}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "control_forever",
+                "next": null,
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "control_wait_until",
+                        "next": "block_4",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_equals",
+                              "inputs": {
+                                "OPERAND1": {"type": "variable", "name": "gameOver"},
+                                "OPERAND2": {"type": "literal", "value": 0}
+                              },
+                              "fields": {}
+                            }
+                          }
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_create_clone_of",
+                        "next": null,
+                        "inputs": {
+                          "CLONE_OPTION": {"type": "literal", "value": "_myself_"}
+                        },
+                        "fields": {}
+                      }
+                    ]
+                  }
+                },
+                "fields": {}
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "control_start_as_clone",
+                "next": "block_2",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "next": "block_3",
+                "inputs": {
+                  "X": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "operator_random",
+                      "inputs": {
+                        "FROM": {"type": "literal", "value": -220},
+                        "TO": {"type": "literal", "value": 220}
+                      },
+                      "fields": {}
+                    }
+                  },
+                  "Y": {"type": "literal", "value": 200}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "looks_show",
+                "next": "block_4",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "control_forever",
+                "next": null,
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "control_if",
+                        "next": "block_7",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_gt",
+                              "inputs": {
+                                "OPERAND1": {"type": "variable", "name": "gameOver"},
+                                "OPERAND2": {"type": "literal", "value": 0}
+                              },
+                              "fields": {}
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": []
+                          },
+                          "SUBSTACK2": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_changeyby",
+                                "next": "block_6",
+                                "inputs": {
+                                  "DY": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "operator_multiply",
+                                      "inputs": {
+                                        "NUM1": {"type": "literal", "value": -5},
+                                        "NUM2": {"type": "variable", "name": "speedMultiplier"}
+                                      },
+                                      "fields": {}
+                                    }
+                                  }
+                                },
+                                "fields": {}
+                              },
+                              {
+                                "opcode": "control_if",
+                                "next": "block_8",
+                                "inputs": {
+                                  "CONDITION": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "sensing_touchingobject",
+                                      "inputs": {
+                                        "TOUCHINGOBJECTMENU": {"type": "literal", "value": "火箭"}
+                                      },
+                                      "fields": {}
+                                    }
+                                  },
+                                  "SUBSTACK": {
+                                    "type": "stack",
+                                    "blocks": [
+                                      {
+                                        "opcode": "event_broadcast",
+                                        "next": "block_10",
+                                        "inputs": {
+                                          "BROADCAST_INPUT": {"type": "broadcast", "name": "gameOver"}
+                                        },
+                                        "fields": {}
+                                      }
+                                    ]
+                                  },
+                                  "SUBSTACK2": {
+                                    "type": "stack",
+                                    "blocks": []
+                                  }
+                                },
+                                "fields": {}
+                              },
+                              {
+                                "opcode": "control_if",
+                                "next": "block_11",
+                                "inputs": {
+                                  "CONDITION": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "motion_yposition",
+                                      "inputs": {},
+                                      "fields": {}
+                                    }
+                                  },
+                                  "SUBSTACK": {
+                                    "type": "stack",
+                                    "blocks": [
+                                      {
+                                        "opcode": "control_delete_this_clone",
+                                        "next": null,
+                                        "inputs": {},
+                                        "fields": {}
+                                      }
+                                    ]
+                                  },
+                                  "SUBSTACK2": {
+                                    "type": "stack",
+                                    "blocks": []
+                                  }
+                                },
+                                "fields": {}
+                              },
+                              {
+                                "opcode": "control_wait",
+                                "next": null,
+                                "inputs": {
+                                  "DURATION": {"type": "literal", "value": 0.05}
+                                },
+                                "fields": {}
+                              }
+                            ]
+                          }
+                        },
+                        "fields": {}
+                      }
+                    ]
+                  }
+                },
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "分數顯示",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Star", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Collect", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": null,
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "next": "block_2",
+                "inputs": {
+                  "BROADCAST_INPUT": {"type": "broadcast", "name": "start"}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "data_setvariableto",
+                "next": "block_3",
+                "inputs": {
+                  "VARIABLE": {"type": "variable", "name": "score"},
+                  "VALUE": {"type": "literal", "value": 0}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "looks_switchcostumeto",
+                "next": "block_4",
+                "inputs": {
+                  "COSTUME": {"type": "literal", "value": "Star"}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "looks_show",
+                "next": "block_5",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "next": "block_6",
+                "inputs": {
+                  "X": {"type": "literal", "value": -180},
+                  "Y": {"type": "literal", "value": 160}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "control_forever",
+                "next": null,
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "looks_say",
+                        "next": null,
+                        "inputs": {
+                          "MESSAGE": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_join",
+                              "inputs": {
+                                "STRING1": {"type": "literal", "value": "分數："},
+                                "STRING2": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "data_variable",
+                                    "inputs": {},
+                                    "fields": {"VARIABLE": {"type": "variable", "name": "score"}}
+                                  }
+                                }
+                              },
+                              "fields": {}
+                            }
+                          }
+                        },
+                        "fields": {}
+                      }
+                    ]
+                  }
+                },
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": -180,
+        "y": 160,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "遊戲結束",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Button2-a", "dataFormat": "svg"},
+          {"name": "Button2-b", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Lose", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": null,
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "next": "block_2",
+                "inputs": {
+                  "BROADCAST_INPUT": {"type": "broadcast", "name": "gameOver"}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "data_setvariableto",
+                "next": "block_3",
+                "inputs": {
+                  "VARIABLE": {"type": "variable", "name": "gameOver"},
+                  "VALUE": {"type": "literal", "value": 1}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "sound_play",
+                "next": "block_4",
+                "inputs": {
+                  "SOUND_MENU": {"type": "literal", "value": "Lose"}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "looks_switchcostumeto",
+                "next": "block_5",
+                "inputs": {
+                  "COSTUME": {"type": "literal", "value": "Button2-b"}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "looks_show",
+                "next": "block_6",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "next": "block_7",
+                "inputs": {
+                  "X": {"type": "literal", "value": 0},
+                  "Y": {"type": "literal", "value": 0}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "looks_sayforsecs",
+                "next": null,
+                "inputs": {
+                  "MESSAGE": {"type": "literal", "value": "遊戲結束！按空格鍵重玩"},
+                  "SECS": {"type": "literal", "value": 3}
+                },
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": false,
+        "draggable": false,
+        "rotationStyle": "all around"
+      }
+    ],
+    "broadcasts": [
+      {"name": "start"},
+      {"name": "gameOver"}
+    ]
+  },
+  "requirementCoverage": [
+    {
+      "id": "R1",
+      "requirement": "玩家角色為火箭，可左右移動",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/0/scripts/0/blocks/2",
+        "/sprites/0/scripts/0/blocks/3",
+        "/sprites/0/scripts/0/blocks/4",
+        "/sprites/0/scripts/0/blocks/5",
+        "/sprites/0/scripts/0/blocks/6"
+      ]
+    },
+    {
+      "id": "R2",
+      "requirement": "隕石持續下落且速度隨時間加快",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/1/scripts/1/blocks/3",
+        "/sprites/1/scripts/2/blocks/5",
+        "/sprites/1/scripts/2/blocks/6",
+        "/sprites/1/scripts/2/blocks/7"
+      ]
+    },
+    {
+      "id": "R3",
+      "requirement": "活越久分數越高",
+      "status": "approximated",
+      "evidencePointers": [
+        "/sprites/2/scripts/0/blocks/2"
+      ]
+    },
+    {
+      "id": "R4",
+      "requirement": "撞到隕石遊戲結束",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/1/scripts/2/blocks/7",
+        "/sprites/1/scripts/2/blocks/8",
+        "/sprites/3/scripts/0/blocks/1",
+        "/sprites/3/scripts/0/blocks/2"
+      ]
+    },
+    {
+      "id": "R5",
+      "requirement": "遊戲結束後可快速重玩",
+      "status": "approximated",
+      "evidencePointers": [
+        "/sprites/0/scripts/1/blocks/1",
+        "/sprites/0/scripts/2/blocks/1",
+        "/sprites/0/scripts/2/blocks/2"
+      ]
+    },
+    {
+      "id": "R6",
+      "requirement": "使用官方素材與音效",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/0/costumes/0",
+        "/sprites/0/sounds/0",
+        "/sprites/1/costumes/0",
+        "/sprites/1/sounds/0",
+        "/sprites/2/costumes/0",
+        "/sprites/3/costumes/0",
+        "/stage/costumes/0",
+        "/stage/sounds/0"
+      ]
+    },
+    {
+      "id": "R7",
+      "requirement": "核心循環：操作→挑戰→回饋",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/0/scripts/0/blocks/0",
+        "/sprites/1/scripts/1/blocks/0",
+        "/sprites/1/scripts/2/blocks/7",
+        "/sprites/3/scripts/0/blocks/1",
+        "/sprites/2/scripts/0/blocks/10"
+      ]
+    }
+  ]
+}

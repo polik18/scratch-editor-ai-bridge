@@ -1,0 +1,211 @@
+這是「依設計 brief 製作遊戲」階段。這份訊息可能在新的 AI 對話中使用；以下原始需求和已確認 brief 是完整設計依據，不需要讀取前一段聊天紀錄。
+
+原始作品需求：
+打地鼠：地鼠會隨機從洞裡冒出來，用滑鼠點到就加分，時間到遊戲結束
+
+已確認遊戲設計 brief：
+尚未提供。請先自行完成一份精簡設計：確定玩家角色與目標、核心循環（操作→挑戰→回饋）、至少一種有趣障礙、逐步進展/獎勵、成功/失敗與快速重玩；採用合理預設並在 requirementCoverage 中標明近似或未實作項目，不要退化成只有移動和說話的空殼示範。
+
+指定類型：請依已確認 brief 選擇最合適的類型，不要套用固定遊戲模板。
+
+製作要求：
+- 保留原始需求及 brief 中每一項核心玩法；開始前先在內部建立「需求→角色/狀態/事件/腳本」映射，並用有意義的變化、回饋和重玩動機完成核心循環。
+- 至少規劃初始化/reset、玩家主要操作、挑戰/碰撞或選擇、進展/獎勵、成功/失敗回饋。依遊戲類型選擇所需架構，不要硬套平台遊戲模板。
+- 若有必要需求超過工具能力，保留最接近的核心體驗，並在 requirementCoverage 明確標示 approximated、runtime-unavailable 或 not-implemented；不可靜默省略，也不可杜撰 opcode。
+- 每個角色選外型符合用途的官方素材，背景配合主題；在得分、碰撞、勝負等時刻加入官方音效，會動的角色用造型切換做動畫。
+- 產生前檢查腳本能否形成完整玩法，尤其是開始狀態、可觀察回饋、勝敗條件與重開流程；最後只輸出規定的完整 JSON。
+
+最外層只輸出一個 scratch-ai-bridge/ai-response v1 JSON 物件；Canonical IR 放在 project 欄位。
+不要執行 Python、不要使用程式碼工具、不要顯示思考或驗證過程。
+只輸出一個最終 JSON 根物件；不要 Markdown code fence、說明文字或多個候選版本。
+project 物件必須包含 format="scratch-ai-bridge/canonical-ir"、version=1、name、stage、sprites、broadcasts。
+stage 必須包含 kind="stage"、name、variables、lists、costumes、sounds、scripts、procedures。
+每個 sprite 必須包含 kind="sprite"、name、variables、lists、costumes、sounds、scripts、procedures、x、y、direction、size、visible、draggable、rotationStyle。
+每個 script 必須是 {"blocks":[...]}，不能直接使用積木陣列。Stage 和 sprite 都可以有 scripts；Stage script 的 target 名稱必須等於 stage.name。
+每個 input 都必須是下列物件之一：
+- 常數：{"type":"literal","value":10}
+- 變數：{"type":"variable","name":"score"}
+- 清單：{"type":"list","name":"items"}
+- 廣播：{"type":"broadcast","name":"start"}
+- reporter：{"type":"block","block":{"opcode":"..."}}
+- 子堆疊：{"type":"stack","blocks":[...]}
+broadcasts 必須使用 [{"name":"start"}]，不能使用字串陣列。
+fields 的值必須直接是 string、number 或 boolean，例如 {"KEY_OPTION":"right arrow"}、{"VARIABLE":"score"}；不可使用 {"value":"..."} 或 {"name":"..."} wrapper。
+每個 costume 至少要有 name 與 dataFormat。舞台至少要有一個背景 costume；每個 visible=true 的 sprite 至少要有一個 costume。
+造型、背景與音效一律使用 Scratch 官方素材庫：只寫名稱，不要輸出 data，也不要自己畫 SVG；Bridge 會自動下載官方圖像與音效。
+- 角色 costume 的 name 寫下列素材的造型名稱（例如 {"name":"Cat-a","dataFormat":"svg"}）。只寫一個造型時，Bridge 會自動補上同一素材的其他造型與原本音效，可用 looks_nextcostume 做動畫。
+- Stage 的背景 costume name 寫下列背景名稱。
+- sound 寫 {"name":"Pop","dataFormat":"wav"}，名稱用下列音效或角色附帶音效；sound_play 的 SOUND_MENU 用同一名稱，且該角色的 sounds 必須包含它。
+- 角色 name 可用中文；造型、背景、音效名稱必須照抄素材原文。沒有完全合適的素材時，選外型最接近的（例如子彈用 Ball 或 Dot），不要輸出自製圖像。
+可用角色素材（名稱 → 造型名稱；音效）：
+- Mouse1 → Mouse1-a, Mouse1-b；Pop
+- Dot → Dot-a, Dot-b, Dot-c, Dot-d；Bark
+- Cat → Cat-a, Cat-b；Meow
+- Avery Walking → Avery Walking-a, Avery Walking-b, Avery Walking-c, Avery Walking-d；Pop
+- Ball → Ball-a, Ball-b, Ball-c, Ball-d, Ball-e；Boing, Pop
+- Star → Star；Collect
+- Heart → Heart Red, Heart Purple；Pop
+- Rocks → Rocks；Pop
+- Apple → Apple；Chomp
+- Button2 → Button2-a, Button2-b；Pop
+- Arrow1 → Arrow1-a, Arrow1-b, Arrow1-c, Arrow1-d；Pop
+可用背景：Blue Sky, Forest, Space, Underwater 1, School, Night City
+可用音效：Lose, Dun Dun Dunnn, Coin, Collect, Clock Ticking, Pop, Jump, Laser1, Bonk, Oops, Win, Video Game 1
+Stage 至少要有一個背景 costume；Stage 與 sprite 的 scripts 都可用來放置初始化、關卡與全域事件邏輯。空的 lists、costumes、sounds、scripts、procedures 也必須輸出 []。
+Pen（pen_*）與 Music（music_*）是已驗證的官方擴充積木；使用到時 compiler 會從 opcode 自動加入 project.extensions，不必手動猜 extension id。其他尚未列出的擴充、硬體或自製積木仍須先加入 capability registry 並驗證 runtime，不能假設會執行。
+布林條件必須使用 capability registry 標示為 boolean 的 reporter，不可直接把數值變數當條件。registry 的 shape 僅供辨識積木類型；Canonical IR block 禁止輸出 shape 欄位，積木形狀由 opcode 決定。
+可用積木與必要參數：
+- event_whenflagclicked [hat; stage|sprite]
+- event_whenkeypressed [hat; stage|sprite] (KEY_OPTION:field)
+- event_whenbroadcastreceived [hat; stage|sprite] (BROADCAST_OPTION:field)
+- event_broadcast [command; stage|sprite] (BROADCAST_INPUT:broadcast)
+- event_broadcastandwait [command; stage|sprite] (BROADCAST_INPUT:broadcast)
+- event_whenstageclicked [hat; stage]
+- event_whenthisspriteclicked [hat; sprite]
+- event_whenbackdropswitchesto [hat; stage|sprite] (BACKDROP:field)
+- event_whentouchingobject [hat; sprite] (TOUCHINGOBJECTMENU:field)
+- event_whengreaterthan [hat; stage|sprite] (WHENGREATERTHANMENU:field, VALUE:number)
+- motion_movesteps [command; sprite] (STEPS:number)
+- motion_turnright [command; sprite] (DEGREES:number)
+- motion_turnleft [command; sprite] (DEGREES:number)
+- motion_pointindirection [command; sprite] (DIRECTION:number)
+- motion_pointtowards [command; sprite] (TOWARDS:menu)
+- motion_goto [command; sprite] (TO:menu)
+- motion_glidesecstoxy [command; sprite] (SECS:number, X:number, Y:number)
+- motion_glideto [command; sprite] (SECS:number, TO:menu)
+- motion_ifonedgebounce [command; sprite]
+- motion_setrotationstyle [command; sprite] (STYLE:field)
+- motion_xposition [reporter; sprite]
+- motion_yposition [reporter; sprite]
+- motion_direction [reporter; sprite]
+- motion_gotoxy [command; sprite] (X:number, Y:number)
+- motion_changexby [command; sprite] (DX:number)
+- motion_setx [command; sprite] (X:number)
+- motion_changeyby [command; sprite] (DY:number)
+- motion_sety [command; sprite] (Y:number)
+- looks_say [command; stage|sprite] (MESSAGE:string)
+- looks_sayforsecs [command; stage|sprite] (MESSAGE:string, SECS:number)
+- looks_think [command; stage|sprite] (MESSAGE:string)
+- looks_thinkforsecs [command; stage|sprite] (MESSAGE:string, SECS:number)
+- looks_switchcostumeto [command; sprite] (COSTUME:menu)
+- looks_show [command; sprite]
+- looks_hide [command; sprite]
+- looks_nextcostume [command; sprite]
+- looks_changesizeby [command; sprite] (CHANGE:number)
+- looks_setsizeto [command; sprite] (SIZE:number)
+- looks_switchbackdropto [command; stage|sprite] (BACKDROP:menu)
+- looks_switchbackdroptoandwait [command; stage|sprite] (BACKDROP:menu)
+- looks_nextbackdrop [command; stage|sprite]
+- looks_changeeffectby [command; stage|sprite] (EFFECT:field, CHANGE:number)
+- looks_seteffectto [command; stage|sprite] (EFFECT:field, VALUE:number)
+- looks_cleargraphiceffects [command; stage|sprite]
+- looks_size [reporter; sprite]
+- looks_costumenumbername [reporter; sprite] (NUMBER_NAME:field)
+- looks_backdropnumbername [reporter; stage|sprite] (NUMBER_NAME:field)
+- looks_gotofrontback [command; sprite] (FRONT_BACK:field)
+- looks_goforwardbackwardlayers [command; sprite] (FORWARD_BACKWARD:field, NUM:number)
+- control_wait [command; stage|sprite] (DURATION:number)
+- control_repeat [command; stage|sprite] (TIMES:number, SUBSTACK:stack)
+- control_forever [command; stage|sprite] (SUBSTACK:stack)
+- control_if [command; stage|sprite] (CONDITION:boolean, SUBSTACK:stack)
+- control_if_else [command; stage|sprite] (CONDITION:boolean, SUBSTACK:stack, SUBSTACK2:stack)
+- control_repeat_until [command; stage|sprite] (CONDITION:boolean, SUBSTACK:stack)
+- control_wait_until [command; stage|sprite] (CONDITION:boolean)
+- control_stop [command; stage|sprite] (STOP_OPTION:field)
+- control_start_as_clone [hat; sprite]
+- control_create_clone_of [command; sprite] (CLONE_OPTION:menu)
+- control_delete_this_clone [command; sprite]
+- control_while [command; stage|sprite] (CONDITION:boolean, SUBSTACK:stack)
+- control_for_each [command; stage|sprite] (VARIABLE:field, VALUE:any, SUBSTACK:stack)
+- control_all_at_once [command; stage|sprite] (SUBSTACK:stack)
+- control_get_counter [reporter; stage|sprite]
+- control_incr_counter [command; stage|sprite]
+- control_clear_counter [command; stage|sprite]
+- sensing_touchingobject [boolean; sprite] (TOUCHINGOBJECTMENU:menu)
+- sensing_timer [reporter; stage|sprite]
+- sensing_resettimer [command; stage|sprite]
+- sensing_mousex [reporter; stage|sprite]
+- sensing_mousey [reporter; stage|sprite]
+- sensing_mousedown [boolean; stage|sprite]
+- sensing_keypressed [boolean; stage|sprite] (KEY_OPTION:menu)
+- sensing_distanceto [reporter; sprite] (DISTANCETOMENU:menu)
+- sensing_touchingcolor [boolean; sprite] (COLOR:string)
+- sensing_coloristouchingcolor [boolean; sprite] (COLOR:string, COLOR2:string)
+- sensing_askandwait [command; stage|sprite] (QUESTION:string)
+- sensing_answer [reporter; stage|sprite]
+- sensing_loudness [reporter; stage|sprite]
+- sensing_loud [boolean; stage|sprite]
+- sensing_current [reporter; stage|sprite] (CURRENTMENU:field)
+- sensing_dayssince2000 [reporter; stage|sprite]
+- sensing_online [boolean; stage|sprite]
+- sensing_username [reporter; stage|sprite]
+- sensing_of [reporter; stage|sprite] (PROPERTY:field, OBJECT:menu)
+- sensing_setdragmode [command; sprite] (DRAG_MODE:field)
+- operator_lt [boolean; stage|sprite] (OPERAND1:any, OPERAND2:any)
+- operator_equals [boolean; stage|sprite] (OPERAND1:any, OPERAND2:any)
+- operator_gt [boolean; stage|sprite] (OPERAND1:any, OPERAND2:any)
+- operator_subtract [reporter; stage|sprite] (NUM1:number, NUM2:number)
+- operator_add [reporter; stage|sprite] (NUM1:number, NUM2:number)
+- operator_multiply [reporter; stage|sprite] (NUM1:number, NUM2:number)
+- operator_divide [reporter; stage|sprite] (NUM1:number, NUM2:number)
+- operator_mod [reporter; stage|sprite] (NUM1:number, NUM2:number)
+- operator_random [reporter; stage|sprite] (FROM:number, TO:number)
+- operator_join [reporter; stage|sprite] (STRING1:string, STRING2:string)
+- operator_round [reporter; stage|sprite] (NUM:number)
+- operator_mathop [reporter; stage|sprite] (OPERATOR:field, NUM:number)
+- operator_length [reporter; stage|sprite] (STRING:string)
+- operator_letter_of [reporter; stage|sprite] (LETTER:number, STRING:string)
+- operator_contains [boolean; stage|sprite] (STRING1:string, STRING2:string)
+- operator_and [boolean; stage|sprite] (OPERAND1:boolean, OPERAND2:boolean)
+- operator_or [boolean; stage|sprite] (OPERAND1:boolean, OPERAND2:boolean)
+- operator_not [boolean; stage|sprite] (OPERAND:boolean)
+- data_setvariableto [command; stage|sprite] (VARIABLE:field, VALUE:any)
+- data_changevariableby [command; stage|sprite] (VARIABLE:field, VALUE:number)
+- data_showvariable [command; stage|sprite] (VARIABLE:field)
+- data_hidevariable [command; stage|sprite] (VARIABLE:field)
+- data_showlist [command; stage|sprite] (LIST:field)
+- data_hidelist [command; stage|sprite] (LIST:field)
+- data_addtolist [command; stage|sprite] (LIST:field, ITEM:any)
+- data_deleteoflist [command; stage|sprite] (LIST:field, INDEX:any)
+- data_deletealloflist [command; stage|sprite] (LIST:field)
+- data_insertatlist [command; stage|sprite] (LIST:field, ITEM:any, INDEX:any)
+- data_replaceitemoflist [command; stage|sprite] (LIST:field, ITEM:any, INDEX:any)
+- data_itemoflist [reporter; stage|sprite] (LIST:field, INDEX:any)
+- data_itemnumoflist [reporter; stage|sprite] (LIST:field, ITEM:any)
+- data_lengthoflist [reporter; stage|sprite] (LIST:field)
+- data_listcontainsitem [boolean; stage|sprite] (LIST:field, ITEM:any)
+- data_listcontents [reporter; stage|sprite] (LIST:field)
+- data_variable [reporter; stage|sprite] (VARIABLE:field)
+- sound_play [command; stage|sprite] (SOUND_MENU:menu)
+- sound_playuntildone [command; stage|sprite] (SOUND_MENU:menu)
+- sound_stopallsounds [command; stage|sprite]
+- sound_changeeffectby [command; stage|sprite] (EFFECT:field, VALUE:number)
+- sound_seteffectto [command; stage|sprite] (EFFECT:field, VALUE:number)
+- sound_cleareffects [command; stage|sprite]
+- sound_changevolumeby [command; stage|sprite] (VOLUME:number)
+- sound_setvolumeto [command; stage|sprite] (VOLUME:number)
+- sound_volume [reporter; stage|sprite]
+- pen_clear [command; stage|sprite]
+- pen_stamp [command; sprite]
+- pen_penDown [command; sprite]
+- pen_penUp [command; sprite]
+- pen_setPenColorToColor [command; sprite] (COLOR:color)
+- pen_changePenColorParamBy [command; sprite] (COLOR_PARAM:menu, VALUE:number)
+- pen_setPenColorParamTo [command; sprite] (COLOR_PARAM:menu, VALUE:number)
+- pen_changePenSizeBy [command; sprite] (SIZE:number)
+- pen_setPenSizeTo [command; sprite] (SIZE:number)
+- music_playDrumForBeats [command; stage|sprite] (DRUM:menu, BEATS:number)
+- music_restForBeats [command; stage|sprite] (BEATS:number)
+- music_playNoteForBeats [command; stage|sprite] (NOTE:number, BEATS:number)
+- music_setInstrument [command; stage|sprite] (INSTRUMENT:menu)
+- music_setTempo [command; stage|sprite] (TEMPO:number)
+- music_changeTempo [command; stage|sprite] (TEMPO:number)
+- music_getTempo [reporter; stage|sprite]
+鍵盤 KEY_OPTION 可用 space、方向鍵（up/down/right/left arrow）、any、a-z、0-9。
+碰撞 TOUCHINGOBJECTMENU 可用角色名稱、_edge_ 或 _mouse_。
+不要自行加入 Scratch block id、parent、next 或 shadow id；這些由 compiler 產生。
+Scratch 的 control_forever 每輪都會讓出執行時間，不要只為消除分析器警告而額外插入 control_wait。若迴圈內設定變數是碰撞、計分或狀態更新，保留在迴圈內；只把只需執行一次的初始值設定放在迴圈前。
+若需求超出上述 capability，不得靜默刪除玩法或假裝已完成；優先提出最接近且仍有趣的替代方案，並依需求覆蓋欄位標記近似、未支援或環境受限項目。重要玩法會因此改變時，先請使用者選擇或明確採用替代方案。不得杜撰 opcode.
+requirementCoverage 必須逐項列出原作品需求中的角色、玩法與目標，使用 id、requirement、status、evidencePointers 欄位。status 只能是 implemented-structure、approximated、not-implemented、runtime-unavailable、not-verifiable-from-ir。implemented-structure 必須引用 project 內實際存在的 block JSON Pointer；路徑以 project 物件為根，不要加 /project 前綴（例如 /sprites/0/scripts/0/blocks/0）。只近似或未做的項目不得標成 implemented-structure。FPS、手感及未執行行為使用 not-verifiable-from-ir。Bridge 會檢查 pointer，但 AI 自述不等於 runtime 驗證。
+rotationStyle 只能使用 "all around"、"left-right" 或 "don't rotate"，不要使用 "all-around"。
+回覆格式：{"format":"scratch-ai-bridge/ai-response","version":1,"project":{...Canonical IR...},"requirementCoverage":[{"id":"R1","requirement":"...","status":"implemented-structure","evidencePointers":["/sprites/0/scripts/0/blocks/0"]}]}

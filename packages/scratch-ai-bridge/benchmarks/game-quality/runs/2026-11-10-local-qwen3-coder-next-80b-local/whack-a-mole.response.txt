@@ -1,0 +1,508 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "打地鼠",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {
+          "name": "score",
+          "value": 0,
+          "isPersistent": false
+        },
+        {
+          "name": "timeLeft",
+          "value": 30,
+          "isPersistent": false
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Forest",
+          "dataFormat": "png"
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked",
+              "next": {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.1
+                          }
+                        },
+                        "next": {
+                          "opcode": "event_broadcast",
+                          "inputs": {
+                            "BROADCAST_INPUT": {
+                              "type": "broadcast",
+                              "name": "start"
+                            }
+                          },
+                          "next": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "地鼠",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Mouse1-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Mouse1-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Pop",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "inputs": {
+                  "BROADCAST_OPTION": {
+                    "type": "broadcast",
+                    "name": "start"
+                  }
+                },
+                "next": {
+                  "opcode": "control_forever",
+                  "inputs": {
+                    "SUBSTACK": {
+                      "type": "stack",
+                      "blocks": [
+                        {
+                          "opcode": "control_wait",
+                          "inputs": {
+                            "DURATION": {
+                              "type": "literal",
+                              "value": 0.5
+                            }
+                          },
+                          "next": {
+                            "opcode": "looks_nextcostume",
+                            "next": {
+                              "opcode": "control_wait",
+                              "inputs": {
+                                "DURATION": {
+                                  "type": "literal",
+                                  "value": 0.3
+                                }
+                              },
+                              "next": {
+                                "opcode": "looks_nextcostume",
+                                "next": {
+                                  "opcode": "control_wait",
+                                  "inputs": {
+                                    "DURATION": {
+                                      "type": "literal",
+                                      "value": 0.5
+                                    }
+                                  },
+                                  "next": {
+                                    "opcode": "control_wait",
+                                    "inputs": {
+                                      "DURATION": {
+                                        "type": "literal",
+                                        "value": 0.3
+                                      }
+                                    },
+                                    "next": null
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "opcode": "event_whenthisspriteclicked",
+                "next": {
+                  "opcode": "data_changevariableby",
+                  "inputs": {
+                    "VARIABLE": {
+                      "type": "variable",
+                      "name": "score"
+                    },
+                    "VALUE": {
+                      "type": "literal",
+                      "value": 1
+                    }
+                  },
+                  "next": {
+                    "opcode": "sound_play",
+                    "inputs": {
+                      "SOUND_MENU": {
+                        "type": "literal",
+                        "value": "Pop"
+                      }
+                    },
+                    "next": null
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "計時器",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Dot-a",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "inputs": {
+                  "BROADCAST_OPTION": {
+                    "type": "broadcast",
+                    "name": "start"
+                  }
+                },
+                "next": {
+                  "opcode": "control_wait_until",
+                  "inputs": {
+                    "CONDITION": {
+                      "type": "block",
+                      "block": {
+                        "opcode": "operator_lt",
+                        "inputs": {
+                          "OPERAND1": {
+                            "type": "variable",
+                            "name": "timeLeft"
+                          },
+                          "OPERAND2": {
+                            "type": "literal",
+                            "value": 0
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "next": {
+                    "opcode": "control_stop",
+                    "inputs": {
+                      "STOP_OPTION": {
+                        "type": "literal",
+                        "value": "all"
+                      }
+                    },
+                    "next": null
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": false,
+        "draggable": false,
+        "rotationStyle": "don't rotate"
+      },
+      {
+        "kind": "sprite",
+        "name": "分數板",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Star",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": {
+                  "opcode": "control_forever",
+                  "inputs": {
+                    "SUBSTACK": {
+                      "type": "stack",
+                      "blocks": [
+                        {
+                          "opcode": "looks_say",
+                          "inputs": {
+                            "MESSAGE": {
+                              "type": "block",
+                              "block": {
+                                "opcode": "operator_join",
+                                "inputs": {
+                                  "STRING1": {
+                                    "type": "literal",
+                                    "value": "分數："
+                                  },
+                                  "STRING2": {
+                                    "type": "variable",
+                                    "name": "score"
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "next": {
+                            "opcode": "control_wait",
+                            "inputs": {
+                              "DURATION": {
+                                "type": "literal",
+                                "value": 0.5
+                              }
+                            },
+                            "next": null
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 100,
+        "y": 150,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "don't rotate"
+      },
+      {
+        "kind": "sprite",
+        "name": "倒數計時",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Button2-a",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": {
+                  "opcode": "data_setvariableto",
+                  "inputs": {
+                    "VARIABLE": {
+                      "type": "variable",
+                      "name": "timeLeft"
+                    },
+                    "VALUE": {
+                      "type": "literal",
+                      "value": 30
+                    }
+                  },
+                  "next": {
+                    "opcode": "control_forever",
+                    "inputs": {
+                      "SUBSTACK": {
+                        "type": "stack",
+                        "blocks": [
+                          {
+                            "opcode": "control_wait",
+                            "inputs": {
+                              "DURATION": {
+                                "type": "literal",
+                              "value": 1
+                            }
+                          },
+                          "next": {
+                            "opcode": "data_changevariableby",
+                            "inputs": {
+                              "VARIABLE": {
+                                "type": "variable",
+                                "name": "timeLeft"
+                              },
+                              "VALUE": {
+                                "type": "literal",
+                                "value": -1
+                              }
+                            },
+                            "next": {
+                              "opcode": "looks_say",
+                              "inputs": {
+                                "MESSAGE": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "operator_join",
+                                    "inputs": {
+                                      "STRING1": {
+                                        "type": "literal",
+                                        "value": "剩餘時間："
+                                      },
+                                      "STRING2": {
+                                        "type": "variable",
+                                        "name": "timeLeft"
+                                      }
+                                    }
+                                  }
+                                }
+                              },
+                              "next": null
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 150,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "don't rotate"
+      }
+    ],
+    "broadcasts": [
+      {
+        "name": "start"
+      }
+    ]
+  },
+  "requirementCoverage": [
+    {
+      "id": "R1",
+      "requirement": "地鼠會隨機從洞裡冒出來",
+      "status": "approximated",
+      "evidencePointers": [
+        "/sprites/0/scripts/0/blocks/1/inputs/SUBSTACK/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/NEXT/0/blocks/0"
+      ]
+    },
+    {
+      "id": "R2",
+      "requirement": "用滑鼠點到就加分",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/0/scripts/0/blocks/1/inputs/SUBSTACK/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/NEXT/0/blocks/0",
+        "/sprites/0/scripts/0/blocks/2/inputs/NEXT/0/blocks/0"
+      ]
+    },
+    {
+      "id": "R3",
+      "requirement": "時間到遊戲結束",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/1/scripts/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/CONDITION/0/blocks/0/inputs/OPERAND1/0",
+        "/sprites/1/scripts/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/NEXT/0/blocks/0"
+      ]
+    },
+    {
+      "id": "R4",
+      "requirement": "玩家角色與目標：點擊地鼠得分，時間內盡可能高分",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/2/scripts/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/MESSAGE/0/blocks/0/inputs/STRING2/0",
+        "/sprites/3/scripts/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/VALUE/0",
+        "/sprites/3/scripts/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/MESSAGE/0/blocks/0/inputs/STRING2/0"
+      ]
+    },
+    {
+      "id": "R5",
+      "requirement": "核心循環：操作（點擊）→ 挑戰（地鼠出現時機）→ 回饋（加分+音效）",
+      "status": "approximated",
+      "evidencePointers": [
+        "/sprites/0/scripts/0/blocks/2/inputs/NEXT/0/blocks/0/inputs/VALUE/0",
+        "/sprites/0/scripts/0/blocks/2/inputs/NEXT/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/SOUND_MENU/0"
+      ]
+    },
+    {
+      "id": "R6",
+      "requirement": "至少一種有趣障礙：地鼠出現無固定節奏",
+      "status": "approximated",
+      "evidencePointers": [
+        "/sprites/0/scripts/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/DURATION/0"
+      ]
+    },
+    {
+      "id": "R7",
+      "requirement": "逐步進展/獎勵：分數累積顯示",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/2/scripts/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/MESSAGE/0/blocks/0"
+      ]
+    },
+    {
+      "id": "R8",
+      "requirement": "成功/失敗與快速重玩：時間結束即終止",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/1/scripts/0/blocks/0/inputs/NEXT/0/blocks/0/inputs/STOP_OPTION/0"
+      ]
+    }
+  ]
+}

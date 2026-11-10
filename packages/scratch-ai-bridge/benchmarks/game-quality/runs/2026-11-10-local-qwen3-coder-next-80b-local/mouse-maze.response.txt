@@ -1,0 +1,400 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "老鼠走迷宮",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {"name": "score", "value": 0, "isPersistent": false}
+      ],
+      "lists": [],
+      "costumes": [
+        {"name": "Blue Sky", "dataFormat": "svg"}
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked",
+              "next": {
+                "opcode": "looks_switchbackdropto",
+                "fields": {"BACKDROP": "Blue Sky"},
+                "next": {
+                  "opcode": "data_setvariableto",
+                  "fields": {"VARIABLE": "score"},
+                  "inputs": {"VALUE": {"type": "literal", "value": 0}},
+                  "next": {
+                    "opcode": "event_broadcast",
+                    "fields": {"BROADCAST_INPUT": {"type": "broadcast", "name": "start"}},
+                    "next": null
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "老鼠",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Mouse1-a", "dataFormat": "svg"},
+          {"name": "Mouse1-b", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Pop", "dataFormat": "wav"}
+        ],
+        "x": -180,
+        "y": 120,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "fields": {"BROADCAST_OPTION": {"type": "broadcast", "name": "start"}},
+                "next": {
+                  "opcode": "looks_show",
+                  "next": {
+                    "opcode": "motion_gotoxy",
+                    "inputs": {
+                      "X": {"type": "literal", "value": -180},
+                      "Y": {"type": "literal", "value": 120}
+                    },
+                    "next": {
+                      "opcode": "control_forever",
+                      "substack": {
+                        "blocks": [
+                          {
+                            "opcode": "control_if",
+                            "inputs": {
+                              "CONDITION": {
+                                "type": "block",
+                                "block": {
+                                  "opcode": "sensing_keypressed",
+                                  "fields": {"KEY_OPTION": "up arrow"}
+                                }
+                              },
+                              "SUBSTACK": {
+                                "blocks": [
+                                  {
+                                    "opcode": "motion_pointindirection",
+                                    "inputs": {"DIRECTION": {"type": "literal", "value": 0}},
+                                    "next": {
+                                      "opcode": "motion_movesteps",
+                                      "inputs": {"STEPS": {"type": "literal", "value": 5}},
+                                      "next": null
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "next": {
+                              "opcode": "control_if",
+                              "inputs": {
+                                "CONDITION": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "sensing_keypressed",
+                                    "fields": {"KEY_OPTION": "down arrow"}
+                                  }
+                                },
+                                "SUBSTACK": {
+                                  "blocks": [
+                                    {
+                                      "opcode": "motion_pointindirection",
+                                      "inputs": {"DIRECTION": {"type": "literal", "value": 180}},
+                                      "next": {
+                                        "opcode": "motion_movesteps",
+                                        "inputs": {"STEPS": {"type": "literal", "value": 5}},
+                                        "next": null
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "next": {
+                                "opcode": "control_if",
+                                "inputs": {
+                                  "CONDITION": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "sensing_keypressed",
+                                      "fields": {"KEY_OPTION": "left arrow"}
+                                    }
+                                  },
+                                  "SUBSTACK": {
+                                    "blocks": [
+                                      {
+                                        "opcode": "motion_pointindirection",
+                                        "inputs": {"DIRECTION": {"type": "literal", "value": -90}},
+                                        "next": {
+                                          "opcode": "motion_movesteps",
+                                          "inputs": {"STEPS": {"type": "literal", "value": 5}},
+                                          "next": null
+                                        }
+                                      }
+                                    ]
+                                  }
+                                },
+                                "next": {
+                                  "opcode": "control_if",
+                                  "inputs": {
+                                    "CONDITION": {
+                                      "type": "block",
+                                      "block": {
+                                        "opcode": "sensing_keypressed",
+                                        "fields": {"KEY_OPTION": "right arrow"}
+                                      }
+                                    },
+                                    "SUBSTACK": {
+                                      "blocks": [
+                                        {
+                                          "opcode": "motion_pointindirection",
+                                          "inputs": {"DIRECTION": {"type": "literal", "value": 90}},
+                                          "next": {
+                                            "opcode": "motion_movesteps",
+                                            "inputs": {"STEPS": {"type": "literal", "value": 5}},
+                                            "next": null
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "next": {
+                                    "opcode": "looks_nextcostume",
+                                    "next": {
+                                      "opcode": "control_wait",
+                                      "inputs": {"DURATION": {"type": "literal", "value": 0.1}},
+                                      "next": null
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenthingtouchingobject",
+                "fields": {"TOUCHINGOBJECTMENU": "起司"},
+                "next": {
+                  "opcode": "sound_play",
+                  "fields": {"SOUND_MENU": "Collect"},
+                  "next": {
+                    "opcode": "data_changevariableby",
+                    "fields": {"VARIABLE": "score"},
+                    "inputs": {"VALUE": {"type": "literal", "value": 1}},
+                    "next": {
+                      "opcode": "looks_sayforsecs",
+                      "inputs": {
+                        "MESSAGE": {"type": "literal", "value": "找到起司了！"},
+                        "SECS": {"type": "literal", "value": 1}
+                      },
+                      "next": {
+                        "opcode": "event_broadcast",
+                        "fields": {"BROADCAST_INPUT": {"type": "broadcast", "name": "nextLevel"}},
+                        "next": null
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenthingtouchingobject",
+                "fields": {"TOUCHINGOBJECTMENU": "牆"},
+                "next": {
+                  "opcode": "sound_play",
+                  "fields": {"SOUND_MENU": "Bonk"},
+                  "next": {
+                    "opcode": "motion_changexby",
+                    "inputs": {"DX": {"type": "block", "block": {"opcode": "operator_multiply", "inputs": {"NUM1": {"type": "block", "block": {"opcode": "motion_direction"}}, "NUM2": {"type": "literal", "value": -1}}}}},
+                    "next": {
+                      "opcode": "motion_changeyby",
+                      "inputs": {"DY": {"type": "block", "block": {"opcode": "operator_add", "inputs": {"NUM1": {"type": "block", "block": {"opcode": "operator_multiply", "inputs": {"NUM1": {"type": "block", "block": {"opcode": "motion_direction"}}, "NUM2": {"type": "literal", "value": 0}}}}, "NUM2": {"type": "block", "block": {"opcode": "operator_multiply", "inputs": {"NUM1": {"type": "block", "block": {"opcode": "operator_mathop", "fields": {"OPERATOR": "sin"}, "NUM": {"type": "block", "block": {"opcode": "motion_direction"}}}}}, "NUM2": {"type": "literal", "value": 5}}}}}}},
+                      "next": null
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      },
+      {
+        "kind": "sprite",
+        "name": "起司",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Star", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Collect", "dataFormat": "wav"}
+        ],
+        "x": 180,
+        "y": -120,
+        "direction": 0,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": {
+                  "opcode": "looks_show",
+                  "next": {
+                    "opcode": "motion_gotoxy",
+                    "inputs": {
+                      "X": {"type": "literal", "value": 180},
+                      "Y": {"type": "literal", "value": -120}
+                    },
+                    "next": null
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "fields": {"BROADCAST_OPTION": {"type": "broadcast", "name": "nextLevel"}},
+                "next": {
+                  "opcode": "looks_hide",
+                  "next": {
+                    "opcode": "control_wait",
+                    "inputs": {"DURATION": {"type": "literal", "value": 0.5}},
+                    "next": {
+                      "opcode": "motion_gotoxy",
+                      "inputs": {
+                        "X": {"type": "block", "block": {"opcode": "operator_random", "inputs": {"FROM": {"type": "literal", "value": -150}, "TO": {"type": "literal", "value": 150}}}},
+                        "Y": {"type": "block", "block": {"opcode": "operator_random", "inputs": {"FROM": {"type": "literal", "value": -100}, "TO": {"type": "literal", "value": 100}}}}
+                      },
+                      "next": {
+                        "opcode": "looks_show",
+                        "next": null
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      },
+      {
+        "kind": "sprite",
+        "name": "牆",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Rocks", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Pop", "dataFormat": "wav"}
+        ],
+        "x": 0,
+        "y": 0,
+        "direction": 0,
+        "size": 100,
+        "visible": false,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": {
+                  "opcode": "looks_hide",
+                  "next": null
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      }
+    ],
+    "broadcasts": [
+      {"name": "start"},
+      {"name": "nextLevel"}
+    ]
+  },
+  "requirementCoverage": [
+    {
+      "id": "R1",
+      "requirement": "玩家角色為老鼠",
+      "status": "implemented-structure",
+      "evidencePointers": ["/sprites/0/name"]
+    },
+    {
+      "id": "R2",
+      "requirement": "使用上下左右鍵控制老鼠",
+      "status": "implemented-structure",
+      "evidencePointers": ["/sprites/0/scripts/0/blocks/0", "/sprites/0/scripts/0/blocks/1", "/sprites/0/scripts/0/blocks/2", "/sprites/0/scripts/0/blocks/3"]
+    },
+    {
+      "id": "R3",
+      "requirement": "碰到牆會退回去",
+      "status": "approximated",
+      "evidencePointers": ["/sprites/0/scripts/2/blocks/0"]
+    },
+    {
+      "id": "R4",
+      "requirement": "找到起司就過關",
+      "status": "implemented-structure",
+      "evidencePointers": ["/sprites/0/scripts/1/blocks/0", "/sprites/1/scripts/1/blocks/0"]
+    },
+    {
+      "id": "R5",
+      "requirement": "核心循環：操作→挑戰→回饋",
+      "status": "implemented-structure",
+      "evidencePointers": ["/sprites/0/scripts/0/blocks/0", "/sprites/0/scripts/1/blocks/0", "/sprites/0/scripts/1/blocks/1"]
+    },
+    {
+      "id": "R6",
+      "requirement": "逐步進展與獎勵（過關後起司隨機移動）",
+      "status": "implemented-structure",
+      "evidencePointers": ["/sprites/1/scripts/1/blocks/0"]
+    },
+    {
+      "id": "R7",
+      "requirement": "成功/失敗與快速重玩",
+      "status": "approximated",
+      "evidencePointers": ["/stage/scripts/0/blocks/0"]
+    }
+  ]
+}

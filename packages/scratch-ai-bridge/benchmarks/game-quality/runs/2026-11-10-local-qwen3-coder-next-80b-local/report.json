@@ -1,0 +1,164 @@
+{
+  "results": [
+    {
+      "id": "catch-apples",
+      "status": "pipeline-failed",
+      "failedStage": "normalize",
+      "failure": "requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/0/blocks/3",
+      "promptCharacters": 13133,
+      "responseCharacters": 16972,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "normalize: requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/0/blocks/3"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "space-dodge",
+      "status": "pipeline-failed",
+      "failedStage": "normalize",
+      "failure": "requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/0/blocks/4",
+      "promptCharacters": 13252,
+      "responseCharacters": 27747,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "normalize: requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/0/blocks/4"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "space-shooter",
+      "status": "pipeline-failed",
+      "failedStage": "normalize",
+      "failure": "requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/1/blocks/2/inputs/SUBSTACK/blocks/0/inputs/SUBSTACK/blocks/0",
+      "promptCharacters": 13586,
+      "responseCharacters": 25661,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "normalize: requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/1/blocks/2/inputs/SUBSTACK/blocks/0/inputs/SUBSTACK/blocks/0"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "mouse-maze",
+      "status": "pipeline-failed",
+      "failedStage": "normalize",
+      "failure": "requirementCoverage[0] 的 evidence pointer 必須指向 block：/sprites/0/name",
+      "promptCharacters": 13084,
+      "responseCharacters": 15165,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "normalize: requirementCoverage[0] 的 evidence pointer 必須指向 block：/sprites/0/name"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "jump-collect",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 8123 (line 215 column 25)",
+      "promptCharacters": 13051,
+      "responseCharacters": 14997,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 8123 (line 215 column 25)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "pop-balloons",
+      "status": "pipeline-failed",
+      "failedStage": "normalize",
+      "failure": "requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/1/blocks/2",
+      "promptCharacters": 13333,
+      "responseCharacters": 26337,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "normalize: requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/1/blocks/2"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "two-player-pong",
+      "status": "pipeline-failed",
+      "failedStage": "normalize",
+      "failure": "requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/1/blocks/1/inputs/1/0",
+      "promptCharacters": 13534,
+      "responseCharacters": 26017,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "normalize: requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/1/blocks/1/inputs/1/0"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "deep-sea-rescue",
+      "status": "pipeline-failed",
+      "failedStage": "normalize",
+      "failure": "requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/0/blocks/2/inputs/SUBSTACK/blocks/5",
+      "promptCharacters": 13381,
+      "responseCharacters": 32310,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "normalize: requirementCoverage[0] 的 evidence pointer 不存在：/sprites/0/scripts/0/blocks/2/inputs/SUBSTACK/blocks/5"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "car-racing",
+      "status": "pipeline-failed",
+      "failedStage": "normalize",
+      "failure": "requirementCoverage[0] 的 evidence pointer 必須指向 block：/sprites/0/y",
+      "promptCharacters": 13183,
+      "responseCharacters": 24712,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "normalize: requirementCoverage[0] 的 evidence pointer 必須指向 block：/sprites/0/y"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "whack-a-mole",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 12753 (line 412 column 25)",
+      "promptCharacters": 13148,
+      "responseCharacters": 15733,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 12753 (line 412 column 25)"
+        }
+      ],
+      "score": 0
+    }
+  ]
+}

@@ -1,0 +1,951 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "深海救援",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {
+          "name": "score",
+          "value": 0,
+          "isPersistent": false
+        },
+        {
+          "name": "oxygen",
+          "value": 100,
+          "isPersistent": false
+        },
+        {
+          "name": "gameOver",
+          "value": false,
+          "isPersistent": false
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Underwater 2",
+          "dataFormat": "png"
+        }
+      ],
+      "sounds": [
+        {
+          "name": "Ocean Wave",
+          "dataFormat": "wav"
+        }
+      ],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked",
+              "next": "B1",
+              "parent": null,
+              "inputs": {}
+            },
+            {
+              "opcode": "data_setvariableto",
+              "next": "B2",
+              "parent": "B1",
+              "inputs": {
+                "VARIABLE": {"type": "variable", "name": "score"},
+                "VALUE": {"type": "literal", "value": 0}
+              },
+              "fields": {"VARIABLE": {"value": "score"}}
+            },
+            {
+              "opcode": "data_setvariableto",
+              "next": "B3",
+              "parent": "B2",
+              "inputs": {
+                "VARIABLE": {"type": "variable", "name": "oxygen"},
+                "VALUE": {"type": "literal", "value": 100}
+              },
+              "fields": {"VARIABLE": {"value": "oxygen"}}
+            },
+            {
+              "opcode": "data_setvariableto",
+              "next": "B4",
+              "parent": "B3",
+              "inputs": {
+                "VARIABLE": {"type": "variable", "name": "gameOver"},
+                "VALUE": {"type": "literal", "value": false}
+              },
+              "fields": {"VARIABLE": {"value": "gameOver"}}
+            },
+            {
+              "opcode": "looks_switchbackdropto",
+              "next": "B5",
+              "parent": "B4",
+              "inputs": {
+                "BACKDROP": {"type": "literal", "value": "Underwater 2"}
+              },
+              "fields": {"BACKDROP": {"value": "Underwater 2"}}
+            },
+            {
+              "opcode": "event_broadcast",
+              "next": null,
+              "parent": "B5",
+              "inputs": {
+                "BROADCAST_INPUT": {"type": "broadcast", "name": "start"}
+              },
+              "fields": {"BROADCAST_OPTION": {"value": "start"}}
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "小魚",
+        "x": 0,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Fish-a",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Bubbles",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "next": "B1",
+                "parent": null,
+                "inputs": {
+                  "BROADCAST_OPTION": {"type": "broadcast", "name": "start"}
+                },
+                "fields": {"BROADCAST_OPTION": {"value": "start"}}
+              },
+              {
+                "opcode": "looks_show",
+                "next": "B2",
+                "parent": "B1",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "control_forever",
+                "next": null,
+                "parent": "B2",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "control_if",
+                        "next": "B3",
+                        "parent": "B4",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_keypressed",
+                              "inputs": {
+                                "KEY_OPTION": {"type": "literal", "value": "up arrow"}
+                              },
+                              "fields": {"KEY_OPTION": {"value": "up arrow"}}
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_changexby",
+                                "next": "B5",
+                                "parent": "B3",
+                                "inputs": {
+                                  "DX": {"type": "literal", "value": 0}
+                                },
+                                "fields": {}
+                              },
+                              {
+                                "opcode": "motion_changeyby",
+                                "next": null,
+                                "parent": "B5",
+                                "inputs": {
+                                  "DY": {"type": "literal", "value": 3}
+                                },
+                                "fields": {}
+                              }
+                            ]
+                          }
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_if",
+                        "next": "B6",
+                        "parent": "B3",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_keypressed",
+                              "inputs": {
+                                "KEY_OPTION": {"type": "literal", "value": "down arrow"}
+                              },
+                              "fields": {"KEY_OPTION": {"value": "down arrow"}}
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_changexby",
+                                "next": "B7",
+                                "parent": "B6",
+                                "inputs": {
+                                  "DX": {"type": "literal", "value": 0}
+                                },
+                                "fields": {}
+                              },
+                              {
+                                "opcode": "motion_changeyby",
+                                "next": null,
+                                "parent": "B7",
+                                "inputs": {
+                                  "DY": {"type": "literal", "value": -3}
+                                },
+                                "fields": {}
+                              }
+                            ]
+                          }
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_if",
+                        "next": "B8",
+                        "parent": "B6",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_keypressed",
+                              "inputs": {
+                                "KEY_OPTION": {"type": "literal", "value": "left arrow"}
+                              },
+                              "fields": {"KEY_OPTION": {"value": "left arrow"}}
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_turnleft",
+                                "next": "B9",
+                                "parent": "B8",
+                                "inputs": {
+                                  "DEGREES": {"type": "literal", "value": 15}
+                                },
+                                "fields": {}
+                              },
+                              {
+                                "opcode": "motion_movesteps",
+                                "next": null,
+                                "parent": "B9",
+                                "inputs": {
+                                  "STEPS": {"type": "literal", "value": 3}
+                                },
+                                "fields": {}
+                              }
+                            ]
+                          }
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_if",
+                        "next": null,
+                        "parent": "B8",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_keypressed",
+                              "inputs": {
+                                "KEY_OPTION": {"type": "literal", "value": "right arrow"}
+                              },
+                              "fields": {"KEY_OPTION": {"value": "right arrow"}}
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_turnright",
+                                "next": "B10",
+                                "parent": "B10",
+                                "inputs": {
+                                  "DEGREES": {"type": "literal", "value": 15}
+                                },
+                                "fields": {}
+                              },
+                              {
+                                "opcode": "motion_movesteps",
+                                "next": null,
+                                "parent": "B10",
+                                "inputs": {
+                                  "STEPS": {"type": "literal", "value": 3}
+                                },
+                                "fields": {}
+                              }
+                            ]
+                          }
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "looks_nextcostume",
+                        "next": null,
+                        "parent": "B10",
+                        "inputs": {},
+                        "fields": {}
+                      }
+                    ]
+                  }
+                },
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      },
+      {
+        "kind": "sprite",
+        "name": "氧氣泡泡",
+        "x": 150,
+        "y": 100,
+        "direction": 90,
+        "size": 80,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Ball-a",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Pop",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "next": "B1",
+                "parent": null,
+                "inputs": {
+                  "BROADCAST_OPTION": {"type": "broadcast", "name": "start"}
+                },
+                "fields": {"BROADCAST_OPTION": {"value": "start"}}
+              },
+              {
+                "opcode": "looks_show",
+                "next": "B2",
+                "parent": "B1",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "control_forever",
+                "next": null,
+                "parent": "B2",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "motion_changexby",
+                        "next": "B3",
+                        "parent": "B4",
+                        "inputs": {
+                          "DX": {"type": "literal", "value": -1}
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "motion_ifonedgebounce",
+                        "next": "B5",
+                        "parent": "B3",
+                        "inputs": {},
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_if",
+                        "next": "B6",
+                        "parent": "B5",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_touchingobject",
+                              "inputs": {
+                                "TOUCHINGOBJECTMENU": {"type": "literal", "value": "小魚"}
+                              },
+                              "fields": {"TOUCHINGOBJECTMENU": {"value": "小魚"}}
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "sound_play",
+                                "next": "B7",
+                                "parent": "B6",
+                                "inputs": {
+                                  "SOUND_MENU": {"type": "literal", "value": "Pop"}
+                                },
+                                "fields": {"SOUND_MENU": {"value": "Pop"}}
+                              },
+                              {
+                                "opcode": "data_changevariableby",
+                                "next": "B8",
+                                "parent": "B7",
+                                "inputs": {
+                                  "VARIABLE": {"type": "variable", "name": "score"},
+                                  "VALUE": {"type": "literal", "value": 10}
+                                },
+                                "fields": {"VARIABLE": {"value": "score"}}
+                              },
+                              {
+                                "opcode": "data_changevariableby",
+                                "next": "B9",
+                                "parent": "B8",
+                                "inputs": {
+                                  "VARIABLE": {"type": "variable", "name": "oxygen"},
+                                  "VALUE": {"type": "literal", "value": 10}
+                                },
+                                "fields": {"VARIABLE": {"value": "oxygen"}}
+                              },
+                              {
+                                "opcode": "motion_gotoxy",
+                                "next": null,
+                                "parent": "B9",
+                                "inputs": {
+                                  "X": {"type": "block", "block": {"opcode": "operator_random", "inputs": {"FROM": {"type": "literal", "value": -200}, "TO": {"type": "literal", "value": 200}}, "fields": {}}},
+                                  "Y": {"type": "block", "block": {"opcode": "operator_random", "inputs": {"FROM": {"type": "literal", "value": -150}, "TO": {"type": "literal", "value": 150}}, "fields": {}}}
+                                },
+                                "fields": {}
+                              }
+                            ]
+                          }
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "next": null,
+                        "parent": "B6",
+                        "inputs": {
+                          "DURATION": {"type": "literal", "value": 0.1}
+                        },
+                        "fields": {}
+                      }
+                    ]
+                  }
+                },
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      },
+      {
+        "kind": "sprite",
+        "name": "水母",
+        "x": -150,
+        "y": 50,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Jellyfish-a",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Ocean Wave",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "next": "B1",
+                "parent": null,
+                "inputs": {
+                  "BROADCAST_OPTION": {"type": "broadcast", "name": "start"}
+                },
+                "fields": {"BROADCAST_OPTION": {"value": "start"}}
+              },
+              {
+                "opcode": "looks_show",
+                "next": "B2",
+                "parent": "B1",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "control_forever",
+                "next": null,
+                "parent": "B2",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "motion_changexby",
+                        "next": "B3",
+                        "parent": "B4",
+                        "inputs": {
+                          "DX": {"type": "literal", "value": 2}
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "motion_ifonedgebounce",
+                        "next": "B5",
+                        "parent": "B3",
+                        "inputs": {},
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_if",
+                        "next": "B6",
+                        "parent": "B5",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_touchingobject",
+                              "inputs": {
+                                "TOUCHINGOBJECTMENU": {"type": "literal", "value": "小魚"}
+                              },
+                              "fields": {"TOUCHINGOBJECTMENU": {"value": "小魚"}}
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "event_broadcast",
+                                "next": null,
+                                "parent": "B6",
+                                "inputs": {
+                                  "BROADCAST_INPUT": {"type": "broadcast", "name": "gameOver"}
+                                },
+                                "fields": {"BROADCAST_OPTION": {"value": "gameOver"}}
+                              }
+                            ]
+                          }
+                        },
+                        "fields": {}
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "next": null,
+                        "parent": "B6",
+                        "inputs": {
+                          "DURATION": {"type": "literal", "value": 0.1}
+                        },
+                        "fields": {}
+                      }
+                    ]
+                  }
+                },
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      },
+      {
+        "kind": "sprite",
+        "name": "UI",
+        "x": 0,
+        "y": 180,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "don't rotate",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Star",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Collect",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "next": "B1",
+                "parent": null,
+                "inputs": {
+                  "BROADCAST_OPTION": {"type": "broadcast", "name": "start"}
+                },
+                "fields": {"BROADCAST_OPTION": {"value": "start"}}
+              },
+              {
+                "opcode": "looks_show",
+                "next": "B2",
+                "parent": "B1",
+                "inputs": {},
+                "fields": {}
+              },
+              {
+                "opcode": "control_forever",
+                "next": null,
+                "parent": "B2",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "data_changevariableby",
+                        "next": "B3",
+                        "parent": "B4",
+                        "inputs": {
+                          "VARIABLE": {"type": "variable", "name": "oxygen"},
+                          "VALUE": {"type": "literal", "value": -0.5}
+                        },
+                        "fields": {"VARIABLE": {"value": "oxygen"}}
+                      },
+                      {
+                        "opcode": "looks_say",
+                        "next": null,
+                        "parent": "B3",
+                        "inputs": {
+                          "MESSAGE": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_join",
+                              "inputs": {
+                                "STRING1": {"type": "literal", "value": "得分: "},
+                                "STRING2": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "data_variable",
+                                    "inputs": {},
+                                    "fields": {"VARIABLE": {"value": "score"}}
+                                  }
+                                }
+                              },
+                              "fields": {}
+                            }
+                          }
+                        },
+                        "fields": {}
+                      }
+                    ]
+                  }
+                },
+                "fields": {}
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      },
+      {
+        "kind": "sprite",
+        "name": "遊戲管理",
+        "x": 0,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": false,
+        "draggable": false,
+        "rotationStyle": "don't rotate",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Button2-a",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Pop",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "next": "B1",
+                "parent": null,
+                "inputs": {
+                  "BROADCAST_OPTION": {"type": "broadcast", "name": "gameOver"}
+                },
+                "fields": {"BROADCAST_OPTION": {"value": "gameOver"}}
+              },
+              {
+                "opcode": "data_setvariableto",
+                "next": "B2",
+                "parent": "B1",
+                "inputs": {
+                  "VARIABLE": {"type": "variable", "name": "gameOver"},
+                  "VALUE": {"type": "literal", "value": true}
+                },
+                "fields": {"VARIABLE": {"value": "gameOver"}}
+              },
+              {
+                "opcode": "sound_play",
+                "next": "B3",
+                "parent": "B2",
+                "inputs": {
+                  "SOUND_MENU": {"type": "literal", "value": "Lose"}
+                },
+                "fields": {"SOUND_MENU": {"value": "Lose"}}
+              },
+              {
+                "opcode": "looks_sayforsecs",
+                "next": null,
+                "parent": "B3",
+                "inputs": {
+                  "MESSAGE": {"type": "literal", "value": "氧氣用盡！遊戲結束"},
+                  "SECS": {"type": "literal", "value": 2}
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "event_broadcast",
+                "next": null,
+                "parent": "B3",
+                "inputs": {
+                  "BROADCAST_INPUT": {"type": "broadcast", "name": "start"}
+                },
+                "fields": {"BROADCAST_OPTION": {"value": "start"}}
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "next": "B1",
+                "parent": null,
+                "inputs": {
+                  "BROADCAST_OPTION": {"type": "broadcast", "name": "start"}
+                },
+                "fields": {"BROADCAST_OPTION": {"value": "start"}}
+              },
+              {
+                "opcode": "control_wait_until",
+                "next": null,
+                "parent": "B1",
+                "inputs": {
+                  "CONDITION": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "operator_lt",
+                      "inputs": {
+                        "OPERAND1": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "data_variable",
+                            "inputs": {},
+                            "fields": {"VARIABLE": {"value": "oxygen"}}
+                          }
+                        },
+                        "OPERAND2": {"type": "literal", "value": 0}
+                      },
+                      "fields": {}
+                    }
+                  }
+                },
+                "fields": {}
+              },
+              {
+                "opcode": "event_broadcast",
+                "next": null,
+                "parent": null,
+                "inputs": {
+                  "BROADCAST_INPUT": {"type": "broadcast", "name": "gameOver"}
+                },
+                "fields": {"BROADCAST_OPTION": {"value": "gameOver"}}
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      }
+    ],
+    "broadcasts": [
+      {"name": "start"},
+      {"name": "gameOver"}
+    ]
+  },
+  "requirementCoverage": [
+    {
+      "id": "R1",
+      "requirement": "玩家角色為小魚，用方向鍵控制游動",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/0/scripts/0/blocks/1",
+        "/sprites/0/scripts/0/blocks/2",
+        "/sprites/0/scripts/0/blocks/2/inputs/SUBSTACK/blocks/0",
+        "/sprites/0/scripts/0/blocks/2/inputs/SUBSTACK/blocks/1",
+        "/sprites/0/scripts/0/blocks/2/inputs/SUBSTACK/blocks/2",
+        "/sprites/0/scripts/0/blocks/2/inputs/SUBSTACK/blocks/3",
+        "/sprites/0/scripts/0/blocks/2/inputs/SUBSTACK/blocks/4",
+        "/sprites/0/scripts/0/blocks/2/inputs/SUBSTACK/blocks/5",
+        "/sprites/0/scripts/0/blocks/2/inputs/SUBSTACK/blocks/6",
+        "/sprites/0/scripts/0/blocks/2/inputs/SUBSTACK/blocks/7"
+      ]
+    },
+    {
+      "id": "R2",
+      "requirement": "收集氧氣泡泡",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/1/scripts/0/blocks/1",
+        "/sprites/1/scripts/0/blocks/2",
+        "/sprites/1/scripts/0/blocks/2/inputs/SUBSTACK/blocks/5",
+        "/sprites/1/scripts/0/blocks/2/inputs/SUBSTACK/blocks/6",
+        "/sprites/1/scripts/0/blocks/2/inputs/SUBSTACK/blocks/7"
+      ]
+    },
+    {
+      "id": "R3",
+      "requirement": "氧氣用完就輸",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/3/scripts/0/blocks/1",
+        "/sprites/3/scripts/0/blocks/2",
+        "/sprites/4/scripts/0/blocks/0",
+        "/sprites/4/scripts/0/blocks/1",
+        "/sprites/4/scripts/0/blocks/2",
+        "/sprites/4/scripts/0/blocks/3",
+        "/sprites/4/scripts/1/blocks/0",
+        "/sprites/4/scripts/1/blocks/1"
+      ]
+    },
+    {
+      "id": "R4",
+      "requirement": "躲開水母",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/2/scripts/0/blocks/1",
+        "/sprites/2/scripts/0/blocks/2",
+        "/sprites/2/scripts/0/blocks/2/inputs/SUBSTACK/blocks/3",
+        "/sprites/2/scripts/0/blocks/2/inputs/SUBSTACK/blocks/4"
+      ]
+    },
+    {
+      "id": "R5",
+      "requirement": "遊戲有明確開始與重玩機制",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/stage/scripts/0/blocks/5",
+        "/sprites/4/scripts/0/blocks/4",
+        "/sprites/4/scripts/0/blocks/5"
+      ]
+    },
+    {
+      "id": "R6",
+      "requirement": "氧氣消耗與泡泡回復機制",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/3/scripts/0/blocks/0",
+        "/sprites/3/scripts/0/blocks/1",
+        "/sprites/1/scripts/0/blocks/2/inputs/SUBSTACK/blocks/6"
+      ]
+    },
+    {
+      "id": "R7",
+      "requirement": "得分系統與回饋",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/1/scripts/0/blocks/2/inputs/SUBSTACK/blocks/5",
+        "/sprites/3/scripts/0/blocks/0"
+      ]
+    },
+    {
+      "id": "R8",
+      "requirement": "角色與背景符合深海主題",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/stage/costumes/0",
+        "/sprites/0/costumes/0",
+        "/sprites/1/costumes/0",
+        "/sprites/2/costumes/0"
+      ]
+    },
+    {
+      "id": "R9",
+      "requirement": "使用官方音效與造型",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/0/sounds/0",
+        "/sprites/1/sounds/0",
+        "/sprites/2/sounds/0",
+        "/sprites/3/sounds/0",
+        "/sprites/4/sounds/0",
+        "/stage/sounds/0"
+      ]
+    },
+    {
+      "id": "R10",
+      "requirement": "動畫與視覺回饋",
+      "status": "approximated",
+      "evidencePointers": [
+        "/sprites/0/scripts/0/blocks/2/inputs/SUBSTACK/blocks/8",
+        "/sprites/1/scripts/0/blocks/2/inputs/SUBSTACK/blocks/8"
+      ]
+    }
+  ]
+}

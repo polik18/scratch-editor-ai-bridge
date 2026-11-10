@@ -1,0 +1,613 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "Double Pong",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {"name": "Player 1 Score", "value": 0},
+        {"name": "Player 2 Score", "value": 0},
+        {"name": "Ball Speed", "value": 5}
+      ],
+      "lists": [],
+      "costumes": [
+        {"name": "Blue Sky", "dataFormat": "png"}
+      ],
+      "sounds": [
+        {"name": "Boing", "dataFormat": "wav"},
+        {"name": "Pop", "dataFormat": "wav"}
+      ],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked",
+              "next": {
+                "opcode": "data_setvariableto",
+                "fields": [{"name": "VARIABLE", "value": "Player 1 Score"}],
+                "inputs": [
+                  {"name": "VALUE", "block": {"opcode": "literal", "value": 0}}
+                ],
+                "next": {
+                  "opcode": "data_setvariableto",
+                  "fields": [{"name": "VARIABLE", "value": "Player 2 Score"}],
+                  "inputs": [
+                    {"name": "VALUE", "block": {"opcode": "literal", "value": 0}}
+                  ],
+                  "next": {
+                    "opcode": "data_setvariableto",
+                    "fields": [{"name": "VARIABLE", "value": "Ball Speed"}],
+                    "inputs": [
+                      {"name": "VALUE", "block": {"opcode": "literal", "value": 5}}
+                    ],
+                    "next": {
+                      "opcode": "event_broadcast",
+                      "fields": [{"name": "BROADCAST_OPTION", "value": "start"}],
+                      "inputs": [
+                        {"name": "BROADCAST_INPUT", "block": {"opcode": "literal", "value": "start"}}
+                      ],
+                      "next": null
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "Paddle Left",
+        "x": -180,
+        "y": 0,
+        "direction": 90,
+        "size": 120,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Paddle", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Boing", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "fields": [{"name": "BROADCAST_OPTION", "value": "start"}],
+                "next": {
+                  "opcode": "motion_gotoxy",
+                  "inputs": [
+                    {"name": "X", "block": {"opcode": "literal", "value": -180}},
+                    {"name": "Y", "block": {"opcode": "literal", "value": 0}}
+                  ],
+                  "next": null
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": {
+                  "opcode": "control_forever",
+                  "inputs": [
+                    {
+                      "name": "SUBSTACK",
+                      "block": {
+                        "opcode": "control_if",
+                        "inputs": [
+                          {
+                            "name": "CONDITION",
+                            "block": {
+                              "opcode": "sensing_keypressed",
+                              "fields": [{"name": "KEY_OPTION", "value": "w"}]
+                            }
+                          },
+                          {
+                            "name": "SUBSTACK",
+                            "block": {
+                              "opcode": "motion_changeyby",
+                              "inputs": [
+                                {"name": "DY", "block": {"opcode": "literal", "value": 5}}
+                              ],
+                              "next": null
+                            }
+                          }
+                        ],
+                        "next": {
+                          "opcode": "control_if",
+                          "inputs": [
+                            {
+                              "name": "CONDITION",
+                              "block": {
+                                "opcode": "sensing_keypressed",
+                                "fields": [{"name": "KEY_OPTION", "value": "s"}]
+                              }
+                            },
+                            {
+                              "name": "SUBSTACK",
+                              "block": {
+                                "opcode": "motion_changeyby",
+                                "inputs": [
+                                  {"name": "DY", "block": {"opcode": "literal", "value": -5}}
+                                ],
+                                "next": null
+                              }
+                            }
+                          ],
+                          "next": null
+                        }
+                      }
+                    }
+                  ],
+                  "next": null
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      },
+      {
+        "kind": "sprite",
+        "name": "Paddle Right",
+        "x": 180,
+        "y": 0,
+        "direction": 90,
+        "size": 120,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Paddle", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Boing", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "fields": [{"name": "BROADCAST_OPTION", "value": "start"}],
+                "next": {
+                  "opcode": "motion_gotoxy",
+                  "inputs": [
+                    {"name": "X", "block": {"opcode": "literal", "value": 180}},
+                    {"name": "Y", "block": {"opcode": "literal", "value": 0}}
+                  ],
+                  "next": null
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": {
+                  "opcode": "control_forever",
+                  "inputs": [
+                    {
+                      "name": "SUBSTACK",
+                      "block": {
+                        "opcode": "control_if",
+                        "inputs": [
+                          {
+                            "name": "CONDITION",
+                            "block": {
+                              "opcode": "sensing_keypressed",
+                              "fields": [{"name": "KEY_OPTION", "value": "up arrow"}]
+                            }
+                          },
+                          {
+                            "name": "SUBSTACK",
+                            "block": {
+                              "opcode": "motion_changeyby",
+                              "inputs": [
+                                {"name": "DY", "block": {"opcode": "literal", "value": 5}}
+                              ],
+                              "next": null
+                            }
+                          }
+                        ],
+                        "next": {
+                          "opcode": "control_if",
+                          "inputs": [
+                            {
+                              "name": "CONDITION",
+                              "block": {
+                                "opcode": "sensing_keypressed",
+                                "fields": [{"name": "KEY_OPTION", "value": "down arrow"}]
+                              }
+                            },
+                            {
+                              "name": "SUBSTACK",
+                              "block": {
+                                "opcode": "motion_changeyby",
+                                "inputs": [
+                                  {"name": "DY", "block": {"opcode": "literal", "value": -5}}
+                                ],
+                                "next": null
+                              }
+                            }
+                          ],
+                          "next": null
+                        }
+                      }
+                    }
+                  ],
+                  "next": null
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      },
+      {
+        "kind": "sprite",
+        "name": "Ball",
+        "x": 0,
+        "y": 0,
+        "direction": 45,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Ball-a", "dataFormat": "svg"},
+          {"name": "Ball-b", "dataFormat": "svg"},
+          {"name": "Ball-c", "dataFormat": "svg"},
+          {"name": "Ball-d", "dataFormat": "svg"},
+          {"name": "Ball-e", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Boing", "dataFormat": "wav"},
+          {"name": "Pop", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked",
+                "next": {
+                  "opcode": "control_forever",
+                  "inputs": [
+                    {
+                      "name": "SUBSTACK",
+                      "block": {
+                        "opcode": "looks_nextcostume",
+                        "next": {
+                          "opcode": "motion_movesteps",
+                          "inputs": [
+                            {"name": "STEPS", "block": {"opcode": "data_variable", "fields": [{"name": "VARIABLE", "value": "Ball Speed"}]}}
+                          ],
+                          "next": {
+                            "opcode": "motion_ifonedgebounce",
+                            "next": {
+                              "opcode": "control_if",
+                              "inputs": [
+                                {
+                                  "name": "CONDITION",
+                                  "block": {
+                                    "opcode": "sensing_touchingobject",
+                                    "fields": [{"name": "TOUCHINGOBJECTMENU", "value": "Paddle Left"}]
+                                  }
+                                },
+                                {
+                                  "name": "SUBSTACK",
+                                  "block": {
+                                    "opcode": "sound_play",
+                                    "fields": [{"name": "SOUND_MENU", "value": "Boing"}],
+                                    "next": {
+                                      "opcode": "motion_pointindirection",
+                                      "inputs": [
+                                        {"name": "DIRECTION", "block": {"opcode": "operator_add", "inputs": [
+                                          {"name": "NUM1", "block": {"opcode": "literal", "value": 90}},
+                                          {"name": "NUM2", "block": {"opcode": "operator_random", "inputs": [
+                                            {"name": "FROM", "block": {"opcode": "literal", "value": -30}},
+                                            {"name": "TO", "block": {"opcode": "literal", "value": 30}}
+                                          ]}}
+                                        ]}}
+                                      ],
+                                      "next": {
+                                        "opcode": "motion_setx",
+                                        "inputs": [
+                                          {"name": "X", "block": {"opcode": "operator_add", "inputs": [
+                                            {"name": "NUM1", "block": {"opcode": "motion_xposition"}},
+                                            {"name": "NUM2", "block": {"opcode": "literal", "value": 10}}
+                                          ]}}
+                                        ],
+                                        "next": {
+                                          "opcode": "data_changevariableby",
+                                          "fields": [{"name": "VARIABLE", "value": "Ball Speed"}],
+                                          "inputs": [
+                                            {"name": "VALUE", "block": {"opcode": "literal", "value": 0.5}}
+                                          ],
+                                          "next": null
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              ],
+                              "next": {
+                                "opcode": "control_if",
+                                "inputs": [
+                                  {
+                                    "name": "CONDITION",
+                                    "block": {
+                                      "opcode": "sensing_touchingobject",
+                                      "fields": [{"name": "TOUCHINGOBJECTMENU", "value": "Paddle Right"}]
+                                    }
+                                  },
+                                  {
+                                    "name": "SUBSTACK",
+                                    "block": {
+                                      "opcode": "sound_play",
+                                      "fields": [{"name": "SOUND_MENU", "value": "Boing"}],
+                                      "next": {
+                                        "opcode": "motion_pointindirection",
+                                        "inputs": [
+                                          {"name": "DIRECTION", "block": {"opcode": "operator_subtract", "inputs": [
+                                            {"name": "NUM1", "block": {"opcode": "literal", "value": 90}},
+                                            {"name": "NUM2", "block": {"opcode": "operator_random", "inputs": [
+                                              {"name": "FROM", "block": {"opcode": "literal", "value": -30}},
+                                              {"name": "TO", "block": {"opcode": "literal", "value": 30}}
+                                            ]}}
+                                          ]}}
+                                        ],
+                                        "next": {
+                                          "opcode": "motion_setx",
+                                          "inputs": [
+                                            {"name": "X", "block": {"opcode": "operator_subtract", "inputs": [
+                                              {"name": "NUM1", "block": {"opcode": "motion_xposition"}},
+                                              {"name": "NUM2", "block": {"opcode": "literal", "value": 10}}
+                                            ]}}
+                                          ],
+                                          "next": {
+                                            "opcode": "data_changevariableby",
+                                            "fields": [{"name": "VARIABLE", "value": "Ball Speed"}],
+                                            "inputs": [
+                                              {"name": "VALUE", "block": {"opcode": "literal", "value": 0.5}}
+                                            ],
+                                            "next": null
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                ],
+                                "next": {
+                                  "opcode": "control_if",
+                                  "inputs": [
+                                    {
+                                      "name": "CONDITION",
+                                      "block": {
+                                        "opcode": "operator_lt",
+                                        "inputs": [
+                                          {"name": "OPERAND1", "block": {"opcode": "motion_xposition"}},
+                                          {"name": "OPERAND2", "block": {"opcode": "literal", "value": -220}}
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "name": "SUBSTACK",
+                                      "block": {
+                                        "opcode": "sound_play",
+                                        "fields": [{"name": "SOUND_MENU", "value": "Pop"}],
+                                        "next": {
+                                          "opcode": "data_changevariableby",
+                                          "fields": [{"name": "VARIABLE", "value": "Player 2 Score"}],
+                                          "inputs": [
+                                            {"name": "VALUE", "block": {"opcode": "literal", "value": 1}}
+                                          ],
+                                          "next": {
+                                            "opcode": "event_broadcast",
+                                            "fields": [{"name": "BROADCAST_OPTION", "value": "reset"}],
+                                            "inputs": [
+                                              {"name": "BROADCAST_INPUT", "block": {"opcode": "literal", "value": "reset"}}
+                                            ],
+                                            "next": null
+                                          }
+                                        }
+                                      }
+                                    }
+                                  ],
+                                  "next": {
+                                    "opcode": "control_if",
+                                    "inputs": [
+                                      {
+                                        "name": "CONDITION",
+                                        "block": {
+                                          "opcode": "operator_gt",
+                                          "inputs": [
+                                            {"name": "OPERAND1", "block": {"opcode": "motion_xposition"}},
+                                            {"name": "OPERAND2", "block": {"opcode": "literal", "value": 220}}
+                                          ]
+                                        }
+                                      },
+                                      {
+                                        "name": "SUBSTACK",
+                                        "block": {
+                                          "opcode": "sound_play",
+                                          "fields": [{"name": "SOUND_MENU", "value": "Pop"}],
+                                          "next": {
+                                            "opcode": "data_changevariableby",
+                                            "fields": [{"name": "VARIABLE", "value": "Player 1 Score"}],
+                                            "inputs": [
+                                              {"name": "VALUE", "block": {"opcode": "literal", "value": 1}}
+                                            ],
+                                            "next": {
+                                              "opcode": "event_broadcast",
+                                              "fields": [{"name": "BROADCAST_OPTION", "value": "reset"}],
+                                              "inputs": [
+                                                {"name": "BROADCAST_INPUT", "block": {"opcode": "literal", "value": "reset"}}
+                                              ],
+                                              "next": null
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ],
+                                    "next": null
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "next": null
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "fields": [{"name": "BROADCAST_OPTION", "value": "reset"}],
+                "next": {
+                  "opcode": "motion_gotoxy",
+                  "inputs": [
+                    {"name": "X", "block": {"opcode": "literal", "value": 0}},
+                    {"name": "Y", "block": {"opcode": "literal", "value": 0}}
+                  ],
+                  "next": {
+                    "opcode": "motion_pointindirection",
+                    "inputs": [
+                      {"name": "DIRECTION", "block": {"opcode": "operator_random", "inputs": [
+                        {"name": "FROM", "block": {"opcode": "literal", "value": -60}},
+                        {"name": "TO", "block": {"opcode": "literal", "value": 60}}
+                      ]}}
+                    ],
+                    "next": {
+                      "opcode": "data_setvariableto",
+                      "fields": [{"name": "VARIABLE", "value": "Ball Speed"}],
+                      "inputs": [
+                        {"name": "VALUE", "block": {"opcode": "literal", "value": 5}}
+                      ],
+                      "next": null
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": []
+      }
+    ],
+    "broadcasts": [
+      {"name": "start"},
+      {"name": "reset"}
+    ]
+  },
+  "requirementCoverage": [
+    {
+      "id": "R1",
+      "requirement": "雙人乒乓球：左邊玩家用 W/S",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/0/scripts/1/blocks/0",
+        "/sprites/0/scripts/1/blocks/1/inputs/1/0",
+        "/sprites/0/scripts/1/blocks/2/inputs/1/0"
+      ]
+    },
+    {
+      "id": "R2",
+      "requirement": "右邊玩家用上下鍵",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/1/scripts/1/blocks/0",
+        "/sprites/1/scripts/1/blocks/1/inputs/1/0",
+        "/sprites/1/scripts/1/blocks/2/inputs/1/0"
+      ]
+    },
+    {
+      "id": "R3",
+      "requirement": "球碰到球拍反彈",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/1/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/1/0/inputs/0/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/1/0/inputs/0/0/inputs/1/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/1/0/inputs/0/0/inputs/1/0/inputs/1/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/1/0/inputs/0/0/inputs/1/0/inputs/1/0/inputs/0/0"
+      ]
+    },
+    {
+      "id": "R4",
+      "requirement": "漏球對方得分",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/2/0/inputs/0/0/inputs/1/0/inputs/1/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/2/0/inputs/0/0/inputs/1/0/inputs/1/0/inputs/0/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/3/0/inputs/0/0/inputs/1/0/inputs/1/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/3/0/inputs/0/0/inputs/1/0/inputs/1/0/inputs/0/0"
+      ]
+    },
+    {
+      "id": "R5",
+      "requirement": "核心循環：操作→挑戰→回饋",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/0/scripts/1/blocks/0",
+        "/sprites/1/scripts/1/blocks/0",
+        "/sprites/2/scripts/1/blocks/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/0/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/1/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/2/0/inputs/0/0/inputs/1/0/inputs/1/0/inputs/0/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/3/0/inputs/0/0/inputs/1/0/inputs/1/0/inputs/0/0"
+      ]
+    },
+    {
+      "id": "R6",
+      "requirement": "至少一種有趣障礙",
+      "status": "approximated",
+      "evidencePointers": [
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/1/0/inputs/0/0/inputs/1/0/inputs/1/0/inputs/0/0"
+      ]
+    },
+    {
+      "id": "R7",
+      "requirement": "逐步進展/獎勵",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/1/0/inputs/0/0/inputs/1/0/inputs/1/0/inputs/0/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/1/0/inputs/0/0/inputs/1/0/inputs/1/0/inputs/0/0/inputs/0/0"
+      ]
+    },
+    {
+      "id": "R8",
+      "requirement": "成功/失敗與快速重玩",
+      "status": "implemented-structure",
+      "evidencePointers": [
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/2/0/inputs/0/0/inputs/1/0/inputs/1/0/inputs/0/0",
+        "/sprites/2/scripts/1/blocks/0/inputs/0/0/inputs/3/0/inputs/0/0/inputs/1/0/inputs/1/0/inputs/0/0",
+        "/sprites/2/scripts/1/blocks/1/inputs/0/0"
+      ]
+    }
+  ]
+}

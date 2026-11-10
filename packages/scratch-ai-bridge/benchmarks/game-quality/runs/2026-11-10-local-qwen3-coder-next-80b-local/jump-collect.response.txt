@@ -1,0 +1,396 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "Star Collector",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {"name": "score", "value": 0, "isPersistent": false}
+      ],
+      "lists": [],
+      "costumes": [
+        {"name": "Blue Sky", "dataFormat": "svg"}
+      ],
+      "sounds": [
+        {"name": "Pop", "dataFormat": "wav"}
+      ],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked",
+              "next": {
+                "opcode": "event_broadcast",
+                "fields": {"BROADCAST_INPUT": {"type": "broadcast", "name": "start"}},
+                "next": null
+              },
+              "topLevel": true,
+              "x": 0,
+              "y": 0
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "Player",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Avery Walking-a", "dataFormat": "svg"},
+          {"name": "Avery Walking-b", "dataFormat": "svg"},
+          {"name": "Avery Walking-c", "dataFormat": "svg"},
+          {"name": "Avery Walking-d", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Pop", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "fields": {"BROADCAST_OPTION": {"type": "broadcast", "name": "start"}},
+                "next": {
+                  "opcode": "motion_gotoxy",
+                  "fields": {
+                    "X": {"type": "literal", "value": -180},
+                    "Y": {"type": "literal", "value": -100}
+                  },
+                  "next": {
+                    "opcode": "looks_show",
+                    "next": {
+                      "opcode": "control_forever",
+                      "fields": {},
+                      "substack": {
+                        "blocks": [
+                          {
+                            "opcode": "control_if",
+                            "fields": {},
+                            "condition": {
+                              "opcode": "sensing_keypressed",
+                              "fields": {"KEY_OPTION": {"type": "literal", "value": "right arrow"}}
+                            },
+                            "substack": {
+                              "blocks": [
+                                {
+                                  "opcode": "motion_changexby",
+                                  "fields": {"DX": {"type": "literal", "value": 5}},
+                                  "next": {
+                                    "opcode": "looks_nextcostume",
+                                    "next": null
+                                  }
+                                }
+                              ]
+                            },
+                            "substack2": {
+                              "blocks": [
+                                {
+                                  "opcode": "control_if",
+                                  "fields": {},
+                                  "condition": {
+                                    "opcode": "sensing_keypressed",
+                                    "fields": {"KEY_OPTION": {"type": "literal", "value": "left arrow"}}
+                                  },
+                                  "substack": {
+                                    "blocks": [
+                                      {
+                                        "opcode": "motion_changexby",
+                                        "fields": {"DX": {"type": "literal", "value": -5}},
+                                        "next": {
+                                          "opcode": "looks_nextcostume",
+                                          "next": null
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "substack2": null
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "opcode": "control_if",
+                            "fields": {},
+                            "condition": {
+                              "opcode": "sensing_keypressed",
+                              "fields": {"KEY_OPTION": {"type": "literal", "value": "space"}}
+                            },
+                            "substack": {
+                              "blocks": [
+                                {
+                                  "opcode": "sound_play",
+                                  "fields": {"SOUND_MENU": {"type": "literal", "value": "Pop"}},
+                                  "next": null
+                                }
+                              ]
+                            },
+                            "substack2": null
+                          },
+                          {
+                            "opcode": "motion_changeyby",
+                            "fields": {"DY": {"type": "literal", "value": -1}},
+                            "next": null
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                "topLevel": true,
+                "x": 0,
+                "y": 0
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": -180,
+        "y": -100,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "Star",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Star", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Collect", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "fields": {"BROADCAST_OPTION": {"type": "broadcast", "name": "start"}},
+                "next": {
+                  "opcode": "looks_show",
+                  "next": {
+                    "opcode": "control_forever",
+                    "fields": {},
+                    "substack": {
+                      "blocks": [
+                        {
+                          "opcode": "motion_changexby",
+                          "fields": {"DX": {"type": "literal", "value": -2}},
+                          "next": {
+                            "opcode": "control_if",
+                            "fields": {},
+                            "condition": {
+                              "opcode": "operator_gt",
+                            "fields": {},
+                            "inputs": {
+                              "OPERAND1": {"type": "block", "block": {"opcode": "motion_xposition"}},
+                              "OPERAND2": {"type": "literal", "value": -240}
+                            }
+                          },
+                          "substack": {
+                            "blocks": [
+                              {
+                                "opcode": "motion_setx",
+                                "fields": {"X": {"type": "literal", "value": 240}},
+                                "next": {
+                                  "opcode": "motion_sety",
+                                  "fields": {"Y": {"type": "block", "block": {"opcode": "operator_random", "inputs": {"FROM": {"type": "literal", "value": -160}, "TO": {"type": "literal", "value": 160}}}}}
+                                }
+                              }
+                            ]
+                          },
+                          "substack2": null
+                        },
+                        {
+                          "opcode": "control_if",
+                          "fields": {},
+                          "condition": {
+                            "opcode": "sensing_touchingobject",
+                            "fields": {"TOUCHINGOBJECTMENU": {"type": "literal", "value": "Player"}}
+                          },
+                          "substack": {
+                            "blocks": [
+                              {
+                                "opcode": "sound_play",
+                                "fields": {"SOUND_MENU": {"type": "literal", "value": "Collect"}},
+                                "next": {
+                                  "opcode": "data_changevariableby",
+                                  "fields": {"VARIABLE": {"type": "variable", "name": "score"}},
+                                  "next": {
+                                    "opcode": "motion_setx",
+                                    "fields": {"X": {"type": "literal", "value": 240}},
+                                    "next": {
+                                      "opcode": "motion_sety",
+                                      "fields": {"Y": {"type": "block", "block": {"opcode": "operator_random", "inputs": {"FROM": {"type": "literal", "value": -160}, "TO": {"type": "literal", "value": 160}}}}}
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          "substack2": null
+                        }
+                      ]
+                    }
+                  }
+                },
+                "topLevel": true,
+                "x": 0,
+                "y": 0
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 240,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "Obstacle",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {"name": "Rocks", "dataFormat": "svg"}
+        ],
+        "sounds": [
+          {"name": "Bonk", "dataFormat": "wav"}
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "fields": {"BROADCAST_OPTION": {"type": "broadcast", "name": "start"}},
+                "next": {
+                  "opcode": "looks_show",
+                  "next": {
+                    "opcode": "control_forever",
+                    "fields": {},
+                    "substack": {
+                      "blocks": [
+                        {
+                          "opcode": "motion_changexby",
+                          "fields": {"DX": {"type": "literal", "value": -3}},
+                          "next": {
+                            "opcode": "control_if",
+                            "fields": {},
+                            "condition": {
+                              "opcode": "operator_gt",
+                              "inputs": {
+                                "OPERAND1": {"type": "block", "block": {"opcode": "motion_xposition"}},
+                                "OPERAND2": {"type": "literal", "value": -240}
+                              }
+                            },
+                            "substack": {
+                              "blocks": [
+                                {
+                                  "opcode": "motion_setx",
+                                  "fields": {"X": {"type": "literal", "value": 240}},
+                                  "next": {
+                                    "opcode": "motion_sety",
+                                    "fields": {"Y": {"type": "block", "block": {"opcode": "operator_random", "inputs": {"FROM": {"type": "literal", "value": -160}, "TO": {"type": "literal", "value": 160}}}}}
+                                  }
+                                }
+                              ]
+                            },
+                            "substack2": null
+                          }
+                        },
+                        {
+                          "opcode": "control_if",
+                          "fields": {},
+                          "condition": {
+                            "opcode": "sensing_touchingobject",
+                            "fields": {"TOUCHINGOBJECTMENU": {"type": "literal", "value": "Player"}}
+                          },
+                          "substack": {
+                            "blocks": [
+                              {
+                                "opcode": "sound_play",
+                                "fields": {"SOUND_MENU": {"type": "literal", "value": "Bonk"}},
+                                "next": {
+                                  "opcode": "event_broadcast",
+                                  "fields": {"BROADCAST_INPUT": {"type": "broadcast", "name": "gameover"}},
+                                  "next": null
+                                }
+                              }
+                            ]
+                          },
+                          "substack2": null
+                        }
+                      ]
+                    }
+                  }
+                },
+                "topLevel": true,
+                "x": 0,
+                "y": 0
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 240,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      }
+    ],
+    "broadcasts": [
+      {"name": "start"},
+      {"name": "gameover"}
+    ]
+  },
+  "requirementCoverage": [
+    {
+      "id": "R1",
+      "requirement": "玩家角色（可左右移動）",
+      "status": "implemented-structure",
+      "evidencePointers": ["/sprites/0/scripts/0/blocks/0", "/sprites/0/scripts/0/blocks/0/substack/blocks/0", "/sprites/0/scripts/0/blocks/0/substack/blocks/1"]
+    },
+    {
+      "id": "R2",
+      "requirement": "空白鍵跳躍",
+      "status": "approximated",
+      "evidencePointers": ["/sprites/0/scripts/0/blocks/0/substack/blocks/1"]
+    },
+    {
+      "id": "R3",
+      "requirement": "收集星星加分",
+      "status": "implemented-structure",
+      "evidencePointers": ["/sprites/1/scripts/0/blocks/0", "/sprites/1/scripts/0/blocks/0/substack/blocks/1", "/sprites/1/scripts/0/blocks/0/substack/blocks/1/substack/blocks/0"]
+    },
+    {
+      "id": "R4",
+      "requirement": "掉到底下就重來",
+      "status": "not-implemented",
+      "evidencePointers": []
+    },
+    {
+      "id": "R5",
+      "requirement": "左右鍵走路",
+      "status": "implemented-structure",
+      "evidencePointers": ["/sprites/0/scripts/0/blocks/0/substack/blocks/0"]
+    }
+  ]
+}
