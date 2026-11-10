@@ -71,6 +71,14 @@ import {
   type RequirementCoverageEntry,
 } from './core/normalizer'
 import {
+  changedVariableNames,
+  controlMovement,
+  createPlaytestFeedback,
+  inferPlaytestPlan,
+  snapshotsChanged,
+  type PlaytestSnapshot,
+} from './core/playtest/feedback'
+import {
   decryptProgressSave,
   encryptProgressSave,
   encryptCloudValue,
@@ -184,6 +192,8 @@ interface ActiveStudentAnimation {
 
   onProgress(message: Record<string, unknown>): void
 
+  playtestKey(key: string, isDown: boolean): void
+
   onHardwareMessage(message: Record<string, unknown>): void
 
   onRuntimePatchResult(message: Record<string, unknown>): void
@@ -209,6 +219,8 @@ interface ActiveStudentAnimation {
 }
 
 let activeStudentAnimation: ActiveStudentAnimation | null = null
+
+let cancelActiveStudentPlaytest: (() => void) | null = null
 
 let speechConsentPromptQueue: Promise<void> = Promise.resolve()
 
@@ -1368,6 +1380,10 @@ let latestRepairContext: RepairContext | null = null
 
 let repairUndoSnapshot: string | null = null
 
+let latestPlaytestPrompt: string | null = null
+
+let latestPlaytestSummary: string | null = null
+
 let latestStudentValidationReport: AiOutputValidationReport | null = null
 
 let latestRequirementCoverage: readonly RequirementCoverageEntry[] | null = null
@@ -1381,9 +1397,9 @@ const renderRepairTools = (): void => {
 
   const actionable = (report?.summary.errors ?? 0) + (report?.summary.warnings ?? 0)
 
-  repairTools.hidden = !hasIssues && repairUndoSnapshot === null
+  repairTools.hidden = !hasIssues && repairUndoSnapshot === null && latestPlaytestPrompt === null
 
-  copyRepairPrompt.disabled = actionable === 0
+  copyRepairPrompt.disabled = actionable === 0 && latestPlaytestPrompt === null
 
   copyRepairReport.disabled = !hasIssues
 
@@ -1409,23 +1425,27 @@ const renderRepairTools = (): void => {
     ? `自動修復 ${report.summary.autoRepaired} · 必須修正 ${report.summary.errors} · 需要確認 ${report.summary.warnings}${phaseSummary ? ` · ${phaseSummary}` : ''}`
     : '沒有目前診斷'
 
-  repairTitle.textContent = report
-    ? report.summary.errors > 0
-      ? '作品資料還不完整'
-      : report.summary.warnings > 0
-        ? '作品還有幾個地方需要確認'
-        : '格式已自動整理完成'
-    : '作品檢查結果'
-
-  repairExplanation.textContent = report
-    ? latestRepairContext?.repeatedIssues.length
-      ? `上一輪修正後仍有 ${latestRepairContext.repeatedIssues.length} 個相同問題。請依 fingerprint 與欄位路徑檢查；若 AI 反覆輸出同一內容，可改用下方欄位範例手動修正。`
-      : report.summary.errors > 0
-        ? `AI 回覆還缺少 ${report.summary.errors} 個製作作品需要的資料。請複製修正訊息，貼回 AI 後再試一次。`
+  repairTitle.textContent = latestPlaytestSummary
+    ? '自動試玩發現需要修正的地方'
+    : report
+      ? report.summary.errors > 0
+        ? '作品資料還不完整'
         : report.summary.warnings > 0
-          ? `有 ${report.summary.warnings} 個遊戲規則不夠清楚。Bridge 不會自行猜測，以免改變你的作品。`
-          : `已自動整理 ${report.summary.autoRepaired} 個格式問題；作品內容沒有需要確認的地方。`
-    : ''
+          ? '作品還有幾個地方需要確認'
+          : '格式已自動整理完成'
+      : '作品檢查結果'
+
+  repairExplanation.textContent =
+    latestPlaytestSummary ??
+    (report
+      ? latestRepairContext?.repeatedIssues.length
+        ? `上一輪修正後仍有 ${latestRepairContext.repeatedIssues.length} 個相同問題。請依 fingerprint 與欄位路徑檢查；若 AI 反覆輸出同一內容，可改用下方欄位範例手動修正。`
+        : report.summary.errors > 0
+          ? `AI 回覆還缺少 ${report.summary.errors} 個製作作品需要的資料。請複製修正訊息，貼回 AI 後再試一次。`
+          : report.summary.warnings > 0
+            ? `有 ${report.summary.warnings} 個遊戲規則不夠清楚。Bridge 不會自行猜測，以免改變你的作品。`
+            : `已自動整理 ${report.summary.autoRepaired} 個格式問題；作品內容沒有需要確認的地方。`
+      : '')
 }
 
 const publishRepairContext = (
@@ -1446,6 +1466,10 @@ const publishRepairContext = (
 
 const clearRepairContext = (): void => {
   latestRepairContext = null
+
+  latestPlaytestPrompt = null
+
+  latestPlaytestSummary = null
 
   clipboardFallback.hidden = true
 
@@ -1746,8 +1770,19 @@ const createAnimationPreviewArchive = async (
   return { archive, fallbackCount }
 }
 
-const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: RawSb3Project): void => {
+const renderStudentPreview = (
+  project: CanonicalProject,
+  sb3: Blob,
+  rawSource?: RawSb3Project,
+  options: { readonly autoPlaytest?: boolean } = {},
+): void => {
+  cancelActiveStudentPlaytest?.()
+  cancelActiveStudentPlaytest = null
   stopStudentAnimation('動畫預覽已停止；舞台靜態畫面已恢復。')
+
+  latestPlaytestPrompt = null
+
+  latestPlaytestSummary = null
 
   const generation = ++studentPreviewGeneration
 
@@ -1947,7 +1982,27 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
 
   stopAnimation.hidden = true
 
-  previewActions.append(startAnimation, stopAnimation)
+  const playtestButton = document.createElement('button')
+
+  playtestButton.type = 'button'
+
+  playtestButton.className = 'button secondary'
+
+  playtestButton.textContent = '🔎 重新自動試玩'
+
+  playtestButton.disabled = true
+
+  const playtestStatus = document.createElement('p')
+
+  playtestStatus.className = 'student-preview-playtest-status'
+
+  playtestStatus.setAttribute('role', 'status')
+
+  playtestStatus.setAttribute('aria-live', 'polite')
+
+  playtestStatus.textContent = '作品執行後會自動檢查按鍵與遊戲進度。'
+
+  previewActions.append(startAnimation, stopAnimation, playtestButton, playtestStatus)
 
   previewColumn.append(previewActions)
 
@@ -2634,6 +2689,8 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
     throw new Error(`動畫預覽重載逾時：${stageStatus.textContent || '尚未回報狀態'}`)
   }
   const reloadPreviewArchive = async (archive: Blob, revision: number): Promise<void> => {
+    cancelActiveStudentPlaytest?.()
+    cancelActiveStudentPlaytest = null
     const currentAnimation = activeStudentAnimation
     liveRevision = revision
     patchedPreviewArchive = archive
@@ -4167,10 +4224,166 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
       error: error instanceof Error ? error : new Error('無法準備損壞素材的動畫示意圖。'),
     }))
 
+  const sleep = (milliseconds: number): Promise<void> =>
+    new Promise((resolve) => window.setTimeout(resolve, milliseconds))
+
+  const capturePlaytestSnapshot = async (
+    animation: ActiveStudentAnimation,
+  ): Promise<PlaytestSnapshot | undefined> => {
+    const result = await animation.requestProgress('capture-game-progress', liveRevision)
+    if (result.ok !== true) return undefined
+    const targets = Array.isArray(result.targets) ? result.targets : []
+    const sprites = targets
+      .filter(
+        (target): target is Record<string, unknown> =>
+          typeof target === 'object' && target !== null && !Array.isArray(target),
+      )
+      .filter(
+        (target) =>
+          target.isStage !== true &&
+          typeof target.name === 'string' &&
+          typeof target.x === 'number' &&
+          typeof target.y === 'number' &&
+          typeof target.visible === 'boolean' &&
+          typeof target.currentCostume === 'number',
+      )
+      .map((target) => ({
+        name: target.name as string,
+        x: target.x as number,
+        y: target.y as number,
+        visible: target.visible as boolean,
+        currentCostume: target.currentCostume as number,
+      }))
+    const variables = (Array.isArray(result.snapshot) ? result.snapshot : [])
+      .filter(
+        (variable): variable is Record<string, unknown> =>
+          typeof variable === 'object' && variable !== null && !Array.isArray(variable),
+      )
+      .filter(
+        (variable) =>
+          typeof variable.targetName === 'string' &&
+          typeof variable.name === 'string' &&
+          typeof variable.type === 'string' &&
+          Object.hasOwn(variable, 'value'),
+      )
+      .map((variable) => ({
+        targetName: variable.targetName as string,
+        name: variable.name as string,
+        type: variable.type as string,
+        value: variable.value,
+      }))
+    return { sprites, variables }
+  }
+
+  const setPlaytestStatus = (kind: string, text: string): void => {
+    playtestStatus.dataset.kind = kind
+    playtestStatus.textContent = text
+  }
+
+  async function runAutoPlaytest(animation: ActiveStudentAnimation, stopWhenDone = false): Promise<void> {
+    if (generation !== studentPreviewGeneration || activeStudentAnimation !== animation) return
+    if (playtestStatus.dataset.running === 'true') return
+    const cancellation = { cancelled: false }
+    const cancel = (): void => {
+      cancellation.cancelled = true
+    }
+    cancelActiveStudentPlaytest = cancel
+    const ensureNotCancelled = (): void => {
+      if (cancellation.cancelled || generation !== studentPreviewGeneration || activeStudentAnimation !== animation)
+        throw new Error('作品已變更，已取消自動試玩。')
+    }
+    const plan = inferPlaytestPlan(projectRequest.value)
+    const deadline = Date.now() + 4_500
+    const captureWithinBudget = async (): Promise<PlaytestSnapshot | undefined> => {
+      const remaining = deadline - Date.now()
+      if (remaining <= 0) throw new Error('自動試玩已達 4.5 秒上限。')
+      return Promise.race([
+        capturePlaytestSnapshot(animation),
+        new Promise<undefined>((_, reject) =>
+          window.setTimeout(() => reject(new Error('自動試玩擷取逾時。')), Math.min(remaining, 1_200)),
+        ),
+      ])
+    }
+    playtestStatus.dataset.running = 'true'
+    playtestButton.disabled = true
+    playtestStatus.dataset.kind = 'neutral'
+    playtestStatus.textContent = '自動試玩中（擷取初始狀態）…'
+    try {
+      ensureNotCancelled()
+      const start = await captureWithinBudget()
+      ensureNotCancelled()
+      await sleep(250)
+      const afterIdle = await captureWithinBudget()
+      ensureNotCancelled()
+      const controls = []
+      for (const control of plan.controls) {
+        ensureNotCancelled()
+        playtestStatus.textContent = `自動試玩中（測試${control.label ?? control.key}）…`
+        const before = await captureWithinBudget()
+        animation.playtestKey(control.key, true)
+        await sleep(350)
+        const after = await captureWithinBudget()
+        animation.playtestKey(control.key, false)
+        controls.push(controlMovement(before, after, control))
+      }
+      if (plan.controls.length === 0) await sleep(900)
+      ensureNotCancelled()
+      const end = await captureWithinBudget()
+      const feedback = createPlaytestFeedback(projectRequest.value, project, {
+        ready: true,
+        pageErrors: [],
+        autonomousMotion: snapshotsChanged(start, afterIdle),
+        controls,
+        changedVariables: changedVariableNames(start, end),
+      })
+      const feedbackKind = feedback.passed ? 'ok' : 'warning'
+      const feedbackText = `${feedback.title}：${feedback.summary}`
+      setPlaytestStatus(feedbackKind, feedbackText)
+      if (feedback.passed) {
+        latestPlaytestPrompt = null
+        latestPlaytestSummary = null
+      } else if (feedback.repairPrompt) {
+        const capabilityGuide = projectRequest.value.trim()
+          ? createStudentProjectInstruction(projectRequest.value)
+          : AI_INSTRUCTION
+        const validationPrompt = latestRepairContext
+          ? createRepairPrompt(
+              latestRepairContext.report,
+              latestRepairContext.currentProject,
+              capabilityGuide,
+              latestRepairContext.repeatedIssues,
+            )
+          : ''
+        latestPlaytestPrompt = validationPrompt
+          ? `${validationPrompt}\n\n【實際試玩回饋】\n${feedback.repairPrompt}`
+          : feedback.repairPrompt
+        latestPlaytestSummary = feedback.summary
+      }
+      renderRepairTools()
+    } catch (error) {
+      if (cancellation.cancelled) return
+      latestPlaytestPrompt = `請修正 Scratch 作品的實際玩法。Bridge 自動試玩時無法完成狀態擷取：${error instanceof Error ? error.message : String(error)}`
+      latestPlaytestSummary = '自動試玩沒有完成，請重新執行預覽或把這個訊息貼回 AI。'
+      const failureText = latestPlaytestSummary
+      setPlaytestStatus('warning', failureText)
+      renderRepairTools()
+    } finally {
+      if (cancelActiveStudentPlaytest === cancel) cancelActiveStudentPlaytest = null
+      if (!cancellation.cancelled && stopWhenDone && activeStudentAnimation === animation)
+        animation.finish('自動試玩完成；可按綠旗繼續手動試玩。')
+      delete playtestStatus.dataset.running
+      playtestButton.disabled = activeStudentAnimation !== animation
+    }
+  }
+
   let animationStarting = false
+  let pendingAutoPlaytest = options.autoPlaytest === true
 
   startAnimation.addEventListener('click', () => {
     if (activeStudentAnimation || animationStarting || generation !== studentPreviewGeneration) return
+
+    const shouldAutoPlaytest = pendingAutoPlaytest
+    pendingAutoPlaytest = false
 
     animationStarting = true
 
@@ -4360,12 +4573,20 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
           startAnimation.disabled = false
 
           stopAnimation.hidden = false
+
+          playtestButton.disabled = false
+
+          if (shouldAutoPlaytest) void runAutoPlaytest(animation, true)
         },
 
         onProgress: (message) => {
           if (generation !== studentPreviewGeneration || typeof message.detail !== 'string') return
           stageStatus.hidden = false
           stageStatus.textContent = message.detail
+        },
+
+        playtestKey: (key, isDown) => {
+          frame.contentWindow?.postMessage({ type: 'playtest-key', token, key, isDown }, '*')
         },
 
         onHardwareMessage: (message) => {
@@ -4457,6 +4678,8 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
 
           stageStatus.textContent = message
 
+          playtestButton.disabled = true
+
           hardwareControls.hidden = true
 
           for (const row of hardwareRows.values()) {
@@ -4501,10 +4724,17 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
 
       startAnimation.disabled = false
 
+      playtestButton.disabled = true
+
       stageStatus.textContent = error instanceof Error ? error.message : '無法準備動畫預覽。'
 
       stageStatus.dataset.kind = 'warning'
     })
+  })
+
+  playtestButton.addEventListener('click', () => {
+    const animation = activeStudentAnimation
+    if (animation) void runAutoPlaytest(animation)
   })
 
   const spriteList = document.createElement('div')
@@ -4571,6 +4801,8 @@ const renderStudentPreview = (project: CanonicalProject, sb3: Blob, rawSource?: 
       stageStatus.hidden = !stageAssetFallback
 
       if (stageAssetFallback) stageStatus.dataset.kind = 'warning'
+
+      if (options.autoPlaytest) window.setTimeout(() => startAnimation.click(), 0)
     })
 
     .catch(() => {
@@ -5506,7 +5738,7 @@ const buildStudentProject = async (): Promise<void> => {
       )
     }
 
-    renderStudentPreview(validation.data, sb3)
+    renderStudentPreview(validation.data, sb3, undefined, { autoPlaytest: true })
 
     renderStudentAssetLibrary(validation.data, candidate)
 
@@ -5640,6 +5872,10 @@ downloadStudentValidationReport.addEventListener('click', () => {
 })
 
 copyRepairPrompt.addEventListener('click', () => {
+  if (latestPlaytestPrompt) {
+    void copyTextWithFallback(latestPlaytestPrompt, '已複製試玩修正訊息；請貼回 AI 對話。')
+    return
+  }
   if (!latestRepairContext) return
 
   const request = projectRequest.value.trim()

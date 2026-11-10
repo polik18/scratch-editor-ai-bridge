@@ -4,13 +4,15 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium, type Browser, type Page } from 'playwright'
 import { preview, type PreviewServer } from 'vite'
+import {
+  changedVariableNames,
+  controlMovement,
+  snapshotsChanged,
+  type PlaytestControl as SharedPlaytestControl,
+  type PlaytestSnapshot,
+} from '../core/playtest/feedback'
 
-export interface PlaytestControl {
-  /** KeyboardEvent.key value, e.g. "ArrowLeft", " ", "w". */
-  readonly key: string
-  readonly axis: 'x' | 'y'
-  readonly sign: 1 | -1
-}
+export type PlaytestControl = SharedPlaytestControl
 
 export interface PlaytestPlan {
   readonly controls: readonly PlaytestControl[]
@@ -19,26 +21,6 @@ export interface PlaytestPlan {
   readonly idleMs?: number
   readonly holdMs?: number
   readonly playMs?: number
-}
-
-interface SpriteState {
-  readonly name: string
-  readonly x: number
-  readonly y: number
-  readonly visible: boolean
-  readonly currentCostume: number
-}
-
-interface VariableState {
-  readonly targetName: string
-  readonly name: string
-  readonly type: string
-  readonly value: unknown
-}
-
-interface Snapshot {
-  readonly sprites: readonly SpriteState[]
-  readonly variables: readonly VariableState[]
 }
 
 export interface PlaytestControlResult {
@@ -69,9 +51,11 @@ interface PreviewMessage {
   readonly requestId?: string
   readonly ok?: boolean
   readonly error?: string
-  readonly snapshot?: VariableState[]
-  readonly targets?: (SpriteState & { isStage: boolean })[]
+  readonly snapshot?: PlaytestSnapshot['variables']
+  readonly targets?: (PlaytestSnapshot['sprites'][number] & { isStage: boolean })[]
 }
+
+type Snapshot = PlaytestSnapshot
 
 const MOVE_THRESHOLD = 4
 
@@ -240,9 +224,7 @@ export class PlaytestRunner {
     await sleep(idleMs)
     const pixelsAfter = await canvas.screenshot()
     const afterIdle = await capture()
-    const autonomousMotion =
-      !pixelsBefore.equals(pixelsAfter) ||
-      (start !== undefined && afterIdle !== undefined && JSON.stringify(start) !== JSON.stringify(afterIdle))
+    const autonomousMotion = !pixelsBefore.equals(pixelsAfter) || snapshotsChanged(start, afterIdle)
 
     const controls: PlaytestControlResult[] = []
     for (const control of plan.controls) {
@@ -251,31 +233,12 @@ export class PlaytestRunner {
       await sleep(holdMs)
       const after = await capture()
       await key(control.key, false)
-      let best: { sprite: string; delta: number } | undefined
-      for (const sprite of after?.sprites ?? []) {
-        const previous = before?.sprites.find(({ name }) => name === sprite.name)
-        if (!previous) continue
-        const delta = (sprite[control.axis] - previous[control.axis]) * control.sign
-        if (!best || delta > best.delta) best = { sprite: sprite.name, delta }
-      }
-      controls.push({
-        key: control.key,
-        expected: `${control.axis}${control.sign > 0 ? '+' : '-'}`,
-        moved: (best?.delta ?? 0) >= MOVE_THRESHOLD,
-        ...(best ? { sprite: best.sprite, delta: Math.round(best.delta * 10) / 10 } : { delta: 0 }),
-      })
+      controls.push(controlMovement(before, after, control, MOVE_THRESHOLD))
     }
 
     await this.freePlay(page, plan, playMs, key, capture)
     const end = await capture()
-    const changedVariables = (end?.variables ?? [])
-      .filter((variable) => {
-        const initial = start?.variables.find(
-          ({ targetName, name }) => targetName === variable.targetName && name === variable.name,
-        )
-        return initial !== undefined && JSON.stringify(initial.value) !== JSON.stringify(variable.value)
-      })
-      .map(({ targetName, name }) => `${targetName}/${name}`)
+    const changedVariables = changedVariableNames(start, end)
 
     if (screenshotPath) await writeFile(screenshotPath, await canvas.screenshot())
 

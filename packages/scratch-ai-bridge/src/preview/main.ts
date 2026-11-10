@@ -274,10 +274,21 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     targetSnapshot?: unknown
     projectId?: unknown
     canWrite?: unknown
+    key?: unknown
+    isDown?: unknown
     name?: unknown
     value?: unknown
   }
   if (!previewToken || (message as { token?: unknown }).token !== previewToken) return
+  if (message.type === 'playtest-key') {
+    if (!vm || typeof message.key !== 'string' || message.key.length > 32 || typeof message.isDown !== 'boolean')
+      return
+    const key = keyName(message.key)
+    if (message.isDown) pressedKeys.add(key)
+    else pressedKeys.delete(key)
+    postScratchIOData(vm, 'keyboard', { key, isDown: message.isDown })
+    return
+  }
   if (message.type === 'disconnect-selfhosted-cloud') {
     disconnectSelfHostedCloud()
     return
