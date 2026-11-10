@@ -6,6 +6,11 @@ Optional local AI paths are documented in [`docs/AI-PROVIDER-MCP.md`](docs/AI-PR
 
 Public beta: [https://polik18.github.io/scratch-editor-ai-bridge/](https://polik18.github.io/scratch-editor-ai-bridge/)
 
+## 文件入口
+
+- **現行作品品質主線**：[`docs/game-quality-plan.md`](docs/game-quality-plan.md)。學生生成品質、官方素材庫、真實模型基準與首頁流程的進度，以此文件為唯一執行與交接入口。
+- **歷史參考**：本套件 `docs/` 中其他改善計畫、狀態報告與任務規格保留原文供背景查閱，不代表現行進度；其中 `README-IMPROVEMENT.md`、`sb3-generation-reliability-plan*.md`、`sb3-end-to-end-*.md`、`analysis-improvement-*.md`、`teacher-review-improvement-plan.md`、`student-work-feedback-plan.md`、`cli-agent-*.md` 與 `completeness-roadmap.md` 均屬此類。
+
 ## Important repository layout
 
 Nothing in the surrounding Scratch Editor was removed. The normal workspaces remain available, including `scratch-gui`, `scratch-vm`, `scratch-paint`, `scratch-render`, and `scratch-storage`.

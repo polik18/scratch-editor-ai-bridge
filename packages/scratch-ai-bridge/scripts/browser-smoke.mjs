@@ -44,6 +44,7 @@ if (!browserType) throw new Error(`Unsupported BROWSER value: ${browserName}`)
 
 const sitePrefix = '/scratch-editor-ai-bridge/'
 const distRoot = resolve(fileURLToPath(new URL('../dist/', import.meta.url)))
+const expectedRendererAbort = /\/assets\/scratch-(?:render|svg-renderer)-[^/]+\.js$/
 const svgRendererBundlePath = fileURLToPath(
   new URL('../../scratch-svg-renderer/dist/web/scratch-svg-renderer.js', import.meta.url),
 )
@@ -350,9 +351,11 @@ try {
   page.on('response', (response) => {
     if (response.status() >= 400) failures.push(`HTTP ${response.status()}: ${response.url()}`)
   })
-  page.on('requestfailed', (request) =>
-    failures.push(`request failed: ${request.url()} ${request.failure()?.errorText ?? ''}`),
-  )
+  page.on('requestfailed', (request) => {
+    const errorText = request.failure()?.errorText ?? ''
+    if (errorText === 'net::ERR_ABORTED' && expectedRendererAbort.test(request.url())) return
+    failures.push(`request failed: ${request.url()} ${errorText}`)
+  })
 
   await page.goto(`http://127.0.0.1:${address.port}${sitePrefix}`, { waitUntil: 'networkidle' })
 

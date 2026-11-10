@@ -31,7 +31,7 @@
 | 2b   | scratchblocks 文字格式可行性實驗           | ✅ 完成（採用後續受控整合方向）     | 同模型／同 10 題：平均 61%、build 10/10；見 T2b 證據                                           |
 | 3    | 網頁內自動試玩，玩法錯誤回饋給學生         | ✅ 完成                             | 共享判斷模組、瀏覽器自動試玩、修正 handoff；見 T3 完成紀錄                                     |
 | 4    | 首頁精簡成單一路線                         | ✅ 完成                             | 首屏主操作按鈕 7 → 2；見 T4 完成紀錄                                                           |
-| 5    | 文件與工程整理                             | ⏳ 待做                             | 見 T5                                                                                          |
+| 5    | 文件與工程整理                             | ✅ 完成                             | 舊計畫已在套件與根目錄索引標示為歷史參考；見 T5 完成紀錄                                       |
 
 建議順序：**1b → 0b → 2a → 3 → 1c → 4 → 2b → 5**。1b 只要幾分鐘，卻決定上線後素材功能能不能用；0b 是之後所有改動的比較基準。
 
@@ -185,7 +185,7 @@
   - 修正步驟編號「1、2、2」，以及第二個步驟 2 的說明矛盾。
 - **注意**：`src/main.ts` 的 HTML 模板在約 520–1100 行。改之前先和使用者確認 paper-feedback 工作樹的狀態，避免大範圍衝突。拆檔（生成、匯入分析、教師工具各一檔）可以和 T4 一起做，但要分開提交。
 - **驗收**：`test:student-flow` 和 `test:browser` 都通過；首頁首屏的按鈕數有明顯下降，記錄改前改後的數字；附桌面和窄螢幕截圖。
-- **完成紀錄（2026-11-10 Codex）**：主線保留「寫下想法 → 複製製作訊息 → 貼回回答 → 檢查並製作 Scratch」，將想法範例、玩法討論、大型作品片段、範例載入與教師／進階工具收進折疊區；既有作品檢查頁籤改以「進階：檢查已有作品」呈現，保留原 aria 名稱供既有測試與輔助技術使用。修正首頁步驟文字為「1 寫下想法、2 交給 AI、3 貼回回答、4 試玩下載」。以 `#generate-panel` 初始可見按鈕計算，改前 7 個（3 個靈感範例、2 個複製操作、製作、載入範例）降為 2 個（複製製作訊息、檢查並製作）；桌面與 390px 窄版截圖已保存於 `test-results/t4-home-desktop.png`、`test-results/t4-home-narrow.png`。`npm run build`、`npm run test:student-flow`、改檔 ESLint／Prettier 通過；完整 `test:browser` 本次仍在既有 Scratch renderer 載入時以非固定 `ERR_ABORTED` 失敗，失敗訊息另含既有 Live patch status，未宣稱整體 browser smoke 通過；尚未 push／部署。
+- **完成紀錄（2026-11-10 Codex）**：主線保留「寫下想法 → 複製製作訊息 → 貼回回答 → 檢查並製作 Scratch」，將想法範例、玩法討論、大型作品片段、範例載入與教師／進階工具收進折疊區；既有作品檢查頁籤改以「進階：檢查已有作品」呈現，保留原 aria 名稱供既有測試與輔助技術使用。修正首頁步驟文字為「1 寫下想法、2 交給 AI、3 貼回回答、4 試玩下載」。以 `#generate-panel` 初始可見按鈕計算，改前 7 個（3 個靈感範例、2 個複製操作、製作、載入範例）降為 2 個（複製製作訊息、檢查並製作）；桌面與 390px 窄版截圖已保存於 `test-results/t4-home-desktop.png`、`test-results/t4-home-narrow.png`。`npm run build`、`npm run test:student-flow`、改檔 ESLint／Prettier 通過；browser smoke 的 renderer bundle 可預期取消由 T5 修正後，`npm run test:browser` 連續兩次通過；尚未 push／部署。
 
 ### T2b scratchblocks 文字格式實驗（視 T2a 結果決定）
 
@@ -197,8 +197,11 @@
 
 - 把 gh-pages `docs/` 和套件 `docs/` 裡的舊計畫，在索引中標示「歷史參考，現行主線見 game-quality-plan.md」。不刪除，也不改寫內容。
 - lint 只要求新改的檔案零錯誤；讓 CI 恢復跑 browser smoke。
+- **完成紀錄（2026-11-10 Codex）**：在套件 `README.md` 新增文件入口，明確指定 `docs/game-quality-plan.md` 為現行作品品質主線，並將套件內既有改善計畫列為歷史參考；在根目錄 `docs/bridge-ai-tasks/README.md` 加上同樣的歷史導覽標記，指回套件主線。未刪除或改寫任何舊計畫內容。另修正 browser smoke 對預覽生命週期中 `scratch-render`／`scratch-svg-renderer` bundle 的可預期 `net::ERR_ABORTED` 誤報：只忽略帶有正確檔名模式的這類取消，其他網路失敗仍會使 smoke 失敗。文件與程式變更通過 Prettier、ESLint、`git diff --check`；`npm run test:browser` 連續兩次通過。尚未 push／部署。
 
 ## 7. 交接紀錄（新的寫在最上面）
+
+- **2026-11-10 Codex**：完成 T5 文件與工程整理。兩個索引入口現在都明確區分「現行 `game-quality-plan.md`」與歷史計畫／任務卡，舊文件內容完整保留；同時修正 browser smoke 對可預期 renderer bundle 取消的誤報，Chromium smoke 連續兩次通過；尚未 push／部署。
 
 - **2026-11-10 Codex**：完成 T4 首頁精簡。主操作按鈕由 7 個降至 2 個，次要流程改為選用折疊區；補上桌面／窄版截圖與初始按鈕數 smoke assertion。build、學生流程與改檔 lint／格式檢查通過；完整 Chromium smoke 仍受既有 renderer `ERR_ABORTED` 非固定載入失敗影響，尚未 push／部署。
 

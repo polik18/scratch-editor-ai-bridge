@@ -2,6 +2,8 @@
 
 本入口是[總體計畫](../BRIDGE-IMPROVEMENT-PLAN-2026-11-02.md)的精簡執行層；目標、限制與驗收以總體計畫及適用指令為準，不代表實作已完成。狀態以[執行狀態](../BRIDGE-EXECUTION-STATUS.md)為準。任務卡非實時狀態。
 
+> **文件導覽標記**：本目錄的總體計畫、執行狀態與任務卡是歷史參考，現行作品品質主線唯一入口為套件的 [`game-quality-plan.md`](../../packages/scratch-ai-bridge/docs/game-quality-plan.md)。請勿以本頁或其舊狀態欄接手目前進度。
+
 ## 每次啟動
 
 1. 先遵守執行環境規定的啟動及 `AGENTS.md`。讀本頁、執行狀態與**一張**當前任務卡；不把整份總計畫、完整測試日誌或大型 SB3 放進上下文。遇到契約疑點，用 `rg -n` 搜關鍵字，按行數少量讀取總計畫相關小節。
@@ -16,21 +18,21 @@
 
 ## 執行順序
 
-| 卡片 | 主題 | 先決條件 |
-|---|---|---|
-| [P0a](P0a-browser-selector.md) | 瀏覽器測試選擇器 | 無 |
-| [P0b](P0b-browser-csp.md) | CSP 與遊戲輸入 | P0a 測試能力 |
-| [U0](U0-web-baseline.md) | 網頁流程與效能基線 | P0 測試能力 |
-| [P1a](P1a-sb3-primitives.md) | 合法 SB3 primitive | 無，可接續 P0a |
-| [P1b](P1b-procedure-arguments.md) | 自製積木參數告警 | P1a |
-| [P2a](P2a-large-summary.md) | 大型作品摘要 | P1a |
-| [P2b](P2b-paged-inspection.md) | 查詢與分頁 | P2a |
-| [P3](P3-feedback.md) | 可定位回饋 | P1、P2 |
-| [P4](P4-safe-edit.md) | 安全修改與行為 | P0–P2 |
-| [U1](U1-student-flow.md) | 學生操作流程 | U0；依能力逐步整合 P1–P3 |
-| [U2](U2-web-performance.md) | 網頁效能 | U0；協調 P2 |
-| [A0](A0-assets-inventory.md) | Scratch 素材來源 | U0、P1 |
-| [A1](A1-assets-integration.md) | 素材選擇、辨識與封裝 | A0；協調 U1、P2、P4 |
-| [P5](P5-model-evaluation.md) | 真實模型評估 | P2–P4 |
+| 卡片                              | 主題                 | 先決條件                 |
+| --------------------------------- | -------------------- | ------------------------ |
+| [P0a](P0a-browser-selector.md)    | 瀏覽器測試選擇器     | 無                       |
+| [P0b](P0b-browser-csp.md)         | CSP 與遊戲輸入       | P0a 測試能力             |
+| [U0](U0-web-baseline.md)          | 網頁流程與效能基線   | P0 測試能力              |
+| [P1a](P1a-sb3-primitives.md)      | 合法 SB3 primitive   | 無，可接續 P0a           |
+| [P1b](P1b-procedure-arguments.md) | 自製積木參數告警     | P1a                      |
+| [P2a](P2a-large-summary.md)       | 大型作品摘要         | P1a                      |
+| [P2b](P2b-paged-inspection.md)    | 查詢與分頁           | P2a                      |
+| [P3](P3-feedback.md)              | 可定位回饋           | P1、P2                   |
+| [P4](P4-safe-edit.md)             | 安全修改與行為       | P0–P2                    |
+| [U1](U1-student-flow.md)          | 學生操作流程         | U0；依能力逐步整合 P1–P3 |
+| [U2](U2-web-performance.md)       | 網頁效能             | U0；協調 P2              |
+| [A0](A0-assets-inventory.md)      | Scratch 素材來源     | U0、P1                   |
+| [A1](A1-assets-integration.md)    | 素材選擇、辨識與封裝 | A0；協調 U1、P2、P4      |
+| [P5](P5-model-evaluation.md)      | 真實模型評估         | P2–P4                    |
 
 第一張卡以狀態檔為準；初始為 P0a。執行者可在無關依賴受阻時處理其他已就緒卡片。真人學生驗收曾經豁免；未實測不宣稱已驗證，不以重新招募為工程開發前提。
