@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { access, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { chromium, type Browser, type Page } from 'playwright'
+import { chromium, type Browser, type Frame, type Page } from 'playwright'
 import { preview, type PreviewServer } from 'vite'
 import {
   changedVariableNames,
@@ -45,7 +45,7 @@ export interface PlaytestResult {
   readonly stateUnavailable?: string
 }
 
-interface PreviewMessage {
+export interface PreviewMessage {
   readonly type: string
   readonly detail?: string
   readonly requestId?: string
@@ -56,6 +56,12 @@ interface PreviewMessage {
 }
 
 type Snapshot = PlaytestSnapshot
+
+export interface OpenPreview {
+  readonly token: string
+  readonly frame: Frame
+  readonly waitFor: (match: (message: PreviewMessage) => boolean, timeout: number) => Promise<PreviewMessage>
+}
 
 const MOVE_THRESHOLD = 4
 
@@ -122,13 +128,13 @@ export class PlaytestRunner {
     }
   }
 
-  private async drive(
-    page: Page,
-    archive: Uint8Array,
-    plan: PlaytestPlan,
-    pageErrors: string[],
-    screenshotPath?: string,
-  ): Promise<PlaytestResult> {
+  /**
+   * Loads an SB3 into the isolated preview page and resolves once Scratch reports it ready.
+   * @param page - Page to host the preview iframe.
+   * @param archive - Compiled SB3 bytes.
+   * @returns The preview frame and message helpers, or the preview's start-up error.
+   */
+  async openPreview(page: Page, archive: Uint8Array): Promise<OpenPreview | { readonly error: string }> {
     const token = randomUUID()
     await page.setContent('<style>body{margin:0}iframe{border:0;display:block}</style><main id="host"></main>')
     await page.evaluate(() => {
@@ -169,19 +175,40 @@ export class PlaytestRunner {
       { base64: Buffer.from(archive).toString('base64'), token },
     )
     const started = await waitFor(({ type }) => type === 'ready' || type === 'error', 60_000)
-    if (started.type === 'error') {
+    if (started.type === 'error') return { error: (started.detail ?? 'preview error').slice(0, 500) }
+
+    const frame = page.frames().find((candidate) => candidate.url().includes('/preview.html'))
+    if (!frame) throw new Error('Scratch preview frame did not load')
+    return { token, frame, waitFor }
+  }
+
+  /**
+   * Opens a fresh page for callers that drive the preview themselves (for example spec scenarios).
+   * @returns A stage-sized page in the runner's browser.
+   */
+  newPage(): Promise<Page> {
+    return this.browser.newPage({ viewport: { width: 480, height: 360 } })
+  }
+
+  private async drive(
+    page: Page,
+    archive: Uint8Array,
+    plan: PlaytestPlan,
+    pageErrors: string[],
+    screenshotPath?: string,
+  ): Promise<PlaytestResult> {
+    const opened = await this.openPreview(page, archive)
+    if ('error' in opened) {
       return {
         ready: false,
-        error: (started.detail ?? 'preview error').slice(0, 500),
+        error: opened.error,
         pageErrors,
         autonomousMotion: false,
         controls: [],
         changedVariables: [],
       }
     }
-
-    const frame = page.frames().find((candidate) => candidate.url().includes('/preview.html'))
-    if (!frame) throw new Error('Scratch preview frame did not load')
+    const { token, frame, waitFor } = opened
     const canvas = frame.locator('#stage')
 
     let stateUnavailable: string | undefined

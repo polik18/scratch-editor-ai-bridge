@@ -17,6 +17,10 @@ npm run benchmark:games -- score --run $RUN              # writes report.md, rep
 
 `--cases id1,id2` limits a command to some cases; `generate --force` regenerates existing responses.
 
+`--format spec` runs the same cases through the [Game Spec](../../docs/game-spec.md) path (behavior-card prompt, spec
+compiler, scenarios generated from the spec). Use a separate run directory per format. Spec v0 has no sound,
+library-art or animation behaviors, so those checks are not scored for it; the `scenario` rows are spec-only.
+
 ## Checks
 
 | check                 | passes when                                                                             |

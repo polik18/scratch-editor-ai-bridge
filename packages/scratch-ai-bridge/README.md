@@ -116,9 +116,14 @@ npm run cli --workspace=@scratch/scratch-ai-bridge -- inspect ./作品.sb3 --for
 npm run cli --workspace=@scratch/scratch-ai-bridge -- inspect ./作品.sb3 --format student-markdown
 npm run cli --workspace=@scratch/scratch-ai-bridge -- batch ./班級作品 --out ./班級分析結果 --jobs 1
 npm run cli --workspace=@scratch/scratch-ai-bridge -- generate ./遊戲設計.json --out ./新遊戲.sb3 --report ./新遊戲.report.json
+npm run cli --workspace=@scratch/scratch-ai-bridge -- spec ./作品描述.json --out ./新遊戲.sb3 --playtest
 npm run session --workspace=@scratch/scratch-ai-bridge -- new-game --design=./遊戲設計.json --output=./build
 npm run mcp --workspace=@scratch/scratch-ai-bridge -- --project ./canonical-ir.json
 ```
+
+`spec` builds from a [Game Spec](docs/game-spec.md): entities, behaviors, "when … → do …" rules and a text map,
+which is small enough for small local models to write. It checks reachability with the generated physics and, with
+`--playtest`, runs scenarios generated from the spec in the real Scratch preview.
 
 Existing output files are preserved by default. Pass `--force` to replace one intentionally. The `scratch-session`
 bin also accepts both `new-game` and its historical `newGame` spelling.

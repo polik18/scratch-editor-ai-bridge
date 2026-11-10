@@ -1,0 +1,1067 @@
+{
+  "results": [
+    {
+      "id": "catch-apples",
+      "status": "scored",
+      "promptCharacters": 1062,
+      "responseCharacters": 768,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": false
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "貓咪 Δ4"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "貓咪 Δ148"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": false,
+          "detail": "no variable changed"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -152, expected > -220"
+        },
+        {
+          "name": "scenario 基本操作/往左是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -232, expected 與 -224.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/往上是牆，不能穿過",
+          "pass": true,
+          "detail": "actual 172, expected 與 168.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/按下鍵會移動",
+          "pass": true,
+          "detail": "actual 96, expected < 164"
+        }
+      ],
+      "score": 0.8,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "貓咪",
+            "delta": 4
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "貓咪",
+            "delta": 148
+          }
+        ],
+        "changedVariables": []
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -152,
+              "expected": "> -220"
+            },
+            {
+              "label": "往左是牆，不能穿過",
+              "pass": true,
+              "actual": -232,
+              "expected": "與 -224.0 相差 ≤ 12"
+            },
+            {
+              "label": "往上是牆，不能穿過",
+              "pass": true,
+              "actual": 172,
+              "expected": "與 168.0 相差 ≤ 12"
+            },
+            {
+              "label": "按下鍵會移動",
+              "pass": true,
+              "actual": 96,
+              "expected": "< 164"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 角色.蘋果：「蘋果」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色.毒蘋果：「毒蘋果」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。"
+    },
+    {
+      "id": "space-dodge",
+      "status": "scored",
+      "promptCharacters": 1057,
+      "responseCharacters": 650,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "火箭 Δ4"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "火箭 Δ228"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": false,
+          "detail": "no variable changed"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -114, expected > -220"
+        },
+        {
+          "name": "scenario 基本操作/往左是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -232, expected 與 -228.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/往上是牆，不能穿過",
+          "pass": true,
+          "detail": "actual 172, expected 與 168.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/按下鍵會移動",
+          "pass": true,
+          "detail": "actual 58, expected < 164"
+        }
+      ],
+      "score": 0.9,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "火箭",
+            "delta": 4
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "火箭",
+            "delta": 228
+          }
+        ],
+        "changedVariables": []
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -114,
+              "expected": "> -220"
+            },
+            {
+              "label": "往左是牆，不能穿過",
+              "pass": true,
+              "actual": -232,
+              "expected": "與 -228.0 相差 ≤ 12"
+            },
+            {
+              "label": "往上是牆，不能穿過",
+              "pass": true,
+              "actual": 172,
+              "expected": "與 168.0 相差 ≤ 12"
+            },
+            {
+              "label": "按下鍵會移動",
+              "pass": true,
+              "actual": 58,
+              "expected": "< 164"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 角色.隕石：「隕石」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。"
+    },
+    {
+      "id": "space-shooter",
+      "status": "scored",
+      "promptCharacters": 1060,
+      "responseCharacters": 717,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": false
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "飛船 Δ4"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "飛船 Δ152"
+        },
+        {
+          "name": "key space y+",
+          "pass": false,
+          "detail": "_Walls Δ0"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": false,
+          "detail": "no variable changed"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -152, expected > -220"
+        },
+        {
+          "name": "scenario 基本操作/往左是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -232, expected 與 -228.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/往上是牆，不能穿過",
+          "pass": true,
+          "detail": "actual 172, expected 與 168.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/按下鍵會移動",
+          "pass": true,
+          "detail": "actual 96, expected < 164"
+        }
+      ],
+      "score": 0.7272727272727273,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "飛船",
+            "delta": 4
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "飛船",
+            "delta": 152
+          },
+          {
+            "key": " ",
+            "expected": "y+",
+            "moved": false,
+            "sprite": "_Walls",
+            "delta": 0
+          }
+        ],
+        "changedVariables": []
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -152,
+              "expected": "> -220"
+            },
+            {
+              "label": "往左是牆，不能穿過",
+              "pass": true,
+              "actual": -232,
+              "expected": "與 -228.0 相差 ≤ 12"
+            },
+            {
+              "label": "往上是牆，不能穿過",
+              "pass": true,
+              "actual": 172,
+              "expected": "與 168.0 相差 ≤ 12"
+            },
+            {
+              "label": "按下鍵會移動",
+              "pass": true,
+              "actual": 96,
+              "expected": "< 164"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 角色.外星人：「外星人」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色.雷射：「雷射」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。"
+    },
+    {
+      "id": "mouse-maze",
+      "status": "scored",
+      "promptCharacters": 1054,
+      "responseCharacters": 526,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "key ArrowUp y+",
+          "pass": true,
+          "detail": "老鼠 Δ4"
+        },
+        {
+          "name": "key ArrowDown y-",
+          "pass": true,
+          "detail": "老鼠 Δ100"
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": false,
+          "detail": "_Walls Δ0"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "老鼠 Δ48"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -128, expected > -196"
+        },
+        {
+          "name": "scenario 基本操作/往左是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -204, expected 與 -200.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/往上是牆，不能穿過",
+          "pass": true,
+          "detail": "actual 148, expected 與 144.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/按下鍵會移動",
+          "pass": true,
+          "detail": "actual 72, expected < 140"
+        },
+        {
+          "name": "scenario 通關/自動玩家走到「起司」並過關",
+          "pass": true,
+          "detail": "actual 1, expected == 1"
+        }
+      ],
+      "score": 0.9090909090909091,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [
+          {
+            "key": "ArrowUp",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "老鼠",
+            "delta": 4
+          },
+          {
+            "key": "ArrowDown",
+            "expected": "y-",
+            "moved": true,
+            "sprite": "老鼠",
+            "delta": 100
+          },
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": false,
+            "sprite": "_Walls",
+            "delta": 0
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "老鼠",
+            "delta": 48
+          }
+        ],
+        "changedVariables": ["Stage/_playerY", "老鼠/_offset"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -128,
+              "expected": "> -196"
+            },
+            {
+              "label": "往左是牆，不能穿過",
+              "pass": true,
+              "actual": -204,
+              "expected": "與 -200.0 相差 ≤ 12"
+            },
+            {
+              "label": "往上是牆，不能穿過",
+              "pass": true,
+              "actual": 148,
+              "expected": "與 144.0 相差 ≤ 12"
+            },
+            {
+              "label": "按下鍵會移動",
+              "pass": true,
+              "actual": 72,
+              "expected": "< 140"
+            }
+          ]
+        },
+        {
+          "name": "通關",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "自動玩家走到「起司」並過關",
+              "pass": true,
+              "actual": 1,
+              "expected": "== 1"
+            }
+          ],
+          "trace": [
+            [23, -204, 144],
+            [293, -144, 144],
+            [559, -76, 144],
+            [824, -60, 96],
+            [1076, -12, 84],
+            [1339, -12, 20],
+            [1601, -12, -48],
+            [1874, 36, -64],
+            [2143, 36, -116]
+          ]
+        }
+      ],
+      "feedback": ""
+    },
+    {
+      "id": "jump-collect",
+      "status": "scored",
+      "promptCharacters": 1054,
+      "responseCharacters": 672,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "主角 Δ4"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "主角 Δ197.8"
+        },
+        {
+          "name": "key space y+",
+          "pass": true,
+          "detail": "主角 Δ83.4"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/分數, Stage/_playerY, 星星/_i, 主角/vx"
+        },
+        {
+          "name": "scenario 基本操作/開場站在地面上",
+          "pass": true,
+          "detail": "actual 1, expected == 1"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -150.5, expected > -218"
+        },
+        {
+          "name": "scenario 基本操作/按上鍵會跳起來",
+          "pass": true,
+          "detail": "actual -54.6, expected > -138.8"
+        },
+        {
+          "name": "scenario 基本操作/跳完會落地站穩（不穿過地面）",
+          "pass": true,
+          "detail": "actual 1, expected == 1"
+        }
+      ],
+      "score": 1,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "主角",
+            "delta": 4
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "主角",
+            "delta": 197.8
+          },
+          {
+            "key": " ",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "主角",
+            "delta": 83.4
+          }
+        ],
+        "changedVariables": ["Stage/分數", "Stage/_playerY", "星星/_i", "主角/vx"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "開場站在地面上",
+              "pass": true,
+              "actual": 1,
+              "expected": "== 1"
+            },
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -150.5,
+              "expected": "> -218"
+            },
+            {
+              "label": "按上鍵會跳起來",
+              "pass": true,
+              "actual": -54.6,
+              "expected": "> -138.8"
+            },
+            {
+              "label": "跳完會落地站穩（不穿過地面）",
+              "pass": true,
+              "actual": 1,
+              "expected": "== 1"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 角色.陷阱：「陷阱」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。\n[注意] 地圖 第 4 列第 5 欄：玩家可能到不了這個「星星」。 → 降低平台或在中間加一層踏板（每次最多往上跳 5 格）。\n[注意] 地圖 第 4 列第 19 欄：玩家可能到不了這個「星星」。 → 降低平台或在中間加一層踏板（每次最多往上跳 5 格）。\n[注意] 地圖 第 6 列第 6 欄：玩家可能到不了這個「星星」。 → 降低平台或在中間加一層踏板（每次最多往上跳 5 格）。\n[注意] 地圖 第 6 列第 14 欄：玩家可能到不了這個「星星」。 → 降低平台或在中間加一層踏板（每次最多往上跳 5 格）。\n[注意] 地圖 第 8 列第 19 欄：玩家可能到不了這個「星星」。 → 降低平台或在中間加一層踏板（每次最多往上跳 5 格）。"
+    },
+    {
+      "id": "pop-balloons",
+      "status": "scored",
+      "promptCharacters": 1060,
+      "responseCharacters": 702,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/時間"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -152, expected > -220"
+        },
+        {
+          "name": "scenario 基本操作/往左是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -232, expected 與 -228.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/往上是牆，不能穿過",
+          "pass": true,
+          "detail": "actual 172, expected 與 168.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/按下鍵會移動",
+          "pass": true,
+          "detail": "actual 96, expected < 164"
+        }
+      ],
+      "score": 1,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [],
+        "changedVariables": ["Stage/時間"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -152,
+              "expected": "> -220"
+            },
+            {
+              "label": "往左是牆，不能穿過",
+              "pass": true,
+              "actual": -232,
+              "expected": "與 -228.0 相差 ≤ 12"
+            },
+            {
+              "label": "往上是牆，不能穿過",
+              "pass": true,
+              "actual": 172,
+              "expected": "與 168.0 相差 ≤ 12"
+            },
+            {
+              "label": "按下鍵會移動",
+              "pass": true,
+              "actual": 96,
+              "expected": "< 164"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 角色.終點：「終點」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。"
+    },
+    {
+      "id": "two-player-pong",
+      "status": "pipeline-failed",
+      "failedStage": "spec",
+      "failure": "[錯誤] 角色：有 2 個玩家角色（左球拍、右球拍），目前只支援一個。 → 只保留一個角色有「平台移動」或「俯視移動」。\n[注意] 角色.左球拍：「左球拍」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色.右球拍：「右球拍」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色.球：「球」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[錯誤] 規則[0].做[0]：看不懂動作「 球反彈」。 → 可用：分數 +N、生命 -N、說 文字、過關、失敗。\n[錯誤] 規則[1].做[0]：看不懂動作「 球反彈」。 → 可用：分數 +N、生命 -N、說 文字、過關、失敗。\n[錯誤] 規則[2].做[0]：看不懂動作「 球反彈」。 → 可用：分數 +N、生命 -N、說 文字、過關、失敗。\n[錯誤] 規則[3].當：沒有叫「左牆」的角色。 → 目前的角色：左球拍、右球拍、球。\n[錯誤] 規則[3].做[0]：看不懂動作「 右球拍得分」。 → 可用：分數 +N、生命 -N、說 文字、過關、失敗。\n[錯誤] 規則[4].當：沒有叫「右牆」的角色。 → 目前的角色：左球拍、右球拍、球。\n[錯誤] 規則[4].做[0]：看不懂動作「 左球拍得分」。 → 可用：分數 +N、生命 -N、說 文字、過關、失敗。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。",
+      "promptCharacters": 1061,
+      "responseCharacters": 521,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "[錯誤] 角色：有 2 個玩家角色（左球拍、右球拍），目前只支援一個。 → 只保留一個角色有「平台移動」或「俯視移動」。"
+        }
+      ],
+      "score": 0,
+      "feedback": "[錯誤] 角色：有 2 個玩家角色（左球拍、右球拍），目前只支援一個。 → 只保留一個角色有「平台移動」或「俯視移動」。\n[注意] 角色.左球拍：「左球拍」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色.右球拍：「右球拍」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色.球：「球」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[錯誤] 規則[0].做[0]：看不懂動作「 球反彈」。 → 可用：分數 +N、生命 -N、說 文字、過關、失敗。\n[錯誤] 規則[1].做[0]：看不懂動作「 球反彈」。 → 可用：分數 +N、生命 -N、說 文字、過關、失敗。\n[錯誤] 規則[2].做[0]：看不懂動作「 球反彈」。 → 可用：分數 +N、生命 -N、說 文字、過關、失敗。\n[錯誤] 規則[3].當：沒有叫「左牆」的角色。 → 目前的角色：左球拍、右球拍、球。\n[錯誤] 規則[3].做[0]：看不懂動作「 右球拍得分」。 → 可用：分數 +N、生命 -N、說 文字、過關、失敗。\n[錯誤] 規則[4].當：沒有叫「右牆」的角色。 → 目前的角色：左球拍、右球拍、球。\n[錯誤] 規則[4].做[0]：看不懂動作「 左球拍得分」。 → 可用：分數 +N、生命 -N、說 文字、過關、失敗。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。"
+    },
+    {
+      "id": "deep-sea-rescue",
+      "status": "scored",
+      "promptCharacters": 1056,
+      "responseCharacters": 729,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "key ArrowUp y+",
+          "pass": true,
+          "detail": "小魚 Δ4"
+        },
+        {
+          "name": "key ArrowDown y-",
+          "pass": true,
+          "detail": "小魚 Δ148"
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "小魚 Δ4"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "小魚 Δ152"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/分數, Stage/_playerY, 氧氣泡泡/_i"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -152, expected > -220"
+        },
+        {
+          "name": "scenario 基本操作/往左是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -232, expected 與 -224.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/往上是牆，不能穿過",
+          "pass": true,
+          "detail": "actual 148, expected 與 144.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/按下鍵會移動",
+          "pass": true,
+          "detail": "actual 68, expected < 136"
+        }
+      ],
+      "score": 1,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "ArrowUp",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "小魚",
+            "delta": 4
+          },
+          {
+            "key": "ArrowDown",
+            "expected": "y-",
+            "moved": true,
+            "sprite": "小魚",
+            "delta": 148
+          },
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "小魚",
+            "delta": 4
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "小魚",
+            "delta": 152
+          }
+        ],
+        "changedVariables": ["Stage/分數", "Stage/_playerY", "氧氣泡泡/_i"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -152,
+              "expected": "> -220"
+            },
+            {
+              "label": "往左是牆，不能穿過",
+              "pass": true,
+              "actual": -232,
+              "expected": "與 -224.0 相差 ≤ 12"
+            },
+            {
+              "label": "往上是牆，不能穿過",
+              "pass": true,
+              "actual": 148,
+              "expected": "與 144.0 相差 ≤ 12"
+            },
+            {
+              "label": "按下鍵會移動",
+              "pass": true,
+              "actual": 68,
+              "expected": "< 136"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 角色.水母：「水母」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色.終點：「終點」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。"
+    },
+    {
+      "id": "car-racing",
+      "status": "scored",
+      "promptCharacters": 1059,
+      "responseCharacters": 704,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": false
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "我的車 Δ4"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "我的車 Δ152"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": false,
+          "detail": "no variable changed"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -152, expected > -220"
+        },
+        {
+          "name": "scenario 基本操作/往左是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -232, expected 與 -224.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/往上是牆，不能穿過",
+          "pass": true,
+          "detail": "actual 172, expected 與 168.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/按下鍵會移動",
+          "pass": true,
+          "detail": "actual 96, expected < 164"
+        }
+      ],
+      "score": 0.8,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "我的車",
+            "delta": 4
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "我的車",
+            "delta": 152
+          }
+        ],
+        "changedVariables": []
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -152,
+              "expected": "> -220"
+            },
+            {
+              "label": "往左是牆，不能穿過",
+              "pass": true,
+              "actual": -232,
+              "expected": "與 -224.0 相差 ≤ 12"
+            },
+            {
+              "label": "往上是牆，不能穿過",
+              "pass": true,
+              "actual": 172,
+              "expected": "與 168.0 相差 ≤ 12"
+            },
+            {
+              "label": "按下鍵會移動",
+              "pass": true,
+              "actual": 96,
+              "expected": "< 164"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 角色.前車：「前車」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色.終點線：「終點線」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。"
+    },
+    {
+      "id": "whack-a-mole",
+      "status": "scored",
+      "promptCharacters": 1054,
+      "responseCharacters": 372,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/時間"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -66, expected > -172"
+        },
+        {
+          "name": "scenario 基本操作/按左鍵會移動",
+          "pass": true,
+          "detail": "actual -232, expected < -188"
+        },
+        {
+          "name": "scenario 基本操作/按上鍵會移動",
+          "pass": true,
+          "detail": "actual 42, expected > -64"
+        },
+        {
+          "name": "scenario 基本操作/按下鍵會移動",
+          "pass": true,
+          "detail": "actual -172, expected < -80"
+        }
+      ],
+      "score": 1,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [],
+        "changedVariables": ["Stage/時間"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -66,
+              "expected": "> -172"
+            },
+            {
+              "label": "按左鍵會移動",
+              "pass": true,
+              "actual": -232,
+              "expected": "< -188"
+            },
+            {
+              "label": "按上鍵會移動",
+              "pass": true,
+              "actual": 42,
+              "expected": "> -64"
+            },
+            {
+              "label": "按下鍵會移動",
+              "pass": true,
+              "actual": -172,
+              "expected": "< -80"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 地圖 第 2 列第 11 欄：玩家「地鼠」在地圖上出現 5 次，只會使用第一個位置。 → 只留一個玩家符號。"
+    }
+  ]
+}

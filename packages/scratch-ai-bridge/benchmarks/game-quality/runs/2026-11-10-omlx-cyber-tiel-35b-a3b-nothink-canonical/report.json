@@ -1,0 +1,164 @@
+{
+  "results": [
+    {
+      "id": "catch-apples",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 2719 (line 1 column 2720)",
+      "promptCharacters": 5901,
+      "responseCharacters": 4012,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 2719 (line 1 column 2720)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "space-dodge",
+      "status": "pipeline-failed",
+      "failedStage": "schema",
+      "failure": "[{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'broadcasts'\",\"params\":{\"missingProperty\":\"broadcasts\"}},{\"instancePath\":\"/sprites/1\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'name'\",\"params\":{\"missingProperty\":\"name\"}},{\"instancePath\":\"/sprites/1\",\"schemaPath\":\"#/additionalProperties\",\"keyword\":\"additionalProperties\",\"message\":\"must NOT have additional properties\",\"params\":{\"additionalProperty\":\"blocks\"}}]",
+      "promptCharacters": 5922,
+      "responseCharacters": 5527,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "schema: [{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'broadcasts'\",\"params\":{\"missingProperty\":\"broadcasts\""
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "space-shooter",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 3658 (line 1 column 3659)",
+      "promptCharacters": 5893,
+      "responseCharacters": 4941,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 3658 (line 1 column 3659)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "mouse-maze",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 824 (line 1 column 825)",
+      "promptCharacters": 5887,
+      "responseCharacters": 4764,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 824 (line 1 column 825)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "jump-collect",
+      "status": "pipeline-failed",
+      "failedStage": "schema",
+      "failure": "[{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'broadcasts'\",\"params\":{\"missingProperty\":\"broadcasts\"}},{\"instancePath\":\"/sprites/1\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'name'\",\"params\":{\"missingProperty\":\"name\"}},{\"instancePath\":\"/sprites/1\",\"schemaPath\":\"#/additionalProperties\",\"keyword\":\"additionalProperties\",\"message\":\"must NOT have additional properties\",\"params\":{\"additionalProperty\":\"blocks\"}}]",
+      "promptCharacters": 5878,
+      "responseCharacters": 4476,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "schema: [{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'broadcasts'\",\"params\":{\"missingProperty\":\"broadcasts\""
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "pop-balloons",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 2732 (line 1 column 2733)",
+      "promptCharacters": 5921,
+      "responseCharacters": 5232,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 2732 (line 1 column 2733)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "two-player-pong",
+      "status": "pipeline-failed",
+      "failedStage": "schema",
+      "failure": "[{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'sprites'\",\"params\":{\"missingProperty\":\"sprites\"}},{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'broadcasts'\",\"params\":{\"missingProperty\":\"broadcasts\"}},{\"instancePath\":\"\",\"schemaPath\":\"#/additionalProperties\",\"keyword\":\"additionalProperties\",\"message\":\"must NOT have additional properties\",\"params\":{\"additionalProperty\":\"procedures\"}}]",
+      "promptCharacters": 5939,
+      "responseCharacters": 3294,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "schema: [{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'sprites'\",\"params\":{\"missingProperty\":\"sprites\"}},{\"i"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "deep-sea-rescue",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Unexpected token '`', \"```json\n{\"\"... is not valid JSON",
+      "promptCharacters": 5919,
+      "responseCharacters": 6815,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Unexpected token '`', \"```json\n{\"\"... is not valid JSON"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "car-racing",
+      "status": "pipeline-failed",
+      "failedStage": "schema",
+      "failure": "[{\"instancePath\":\"/sprites/1/scripts/1\",\"schemaPath\":\"#/additionalProperties\",\"keyword\":\"additionalProperties\",\"message\":\"must NOT have additional properties\",\"params\":{\"additionalProperty\":\"procedures\"}},{\"instancePath\":\"/sprites/2/scripts/1\",\"schemaPath\":\"#/additionalProperties\",\"keyword\":\"additionalProperties\",\"message\":\"must NOT have additional properties\",\"params\":{\"additionalProperty\":\"procedures\"}}]",
+      "promptCharacters": 5913,
+      "responseCharacters": 2750,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "schema: [{\"instancePath\":\"/sprites/1/scripts/1\",\"schemaPath\":\"#/additionalProperties\",\"keyword\":\"additionalProperties\",\"message\":\"must NOT have additional properties\",\""
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "whack-a-mole",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 733 (line 1 column 734)",
+      "promptCharacters": 5901,
+      "responseCharacters": 3925,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 733 (line 1 column 734)"
+        }
+      ],
+      "score": 0
+    }
+  ]
+}

@@ -9,9 +9,11 @@ Usage:
   scratch-ai-bridge inspect <file.sb3> [--format json|markdown|student-markdown]
   scratch-ai-bridge batch <directory> --out <new-directory> [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
   scratch-ai-bridge generate <design.json> --out <new-file.sb3> [--report <report.json>] [--preview <stage.png>] [--force]
+  scratch-ai-bridge spec <game-spec.json> --out <new-file.sb3> [--ir <canonical-ir.json>] [--report <report.json>] [--playtest] [--force]
   scratch-ai-bridge --help
   scratch-ai-bridge --version
 
+"spec" builds from a Game Spec (entities + behaviors + rules + text map; see docs/game-spec.md) and, with --playtest, runs scenarios generated from the spec in the real Scratch preview.
 "generate" accepts Canonical IR JSON or the documented GameDesign JSON shape. Pass --preview <stage.png> to run the browser renderer; gameplay behavior requires a separate deterministic smoke test.`
 
 const writeJson = (value: unknown): void => {
@@ -142,6 +144,58 @@ if (command === '--help' || command === '-h' || command === '') {
           ? 2
           : 3
     }
+  }
+} else if (command === 'spec') {
+  const positionals: string[] = []
+  const values: Record<string, string> = {}
+  let playtest = false
+  let force = false
+  let argumentError = false
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index]
+    if (argument === '--out' || argument === '--ir' || argument === '--report') {
+      const value = args[index + 1]
+      if (!value || value.startsWith('-')) {
+        argumentError = true
+        break
+      }
+      values[argument] = value
+      index += 1
+    } else if (argument === '--playtest') playtest = true
+    else if (argument === '--force') force = true
+    else if (argument.startsWith('-')) {
+      argumentError = true
+      break
+    } else positionals.push(argument)
+  }
+  if (argumentError || positionals.length !== 1 || !values['--out']) {
+    process.stderr.write(`${USAGE}\n`)
+    process.exitCode = 2
+  } else {
+    const { runSpecBuild } = await import('./spec-command')
+    // Scratch VM logs to stdout; keep stdout reserved for the JSON report.
+    const originalStdoutWrite = process.stdout.write.bind(process.stdout)
+    const originalConsoleLog = console.log
+    console.log = (...items: unknown[]) => process.stderr.write(`${items.map(String).join(' ')}\n`)
+    const redirectStdout: typeof process.stdout.write = (chunk: string | Uint8Array, ...rest: unknown[]) =>
+      (process.stderr.write as (...params: unknown[]) => boolean)(chunk, ...rest)
+    process.stdout.write = redirectStdout
+    let report
+    try {
+      report = await runSpecBuild({
+        specPath: positionals[0] ?? '',
+        outputFile: values['--out'],
+        ...(values['--ir'] ? { irPath: values['--ir'] } : {}),
+        ...(values['--report'] ? { reportPath: values['--report'] } : {}),
+        playtest,
+        force,
+      })
+    } finally {
+      process.stdout.write = originalStdoutWrite
+      console.log = originalConsoleLog
+    }
+    writeJson(report)
+    if (report.status !== 'success' || report.playtestStatus === 'fail') process.exitCode = 1
   }
 } else if (command === 'generate') {
   const positionals: string[] = []

@@ -1,8 +1,12 @@
 // Game-quality benchmark: measures what a student actually gets from one idea sentence.
 //
 //   npm run benchmark:games -- prompts  --run benchmarks/game-quality/runs/<name>
-//   npm run benchmark:games -- generate --run <dir>   (needs BENCH_BASE_URL, BENCH_MODEL, optional BENCH_API_KEY)
+//   npm run benchmark:games -- generate --run <dir>   (needs BENCH_BASE_URL, BENCH_MODEL, optional BENCH_API_KEY;
+//                                                       BENCH_NO_THINKING=1 turns off Qwen-style thinking)
 //   npm run benchmark:games -- score    --run <dir>   (needs `npm run build` for the renderer preview)
+//
+// `--format spec` runs the same cases through the Game Spec path (short behavior-card prompt, spec compiler,
+// scenarios generated from the spec) instead of the Canonical IR student prompt. Use one run directory per format.
 //
 // `prompts` writes <id>.prompt.txt. Responses are read from <id>.response.txt, written by `generate` from any
 // OpenAI-compatible endpoint or pasted by hand from a chat UI. `score` writes report.json, report.md and
@@ -13,6 +17,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import { PlaytestRunner, type PlaytestControl, type PlaytestResult } from '../src/cli/playtest'
+import { runSpecScenario, type ScenarioResult } from '../src/cli/scenario-runner'
 import { createStudentProjectInstruction, estimatePromptSize } from '../src/core/capabilities/registry'
 import { compileCanonicalProjectToSb3 } from '../src/core/compiler'
 import type { CanonicalBlock, CanonicalInput, CanonicalProject } from '../src/core/ir/types'
@@ -29,6 +34,8 @@ import {
   type LibraryAssetFetcher,
   type LibraryResolutionReport,
 } from '../src/core/visuals/library'
+import { buildFromSpecText, createSpecScenarios, formatSpecDiagnostics } from '../src/spec'
+import { createGameSpecInstruction } from '../src/spec/prompt'
 
 interface BenchmarkCase {
   readonly id: string
@@ -56,7 +63,15 @@ interface CaseResult {
   readonly score: number
   readonly assets?: LibraryResolutionReport & { readonly animatedSprites: number; readonly soundBlocks: number }
   readonly playtest?: PlaytestResult
+  readonly scenarios?: readonly ScenarioResult[]
+  /** Spec path only: plain-language feedback that would be sent back to the model for a repair round. */
+  readonly feedback?: string
 }
+
+type Format = 'canonical' | 'spec'
+
+const promptFor = (format: Format, request: string): string =>
+  format === 'spec' ? createGameSpecInstruction(request) : createStudentProjectInstruction(request)
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const casesPath = path.join(packageRoot, 'benchmarks/game-quality/cases.json')
@@ -113,19 +128,25 @@ const countOpcodes = (target: CanonicalProject['sprites'][number] | CanonicalPro
   return count
 }
 
-const commandPrompts = async (runDir: string, cases: BenchmarkCase[]): Promise<void> => {
+const commandPrompts = async (runDir: string, cases: BenchmarkCase[], format: Format): Promise<void> => {
   await mkdir(runDir, { recursive: true })
   for (const testCase of cases) {
-    const prompt = createStudentProjectInstruction(testCase.request)
+    const prompt = promptFor(format, testCase.request)
     await writeFile(path.join(runDir, `${testCase.id}.prompt.txt`), prompt)
     console.log(`${testCase.id}: ${estimatePromptSize(prompt).characters} characters`)
   }
 }
 
-const commandGenerate = async (runDir: string, cases: BenchmarkCase[], force: boolean): Promise<void> => {
+const commandGenerate = async (
+  runDir: string,
+  cases: BenchmarkCase[],
+  force: boolean,
+  format: Format,
+): Promise<void> => {
   const baseUrl = process.env.BENCH_BASE_URL
   const model = process.env.BENCH_MODEL
   if (!baseUrl || !model) throw new Error('Set BENCH_BASE_URL (e.g. http://127.0.0.1:8000/v1) and BENCH_MODEL')
+  const noThinking = process.env.BENCH_NO_THINKING === '1'
   await mkdir(runDir, { recursive: true })
   const meta: Record<string, unknown>[] = []
   for (const testCase of cases) {
@@ -134,7 +155,7 @@ const commandGenerate = async (runDir: string, cases: BenchmarkCase[], force: bo
       console.log(`${testCase.id}: response exists, skipping`)
       continue
     }
-    const prompt = createStudentProjectInstruction(testCase.request)
+    const prompt = promptFor(format, testCase.request)
     const started = Date.now()
     const response = await fetch(`${baseUrl.replace(/\/$/, '')}/chat/completions`, {
       method: 'POST',
@@ -142,7 +163,13 @@ const commandGenerate = async (runDir: string, cases: BenchmarkCase[], force: bo
         'content-type': 'application/json',
         ...(process.env.BENCH_API_KEY ? { authorization: `Bearer ${process.env.BENCH_API_KEY}` } : {}),
       },
-      body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.4 }),
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
+        // Qwen-style chat templates honour this; servers without the option ignore it.
+        ...(noThinking ? { chat_template_kwargs: { enable_thinking: false } } : {}),
+      }),
       signal: AbortSignal.timeout(15 * 60_000),
     })
     const body = (await response.json()) as { choices?: { message?: { content?: string } }[]; error?: unknown }
@@ -156,7 +183,10 @@ const commandGenerate = async (runDir: string, cases: BenchmarkCase[], force: bo
     meta.push({ id: testCase.id, model, seconds, characters: content.length })
     console.log(`${testCase.id}: ${content.length} characters in ${seconds.toFixed(1)} s`)
   }
-  await writeFile(path.join(runDir, 'generate-meta.json'), `${JSON.stringify({ model, baseUrl, meta }, null, 2)}\n`)
+  await writeFile(
+    path.join(runDir, 'generate-meta.json'),
+    `${JSON.stringify({ model, baseUrl, format, noThinking, meta }, null, 2)}\n`,
+  )
 }
 
 const runPipeline = async (
@@ -282,6 +312,113 @@ const scoreCase = async (
   }
 }
 
+/**
+ * Spec path: the same build and generic playtest checks as the Canonical path (so results compare directly), plus
+ * the scenarios generated from the spec. Art, sound and animation checks are left out because spec v0 draws its own
+ * cell-sized costumes and has no sound behavior yet.
+ * @param runDir - Run directory holding `<id>.response.txt`.
+ * @param testCase - Benchmark case being scored.
+ * @param runner - Shared playtest runner.
+ * @returns Scored case result, including spec feedback for a repair round.
+ */
+const scoreSpecCase = async (
+  runDir: string,
+  testCase: BenchmarkCase,
+  runner: PlaytestRunner,
+): Promise<CaseResult> => {
+  const promptCharacters = estimatePromptSize(createGameSpecInstruction(testCase.request)).characters
+  const response = await readOptional(path.join(runDir, `${testCase.id}.response.txt`))
+  if (response === undefined)
+    return { id: testCase.id, status: 'no-response', promptCharacters, checks: [], score: 0 }
+  const built = buildFromSpecText(response)
+  const feedback = formatSpecDiagnostics(built.diagnostics.filter((item) => item.severity !== 'fixed'))
+  if (!built.project || !built.spec) {
+    return {
+      id: testCase.id,
+      status: 'pipeline-failed',
+      failedStage: 'spec',
+      failure: feedback,
+      promptCharacters,
+      responseCharacters: response.length,
+      checks: [{ name: 'builds', pass: false, detail: feedback.split('\n')[0]?.slice(0, 160) }],
+      score: 0,
+      feedback,
+    }
+  }
+  let sb3: Uint8Array
+  try {
+    sb3 = new Uint8Array(await (await compileCanonicalProjectToSb3(built.project)).arrayBuffer())
+  } catch (error) {
+    const message = (error instanceof Error ? error.message : String(error)).slice(0, 600)
+    return {
+      id: testCase.id,
+      status: 'pipeline-failed',
+      failedStage: 'compile',
+      failure: message,
+      promptCharacters,
+      responseCharacters: response.length,
+      checks: [{ name: 'builds', pass: false, detail: message.slice(0, 160) }],
+      score: 0,
+    }
+  }
+  await writeFile(path.join(runDir, `${testCase.id}.sb3`), sb3)
+  const playtest = await runner.run(
+    sb3,
+    { controls: testCase.controls, clicks: testCase.clicks ?? false },
+    path.join(runDir, `${testCase.id}.png`),
+  )
+  const scenarios: ScenarioResult[] = []
+  for (const scenario of createSpecScenarios(built.spec)) scenarios.push(await runSpecScenario(runner, sb3, scenario))
+  const checks: Check[] = [
+    { name: 'builds', pass: true },
+    {
+      name: 'runs',
+      pass: playtest.ready && playtest.pageErrors.length === 0,
+      ...(playtest.error || playtest.pageErrors.length
+        ? { detail: (playtest.error ?? playtest.pageErrors.join(' | ')).slice(0, 160) }
+        : {}),
+    },
+  ]
+  if (testCase.expectAutonomousMotion) checks.push({ name: 'moves-on-its-own', pass: playtest.autonomousMotion })
+  for (const control of playtest.controls)
+    checks.push({
+      name: `key ${control.key === ' ' ? 'space' : control.key} ${control.expected}`,
+      pass: control.moved,
+      detail: `${control.sprite ?? '-'} Δ${control.delta}`,
+    })
+  if (testCase.expectProgress)
+    checks.push({
+      name: 'state-changes-in-play',
+      pass: playtest.changedVariables.length > 0,
+      detail: playtest.changedVariables.join(', ') || 'no variable changed',
+    })
+  for (const scenario of scenarios)
+    for (const expectation of scenario.expectations)
+      checks.push({
+        name: `scenario ${scenario.name}/${expectation.label}`,
+        pass: expectation.pass,
+        detail: `actual ${String(expectation.actual)}, expected ${expectation.expected}`,
+      })
+  const scenarioFeedback = scenarios
+    .flatMap((scenario) =>
+      scenario.expectations
+        .filter((item) => !item.pass)
+        .map((item) => `[試玩未通過] ${scenario.name}／${item.label} → ${item.hint ?? ''}`),
+    )
+    .join('\n')
+  return {
+    id: testCase.id,
+    status: 'scored',
+    promptCharacters,
+    responseCharacters: response.length,
+    checks,
+    score: checks.filter(({ pass }) => pass).length / checks.length,
+    playtest,
+    scenarios,
+    feedback: [feedback, scenarioFeedback].filter(Boolean).join('\n'),
+  }
+}
+
 const markdownReport = (runDir: string, results: CaseResult[]): string => {
   const scored = results.filter(({ status }) => status !== 'no-response')
   const mean = scored.length ? scored.reduce((sum, { score }) => sum + score, 0) / scored.length : 0
@@ -305,6 +442,7 @@ const markdownReport = (runDir: string, results: CaseResult[]): string => {
       'library-art',
       'plays-sound',
       'animated-sprite',
+      'scenario ',
     ].map((name) => `| ${name.trim()} | ${rate(name)} |`),
     '',
     '| case | score | failed checks |',
@@ -324,13 +462,16 @@ const markdownReport = (runDir: string, results: CaseResult[]): string => {
   return lines.join('\n')
 }
 
-const commandScore = async (runDir: string, cases: BenchmarkCase[]): Promise<void> => {
+const commandScore = async (runDir: string, cases: BenchmarkCase[], format: Format): Promise<void> => {
   const fetcher = cachedFetcher()
   const runner = await PlaytestRunner.create()
   const results: CaseResult[] = []
   try {
     for (const testCase of cases) {
-      const result = await scoreCase(runDir, testCase, fetcher, runner)
+      const result =
+        format === 'spec'
+          ? await scoreSpecCase(runDir, testCase, runner)
+          : await scoreCase(runDir, testCase, fetcher, runner)
       results.push(result)
       console.log(`${testCase.id}: ${result.status} ${(result.score * 100).toFixed(0)}%`)
     }
@@ -345,15 +486,23 @@ const commandScore = async (runDir: string, cases: BenchmarkCase[]): Promise<voi
 
 const { positionals, values } = parseArgs({
   allowPositionals: true,
-  options: { run: { type: 'string' }, cases: { type: 'string' }, force: { type: 'boolean', default: false } },
+  options: {
+    run: { type: 'string' },
+    cases: { type: 'string' },
+    force: { type: 'boolean', default: false },
+    format: { type: 'string', default: 'canonical' },
+  },
 })
 const command = positionals[0]
-if (!values.run || !['prompts', 'generate', 'score'].includes(command)) {
-  console.error('Usage: game-benchmark <prompts|generate|score> --run <dir> [--cases id1,id2] [--force]')
+const format = values.format as Format
+if (!values.run || !['prompts', 'generate', 'score'].includes(command) || !['canonical', 'spec'].includes(format)) {
+  console.error(
+    'Usage: game-benchmark <prompts|generate|score> --run <dir> [--format canonical|spec] [--cases id1,id2] [--force]',
+  )
   process.exit(2)
 }
 const runDir = path.resolve(values.run)
 const cases = await loadCases(values.cases)
-if (command === 'prompts') await commandPrompts(runDir, cases)
-else if (command === 'generate') await commandGenerate(runDir, cases, values.force)
-else await commandScore(runDir, cases)
+if (command === 'prompts') await commandPrompts(runDir, cases, format)
+else if (command === 'generate') await commandGenerate(runDir, cases, values.force, format)
+else await commandScore(runDir, cases, format)
