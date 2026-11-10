@@ -101,10 +101,13 @@ import {
   type CanonicalSemanticIssue,
 } from './core/validator'
 import {
-  resolveAutomaticVisual,
-  summarizeAutomaticVisuals,
-  type AutomaticVisualSummary,
-} from './core/visuals/presets'
+  createScratchAssetFetcher,
+  describeLibraryResolution,
+  resolveLibraryAssets,
+  type LibraryResolutionReport,
+  type ResolveLibraryAssetsOptions,
+} from './core/visuals/library'
+import { resolveAutomaticVisual } from './core/visuals/presets'
 import { SCRATCH_LINK_HARDWARE_EXTENSION_IDS } from './scratch/extensions'
 import {
   createVM,
@@ -4970,17 +4973,21 @@ byId<HTMLButtonElement>('validate').addEventListener('click', () => {
   }
 })
 
-const compileProjectToBlob = async (project: CanonicalProject): Promise<Blob> => compileCanonicalProjectToSb3(project)
+const libraryAssetFetcher = createScratchAssetFetcher()
 
-const describeAutomaticVisuals = (summary: AutomaticVisualSummary): string => {
-  const additions: string[] = []
+let latestLibraryReport: LibraryResolutionReport | null = null
 
-  if (summary.backdropCostumes > 0) additions.push(`${summary.backdropCostumes} 個背景`)
-
-  if (summary.spriteCostumes > 0) additions.push(`${summary.spriteCostumes} 個角色造型`)
-
-  return additions.length > 0 ? `已自動補上 ${additions.join('、')}。` : ''
+const compileProjectToBlob = async (
+  project: CanonicalProject,
+  options: ResolveLibraryAssetsOptions = {},
+): Promise<Blob> => {
+  const resolved = await resolveLibraryAssets(project, libraryAssetFetcher, options)
+  latestLibraryReport = resolved.report
+  return compileCanonicalProjectToSb3(resolved.project)
 }
+
+const describeLatestLibraryAssets = (): string =>
+  latestLibraryReport ? describeLibraryResolution(latestLibraryReport) : ''
 
 const describeOfflineCloudVariables = (project: CanonicalProject): string => {
   const cloudVariables = [project.stage, ...project.sprites].flatMap((target) =>
@@ -5014,11 +5021,9 @@ const compileProject = async () => {
   }
 
   try {
-    const automaticVisuals = summarizeAutomaticVisuals(project)
+    setStatus(generateStatus, '正在下載官方素材並透過 Scratch VM 編譯…')
 
-    setStatus(generateStatus, '正在透過 Scratch VM 編譯…')
-
-    const sb3 = await compileProjectToBlob(project)
+    const sb3 = await compileProjectToBlob(project, { replaceModelSvg: true })
 
     download(sb3, `${project.name.replace(/[^\w\-\u4e00-\u9fff]+/g, '-') || 'scratch-project'}.sb3`)
 
@@ -5031,7 +5036,7 @@ const compileProject = async () => {
     setStatus(
       generateStatus,
 
-      `完成：.sb3 已由 Scratch VM 產生。${describeAutomaticVisuals(automaticVisuals)}${semanticWarning}${cloudWarning ? `\n${cloudWarning}` : ''}`,
+      `完成：.sb3 已由 Scratch VM 產生。${describeLatestLibraryAssets()}${semanticWarning}${cloudWarning ? `\n${cloudWarning}` : ''}`,
 
       'ok',
     )
@@ -5227,13 +5232,11 @@ const buildStudentProject = async (): Promise<void> => {
   }
 
   try {
-    const automaticVisuals = summarizeAutomaticVisuals(validation.data)
-
-    setStatus(generateStatus, '正在製作 Scratch 專案，請稍候…')
+    setStatus(generateStatus, '正在下載官方素材並製作 Scratch 專案，請稍候…')
 
     setProgress(4)
 
-    const sb3 = await compileProjectToBlob(validation.data)
+    const sb3 = await compileProjectToBlob(validation.data, { replaceModelSvg: true })
 
     latestStudentValidationReport = await createAiOutputValidationReport({
       sourceResponse,
@@ -5293,7 +5296,7 @@ const buildStudentProject = async (): Promise<void> => {
     setStudentResult(
       isCandidate ? `新版候選「${validation.data.name}」` : `已完成「${validation.data.name}」`,
 
-      `作品包含 ${validation.data.sprites.length} 個角色。${describeAutomaticVisuals(automaticVisuals)}${describeOfflineCloudVariables(validation.data)}${latestRequirementCoverage ? '下方需求完成度是 AI 自述，Bridge 已檢查引用位置，但不代表已執行驗證。' : 'AI 回覆未提供需求完成度清單；格式與編譯通過不代表原始需求全數完成。'}${isCandidate ? '先試玩，再選擇是否使用新版。' : '請開啟下載的 .sb3 檔案繼續創作。'}本次驗證報告也可以下載。`,
+      `作品包含 ${validation.data.sprites.length} 個角色。${describeLatestLibraryAssets()}${describeOfflineCloudVariables(validation.data)}${latestRequirementCoverage ? '下方需求完成度是 AI 自述，Bridge 已檢查引用位置，但不代表已執行驗證。' : 'AI 回覆未提供需求完成度清單；格式與編譯通過不代表原始需求全數完成。'}${isCandidate ? '先試玩，再選擇是否使用新版。' : '請開啟下載的 .sb3 檔案繼續創作。'}本次驗證報告也可以下載。`,
 
       'success',
     )

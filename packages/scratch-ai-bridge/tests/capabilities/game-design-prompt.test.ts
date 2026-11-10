@@ -48,7 +48,8 @@ describe('game design and production prompt stages', () => {
     const followUp = createProjectFragmentInstruction({ ...base, reuseCapabilityContract: true })
 
     expect(standalone).toContain('event_whenkeypressed')
-    expect(standalone).toContain('underwater')
+    expect(standalone).toContain('Underwater 2')
+    expect(standalone).toContain('- Fish → Fish-a')
     expect(standalone).toContain('TOUCHINGOBJECTMENU')
     expect(followUp).toContain('沿用本 AI 對話前文')
     expect(followUp).not.toContain('event_whenkeypressed')

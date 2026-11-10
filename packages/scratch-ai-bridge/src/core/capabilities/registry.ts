@@ -1,4 +1,4 @@
-import { BUILT_IN_BACKDROP_VISUALS, BUILT_IN_SPRITE_VISUALS } from '../visuals/presets'
+import { formatLibraryCandidates, selectLibraryCandidates } from '../visuals/library'
 
 export type CanonicalBlockCategory =
   'motion' | 'looks' | 'events' | 'control' | 'sensing' | 'operators' | 'data' | 'sound' | 'extensions'
@@ -957,7 +957,21 @@ const describeBlock = (opcode: KnownOpcode): string => {
   return `- ${opcode} [${capability.shape}; ${capability.targets.join('|')}]${argumentsText ? ` (${argumentsText})` : ''}`
 }
 
-export const createAuthoringInstruction = (withRequirementCoverage = false): string => `${
+/**
+ * Asset rules shared by all authoring prompts: the model names official Scratch library assets and never draws.
+ * @param assetContext - Project idea used to pick relevant library candidates.
+ * @returns Prompt section listing the asset rules and candidate names.
+ */
+export const createLibraryAssetInstruction = (
+  assetContext = '',
+): string => `造型、背景與音效一律使用 Scratch 官方素材庫：只寫名稱，不要輸出 data，也不要自己畫 SVG；Bridge 會自動下載官方圖像與音效。
+- 角色 costume 的 name 寫下列素材的造型名稱（例如 {"name":"Cat-a","dataFormat":"svg"}）。只寫一個造型時，Bridge 會自動補上同一素材的其他造型與原本音效，可用 looks_nextcostume 做動畫。
+- Stage 的背景 costume name 寫下列背景名稱。
+- sound 寫 {"name":"Pop","dataFormat":"wav"}，名稱用下列音效或角色附帶音效；sound_play 的 SOUND_MENU 用同一名稱，且該角色的 sounds 必須包含它。
+- 角色 name 可用中文；造型、背景、音效名稱必須照抄素材原文。沒有完全合適的素材時，選外型最接近的（例如子彈用 Ball 或 Dot），不要輸出自製圖像。
+${formatLibraryCandidates(selectLibraryCandidates(assetContext))}`
+
+export const createAuthoringInstruction = (withRequirementCoverage = false, assetContext = ''): string => `${
   withRequirementCoverage
     ? '最外層只輸出一個 scratch-ai-bridge/ai-response v1 JSON 物件；Canonical IR 放在 project 欄位。'
     : '你要輸出 Scratch AI Bridge Canonical IR JSON。'
@@ -977,11 +991,8 @@ stage 必須包含 kind="stage"、name、variables、lists、costumes、sounds�
 - 子堆疊：{"type":"stack","blocks":[...]}
 broadcasts 必須使用 [{"name":"start"}]，不能使用字串陣列。
 fields 的值必須直接是 string、number 或 boolean，例如 {"KEY_OPTION":"right arrow"}、{"VARIABLE":"score"}；不可使用 {"value":"..."} 或 {"name":"..."} wrapper。
-每個 costume 至少要有 name 與 dataFormat（svg/png/jpg/jpeg/bmp）。
-舞台至少要有一個背景 costume；可用內建背景名稱：${BUILT_IN_BACKDROP_VISUALS.join('、')}。
-每個 visible=true 的 sprite 至少要有一個 costume；可用內建造型名稱：${BUILT_IN_SPRITE_VISUALS.join('、')}。
-使用上述內建名稱時不要輸出 data，Bridge 會安全加入圖像；若不確定造型，角色使用 generic-character，背景使用 platform-day。Paddle/球拍、Wall/牆/邊界、Brick/磚塊等角色名稱會優先決定造型；Left/Right wall 會使用直向牆，Top/Bottom wall 使用橫向牆，避免被泛用 costume 名稱覆蓋。
-不要使用 Mario、Goomba 等受版權保護角色的原始圖像；應使用通用平台英雄與敵人造型。
+每個 costume 至少要有 name 與 dataFormat。舞台至少要有一個背景 costume；每個 visible=true 的 sprite 至少要有一個 costume。
+${createLibraryAssetInstruction(assetContext)}
 Stage 至少要有一個背景 costume；Stage 與 sprite 的 scripts 都可用來放置初始化、關卡與全域事件邏輯。空的 lists、costumes、sounds、scripts、procedures 也必須輸出 []。
 Pen（pen_*）與 Music（music_*）是已驗證的官方擴充積木；使用到時 compiler 會從 opcode 自動加入 project.extensions，不必手動猜 extension id。其他尚未列出的擴充、硬體或自製積木仍須先加入 capability registry 並驗證 runtime，不能假設會執行。
 布林條件必須使用 capability registry 標示為 boolean 的 reporter，不可直接把數值變數當條件。registry 的 shape 僅供辨識積木類型；Canonical IR block 禁止輸出 shape 欄位，積木形狀由 opcode 決定。
@@ -1032,7 +1043,7 @@ export const createProjectFragmentInstruction = (options: ProjectFragmentPromptO
   const targetShape =
     targetKind === 'stage'
       ? `{"kind":"stage","name":${JSON.stringify(options.targetName)},"variables":[],"lists":[],"costumes":[{"name":"platform-day","dataFormat":"svg"}],"sounds":[],"scripts":[],"procedures":[]}`
-      : `{"kind":"sprite","name":${JSON.stringify(options.targetName)},"variables":[],"lists":[],"costumes":[{"name":"generic-character","dataFormat":"svg"}],"sounds":[],"scripts":[],"procedures":[],"x":0,"y":0,"direction":90,"size":100,"visible":true,"draggable":false,"rotationStyle":"all around"}`
+      : `{"kind":"sprite","name":${JSON.stringify(options.targetName)},"variables":[],"lists":[],"costumes":[{"name":"Cat-a","dataFormat":"svg"}],"sounds":[],"scripts":[],"procedures":[],"x":0,"y":0,"direction":90,"size":100,"visible":true,"draggable":false,"rotationStyle":"all around"}`
   const capabilityContract = options.reuseCapabilityContract
     ? '沿用本 AI 對話前文的 Scratch AI Bridge 完整 authoring contract 和 opcode 清單。這個模式只適用同一對話；不得猜測未列出的積木，也不得遺失前文規則。若你看不到先前能力規格，請先要求使用者重貼完整模式的指令。'
     : `此片段可用的 opcode 與必要參數：\n${opcodes.map(describeBlock).join('\n')}`
@@ -1053,7 +1064,9 @@ target 必須符合上述完整形狀；scripts 每項是 {"blocks":[...]}，空
 
 ${capabilityContract}
 
-素材與選單限制：Stage 背景可用 ${BUILT_IN_BACKDROP_VISUALS.join('、')}；Sprite 造型可用 ${BUILT_IN_SPRITE_VISUALS.join('、')}。可用內建造型名稱時不要輸出 data。KEY_OPTION 可用 space、方向鍵、any、a-z、0-9；TOUCHINGOBJECTMENU 可用已存在角色名稱、_edge_ 或 _mouse_。不要用 Mario 等受版權角色原始圖像，不要杜撰 opcode 或假裝未支援功能已實作。
+${createLibraryAssetInstruction(`${options.projectName}\n${options.targetName}\n${options.designBrief}`)}
+
+選單限制：KEY_OPTION 可用 space、方向鍵、any、a-z、0-9；TOUCHINGOBJECTMENU 可用已存在角色名稱、_edge_ 或 _mouse_。不要杜撰 opcode 或假裝未支援功能已實作。
 
 只輸出一個 JSON 物件。`
 }
@@ -1124,10 +1137,10 @@ ${brief && brief.length > 0 ? brief : '尚未提供。請先自行完成一份�
 - 保留原始需求及 brief 中每一項核心玩法；開始前先在內部建立「需求→角色/狀態/事件/腳本」映射，並用有意義的變化、回饋和重玩動機完成核心循環。
 - 至少規劃初始化/reset、玩家主要操作、挑戰/碰撞或選擇、進展/獎勵、成功/失敗回饋。依遊戲類型選擇所需架構，不要硬套平台遊戲模板。
 - 若有必要需求超過工具能力，保留最接近的核心體驗，並在 requirementCoverage 明確標示 approximated、runtime-unavailable 或 not-implemented；不可靜默省略，也不可杜撰 opcode。
-- 確保造型和背景對應角色用途；避免所有角色只用相同 generic 外觀。音效素材未提供時不可宣稱已加入實際音效。
+- 每個角色選外型符合用途的官方素材，背景配合主題；在得分、碰撞、勝負等時刻加入官方音效，會動的角色用造型切換做動畫。
 - 產生前檢查腳本能否形成完整玩法，尤其是開始狀態、可觀察回饋、勝敗條件與重開流程；最後只輸出規定的完整 JSON。
 
-${createAuthoringInstruction(true)}`
+${createAuthoringInstruction(true, `${request}\n${brief ?? ''}`)}`
 }
 
 export const estimatePromptSize = (
