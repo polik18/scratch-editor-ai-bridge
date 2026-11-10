@@ -1,0 +1,1148 @@
+{
+  "results": [
+    {
+      "id": "catch-apples",
+      "status": "scored",
+      "promptCharacters": 1470,
+      "responseCharacters": 750,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "貓咪 Δ4"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "貓咪 Δ152"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/分數, Stage/生命, Stage/時間"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -152, expected > -220"
+        },
+        {
+          "name": "scenario 基本操作/往左是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -232, expected 與 -228.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 接住掉落物/左右移動能接到「蘋果」而得分（測試時生命暫設 99）",
+          "pass": true,
+          "detail": "actual 40, expected > 0"
+        },
+        {
+          "name": "scenario 漏接扣命/漏掉「蘋果」會扣命",
+          "pass": true,
+          "detail": "actual 0, expected < 3"
+        },
+        {
+          "name": "scenario 倒數計時/時間會倒數",
+          "pass": true,
+          "detail": "actual 58, expected < 60"
+        }
+      ],
+      "score": 1,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "貓咪",
+            "delta": 4
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "貓咪",
+            "delta": 152
+          }
+        ],
+        "changedVariables": ["Stage/分數", "Stage/生命", "Stage/時間"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -152,
+              "expected": "> -220"
+            },
+            {
+              "label": "往左是牆，不能穿過",
+              "pass": true,
+              "actual": -232,
+              "expected": "與 -228.0 相差 ≤ 12"
+            }
+          ]
+        },
+        {
+          "name": "接住掉落物",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "左右移動能接到「蘋果」而得分（測試時生命暫設 99）",
+              "pass": true,
+              "actual": 40,
+              "expected": "> 0"
+            }
+          ]
+        },
+        {
+          "name": "漏接扣命",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "漏掉「蘋果」會扣命",
+              "pass": true,
+              "actual": 0,
+              "expected": "< 3"
+            }
+          ]
+        },
+        {
+          "name": "倒數計時",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "時間會倒數",
+              "pass": true,
+              "actual": 58,
+              "expected": "< 60"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。"
+    },
+    {
+      "id": "space-dodge",
+      "status": "scored",
+      "promptCharacters": 1465,
+      "responseCharacters": 757,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "火箭 Δ228"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "火箭 Δ228"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/時間"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual 126, expected > 20"
+        },
+        {
+          "name": "scenario 基本操作/按左鍵會移動",
+          "pass": true,
+          "detail": "actual -102, expected < 4"
+        },
+        {
+          "name": "scenario 倒數計時/時間會倒數",
+          "pass": true,
+          "detail": "actual 58, expected < 60"
+        }
+      ],
+      "score": 1,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "火箭",
+            "delta": 228
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "火箭",
+            "delta": 228
+          }
+        ],
+        "changedVariables": ["Stage/時間"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": 126,
+              "expected": "> 20"
+            },
+            {
+              "label": "按左鍵會移動",
+              "pass": true,
+              "actual": -102,
+              "expected": "< 4"
+            }
+          ]
+        },
+        {
+          "name": "倒數計時",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "時間會倒數",
+              "pass": true,
+              "actual": 58,
+              "expected": "< 60"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 做不到：作品沒有做到：隕石沒有分數計分機制，僅以存活時間計分 → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。"
+    },
+    {
+      "id": "space-shooter",
+      "status": "scored",
+      "promptCharacters": 1468,
+      "responseCharacters": 926,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "飛船 Δ4"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "飛船 Δ148"
+        },
+        {
+          "name": "key space y+",
+          "pass": false,
+          "detail": "_Walls Δ0"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/分數, Stage/生命, Stage/時間"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -152, expected > -220"
+        },
+        {
+          "name": "scenario 基本操作/往左是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -232, expected 與 -224.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 倒數計時/時間會倒數",
+          "pass": true,
+          "detail": "actual 58, expected < 60"
+        }
+      ],
+      "score": 0.9,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "飛船",
+            "delta": 4
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "飛船",
+            "delta": 148
+          },
+          {
+            "key": " ",
+            "expected": "y+",
+            "moved": false,
+            "sprite": "_Walls",
+            "delta": 0
+          }
+        ],
+        "changedVariables": ["Stage/分數", "Stage/生命", "Stage/時間"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -152,
+              "expected": "> -220"
+            },
+            {
+              "label": "往左是牆，不能穿過",
+              "pass": true,
+              "actual": -232,
+              "expected": "與 -224.0 相差 ≤ 12"
+            }
+          ]
+        },
+        {
+          "name": "倒數計時",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "時間會倒數",
+              "pass": true,
+              "actual": 58,
+              "expected": "< 60"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 地圖：地圖最寬 23 欄，已裁成 20 欄，右邊的「P」被裁掉。 → 每列最多 20 個字。\n[注意] 做不到：作品沒有做到：玩家向上發射時飛船仍可左右移動屬正常操作，非限制 → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。\n[注意] 地圖 第 15 列第 2 欄：玩家「飛船」在地圖上出現 20 次，只會使用第一個位置。 → 只留一個玩家符號。"
+    },
+    {
+      "id": "mouse-maze",
+      "status": "scored",
+      "promptCharacters": 1462,
+      "responseCharacters": 538,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "key ArrowUp y+",
+          "pass": true,
+          "detail": "老鼠 Δ4"
+        },
+        {
+          "name": "key ArrowDown y-",
+          "pass": true,
+          "detail": "老鼠 Δ100"
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": false,
+          "detail": "_Walls Δ0"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "老鼠 Δ72"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -180, expected > -196"
+        },
+        {
+          "name": "scenario 基本操作/往左是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -204, expected 與 -204.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/往上是牆，不能穿過",
+          "pass": true,
+          "detail": "actual 148, expected 與 144.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/按下鍵會移動",
+          "pass": true,
+          "detail": "actual 72, expected < 140"
+        },
+        {
+          "name": "scenario 倒數計時/時間會倒數",
+          "pass": true,
+          "detail": "actual 58, expected < 60"
+        }
+      ],
+      "score": 0.9090909090909091,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "ArrowUp",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "老鼠",
+            "delta": 4
+          },
+          {
+            "key": "ArrowDown",
+            "expected": "y-",
+            "moved": true,
+            "sprite": "老鼠",
+            "delta": 100
+          },
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": false,
+            "sprite": "_Walls",
+            "delta": 0
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "老鼠",
+            "delta": 72
+          }
+        ],
+        "changedVariables": ["Stage/時間", "Stage/_playerY"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -180,
+              "expected": "> -196"
+            },
+            {
+              "label": "往左是牆，不能穿過",
+              "pass": true,
+              "actual": -204,
+              "expected": "與 -204.0 相差 ≤ 12"
+            },
+            {
+              "label": "往上是牆，不能穿過",
+              "pass": true,
+              "actual": 148,
+              "expected": "與 144.0 相差 ≤ 12"
+            },
+            {
+              "label": "按下鍵會移動",
+              "pass": true,
+              "actual": 72,
+              "expected": "< 140"
+            }
+          ]
+        },
+        {
+          "name": "倒數計時",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "時間會倒數",
+              "pass": true,
+              "actual": 58,
+              "expected": "< 60"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 地圖 第 14 列第 12 欄：玩家可能到不了這個「起司」，遊戲會無法過關。 → 打通牆壁，或移開擋路的危險物。"
+    },
+    {
+      "id": "jump-collect",
+      "status": "scored",
+      "promptCharacters": 1462,
+      "responseCharacters": 2082,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "主角 Δ4"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "主角 Δ200.9"
+        },
+        {
+          "name": "key space y+",
+          "pass": true,
+          "detail": "主角 Δ74.9"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/生命, Stage/時間, Stage/_playerY, 主角/vx"
+        },
+        {
+          "name": "scenario 基本操作/開場站在地面上",
+          "pass": true,
+          "detail": "actual 1, expected == 1"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -150.5, expected > -218"
+        },
+        {
+          "name": "scenario 基本操作/按上鍵會跳起來",
+          "pass": true,
+          "detail": "actual -71.9, expected > -138.6"
+        },
+        {
+          "name": "scenario 基本操作/跳完會落地站穩（不穿過地面）",
+          "pass": true,
+          "detail": "actual 1, expected == 1"
+        },
+        {
+          "name": "scenario 接住掉落物/左右移動能接到「星星」而得分（測試時生命暫設 99）",
+          "pass": true,
+          "detail": "actual 70, expected > 0"
+        },
+        {
+          "name": "scenario 倒數計時/時間會倒數",
+          "pass": true,
+          "detail": "actual 58, expected < 60"
+        },
+        {
+          "name": "scenario 通關/自動玩家走到「終點」並過關",
+          "pass": true,
+          "detail": "actual 1, expected == 1"
+        }
+      ],
+      "score": 1,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "主角",
+            "delta": 4
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "主角",
+            "delta": 200.9
+          },
+          {
+            "key": " ",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "主角",
+            "delta": 74.9
+          }
+        ],
+        "changedVariables": ["Stage/生命", "Stage/時間", "Stage/_playerY", "主角/vx"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "開場站在地面上",
+              "pass": true,
+              "actual": 1,
+              "expected": "== 1"
+            },
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -150.5,
+              "expected": "> -218"
+            },
+            {
+              "label": "按上鍵會跳起來",
+              "pass": true,
+              "actual": -71.9,
+              "expected": "> -138.6"
+            },
+            {
+              "label": "跳完會落地站穩（不穿過地面）",
+              "pass": true,
+              "actual": 1,
+              "expected": "== 1"
+            }
+          ]
+        },
+        {
+          "name": "接住掉落物",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "左右移動能接到「星星」而得分（測試時生命暫設 99）",
+              "pass": true,
+              "actual": 70,
+              "expected": "> 0"
+            }
+          ]
+        },
+        {
+          "name": "倒數計時",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "時間會倒數",
+              "pass": true,
+              "actual": 58,
+              "expected": "< 60"
+            }
+          ]
+        },
+        {
+          "name": "通關",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "自動玩家走到「終點」並過關",
+              "pass": true,
+              "actual": 1,
+              "expected": "== 1"
+            }
+          ],
+          "trace": [
+            [17, -228, -147.2],
+            [300, -144.2, -146.8],
+            [585, -29.6, -58.4],
+            [866, 85.6, -147.4],
+            [1126, -208.5, -147.4],
+            [1401, -106.2, -146.8],
+            [1682, 8.8, -147.4],
+            [1963, -198.1, -146.8],
+            [2239, -93.5, -147.2],
+            [2520, 21.6, -146.8]
+          ]
+        }
+      ],
+      "feedback": "[注意] 做不到：作品沒有做到：掉出舞台下方不算自動重來（地圖底部已用地面封閉，玩家不會掉出） → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 做不到：作品沒有做到：敵人巡邏範圍固定，無法隨關卡遞增 → 這部分需要新的行為，或改用進階模式自己寫積木。"
+    },
+    {
+      "id": "pop-balloons",
+      "status": "scored",
+      "promptCharacters": 1468,
+      "responseCharacters": 706,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/時間"
+        },
+        {
+          "name": "scenario 點擊得分/點到「氣球」會得分",
+          "pass": true,
+          "detail": "actual 120, expected > 0"
+        },
+        {
+          "name": "scenario 倒數計時/時間會倒數",
+          "pass": true,
+          "detail": "actual 28, expected < 30"
+        }
+      ],
+      "score": 1,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [],
+        "changedVariables": ["Stage/時間"]
+      },
+      "scenarios": [
+        {
+          "name": "點擊得分",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "點到「氣球」會得分",
+              "pass": true,
+              "actual": 120,
+              "expected": "> 0"
+            }
+          ]
+        },
+        {
+          "name": "倒數計時",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "時間會倒數",
+              "pass": true,
+              "actual": 28,
+              "expected": "< 30"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 規則[2].做[0]：看不懂動作「 分數 >= 0」，已略過。 → 可用：分數 +N、生命 -N、時間 +N、說 文字、過關、失敗。\n[注意] 做不到：作品沒有做到：滑鼠點擊氣球需要擴充功能，Scratch 原生不支援 → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。"
+    },
+    {
+      "id": "two-player-pong",
+      "status": "pipeline-failed",
+      "failedStage": "spec",
+      "failure": "[錯誤] 角色：有 2 個玩家角色（左球拍、右球拍），目前只支援一個。 → 只保留一個角色有「平台移動」或「俯視移動」。\n[注意] 角色.左球拍：「左球拍」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色.右球拍：「右球拍」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 規則[0].做[0]：看不懂動作「 球反彈」，已略過。 → 可用：分數 +N、生命 -N、時間 +N、說 文字、過關、失敗。\n[注意] 規則[1].做[0]：看不懂動作「 球反彈」，已略過。 → 可用：分數 +N、生命 -N、時間 +N、說 文字、過關、失敗。\n[注意] 規則[2].做[0]：看不懂動作「 左球拍 +1分」，已略過。 → 可用：分數 +N、生命 -N、時間 +N、說 文字、過關、失敗。\n[注意] 規則[3].做[0]：看不懂動作「 右球拍 +1分」，已略過。 → 可用：分數 +N、生命 -N、時間 +N、說 文字、過關、失敗。\n[注意] 做不到：作品沒有做到：真正的球反彈物理（角度、旋轉） → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 做不到：作品沒有做到：雙玩家各自獨立遊戲邏輯 → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 做不到：作品沒有做到：球與球拍的精確碰撞檢測 → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。",
+      "promptCharacters": 1469,
+      "responseCharacters": 1034,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "[錯誤] 角色：有 2 個玩家角色（左球拍、右球拍），目前只支援一個。 → 只保留一個角色有「平台移動」或「俯視移動」。"
+        }
+      ],
+      "score": 0,
+      "feedback": "[錯誤] 角色：有 2 個玩家角色（左球拍、右球拍），目前只支援一個。 → 只保留一個角色有「平台移動」或「俯視移動」。\n[注意] 角色.左球拍：「左球拍」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 角色.右球拍：「右球拍」沒有出現在地圖上，遊戲中看不到它。 → 在圖例替它指定一個符號，並畫進地圖。\n[注意] 規則[0].做[0]：看不懂動作「 球反彈」，已略過。 → 可用：分數 +N、生命 -N、時間 +N、說 文字、過關、失敗。\n[注意] 規則[1].做[0]：看不懂動作「 球反彈」，已略過。 → 可用：分數 +N、生命 -N、時間 +N、說 文字、過關、失敗。\n[注意] 規則[2].做[0]：看不懂動作「 左球拍 +1分」，已略過。 → 可用：分數 +N、生命 -N、時間 +N、說 文字、過關、失敗。\n[注意] 規則[3].做[0]：看不懂動作「 右球拍 +1分」，已略過。 → 可用：分數 +N、生命 -N、時間 +N、說 文字、過關、失敗。\n[注意] 做不到：作品沒有做到：真正的球反彈物理（角度、旋轉） → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 做不到：作品沒有做到：雙玩家各自獨立遊戲邏輯 → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 做不到：作品沒有做到：球與球拍的精確碰撞檢測 → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。"
+    },
+    {
+      "id": "deep-sea-rescue",
+      "status": "scored",
+      "promptCharacters": 1464,
+      "responseCharacters": 954,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "key ArrowUp y+",
+          "pass": true,
+          "detail": "小魚 Δ152"
+        },
+        {
+          "name": "key ArrowDown y-",
+          "pass": true,
+          "detail": "小魚 Δ148"
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "小魚 Δ4"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "小魚 Δ152"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/生命, Stage/_playerY"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual -152, expected > -220"
+        },
+        {
+          "name": "scenario 基本操作/往左是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -232, expected 與 -220.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 基本操作/按上鍵會移動",
+          "pass": true,
+          "detail": "actual -92, expected > -160"
+        },
+        {
+          "name": "scenario 基本操作/往下是牆，不能穿過",
+          "pass": true,
+          "detail": "actual -172, expected 與 -168.0 相差 ≤ 12"
+        },
+        {
+          "name": "scenario 接住掉落物/左右移動能接到「氧氣泡泡」而得分（測試時生命暫設 99）",
+          "pass": true,
+          "detail": "actual 10, expected > 0"
+        }
+      ],
+      "score": 1,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "ArrowUp",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "小魚",
+            "delta": 152
+          },
+          {
+            "key": "ArrowDown",
+            "expected": "y-",
+            "moved": true,
+            "sprite": "小魚",
+            "delta": 148
+          },
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "小魚",
+            "delta": 4
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "小魚",
+            "delta": 152
+          }
+        ],
+        "changedVariables": ["Stage/生命", "Stage/_playerY"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": -152,
+              "expected": "> -220"
+            },
+            {
+              "label": "往左是牆，不能穿過",
+              "pass": true,
+              "actual": -232,
+              "expected": "與 -220.0 相差 ≤ 12"
+            },
+            {
+              "label": "按上鍵會移動",
+              "pass": true,
+              "actual": -92,
+              "expected": "> -160"
+            },
+            {
+              "label": "往下是牆，不能穿過",
+              "pass": true,
+              "actual": -172,
+              "expected": "與 -168.0 相差 ≤ 12"
+            }
+          ]
+        },
+        {
+          "name": "接住掉落物",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "左右移動能接到「氧氣泡泡」而得分（測試時生命暫設 99）",
+              "pass": true,
+              "actual": 10,
+              "expected": "> 0"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 地圖：地圖最寬 31 欄，已裁成 20 欄，右邊的「o」被裁掉。 → 每列最多 20 個字。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。"
+    },
+    {
+      "id": "car-racing",
+      "status": "scored",
+      "promptCharacters": 1467,
+      "responseCharacters": 1124,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "玩家的車 Δ148"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "地雷 Δ246"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/時間"
+        },
+        {
+          "name": "scenario 基本操作/按右鍵會移動",
+          "pass": true,
+          "detail": "actual 88, expected > 20"
+        },
+        {
+          "name": "scenario 基本操作/按左鍵會移動",
+          "pass": true,
+          "detail": "actual -68, expected < 0"
+        },
+        {
+          "name": "scenario 接住掉落物/左右移動能接到「對向車輛」而得分（測試時生命暫設 99）",
+          "pass": true,
+          "detail": "actual 55, expected > 0"
+        },
+        {
+          "name": "scenario 倒數計時/時間會倒數",
+          "pass": true,
+          "detail": "actual 58, expected < 60"
+        }
+      ],
+      "score": 1,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "玩家的車",
+            "delta": 148
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "地雷",
+            "delta": 246
+          }
+        ],
+        "changedVariables": ["Stage/時間"]
+      },
+      "scenarios": [
+        {
+          "name": "基本操作",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "按右鍵會移動",
+              "pass": true,
+              "actual": 88,
+              "expected": "> 20"
+            },
+            {
+              "label": "按左鍵會移動",
+              "pass": true,
+              "actual": -68,
+              "expected": "< 0"
+            }
+          ]
+        },
+        {
+          "name": "接住掉落物",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "左右移動能接到「對向車輛」而得分（測試時生命暫設 99）",
+              "pass": true,
+              "actual": 55,
+              "expected": "> 0"
+            }
+          ]
+        },
+        {
+          "name": "倒數計時",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "時間會倒數",
+              "pass": true,
+              "actual": 58,
+              "expected": "< 60"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 做不到：作品沒有做到：玩家車輛左右換車道時有轉向動畫 → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 做不到：作品沒有做到：對向車輛有不同車道閃避策略 → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。"
+    },
+    {
+      "id": "whack-a-mole",
+      "status": "scored",
+      "promptCharacters": 1462,
+      "responseCharacters": 371,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Stage/時間, 洞/_i"
+        },
+        {
+          "name": "scenario 點擊得分/點到「洞」會得分",
+          "pass": true,
+          "detail": "actual 440, expected > 0"
+        },
+        {
+          "name": "scenario 倒數計時/時間會倒數",
+          "pass": true,
+          "detail": "actual 28, expected < 30"
+        }
+      ],
+      "score": 1,
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [],
+        "changedVariables": ["Stage/時間", "洞/_i"]
+      },
+      "scenarios": [
+        {
+          "name": "點擊得分",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "點到「洞」會得分",
+              "pass": true,
+              "actual": 440,
+              "expected": "> 0"
+            }
+          ]
+        },
+        {
+          "name": "倒數計時",
+          "ready": true,
+          "pageErrors": [],
+          "expectations": [
+            {
+              "label": "時間會倒數",
+              "pass": true,
+              "actual": 28,
+              "expected": "< 30"
+            }
+          ]
+        }
+      ],
+      "feedback": "[注意] 規則[0].當：沒有叫「地鼠」的角色，這條規則已略過。 → 目前的角色：洞。\n[注意] 做不到：作品沒有做到：地鼠冒出的具體位置由「冒出」行為自動決定，玩家用滑鼠點擊得分，本設定以「洞」為冒出位置 → 這部分需要新的行為，或改用進階模式自己寫積木。\n[注意] 角色：作品沒有過關方式。 → 加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。"
+    }
+  ]
+}

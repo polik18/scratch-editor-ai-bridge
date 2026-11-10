@@ -44,6 +44,23 @@ export type ScenarioStep =
   | { readonly kind: 'wait'; readonly ms: number }
   | { readonly kind: 'hold'; readonly keys: readonly string[]; readonly ms: number }
   | { readonly kind: 'press' | 'release'; readonly keys: readonly string[] }
+  /** Click these stage points, or the visible copies of these entities, in turn until `ms` has passed. */
+  | {
+      readonly kind: 'clicks'
+      readonly points?: readonly { readonly x: number; readonly y: number }[]
+      readonly entities?: readonly string[]
+      readonly ms: number
+    }
+  /** Move the player left and right under the lowest visible copy of these entities, holding `fire` if given. */
+  | {
+      readonly kind: 'chase'
+      readonly player: string
+      readonly entities: readonly string[]
+      readonly ms: number
+      readonly fire?: string
+    }
+  /** Set a stage variable in the running game, to isolate the behavior under test (for example keep lives up). */
+  | { readonly kind: 'set'; readonly variable: string; readonly value: number }
   | { readonly kind: 'mark'; readonly name: string }
   | Expectation
   | BotStep
@@ -55,14 +72,152 @@ export interface SpecScenario {
 
 const KEY = { right: 'ArrowRight', left: 'ArrowLeft', up: 'ArrowUp', down: 'ArrowDown' } as const
 
-export const createSpecScenarios = (spec: GameSpec): SpecScenario[] => {
+const score = { variable: SPEC_NAMES.score } as const
+const lives = { variable: SPEC_NAMES.lives } as const
+
+/**
+ * Scenarios that check what behaviors do to the score, lives and timer. Copies made by clones are not visible to
+ * the state capture, so these check effects rather than positions.
+ * @param spec - Normalized spec.
+ * @param cells - Map cells per entity.
+ * @returns Effect scenarios, possibly empty.
+ */
+const effectScenarios = (spec: GameSpec, cells: Map<string, { row: number; column: number }[]>): SpecScenario[] => {
+  const scenarios: SpecScenario[] = []
   const player = findPlayer(spec)
-  if (!player) return []
-  const movement = playerBehavior(player)
-  if (!movement) return []
+  const with_ = (...names: string[]) =>
+    spec.entities.filter((entity) => names.every((name) => entity.behaviors.some((item) => item.name === name)))
+  const sideways = player ? playerBehavior(player) : undefined
+  const canSweep = sideways !== undefined && !(sideways.name === 'topdown' && sideways.params.axis === 'vertical')
+
+  const falling = with_('faller', 'collectible')
+  if (player && canSweep && falling.length > 0)
+    scenarios.push({
+      name: '接住掉落物',
+      steps: [
+        { kind: 'wait', ms: 500 },
+        // The bot only chases what it should catch and dodges nothing; keep lives up so the run measures catching
+        // rather than how fast the game ends.
+        { kind: 'set', variable: SPEC_NAMES.lives, value: 99 },
+        { kind: 'mark', name: 'catch' },
+        { kind: 'chase', player: player.name, entities: falling.map((entity) => entity.name), ms: 10000 },
+        {
+          kind: 'expect',
+          label: `左右移動能接到「${falling[0].name}」而得分（測試時生命暫設 99）`,
+          subject: score,
+          op: '>',
+          from: { mark: 'catch' },
+          hint: `「${falling[0].name}」沒有掉下來，或玩家碰到它也不會得分。`,
+        },
+      ],
+    })
+
+  const shot = with_('target')
+  const bullet = spec.entities.find((entity) => entity.behaviors.some((item) => item.name === 'projectile'))
+  const fireWith = bullet?.behaviors.find((item) => item.name === 'projectile')
+  if (player && canSweep && bullet && fireWith?.name === 'projectile' && shot.length > 0) {
+    const fire =
+      {
+        space: ' ',
+        'up arrow': 'ArrowUp',
+        'down arrow': 'ArrowDown',
+        'left arrow': 'ArrowLeft',
+        'right arrow': 'ArrowRight',
+      }[fireWith.params.key] ?? fireWith.params.key
+    scenarios.push({
+      name: '射擊',
+      steps: [
+        { kind: 'wait', ms: 500 },
+        { kind: 'set', variable: SPEC_NAMES.lives, value: 99 },
+        { kind: 'mark', name: 'shoot' },
+        { kind: 'chase', player: player.name, entities: shot.map((entity) => entity.name), ms: 10000, fire },
+        {
+          kind: 'expect',
+          label: `發射「${bullet.name}」能打中「${shot[0].name}」而得分（測試時生命暫設 99）`,
+          subject: score,
+          op: '>',
+          from: { mark: 'shoot' },
+          hint: `按發射鍵沒有打中「${shot[0].name}」：檢查子彈方向是否朝向目標。`,
+        },
+      ],
+    })
+  }
+
+  const missRule = spec.rules.find(
+    (rule) => rule.when.kind === 'miss' && rule.actions.some((action) => action.kind === 'lives' && action.delta < 0),
+  )
+  if (missRule?.when.kind === 'miss')
+    scenarios.push({
+      name: '漏接扣命',
+      steps: [
+        { kind: 'wait', ms: 300 },
+        { kind: 'mark', name: 'miss' },
+        { kind: 'wait', ms: 9000 },
+        {
+          kind: 'expect',
+          label: `漏掉「${missRule.when.entity}」會扣命`,
+          subject: lives,
+          op: '<',
+          from: { mark: 'miss' },
+          hint: `「${missRule.when.entity}」掉出舞台時沒有扣命。`,
+        },
+      ],
+    })
+
+  const clickable = with_('clickable')
+  if (clickable.length > 0) {
+    const placed = clickable.flatMap((entity) =>
+      (cells.get(entity.name) ?? []).map((cell) => cellCenter(cell.row, cell.column, spec.map.length)),
+    )
+    scenarios.push({
+      name: '點擊得分',
+      steps: [
+        { kind: 'wait', ms: 500 },
+        { kind: 'mark', name: 'click' },
+        placed.length > 0
+          ? { kind: 'clicks', points: placed, ms: 8000 }
+          : { kind: 'clicks', entities: clickable.map((entity) => entity.name), ms: 8000 },
+        {
+          kind: 'expect',
+          label: `點到「${clickable[0].name}」會得分`,
+          subject: score,
+          op: '>',
+          from: { mark: 'click' },
+          hint: `點擊「${clickable[0].name}」沒有得分：它可能沒有出現，或出現的時間太短。`,
+        },
+      ],
+    })
+  }
+
+  if (spec.timeLimit !== undefined)
+    scenarios.push({
+      name: '倒數計時',
+      steps: [
+        { kind: 'wait', ms: 300 },
+        { kind: 'mark', name: 'time' },
+        { kind: 'wait', ms: 2500 },
+        {
+          kind: 'expect',
+          label: '時間會倒數',
+          subject: { variable: SPEC_NAMES.time },
+          op: '<',
+          from: { mark: 'time' },
+          hint: '畫面上的時間沒有減少。',
+        },
+      ],
+    })
+  return scenarios
+}
+
+export const createSpecScenarios = (spec: GameSpec): SpecScenario[] => {
   const cells = entityCells(spec)
+  const scenarios: SpecScenario[] = [...effectScenarios(spec, cells)]
+  const player = findPlayer(spec)
+  if (!player) return scenarios
+  const movement = playerBehavior(player)
+  if (!movement) return scenarios
   const start = cells.get(player.name)?.[0]
-  if (!start) return []
+  if (!start) return scenarios
   const rows = spec.map.length
   const columns = [...spec.map[0]].length
   const wall = (row: number, column: number): boolean =>
@@ -70,7 +225,6 @@ export const createSpecScenarios = (spec: GameSpec): SpecScenario[] => {
   const p = player.name
   const x = { sprite: p, field: 'x' } as const
   const y = { sprite: p, field: 'y' } as const
-  const scenarios: SpecScenario[] = []
 
   // ---------- controls ----------
   const controls: ScenarioStep[] = [{ kind: 'wait', ms: 800 }]
@@ -133,7 +287,9 @@ export const createSpecScenarios = (spec: GameSpec): SpecScenario[] => {
       ['up', -1, 0, y, 1],
       ['down', 1, 0, y, -1],
     ] as const
+    const axis = movement.params.axis
     for (const [direction, dr, dc, subject, sign] of directions) {
+      if ((axis === 'horizontal' && dr !== 0) || (axis === 'vertical' && dc !== 0)) continue
       const blocked = wall(start.row + dr, start.column + dc)
       controls.push(
         { kind: 'mark', name: direction },
@@ -168,7 +324,7 @@ export const createSpecScenarios = (spec: GameSpec): SpecScenario[] => {
       )
     }
   }
-  scenarios.push({ name: '基本操作', steps: controls })
+  scenarios.unshift({ name: '基本操作', steps: controls })
 
   // ---------- reach the goal ----------
   const goalEntity = spec.entities.find((entity) => entity.behaviors.some((item) => item.name === 'goal'))

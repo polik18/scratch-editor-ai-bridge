@@ -29,6 +29,7 @@ const op = (
 })
 
 export const whenFlag = (): CanonicalBlock => op('event_whenflagclicked')
+export const whenClicked = (): CanonicalBlock => op('event_whenthisspriteclicked')
 export const whenCloned = (): CanonicalBlock => op('control_start_as_clone')
 export const whenReceive = (name: string): CanonicalBlock =>
   op('event_whenbroadcastreceived', undefined, { BROADCAST_OPTION: name })
@@ -50,6 +51,12 @@ export const lengthOf = (list: string): CanonicalBlock => op('data_lengthoflist'
 export const add = (a: Value, b: Value): CanonicalBlock => op('operator_add', { NUM1: a, NUM2: b })
 export const sub = (a: Value, b: Value): CanonicalBlock => op('operator_subtract', { NUM1: a, NUM2: b })
 export const mul = (a: Value, b: Value): CanonicalBlock => op('operator_multiply', { NUM1: a, NUM2: b })
+export const divide = (a: Value, b: Value): CanonicalBlock => op('operator_divide', { NUM1: a, NUM2: b })
+export const random = (from: Value, to: Value): CanonicalBlock => op('operator_random', { FROM: from, TO: to })
+export const timer = (): CanonicalBlock => op('sensing_timer')
+export const resetTimer = (): CanonicalBlock => op('sensing_resettimer')
+export const propertyOf = (property: string, target: string): CanonicalBlock =>
+  op('sensing_of', { OBJECT: target }, { PROPERTY: property })
 export const mod = (a: Value, b: Value): CanonicalBlock => op('operator_mod', { NUM1: a, NUM2: b })
 export const abs = (a: Value): CanonicalBlock => op('operator_mathop', { NUM: a }, { OPERATOR: 'abs' })
 export const gt = (a: Value, b: Value): CanonicalBlock => op('operator_gt', { OPERAND1: a, OPERAND2: b })
@@ -101,6 +108,8 @@ export const cloneSelf = (): CanonicalBlock => op('control_create_clone_of', { C
 export const deleteClone = (): CanonicalBlock => op('control_delete_this_clone')
 export const call = (name: string): CanonicalBlock => ({ opcode: 'procedures_call', procedure: { name } })
 
+export const gotoSprite = (target: string): CanonicalBlock => op('motion_goto', { TO: target })
+export const moveSteps = (steps: Value): CanonicalBlock => op('motion_movesteps', { STEPS: steps })
 export const gotoXY = (x: Value, y: Value): CanonicalBlock => op('motion_gotoxy', { X: x, Y: y })
 export const changeX = (dx: Value): CanonicalBlock => op('motion_changexby', { DX: dx })
 export const changeY = (dy: Value): CanonicalBlock => op('motion_changeyby', { DY: dy })

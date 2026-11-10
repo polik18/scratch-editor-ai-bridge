@@ -55,21 +55,32 @@ import {
   yPos,
   add,
   anyKey,
+  divide,
+  gotoSprite,
+  keyPressed,
+  moveSteps,
+  propertyOf,
+  random,
+  resetTimer,
+  timer,
+  whenClicked,
 } from './blocks'
-import { backdropCostume, bannerCostumes, lookCostumes, wallCostume } from './looks'
+import { backdropCostume, bannerCostumes, lookCostumes, narratorCostume, wallCostume } from './looks'
 import {
   CELL,
+  FALL_SPEED,
   FRICTION,
   GRAVITY,
   JUMP_VELOCITY,
   MAX_FALL,
   PATROL_SPEED,
+  PROJECTILE_SPEED,
   RUN_ACCELERATION,
   STEP_UP,
   WALK_SPEED,
   cellCenter,
 } from './physics'
-import type { BehaviorUse, GameSpec, RuleAction, SpecEntity } from './types'
+import type { BehaviorUse, Direction, GameSpec, RuleAction, SpecEntity } from './types'
 
 /** Names shared by generated scripts. Leading underscores keep them apart from author-chosen names. */
 export const SPEC_NAMES = {
@@ -85,6 +96,7 @@ export const SPEC_NAMES = {
   lose: '_lose',
   time: '時間',
   timeUp: 'time-up',
+  narrator: '_Narrator',
   tick: 'player tick',
 } as const
 
@@ -234,11 +246,11 @@ const topdownTick = (params: Extract<BehaviorUse, { name: 'topdown' }>['params']
       ),
     )
   }
+  const horizontal = params.axis !== 'vertical'
+  const vertical = params.axis !== 'horizontal'
   return [
-    step(['right arrow', 'd'], 'x', speed, 90),
-    step(['left arrow', 'a'], 'x', -speed, -90),
-    step(['up arrow', 'w'], 'y', speed),
-    step(['down arrow', 's'], 'y', -speed),
+    ...(horizontal ? [step(['right arrow', 'd'], 'x', speed, 90), step(['left arrow', 'a'], 'x', -speed, -90)] : []),
+    ...(vertical ? [step(['up arrow', 'w'], 'y', speed), step(['down arrow', 's'], 'y', -speed)] : []),
     ifThen(lt(xPos(), -232), setX(-232)),
     ifThen(gt(xPos(), 232), setX(232)),
     ifThen(lt(yPos(), -172), setY(-172)),
@@ -253,6 +265,10 @@ const actionBlocks = (action: RuleAction): CanonicalBlock[] => {
       return [changeVar(N.score, action.delta)]
     case 'lives':
       return [changeVar(N.lives, action.delta), ifThen(lt(variable(N.lives), 1), broadcast(N.lose))]
+    case 'time':
+      return [changeVar(N.time, action.delta)]
+    case 'var':
+      return [changeVar(action.name, action.delta)]
     case 'say':
       return [sayFor(action.text, 2)]
     case 'win':
@@ -262,27 +278,68 @@ const actionBlocks = (action: RuleAction): CanonicalBlock[] => {
   }
 }
 
+const anyOf = (conditions: CanonicalBlock[]): CanonicalBlock | undefined =>
+  conditions.length === 0 ? undefined : conditions.reduce((left, right) => or(left, right))
+
+/**
+ * Stage edges a moving copy leaves through, with a little margin so it is out of sight.
+ * @param direction - Way the copy travels.
+ * @returns Condition that is true once the copy has left.
+ */
+const leftStage = (direction: Direction): CanonicalBlock =>
+  direction === 'down'
+    ? lt(yPos(), -170)
+    : direction === 'up'
+      ? gt(yPos(), 170)
+      : direction === 'left'
+        ? lt(xPos(), -230)
+        : gt(xPos(), 230)
+
+/**
+ * Where a falling copy enters: a random point on the edge opposite its direction.
+ * @param direction - Way the copy travels.
+ * @returns Block that moves the original to the entry point before cloning.
+ */
+const enterStage = (direction: Direction): CanonicalBlock =>
+  direction === 'down'
+    ? gotoXY(random(-220, 220), 175)
+    : direction === 'up'
+      ? gotoXY(random(-220, 220), -175)
+      : direction === 'left'
+        ? gotoXY(235, random(-160, 160))
+        : gotoXY(-235, random(-160, 160))
+
+const step = (direction: Direction, amount: CanonicalBlock | number): CanonicalBlock =>
+  direction === 'down'
+    ? changeY(mul(amount, -1))
+    : direction === 'up'
+      ? changeY(amount)
+      : direction === 'left'
+        ? changeX(mul(amount, -1))
+        : changeX(amount)
+
+const DIRECTION_DEGREES: Record<Direction, number> = { up: 0, down: 180, left: -90, right: 90 }
+
 export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
   const player = findPlayer(spec)
-  if (!player)
-    throw new Error('compileGameSpec: spec has no player entity; normalizeGameSpec reports NO_PLAYER first.')
-  const movement = playerBehavior(player)
-  if (!movement) throw new Error(`compileGameSpec: player "${player.name}" has no movement behavior.`)
+  const movement = player ? playerBehavior(player) : undefined
+  if (player && !movement) throw new Error(`compileGameSpec: player "${player.name}" has no movement behavior.`)
   const cells = entityCells(spec)
   const center = (cell: { row: number; column: number }): { x: number; y: number } =>
     cellCenter(cell.row, cell.column, spec.map.length)
-  const playerCell = cells.get(player.name)?.[0]
+  const playerCell = player ? cells.get(player.name)?.[0] : undefined
   const spawn = playerCell ? center(playerCell) : { x: 0, y: 0 }
-  const isPlatformer = movement.name === 'platformer'
+  const isPlatformer = movement?.name === 'platformer'
   const broadcasts = new Set<string>([N.win, N.lose, ...(spec.timeLimit === undefined ? [] : [N.timeUp])])
   const touchRules = new Set(spec.rules.flatMap((rule) => (rule.when.kind === 'touch' ? [rule.when.entity] : [])))
+  const has =
+    (name: BehaviorUse['name']) =>
+    (entity: SpecEntity): boolean =>
+      entity.behaviors.some((item) => item.name === name)
+  const projectiles = spec.entities.filter(has('projectile')).map((entity) => entity.name)
+  const targets = spec.entities.filter(has('target')).map((entity) => entity.name)
 
-  // ---------- player ----------
-  const tick = [
-    ...(movement.name === 'platformer' ? platformerTick(movement.params) : topdownTick(movement.params)),
-    setVar(N.playerY, yPos()),
-    ...damageBlocks(spawn),
-  ]
+  // ---------- rules live on the player, or on a narrator sprite in games without one ----------
   const ruleScripts: CanonicalScript[] = spec.rules.map((rule) => {
     const body = rule.actions.flatMap(actionBlocks)
     switch (rule.when.kind) {
@@ -292,6 +349,23 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
         return script(whenFlag(), wait(0.1), waitUntil(gt(variable(N.score), rule.when.value - 1)), ...body)
       case 'time-up':
         return script(whenReceive(N.timeUp), ...body)
+      case 'every':
+        return script(whenFlag(), wait(0.1), forever(wait(rule.when.seconds), ...body))
+      case 'compare': {
+        const value = variable(rule.when.variable)
+        const target = rule.when.value
+        const condition =
+          rule.when.op === '>='
+            ? not(lt(value, target))
+            : rule.when.op === '<='
+              ? not(gt(value, target))
+              : rule.when.op === '>'
+                ? gt(value, target)
+                : rule.when.op === '<'
+                  ? lt(value, target)
+                  : eq(value, target)
+        return script(whenFlag(), wait(0.1), waitUntil(condition), ...body)
+      }
       default: {
         const message = `${rule.when.kind}:${rule.when.entity}`
         broadcasts.add(message)
@@ -299,68 +373,94 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
       }
     }
   })
-  const playerSprite = sprite(player.name, {
-    costumes: lookCostumes(player.look, player.color),
-    x: spawn.x,
-    y: spawn.y,
-    rotationStyle: 'left-right',
-    variables: [
-      { name: 'vx', value: 0 },
-      { name: 'onGround', value: 0 },
-      { name: 'invincible', value: 0 },
-      { name: '_offset', value: 0 },
-      { name: '_adjust', value: 0 },
-    ],
-    procedures: [{ name: N.tick, parameters: [], warp: true, body: tick }],
-    scripts: [
-      script(
-        whenFlag(),
-        pointIn(90),
-        gotoXY(spawn.x, spawn.y),
-        setVar('vx', 0),
-        setVar('onGround', 0),
-        setVar('invincible', 0),
-        ghost(0),
-        show(),
-        toFront(),
-        forever(call(N.tick)),
-      ),
-      script(whenReceive(N.win), say('過關！'), stop('other scripts in sprite')),
-      script(whenReceive(N.lose), say('哎呀…'), stop('other scripts in sprite')),
-      ...ruleScripts,
-    ],
-  })
 
-  // ---------- other entities: one hidden original that clones itself onto every map cell ----------
+  const host: CanonicalSprite =
+    player && movement
+      ? sprite(player.name, {
+          costumes: lookCostumes(player.look, player.color),
+          x: spawn.x,
+          y: spawn.y,
+          rotationStyle: 'left-right',
+          variables: [
+            { name: 'vx', value: 0 },
+            { name: 'onGround', value: 0 },
+            { name: 'invincible', value: 0 },
+            { name: '_offset', value: 0 },
+            { name: '_adjust', value: 0 },
+          ],
+          procedures: [
+            {
+              name: N.tick,
+              parameters: [],
+              warp: true,
+              body: [
+                ...(movement.name === 'platformer' ? platformerTick(movement.params) : topdownTick(movement.params)),
+                setVar(N.playerY, yPos()),
+                ...damageBlocks(spawn),
+              ],
+            },
+          ],
+          scripts: [
+            script(
+              whenFlag(),
+              pointIn(90),
+              gotoXY(spawn.x, spawn.y),
+              setVar('vx', 0),
+              setVar('onGround', 0),
+              setVar('invincible', 0),
+              ghost(0),
+              show(),
+              toFront(),
+              forever(call(N.tick)),
+            ),
+            script(whenReceive(N.win), say('過關！'), stop('other scripts in sprite')),
+            script(whenReceive(N.lose), say('哎呀…'), stop('other scripts in sprite')),
+            ...ruleScripts,
+          ],
+        })
+      : sprite(N.narrator, {
+          costumes: [narratorCostume()],
+          x: 0,
+          y: 150,
+          scripts: [script(whenFlag(), gotoXY(0, 150), show()), ...ruleScripts],
+        })
+
+  // ---------- other entities: a hidden original that clones itself onto map cells or stage edges ----------
   const entitySprites = spec.entities
     .filter((entity) => entity !== player)
     .map((entity): CanonicalSprite => {
-      const positions = (cells.get(entity.name) ?? []).map(center)
+      const fromEdges = has('faller')(entity) || has('projectile')(entity)
+      const popsUp = has('popup')(entity)
+      const positions = fromEdges ? [] : (cells.get(entity.name) ?? []).map(center)
+      const originalScripts: CanonicalScript[] = []
       const cloneScripts: CanonicalScript[] = []
       const localVariables = [{ name: '_i', value: 1 }]
+      const touchingPlayer = player ? touching(player.name) : undefined
       for (const use of entity.behaviors) {
         switch (use.name) {
           case 'collectible': {
             const message = `collect:${entity.name}`
             broadcasts.add(message)
-            cloneScripts.push(
-              script(
-                whenCloned(),
-                waitUntil(touching(player.name)),
-                changeVar(N.score, use.params.points),
-                broadcast(message),
-                deleteClone(),
-              ),
-            )
+            if (touchingPlayer)
+              cloneScripts.push(
+                script(
+                  whenCloned(),
+                  waitUntil(touchingPlayer),
+                  changeVar(N.score, use.params.points),
+                  broadcast(message),
+                  deleteClone(),
+                ),
+              )
             break
           }
           case 'goal':
-            cloneScripts.push(script(whenCloned(), waitUntil(touching(player.name)), broadcast(N.win)))
+            if (touchingPlayer) cloneScripts.push(script(whenCloned(), waitUntil(touchingPlayer), broadcast(N.win)))
             break
           case 'hazard':
-            cloneScripts.push(
-              script(whenCloned(), forever(waitUntil(touching(player.name)), setVar(N.hurt, 1), wait(0.1))),
-            )
+            if (touchingPlayer)
+              cloneScripts.push(
+                script(whenCloned(), forever(waitUntil(touchingPlayer), setVar(N.hurt, 1), wait(0.1))),
+              )
             break
           case 'patrol': {
             localVariables.push({ name: '_dir', value: 1 }, { name: '_home', value: 0 })
@@ -398,27 +498,124 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
                     changeX(mul(variable('_dir'), -speed)),
                     setVar('_dir', mul(variable('_dir'), -1)),
                   ),
-                  ifThen(touching(player.name), ...onTouch),
+                  ...(touchingPlayer ? [ifThen(touchingPlayer, ...onTouch)] : []),
                 ),
               ),
             )
             break
           }
+          case 'faller': {
+            const message = `miss:${entity.name}`
+            broadcasts.add(message)
+            const base = FALL_SPEED[use.params.speed]
+            // Speed grows by the base speed every 30 s of play when accelerating.
+            const speed = use.params.accelerate ? mul(base, add(1, divide(timer(), 30))) : base
+            originalScripts.push(
+              script(
+                whenFlag(),
+                wait(0.5),
+                forever(
+                  enterStage(use.params.direction),
+                  cloneSelf(),
+                  wait(mul(use.params.interval, random(0.6, 1.4))),
+                ),
+              ),
+            )
+            cloneScripts.push(
+              script(
+                whenCloned(),
+                repeatUntil(leftStage(use.params.direction), step(use.params.direction, speed)),
+                broadcast(message),
+                deleteClone(),
+              ),
+            )
+            break
+          }
+          case 'projectile': {
+            if (!player) break
+            const direction =
+              use.params.direction === 'facing'
+                ? propertyOf('direction', player.name)
+                : DIRECTION_DEGREES[use.params.direction]
+            originalScripts.push(
+              script(
+                whenFlag(),
+                forever(
+                  waitUntil(keyPressed(use.params.key)),
+                  gotoSprite(player.name),
+                  pointIn(direction),
+                  cloneSelf(),
+                  wait(0.25),
+                ),
+              ),
+            )
+            const offStage = or(or(gt(xPos(), 235), lt(xPos(), -235)), or(gt(yPos(), 175), lt(yPos(), -175)))
+            const hitTarget = anyOf(targets.map(touching))
+            cloneScripts.push(
+              script(
+                whenCloned(),
+                show(),
+                repeatUntil(
+                  hitTarget ? or(offStage, hitTarget) : offStage,
+                  moveSteps(PROJECTILE_SPEED[use.params.speed]),
+                ),
+                // Stay one more frame so the target also sees the hit.
+                wait(0.05),
+                deleteClone(),
+              ),
+            )
+            break
+          }
+          case 'target': {
+            const hitBy = anyOf(projectiles.map(touching))
+            if (!hitBy) break
+            const message = `hit:${entity.name}`
+            broadcasts.add(message)
+            cloneScripts.push(
+              script(
+                whenCloned(),
+                waitUntil(hitBy),
+                changeVar(N.score, use.params.points),
+                broadcast(message),
+                deleteClone(),
+              ),
+            )
+            break
+          }
+          case 'clickable': {
+            const message = `click:${entity.name}`
+            broadcasts.add(message)
+            cloneScripts.push(
+              script(
+                whenClicked(),
+                changeVar(N.score, use.params.points),
+                broadcast(message),
+                popsUp ? hide() : deleteClone(),
+              ),
+            )
+            break
+          }
+          case 'popup':
+            cloneScripts.push(
+              script(whenCloned(), hide(), forever(wait(random(0.5, 2.5)), show(), wait(use.params.stay), hide())),
+            )
+            break
           case 'platformer':
           case 'topdown':
             break
         }
       }
-      if (touchRules.has(entity.name)) {
+      if (touchingPlayer && touchRules.has(entity.name)) {
         const message = `touch:${entity.name}`
         broadcasts.add(message)
         cloneScripts.push(
           script(
             whenCloned(),
-            forever(waitUntil(touching(player.name)), broadcast(message), waitUntil(not(touching(player.name)))),
+            forever(waitUntil(touchingPlayer), broadcast(message), waitUntil(not(touchingPlayer))),
           ),
         )
       }
+      const showsOnClone = !popsUp && !has('projectile')(entity)
       return sprite(entity.name, {
         costumes: lookCostumes(entity.look, entity.color),
         visible: false,
@@ -439,7 +636,8 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
               changeVar('_i', 1),
             ),
           ),
-          script(whenCloned(), show()),
+          ...originalScripts,
+          ...(showsOnClone ? [script(whenCloned(), show())] : []),
           ...cloneScripts,
         ],
       })
@@ -468,6 +666,7 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
       { name: N.score, value: 0 },
       { name: N.lives, value: spec.lives },
       ...(spec.timeLimit === undefined ? [] : [{ name: N.time, value: spec.timeLimit }]),
+      ...Object.entries(spec.variables).map(([name, value]) => ({ name, value })),
       ...internals.map((name) => ({ name, value: 0 })),
     ],
     lists: [],
@@ -477,9 +676,11 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
     scripts: [
       script(
         whenFlag(),
+        resetTimer(),
         setVar(N.score, 0),
         setVar(N.lives, spec.lives),
         ...internals.map((name) => setVar(name, 0)),
+        ...Object.entries(spec.variables).flatMap(([name, value]) => [setVar(name, value), showVar(name)]),
         showVar(N.score),
         showVar(N.lives),
         ...internals.map(hideVar),
@@ -503,7 +704,7 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
     version: 1,
     name: spec.title,
     stage,
-    sprites: [walls, ...entitySprites, playerSprite, banner],
+    sprites: [walls, ...entitySprites, host, banner],
     broadcasts: [...broadcasts].map((name) => ({ name })),
   }
 }

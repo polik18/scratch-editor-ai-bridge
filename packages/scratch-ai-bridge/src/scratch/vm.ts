@@ -1121,6 +1121,25 @@ export const captureScratchProgress = (vm: ScratchVMHandle): readonly ScratchPro
   return result
 }
 
+/** Position of one visible clone, for playtest bots that aim at moving copies. */
+export interface ScratchClonePosition {
+  readonly name: string
+  readonly x: number
+  readonly y: number
+}
+
+/**
+ * List visible clones (not original sprites), capped so a runaway project cannot flood the message channel.
+ * @param vm Running Scratch VM.
+ * @param limit Maximum number of clones returned.
+ * @returns Name and position of each visible clone.
+ */
+export const captureScratchClones = (vm: ScratchVMHandle, limit = 200): readonly ScratchClonePosition[] =>
+  asInternalVM(vm)
+    .runtime.targets.filter((target) => !target.isOriginal && !target.isStage && target.visible)
+    .slice(0, limit)
+    .map((target) => ({ name: target.getName(), x: target.x, y: target.y }))
+
 /**
  * Capture the visual state of original sprites and the stage.
  * @param vm Running Scratch VM.

@@ -17,6 +17,7 @@ import {
   startProjectRuntime,
   setRuntimePatchValues,
   captureScratchProgress,
+  captureScratchClones,
   captureScratchTargetProgress,
   attachScratchCloudSession,
   restoreScratchProgress,
@@ -287,6 +288,16 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     if (message.isDown) pressedKeys.add(key)
     else pressedKeys.delete(key)
     postScratchIOData(vm, 'keyboard', { key, isDown: message.isDown })
+    return
+  }
+  if (message.type === 'playtest-clones') {
+    const requestId =
+      typeof message.requestId === 'string' && message.requestId.length <= 128 ? message.requestId : ''
+    if (!vm || !requestId) return
+    window.parent.postMessage(
+      { type: 'playtest-clones-result', token: previewToken, requestId, clones: captureScratchClones(vm) },
+      '*',
+    )
     return
   }
   if (message.type === 'disconnect-selfhosted-cloud') {

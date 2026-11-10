@@ -53,6 +53,7 @@ export interface PreviewMessage {
   readonly error?: string
   readonly snapshot?: PlaytestSnapshot['variables']
   readonly targets?: (PlaytestSnapshot['sprites'][number] & { isStage: boolean })[]
+  readonly clones?: { readonly name: string; readonly x: number; readonly y: number }[]
 }
 
 type Snapshot = PlaytestSnapshot

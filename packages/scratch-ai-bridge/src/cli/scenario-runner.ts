@@ -70,27 +70,44 @@ export const runSpecScenario = async (
         ...message,
         token,
       })
-    const state = async (): Promise<State> => {
-      const requestId = randomUUID()
-      await post({ type: 'capture-game-progress', requestId, baseRevision: 0 })
+    /**
+     * Waits for the reply to a request and removes it, so the message log stays small during long bot runs.
+     * @param type - Message type the preview answers with.
+     * @param requestId - Request the reply answers.
+     * @returns The matching preview message.
+     */
+    const takeReply = async (type: string, requestId: string): Promise<PreviewMessage> => {
       const deadline = Date.now() + 5000
       while (Date.now() < deadline) {
-        // Remove the matched reply so the message log stays small during long bot runs.
-        const reply = await page.evaluate((requestId) => {
-          const log = (window as unknown as { __messages: PreviewMessage[] }).__messages
-          const index = log.findIndex((item) => item.type === 'game-progress-result' && item.requestId === requestId)
-          return index < 0 ? undefined : log.splice(index, 1)[0]
-        }, requestId)
-        if (reply) {
-          if (!reply.ok) throw new Error(`state capture failed: ${reply.error ?? 'unknown'}`)
-          const sprites: State['sprites'] = Object.fromEntries(
-            (reply.targets ?? []).filter((target) => !target.isStage).map((target) => [target.name, target]),
-          )
-          return { sprites, variables: reply.snapshot ?? [] }
-        }
-        await sleep(15)
+        const reply = await page.evaluate(
+          ({ type, requestId }) => {
+            const log = (window as unknown as { __messages: PreviewMessage[] }).__messages
+            const index = log.findIndex((item) => item.type === type && item.requestId === requestId)
+            return index < 0 ? undefined : log.splice(index, 1)[0]
+          },
+          { type, requestId },
+        )
+        if (reply) return reply
+        await sleep(10)
       }
-      throw new Error('state capture timed out')
+      throw new Error(`runSpecScenario: no ${type} reply`)
+    }
+    // Runtime patches and state captures name the preview's current revision, which starts at 0.
+    let revision = 0
+    const state = async (): Promise<State> => {
+      const requestId = randomUUID()
+      await post({ type: 'capture-game-progress', requestId, baseRevision: revision })
+      const reply = await takeReply('game-progress-result', requestId)
+      if (!reply.ok) throw new Error(`state capture failed: ${reply.error ?? 'unknown'}`)
+      const sprites: State['sprites'] = Object.fromEntries(
+        (reply.targets ?? []).filter((target) => !target.isStage).map((target) => [target.name, target]),
+      )
+      return { sprites, variables: reply.snapshot ?? [] }
+    }
+    const clones = async (): Promise<readonly { name: string; x: number; y: number }[]> => {
+      const requestId = randomUUID()
+      await post({ type: 'playtest-clones', requestId })
+      return (await takeReply('playtest-clones-result', requestId)).clones ?? []
     }
     const key = (name: string, isDown: boolean): Promise<void> => post({ type: 'playtest-key', key: name, isDown })
 
@@ -208,6 +225,63 @@ export const runSpecScenario = async (
           await sleep(step.ms)
           for (const name of step.keys) await key(name, false)
           break
+        case 'set': {
+          const requestId = randomUUID()
+          await post({
+            type: 'apply-runtime-patch',
+            requestId,
+            baseRevision: revision,
+            revision: revision + 1,
+            operations: [{ op: 'set-variable', target: 'Stage', name: step.variable, value: step.value }],
+          })
+          const reply = await takeReply('runtime-patch-result', requestId)
+          if (!reply.ok)
+            throw new Error(`runSpecScenario: could not set ${step.variable}: ${reply.error ?? 'unknown'}`)
+          revision += 1
+          break
+        }
+        case 'clicks': {
+          const until = Date.now() + step.ms
+          for (let index = 0; Date.now() < until; index += 1) {
+            const live = step.entities ? (await clones()).filter((clone) => step.entities?.includes(clone.name)) : []
+            const points = step.entities ? live.slice(0, 3) : (step.points ?? [])
+            for (const point of points) await page.mouse.click(point.x + 240, 180 - point.y)
+            await sleep(points.length > 0 ? 20 : 60)
+          }
+          break
+        }
+        case 'chase': {
+          const until = Date.now() + step.ms
+          const held = new Set<string>()
+          const hold = async (wanted: readonly string[]): Promise<void> => {
+            for (const name of [...held]) {
+              if (wanted.includes(name)) continue
+              held.delete(name)
+              await key(name, false)
+            }
+            for (const name of wanted) {
+              if (held.has(name)) continue
+              held.add(name)
+              await key(name, true)
+            }
+          }
+          while (Date.now() < until) {
+            const me = (await state()).sprites[step.player]
+            if (!me) break
+            const aim = (await clones())
+              .filter((clone) => step.entities.includes(clone.name) && clone.y > me.y - 10)
+              .reduce<{ x: number; y: number } | undefined>(
+                (low, clone) => (!low || clone.y < low.y ? clone : low),
+                undefined,
+              )
+            const keys = step.fire ? [step.fire] : []
+            if (aim && Math.abs(aim.x - me.x) > 5) keys.push(aim.x > me.x ? 'ArrowRight' : 'ArrowLeft')
+            await hold(keys)
+            await sleep(20)
+          }
+          await hold([])
+          break
+        }
         case 'press':
         case 'release':
           for (const name of step.keys) await key(name, step.kind === 'press')

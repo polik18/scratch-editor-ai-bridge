@@ -6,7 +6,20 @@
 
 export type Level = 'low' | 'mid' | 'high'
 
-export type BehaviorName = 'platformer' | 'topdown' | 'patrol' | 'collectible' | 'hazard' | 'goal'
+export type BehaviorName =
+  | 'platformer'
+  | 'topdown'
+  | 'patrol'
+  | 'collectible'
+  | 'hazard'
+  | 'goal'
+  | 'faller'
+  | 'projectile'
+  | 'target'
+  | 'clickable'
+  | 'popup'
+
+export type Direction = 'up' | 'down' | 'left' | 'right'
 
 export interface PlatformerParams {
   readonly jump: Level
@@ -14,6 +27,8 @@ export interface PlatformerParams {
 }
 export interface TopdownParams {
   readonly speed: Level
+  /** Which arrow keys move the player; `horizontal` suits catch-and-dodge games. */
+  readonly axis: 'both' | 'horizontal' | 'vertical'
 }
 export interface PatrolParams {
   readonly speed: Level
@@ -25,6 +40,28 @@ export interface PatrolParams {
 export interface CollectibleParams {
   readonly points: number
 }
+export interface FallerParams {
+  readonly speed: Level
+  /** Average seconds between new copies. */
+  readonly interval: number
+  /** Copies enter from the opposite edge and travel this way. */
+  readonly direction: Direction
+  /** Get faster as the game goes on. */
+  readonly accelerate: boolean
+}
+export interface ProjectileParams {
+  /** Scratch key name that fires. */
+  readonly key: string
+  readonly direction: Direction | 'facing'
+  readonly speed: Level
+}
+export interface PointsParams {
+  readonly points: number
+}
+export interface PopupParams {
+  /** Seconds each copy stays visible when it pops up. */
+  readonly stay: number
+}
 
 export type BehaviorUse =
   | { readonly name: 'platformer'; readonly params: PlatformerParams }
@@ -33,8 +70,27 @@ export type BehaviorUse =
   | { readonly name: 'collectible'; readonly params: CollectibleParams }
   | { readonly name: 'hazard'; readonly params: Record<string, never> }
   | { readonly name: 'goal'; readonly params: Record<string, never> }
+  | { readonly name: 'faller'; readonly params: FallerParams }
+  | { readonly name: 'projectile'; readonly params: ProjectileParams }
+  | { readonly name: 'target'; readonly params: PointsParams }
+  | { readonly name: 'clickable'; readonly params: PointsParams }
+  | { readonly name: 'popup'; readonly params: PopupParams }
 
-export type Look = 'hero' | 'slime' | 'coin' | 'spike' | 'flag' | 'box' | 'key' | 'star'
+export type Look =
+  | 'hero'
+  | 'slime'
+  | 'coin'
+  | 'spike'
+  | 'flag'
+  | 'box'
+  | 'key'
+  | 'star'
+  | 'apple'
+  | 'rock'
+  | 'balloon'
+  | 'bullet'
+  | 'car'
+  | 'mole'
 
 export interface SpecEntity {
   readonly name: string
@@ -45,12 +101,21 @@ export interface SpecEntity {
 
 export type RuleTrigger =
   | { readonly kind: 'start' }
-  | { readonly kind: 'collect' | 'touch' | 'stomp'; readonly entity: string }
+  | { readonly kind: 'collect' | 'touch' | 'stomp' | 'miss' | 'hit' | 'click'; readonly entity: string }
+  | { readonly kind: 'every'; readonly seconds: number }
+  /** Compare a stage variable (score, lives, time or a custom counter) with a number. */
+  | {
+      readonly kind: 'compare'
+      readonly variable: string
+      readonly op: '>=' | '<=' | '>' | '<' | '='
+      readonly value: number
+    }
   | { readonly kind: 'score-at-least'; readonly value: number }
   | { readonly kind: 'time-up' }
 
 export type RuleAction =
-  | { readonly kind: 'score' | 'lives'; readonly delta: number }
+  | { readonly kind: 'score' | 'lives' | 'time'; readonly delta: number }
+  | { readonly kind: 'var'; readonly name: string; readonly delta: number }
   | { readonly kind: 'say'; readonly text: string }
   | { readonly kind: 'win' | 'lose' }
 
@@ -71,6 +136,10 @@ export interface GameSpec {
   readonly lives: number
   /** Seconds on the countdown shown on stage; absent when the game has no timer. */
   readonly timeLimit?: number
+  /** Requests the author said the spec could not express; reported back so substitutions are visible. */
+  readonly unsupported: readonly string[]
+  /** Custom counters (for example 氧氣) and their starting values. */
+  readonly variables: Readonly<Record<string, number>>
 }
 
 export interface SpecDiagnostic {

@@ -18,6 +18,8 @@ export const JUMP_VELOCITY: Record<Level, number> = { low: 12, mid: 15.5, high: 
 export const RUN_ACCELERATION: Record<Level, number> = { low: 1, mid: 1.6, high: 2.2 }
 export const WALK_SPEED: Record<Level, number> = { low: 3, mid: 4, high: 6 }
 export const PATROL_SPEED: Record<Level, number> = { low: 1, mid: 1.5, high: 2.5 }
+export const FALL_SPEED: Record<Level, number> = { low: 2, mid: 3.5, high: 5 }
+export const PROJECTILE_SPEED: Record<Level, number> = { low: 6, mid: 9, high: 13 }
 
 /**
  * Steady horizontal speed reached by `vx = (vx + a) * FRICTION` each frame.

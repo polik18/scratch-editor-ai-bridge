@@ -102,6 +102,62 @@ export const lookCostumes = (look: Look, color?: string): CanonicalCostume[] => 
           `<path d="M10 1 L12.6 7.2 L19 7.6 L14 11.8 L15.6 18.4 L10 14.8 L4.4 18.4 L6 11.8 L1 7.6 L7.4 7.2 Z" fill="${safeColor(color, '#ffcf3f')}" stroke="#c48a00" stroke-width="1.2"/>`,
         ),
       ]
+    case 'apple':
+      return [
+        svg(
+          'apple',
+          18,
+          19,
+          `<circle cx="9" cy="11" r="7.5" fill="${safeColor(color, '#e53935')}" stroke="#8e1b18" stroke-width="1.2"/>` +
+            '<path d="M9 4 Q9 1 11 0.5" stroke="#5d3a1a" stroke-width="1.5" fill="none"/><ellipse cx="12.5" cy="3" rx="2.5" ry="1.3" fill="#4caf50"/>',
+        ),
+      ]
+    case 'rock':
+      return [
+        svg(
+          'rock',
+          22,
+          20,
+          `<path d="M3 7 L9 1 L17 3 L21 10 L17 18 L7 19 L1 13 Z" fill="${safeColor(color, '#8d8478')}" stroke="#4e4740" stroke-width="1.4"/><circle cx="9" cy="9" r="2" fill="#6e665c"/><circle cx="15" cy="13" r="1.5" fill="#6e665c"/>`,
+        ),
+      ]
+    case 'balloon':
+      return [
+        svg(
+          'balloon',
+          16,
+          24,
+          `<ellipse cx="8" cy="8" rx="7" ry="7.5" fill="${safeColor(color, '#ff5ca8')}" stroke="#a02060" stroke-width="1"/><path d="M8 15.5 Q6 19 8 23" stroke="#555" stroke-width="1" fill="none"/>`,
+        ),
+      ]
+    case 'bullet':
+      return [
+        svg(
+          'bullet',
+          4,
+          12,
+          `<rect x="0.5" y="0.5" width="3" height="11" rx="1.5" fill="${safeColor(color, '#ffeb3b')}" stroke="#f57f17" stroke-width="0.8"/>`,
+        ),
+      ]
+    case 'car':
+      return [
+        svg(
+          'car',
+          18,
+          24,
+          '<rect x="0" y="3" width="3" height="6" fill="#222"/><rect x="15" y="3" width="3" height="6" fill="#222"/><rect x="0" y="15" width="3" height="6" fill="#222"/><rect x="15" y="15" width="3" height="6" fill="#222"/>' +
+            `<rect x="2" y="1" width="14" height="22" rx="4" fill="${safeColor(color, '#2196f3')}" stroke="#0d47a1" stroke-width="1.2"/><rect x="4" y="6" width="10" height="5" rx="1.5" fill="#bbdefb"/>`,
+        ),
+      ]
+    case 'mole':
+      return [
+        svg(
+          'mole',
+          22,
+          18,
+          `<path d="M2 17 Q2 2 11 2 Q20 2 20 17 Z" fill="${safeColor(color, '#8d6e63')}" stroke="#4e342e" stroke-width="1.3"/><circle cx="8" cy="8" r="1.6" fill="#111"/><circle cx="14" cy="8" r="1.6" fill="#111"/><ellipse cx="11" cy="12" rx="2.5" ry="1.8" fill="#f48fb1"/>`,
+        ),
+      ]
     case 'box':
       return [
         svg(
@@ -113,6 +169,12 @@ export const lookCostumes = (look: Look, color?: string): CanonicalCostume[] => 
       ]
   }
 }
+
+/**
+ * Invisible costume for the sprite that hosts rules and speech in games without a player.
+ * @returns A 2×2 transparent costume.
+ */
+export const narratorCostume = (): CanonicalCostume => svg('narrator', 2, 2, '')
 
 /**
  * One stage-sized costume with every wall cell, merged into horizontal runs.

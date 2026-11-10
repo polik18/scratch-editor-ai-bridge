@@ -1,0 +1,68 @@
+{
+  "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+  "baseUrl": "http://127.0.0.1:8000/v1",
+  "format": "spec",
+  "noThinking": true,
+  "meta": [
+    {
+      "id": "catch-apples",
+      "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+      "seconds": 10.149,
+      "characters": 750
+    },
+    {
+      "id": "space-dodge",
+      "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+      "seconds": 4.527,
+      "characters": 757
+    },
+    {
+      "id": "space-shooter",
+      "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+      "seconds": 5.476,
+      "characters": 926
+    },
+    {
+      "id": "mouse-maze",
+      "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+      "seconds": 4.332,
+      "characters": 538
+    },
+    {
+      "id": "jump-collect",
+      "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+      "seconds": 7.85,
+      "characters": 2082
+    },
+    {
+      "id": "pop-balloons",
+      "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+      "seconds": 4.309,
+      "characters": 706
+    },
+    {
+      "id": "two-player-pong",
+      "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+      "seconds": 5.648,
+      "characters": 1034
+    },
+    {
+      "id": "deep-sea-rescue",
+      "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+      "seconds": 5.062,
+      "characters": 954
+    },
+    {
+      "id": "car-racing",
+      "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+      "seconds": 6.811,
+      "characters": 1124
+    },
+    {
+      "id": "whack-a-mole",
+      "model": "Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e",
+      "seconds": 3.584,
+      "characters": 371
+    }
+  ]
+}
