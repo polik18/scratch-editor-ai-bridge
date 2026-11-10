@@ -1,0 +1,44 @@
+when green flag clicked  
+set [left score v] to (0)  
+set [right score v] to (0)  
+set x to (0)  
+set y to (0)  
+go to x: (0) y: (0)  
+point in direction (45)  
+show  
+forever  
+  move (5) steps  
+  if <on edge, bounce> then  
+    play sound [Pop v] until done  
+  end  
+  if <touching [Left Paddle v]?> then  
+    point in direction ((180) - (direction))  
+    play sound [Pop v] until done  
+  end  
+  if <touching [Right Paddle v]?> then  
+    point in direction ((180) - (direction))  
+    play sound [Pop v] until done  
+  end  
+  if <x position < (-200)> then  
+    change [right score v] by (1)  
+    set x to (0)  
+    set y to (0)  
+    go to x: (0) y: (0)  
+    point in direction (45)  
+  end  
+  if <x position > (200)> then  
+    change [left score v] by (1)  
+    set x to (0)  
+    set y to (0)  
+    go to x: (0) y: (0)  
+    point in direction (45)  
+  end  
+end  
+when [w v] key pressed  
+change y by (10)  
+when [s v] key pressed  
+change y by (-10)  
+when [up arrow v] key pressed  
+change y by (10)  
+when [down arrow v] key pressed  
+change y by (-10)

@@ -1,0 +1,8 @@
+{
+  "id": "car-racing",
+  "request": "賽車閃避：我的車在下面用左右鍵換車道，前面的車一直開下來，閃過越多分數越高",
+  "responseCharacters": 385,
+  "recognizedLines": 14,
+  "skippedLines": 0,
+  "warnings": []
+}

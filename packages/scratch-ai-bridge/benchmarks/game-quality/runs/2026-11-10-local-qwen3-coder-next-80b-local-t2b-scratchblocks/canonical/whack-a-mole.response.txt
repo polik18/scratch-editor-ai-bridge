@@ -1,0 +1,325 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "whack-a-mole scratchblocks prototype",
+  "broadcasts": [
+    {
+      "name": "[start v]"
+    },
+    {
+      "name": "start"
+    }
+  ],
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [],
+    "lists": [],
+    "costumes": [
+      {
+        "name": "Blue Sky",
+        "dataFormat": "svg"
+      }
+    ],
+    "sounds": [],
+    "scripts": [],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Player",
+      "variables": [
+        {
+          "name": "score",
+          "value": 0
+        },
+        {
+          "name": "time",
+          "value": 0
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Cat",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [
+        {
+          "name": "Pop",
+          "dataFormat": "wav"
+        }
+      ],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "data_setvariableto",
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              },
+              "fields": {
+                "VARIABLE": "score"
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 30
+                }
+              },
+              "fields": {
+                "VARIABLE": "time"
+              }
+            },
+            {
+              "opcode": "looks_hide"
+            },
+            {
+              "opcode": "control_forever",
+              "inputs": {
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "control_wait",
+                      "inputs": {
+                        "DURATION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_random",
+                            "inputs": {
+                              "FROM": {
+                                "type": "literal",
+                                "value": 1
+                              },
+                              "TO": {
+                                "type": "literal",
+                                "value": 3
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "motion_gotoxy",
+                      "inputs": {
+                        "X": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_random",
+                            "inputs": {
+                              "FROM": {
+                                "type": "literal",
+                                "value": -150
+                              },
+                              "TO": {
+                                "type": "literal",
+                                "value": 150
+                              }
+                            }
+                          }
+                        },
+                        "Y": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_random",
+                            "inputs": {
+                              "FROM": {
+                                "type": "literal",
+                                "value": -100
+                              },
+                              "TO": {
+                                "type": "literal",
+                                "value": 100
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "looks_show"
+                    },
+                    {
+                      "opcode": "control_wait",
+                      "inputs": {
+                        "DURATION": {
+                          "type": "literal",
+                          "value": 1
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "looks_hide"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenthisspriteclicked"
+            },
+            {
+              "opcode": "data_changevariableby",
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 1
+                }
+              },
+              "fields": {
+                "VARIABLE": "score"
+              }
+            },
+            {
+              "opcode": "sound_playuntildone",
+              "inputs": {
+                "SOUND_MENU": {
+                  "type": "literal",
+                  "value": "Pop"
+                }
+              }
+            },
+            {
+              "opcode": "looks_hide"
+            },
+            {
+              "opcode": "control_wait",
+              "inputs": {
+                "DURATION": {
+                  "type": "literal",
+                  "value": 0.5
+                }
+              }
+            },
+            {
+              "opcode": "looks_show"
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "space"
+              }
+            },
+            {
+              "opcode": "event_broadcast",
+              "inputs": {
+                "BROADCAST_INPUT": {
+                  "type": "broadcast",
+                  "name": "[start v]"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenbroadcastreceived",
+              "fields": {
+                "BROADCAST_OPTION": "start"
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 30
+                }
+              },
+              "fields": {
+                "VARIABLE": "time"
+              }
+            },
+            {
+              "opcode": "looks_show"
+            },
+            {
+              "opcode": "control_repeat",
+              "inputs": {
+                "TIMES": {
+                  "type": "literal",
+                  "value": 30
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "control_wait",
+                      "inputs": {
+                        "DURATION": {
+                          "type": "literal",
+                          "value": 1
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "data_changevariableby",
+                      "inputs": {
+                        "VALUE": {
+                          "type": "literal",
+                          "value": -1
+                        }
+                      },
+                      "fields": {
+                        "VARIABLE": "time"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "opcode": "looks_hide"
+            },
+            {
+              "opcode": "looks_sayforsecs",
+              "inputs": {
+                "MESSAGE": {
+                  "type": "literal",
+                  "value": "Game Over!"
+                },
+                "SECS": {
+                  "type": "literal",
+                  "value": 2
+                }
+              }
+            },
+            {
+              "opcode": "looks_show"
+            }
+          ]
+        }
+      ],
+      "procedures": [],
+      "x": 0,
+      "y": -100,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "left-right"
+    }
+  ]
+}

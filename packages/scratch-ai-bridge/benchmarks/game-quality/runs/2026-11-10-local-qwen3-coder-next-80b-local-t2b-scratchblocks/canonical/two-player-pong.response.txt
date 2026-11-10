@@ -1,0 +1,536 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "two-player-pong scratchblocks prototype",
+  "broadcasts": [],
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [],
+    "lists": [],
+    "costumes": [
+      {
+        "name": "Blue Sky",
+        "dataFormat": "svg"
+      }
+    ],
+    "sounds": [],
+    "scripts": [],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Player",
+      "variables": [
+        {
+          "name": "left score",
+          "value": 0
+        },
+        {
+          "name": "right score",
+          "value": 0
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Cat",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [
+        {
+          "name": "Pop",
+          "dataFormat": "wav"
+        }
+      ],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "data_setvariableto",
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              },
+              "fields": {
+                "VARIABLE": "left score"
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              },
+              "fields": {
+                "VARIABLE": "right score"
+              }
+            },
+            {
+              "opcode": "motion_setx",
+              "inputs": {
+                "X": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "motion_sety",
+              "inputs": {
+                "Y": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "motion_gotoxy",
+              "inputs": {
+                "X": {
+                  "type": "literal",
+                  "value": 0
+                },
+                "Y": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "motion_pointindirection",
+              "inputs": {
+                "DIRECTION": {
+                  "type": "literal",
+                  "value": 45
+                }
+              }
+            },
+            {
+              "opcode": "looks_show"
+            },
+            {
+              "opcode": "control_forever",
+              "inputs": {
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_movesteps",
+                      "inputs": {
+                        "STEPS": {
+                          "type": "literal",
+                          "value": 5
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "literal",
+                          "value": "on edge, bounce"
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "sound_playuntildone",
+                              "inputs": {
+                                "SOUND_MENU": {
+                                  "type": "literal",
+                                  "value": "Pop"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "sensing_touchingobject",
+                            "inputs": {
+                              "TOUCHINGOBJECTMENU": {
+                                "type": "literal",
+                                "value": "Left Paddle"
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "motion_pointindirection",
+                              "inputs": {
+                                "DIRECTION": {
+                                  "type": "literal",
+                                  "value": "(180) - (direction"
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "sound_playuntildone",
+                              "inputs": {
+                                "SOUND_MENU": {
+                                  "type": "literal",
+                                  "value": "Pop"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "sensing_touchingobject",
+                            "inputs": {
+                              "TOUCHINGOBJECTMENU": {
+                                "type": "literal",
+                                "value": "Right Paddle"
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "motion_pointindirection",
+                              "inputs": {
+                                "DIRECTION": {
+                                  "type": "literal",
+                                  "value": "(180) - (direction"
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "sound_playuntildone",
+                              "inputs": {
+                                "SOUND_MENU": {
+                                  "type": "literal",
+                                  "value": "Pop"
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_lt",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "block",
+                                "block": {
+                                  "opcode": "motion_xposition"
+                                }
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": -200
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "data_changevariableby",
+                              "inputs": {
+                                "VALUE": {
+                                  "type": "literal",
+                                  "value": 1
+                                }
+                              },
+                              "fields": {
+                                "VARIABLE": "right score"
+                              }
+                            },
+                            {
+                              "opcode": "motion_setx",
+                              "inputs": {
+                                "X": {
+                                  "type": "literal",
+                                  "value": 0
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "motion_sety",
+                              "inputs": {
+                                "Y": {
+                                  "type": "literal",
+                                  "value": 0
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "motion_gotoxy",
+                              "inputs": {
+                                "X": {
+                                  "type": "literal",
+                                  "value": 0
+                                },
+                                "Y": {
+                                  "type": "literal",
+                                  "value": 0
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "motion_pointindirection",
+                              "inputs": {
+                                "DIRECTION": {
+                                  "type": "literal",
+                                  "value": 45
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_gt",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "block",
+                                "block": {
+                                  "opcode": "motion_xposition"
+                                }
+                              },
+                              "OPERAND2": {
+                                "type": "literal",
+                                "value": 200
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "data_changevariableby",
+                              "inputs": {
+                                "VALUE": {
+                                  "type": "literal",
+                                  "value": 1
+                                }
+                              },
+                              "fields": {
+                                "VARIABLE": "left score"
+                              }
+                            },
+                            {
+                              "opcode": "motion_setx",
+                              "inputs": {
+                                "X": {
+                                  "type": "literal",
+                                  "value": 0
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "motion_sety",
+                              "inputs": {
+                                "Y": {
+                                  "type": "literal",
+                                  "value": 0
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "motion_gotoxy",
+                              "inputs": {
+                                "X": {
+                                  "type": "literal",
+                                  "value": 0
+                                },
+                                "Y": {
+                                  "type": "literal",
+                                  "value": 0
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "motion_pointindirection",
+                              "inputs": {
+                                "DIRECTION": {
+                                  "type": "literal",
+                                  "value": 45
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "w"
+              }
+            },
+            {
+              "opcode": "motion_changeyby",
+              "inputs": {
+                "DY": {
+                  "type": "literal",
+                  "value": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "s"
+              }
+            },
+            {
+              "opcode": "motion_changeyby",
+              "inputs": {
+                "DY": {
+                  "type": "literal",
+                  "value": -10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "up arrow"
+              }
+            },
+            {
+              "opcode": "motion_changeyby",
+              "inputs": {
+                "DY": {
+                  "type": "literal",
+                  "value": 10
+                }
+              }
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "down arrow"
+              }
+            },
+            {
+              "opcode": "motion_changeyby",
+              "inputs": {
+                "DY": {
+                  "type": "literal",
+                  "value": -10
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": [],
+      "x": 0,
+      "y": -100,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "left-right"
+    },
+    {
+      "kind": "sprite",
+      "name": "Left Paddle",
+      "variables": [],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Left Paddle",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [],
+      "procedures": [],
+      "x": 0,
+      "y": 80,
+      "direction": 90,
+      "size": 60,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "all around"
+    },
+    {
+      "kind": "sprite",
+      "name": "Right Paddle",
+      "variables": [],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Right Paddle",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [],
+      "procedures": [],
+      "x": 0,
+      "y": 80,
+      "direction": 90,
+      "size": 60,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ]
+}

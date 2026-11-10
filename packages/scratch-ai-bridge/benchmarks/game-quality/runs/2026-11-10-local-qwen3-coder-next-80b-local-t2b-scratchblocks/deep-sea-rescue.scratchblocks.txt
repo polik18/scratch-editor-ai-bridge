@@ -1,0 +1,43 @@
+when green flag clicked  
+set [score v] to (0)  
+set [lives v] to (3)  
+show  
+forever  
+  if <key [right arrow v] pressed?> then  
+    change x by (10)  
+  end  
+  if <key [left arrow v] pressed?> then  
+    change x by (-10)  
+  end  
+  if <key [up arrow v] pressed?> then  
+    change y by (10)  
+  end  
+  if <key [down arrow v] pressed?> then  
+    change y by (-10)  
+  end  
+  if <touching [Oxygen v]?> then  
+    change [lives v] by (1)  
+    play sound [Pop v] until done  
+    hide  
+    wait (0.5) seconds  
+    show  
+    go to x: (pick random (-200) to (200)) y: (pick random (-150) to (150))  
+  end  
+  if <touching [Jellyfish v]?> then  
+    change [lives v] by (-1)  
+    play sound [Pop v] until done  
+    go to x: (0) y: (0)  
+  end  
+  if <(lives) < (1)> then  
+    say [Game Over!] for (2) seconds  
+    broadcast [game over v]  
+  end  
+end  
+when [left arrow v] key pressed  
+change x by (-10)  
+when [right arrow v] key pressed  
+change x by (10)  
+when [up arrow v] key pressed  
+change y by (10)  
+when [down arrow v] key pressed  
+change y by (-10)

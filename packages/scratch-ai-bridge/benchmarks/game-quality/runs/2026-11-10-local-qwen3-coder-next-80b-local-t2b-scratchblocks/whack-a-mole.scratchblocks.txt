@@ -1,0 +1,32 @@
+when green flag clicked  
+set [score v] to (0)  
+set [time v] to (30)  
+hide  
+forever  
+  wait (random (1) to (3)) seconds  
+  go to x: (random (-150) to (150)) y: (random (-100) to (100))  
+  show  
+  wait (1) seconds  
+  hide  
+end  
+
+when this sprite clicked  
+change [score v] by (1)  
+play sound [Pop v] until done  
+hide  
+wait (0.5) seconds  
+show  
+
+when [space v] key pressed  
+broadcast [start v]  
+
+when [start v] received  
+set [time v] to (30)  
+show  
+repeat (30)  
+  wait (1) seconds  
+  change [time v] by (-1)  
+end  
+hide  
+say [Game Over!] for (2) seconds  
+show

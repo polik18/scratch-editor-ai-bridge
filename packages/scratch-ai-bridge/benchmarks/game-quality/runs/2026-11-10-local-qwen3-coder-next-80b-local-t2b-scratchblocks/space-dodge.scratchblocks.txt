@@ -1,0 +1,42 @@
+when green flag clicked  
+set [score v] to (0)  
+hide  
+go to x: (0) y: (-150)  
+show  
+broadcast [start v]  
+
+when [left arrow v] key pressed  
+change x by (-10)  
+
+when [right arrow v] key pressed  
+change x by (10)  
+
+when [space v] key pressed  
+go to x: (0) y: (-150)  
+set [score v] to (0)  
+show  
+broadcast [start v]  
+
+when I receive [start v]  
+hide  
+set [score v] to (0)  
+repeat (1)  
+  set [score v] to (0)  
+end  
+forever  
+  wait (0.1) seconds  
+  change [score v] by (0.1)  
+  if <key [left arrow v] pressed?> then  
+    change x by (-8)  
+  end  
+  if <key [right arrow v] pressed?> then  
+    change x by (8)  
+  end  
+  if <touching [隕石 v]?> then  
+    play sound [Lose v] until done  
+    say [Game Over!] for (2) seconds  
+    stop [this script v]  
+  end  
+  if <on edge, bounce> then  
+  end  
+end

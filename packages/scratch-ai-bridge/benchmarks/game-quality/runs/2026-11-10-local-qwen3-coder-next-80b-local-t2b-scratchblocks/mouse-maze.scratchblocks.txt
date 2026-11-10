@@ -1,0 +1,31 @@
+when green flag clicked
+set [score v] to (0)
+forever
+  if <touching [Cheese v]?> then
+    change [score v] by (1)
+    broadcast [level up v]
+    wait (1) seconds
+    set [score v] to (0)
+    go to x: (0) y: (0)
+  end
+end
+when [left arrow v] key pressed
+change x by (-10)
+if <touching [Wall v]?> then
+  change x by (10)
+end
+when [right arrow v] key pressed
+change x by (10)
+if <touching [Wall v]?> then
+  change x by (-10)
+end
+when [up arrow v] key pressed
+change y by (10)
+if <touching [Wall v]?> then
+  change y by (-10)
+end
+when [down arrow v] key pressed
+change y by (-10)
+if <touching [Wall v]?> then
+  change y by (10)
+end

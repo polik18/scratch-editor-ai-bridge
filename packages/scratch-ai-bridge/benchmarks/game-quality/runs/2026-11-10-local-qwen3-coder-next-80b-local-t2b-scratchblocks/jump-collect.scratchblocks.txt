@@ -1,0 +1,39 @@
+when green flag clicked  
+set [score v] to (0)  
+go to x: (0) y: (0)  
+show  
+forever  
+  if <key [left arrow v] pressed?> then  
+    change x by (-10)  
+  end  
+  if <key [right arrow v] pressed?> then  
+    change x by (10)  
+  end  
+  if <touching [Edge v]?> then  
+    if <key [left arrow v] pressed?> then  
+      change x by (10)  
+    end  
+    if <key [right arrow v] pressed?> then  
+      change x by (-10)  
+    end  
+  end  
+  if <y position < (-150)?> then  
+    broadcast [reset v]  
+  end  
+  if <touching [Star v]?> then  
+    change [score v] by (1)  
+    hide  
+    wait (0.2) seconds  
+    show  
+    go to x: (pick random (-200) to (200)) y: (pick random (-100) to (100))  
+  end  
+end  
+when [space v] key pressed  
+repeat (10)  
+  change y by (5)  
+  wait (0.05) seconds  
+end  
+when [reset v] broadcast  
+set [score v] to (0)  
+go to x: (0) y: (0)  
+show

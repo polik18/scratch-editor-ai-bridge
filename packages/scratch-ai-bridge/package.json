@@ -9,6 +9,7 @@
     "audit:reachability": "node scripts/check-audit-reachability.mjs",
     "bench": "node -e \"require('node:fs').mkdirSync('test-results',{recursive:true})\" && vitest bench --run tests/performance --outputJson=test-results/performance.json && node scripts/check-performance-budget.mjs test-results/performance.json",
     "benchmark:games": "tsx scripts/game-benchmark.ts",
+    "benchmark:scratchblocks": "tsx scripts/scratchblocks-benchmark.ts",
     "build": "tsc --noEmit && vite build && node scripts/copy-renderer-sandbox-assets.mjs && node scripts/generate-service-worker.mjs && node scripts/check-bundle-budget.mjs",
     "clean": "rimraf dist coverage",
     "cli": "tsx src/cli/main.ts",

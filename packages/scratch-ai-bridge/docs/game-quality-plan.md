@@ -28,7 +28,7 @@
 | 1b   | 在真實瀏覽器驗證素材下載與 CSP             | ✅ 完成                   | Playwright Chromium 線上／斷網 smoke；官方 Apple MD5、CSP、fallback 均通過 |
 | 1c   | 學生「換一個素材」介面、離線備援、隱私說明 | ✅ 完成                   | Chromium 線上／暖快取離線／冷離線、換素材重編譯與復原均通過 |
 | 2a   | 精簡製作指令並附完整範例（目標 ≤ 6K 字元） | ✅ 完成（同模型平均 8%） | 10 題提示 5,878–5,939 字；最終重跑 `t2a-r3`，builds 1/10、plays-sound 1/1、animated-sprite 1/1 |
-| 2b   | scratchblocks 文字格式可行性實驗           | ⏳ 待做                   | 見 T2b，依 2a 結果再決定                                  |
+| 2b   | scratchblocks 文字格式可行性實驗           | ✅ 完成（採用後續受控整合方向） | 同模型／同 10 題：平均 61%、build 10/10；見 T2b 證據 |
 | 3    | 網頁內自動試玩，玩法錯誤回饋給學生         | ⏳ 待做                   | 見 T3                                                     |
 | 4    | 首頁精簡成單一路線                         | ⏳ 待做                   | 見 T4                                                     |
 | 5    | 文件與工程整理                             | ⏳ 待做                   | 見 T5                                                     |
@@ -187,8 +187,8 @@
 ### T2b scratchblocks 文字格式實驗（視 T2a 結果決定）
 
 - **問題**：讓 AI 輸出 scratchblocks 文字，再由 Bridge 轉成 IR，是否比 JSON 更準？
-- **做法**：寫一個最小的轉換器原型，只支援基準 10 題會用到的積木。用同一個模型，比較 JSON 和 scratchblocks 兩條路徑的 0b 分數、輸出長度和修正輪數。
-- **驗收**：一份比較報告，結論為採用、暫緩或不採用三擇一，附數據。原型不要接進 UI，直到結論是採用。
+- **做法**：新增獨立 `src/core/scratchblocks/parser.ts` 與 `scripts/scratchblocks-benchmark.ts`，先支援基準 10 題實際出現的帽子、控制、移動、感測、資料、音效、廣播與分身等積木；同一 `qwen3-coder-next-80b-local`、同一 10 題送入文字格式，再轉 Canonical IR，沿用既有素材／編譯／無頭試玩 pipeline。
+- **驗收**：證據目錄 `benchmarks/game-quality/runs/2026-11-10-local-qwen3-coder-next-80b-local-t2b-scratchblocks/`，比較報告 `comparison.md`：JSON T2a 平均 8%、build 1/10、平均回覆 17,282 字；scratchblocks prototype 平均 61%、build 10/10、run 10/10、平均回覆 757 字、parser warnings 0。結論：**採用 scratchblocks-style 作為後續受控整合方向，但暫不直接接入 UI**；尚須補齊動畫、多角色、多感測／分身語法後再整合。
 
 ### T5 文件與工程整理
 
@@ -196,6 +196,8 @@
 - lint 只要求新改的檔案零錯誤；讓 CI 恢復跑 browser smoke。
 
 ## 7. 交接紀錄（新的寫在最上面）
+
+- **2026-11-10 Codex**：完成 T2b scratchblocks 文字格式實驗。新增獨立 scratchblocks-style subset parser、benchmark prepare／compare 腳本與 2 個 parser 測試；同一 Qwen 80B／同一 10 題經既有 pipeline，平均 check pass rate 由 JSON T2a 8% 提升至 61%，build 1/10 → 10/10，平均模型回覆 17,282 → 757 字，parser warnings 0。結論採用後續受控整合方向，但暫不接 UI；先補動畫、多角色與更多感測／分身語法。`npm test` 76/76 檔、618/618 測試，build／bundle budget／改檔 lint 通過；尚未 push／部署。
 
 - **2026-11-10 Codex**：完成 T1c。新增完成作品的官方素材縮圖與「換一個並下載新版」介面，替換只改素材欄位、不改積木，並可用既有「回到上一個可用作品」復原；首頁補上官方素材下載／作品不上傳的隱私說明。`createScratchAssetFetcher` 以 Cache Storage 保存並驗證官方素材，加入暖快取離線訊息與冷離線 fallback。Chromium smoke 驗證線上下載、Apple raw-byte MD5、換成 Cat、復原、暖／冷離線、CSP 0 違規；`npm test` 75/75、616/616，build 與 bundle budget 通過；尚未 push／部署。下一步可進入 T2b scratchblocks 實驗或 T3 自動試玩回饋。
 

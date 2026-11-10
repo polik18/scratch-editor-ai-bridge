@@ -1,0 +1,8 @@
+{
+  "id": "jump-collect",
+  "request": "平台跳躍遊戲：左右鍵走路、空白鍵跳，收集星星加分，掉到底下就重來",
+  "responseCharacters": 877,
+  "recognizedLines": 30,
+  "skippedLines": 0,
+  "warnings": []
+}

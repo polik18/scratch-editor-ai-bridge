@@ -1,0 +1,8 @@
+{
+  "id": "two-player-pong",
+  "request": "雙人乒乓球：左邊玩家用 W/S，右邊玩家用上下鍵，球碰到球拍反彈，漏球對方得分",
+  "responseCharacters": 1073,
+  "recognizedLines": 38,
+  "skippedLines": 0,
+  "warnings": []
+}

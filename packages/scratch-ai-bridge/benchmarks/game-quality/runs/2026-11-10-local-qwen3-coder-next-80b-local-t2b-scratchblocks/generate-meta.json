@@ -1,0 +1,86 @@
+{
+  "model": "qwen3-coder-next-80b-local",
+  "baseUrl": "http://172.22.35.142:8091/v1",
+  "cases": [
+    {
+      "id": "catch-apples",
+      "request": "做一個貓咪接蘋果的遊戲，用左右鍵移動貓咪，蘋果從天上掉下來，接到加分，漏接扣生命",
+      "responseCharacters": 743,
+      "recognizedLines": 31,
+      "skippedLines": 0,
+      "warnings": []
+    },
+    {
+      "id": "space-dodge",
+      "request": "太空船躲隕石：左右鍵移動火箭，隕石越來越快，活越久分數越高，撞到就結束",
+      "responseCharacters": 821,
+      "recognizedLines": 32,
+      "skippedLines": 0,
+      "warnings": []
+    },
+    {
+      "id": "space-shooter",
+      "request": "太空射擊遊戲：左右鍵移動，空白鍵發射雷射打外星人，打中加分，外星人碰到我就輸",
+      "responseCharacters": 768,
+      "recognizedLines": 30,
+      "skippedLines": 0,
+      "warnings": []
+    },
+    {
+      "id": "mouse-maze",
+      "request": "老鼠走迷宮：用上下左右鍵控制老鼠，碰到牆會退回去，找到起司就過關",
+      "responseCharacters": 627,
+      "recognizedLines": 25,
+      "skippedLines": 0,
+      "warnings": []
+    },
+    {
+      "id": "jump-collect",
+      "request": "平台跳躍遊戲：左右鍵走路、空白鍵跳，收集星星加分，掉到底下就重來",
+      "responseCharacters": 877,
+      "recognizedLines": 30,
+      "skippedLines": 0,
+      "warnings": []
+    },
+    {
+      "id": "pop-balloons",
+      "request": "點氣球遊戲：氣球會從下面飄上來，用滑鼠點破氣球得分，30 秒倒數結束顯示分數",
+      "responseCharacters": 622,
+      "recognizedLines": 26,
+      "skippedLines": 0,
+      "warnings": []
+    },
+    {
+      "id": "two-player-pong",
+      "request": "雙人乒乓球：左邊玩家用 W/S，右邊玩家用上下鍵，球碰到球拍反彈，漏球對方得分",
+      "responseCharacters": 1073,
+      "recognizedLines": 38,
+      "skippedLines": 0,
+      "warnings": []
+    },
+    {
+      "id": "deep-sea-rescue",
+      "request": "深海救援：用方向鍵控制小魚游動，收集氧氣泡泡，躲開水母，氧氣用完就輸",
+      "responseCharacters": 1076,
+      "recognizedLines": 35,
+      "skippedLines": 0,
+      "warnings": []
+    },
+    {
+      "id": "car-racing",
+      "request": "賽車閃避：我的車在下面用左右鍵換車道，前面的車一直開下來，閃過越多分數越高",
+      "responseCharacters": 385,
+      "recognizedLines": 14,
+      "skippedLines": 0,
+      "warnings": []
+    },
+    {
+      "id": "whack-a-mole",
+      "request": "打地鼠：地鼠會隨機從洞裡冒出來，用滑鼠點到就加分，時間到遊戲結束",
+      "responseCharacters": 582,
+      "recognizedLines": 27,
+      "skippedLines": 0,
+      "warnings": []
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "space-dodge",
+  "request": "太空船躲隕石：左右鍵移動火箭，隕石越來越快，活越久分數越高，撞到就結束",
+  "responseCharacters": 821,
+  "recognizedLines": 32,
+  "skippedLines": 0,
+  "warnings": []
+}

@@ -1,0 +1,8 @@
+{
+  "id": "space-shooter",
+  "request": "太空射擊遊戲：左右鍵移動，空白鍵發射雷射打外星人，打中加分，外星人碰到我就輸",
+  "responseCharacters": 768,
+  "recognizedLines": 30,
+  "skippedLines": 0,
+  "warnings": []
+}

@@ -1,0 +1,8 @@
+{
+  "id": "deep-sea-rescue",
+  "request": "深海救援：用方向鍵控制小魚游動，收集氧氣泡泡，躲開水母，氧氣用完就輸",
+  "responseCharacters": 1076,
+  "recognizedLines": 35,
+  "skippedLines": 0,
+  "warnings": []
+}

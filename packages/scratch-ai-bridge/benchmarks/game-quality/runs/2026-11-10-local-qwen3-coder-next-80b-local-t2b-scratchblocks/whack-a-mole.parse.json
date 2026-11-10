@@ -1,0 +1,8 @@
+{
+  "id": "whack-a-mole",
+  "request": "打地鼠：地鼠會隨機從洞裡冒出來，用滑鼠點到就加分，時間到遊戲結束",
+  "responseCharacters": 582,
+  "recognizedLines": 27,
+  "skippedLines": 0,
+  "warnings": []
+}

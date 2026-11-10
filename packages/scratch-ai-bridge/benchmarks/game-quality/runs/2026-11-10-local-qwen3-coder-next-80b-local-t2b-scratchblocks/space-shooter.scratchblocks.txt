@@ -1,0 +1,37 @@
+when green flag clicked  
+set [score v] to (0)  
+show  
+go to x: (0) y: (-150)  
+forever  
+  if <key [left arrow v] pressed?> then  
+    change x by (-10)  
+  end  
+  if <key [right arrow v] pressed?> then  
+    change x by (10)  
+  end  
+  if <touching [Alien v]?> then  
+    say [Game Over!] for (2) seconds  
+    stop [all v]  
+  end  
+end  
+when [space v] key pressed  
+broadcast [shoot v]  
+when [shoot v]  
+create clone of [myself v]  
+when [clone v]  
+show  
+set y to (-150)  
+set x to (x position)  
+forever  
+  change y by (15)  
+  if <touching [Alien v]?> then  
+    change [score v] by (1)  
+    play sound [Pop v] until done  
+    hide  
+    stop [this script v]  
+  end  
+  if <y position > (200)?> then  
+    hide  
+    stop [this script v]  
+  end  
+end

@@ -1,0 +1,24 @@
+你是 Scratch 遊戲積木作者。把下面的遊戲需求改寫成 scratchblocks-style 文字，讓 Bridge 的最小 parser 可以轉成 Scratch 專案。
+
+遊戲需求：打地鼠：地鼠會隨機從洞裡冒出來，用滑鼠點到就加分，時間到遊戲結束
+
+輸出規則：
+1. 只輸出積木文字，不要 Markdown、JSON、解釋、思考過程或多個版本。
+2. 每個腳本從下列帽子開始：when green flag clicked、when [left arrow v] key pressed、when [space v] key pressed、when this sprite clicked。
+3. 使用 2 個空格表示巢狀積木；每個 forever、repeat、if 之後都必須用 end 結束。
+4. 只使用下列積木格式：move (10) steps、change x by (10)、change y by (10)、set x to (0)、set y to (0)、go to x: (0) y: (0)、if on edge, bounce、say [文字]、wait (1) seconds、forever、repeat (10)、if <key [space v] pressed?> then、change [score v] by (1)、set [score v] to (0)、broadcast [message v]、play sound [Pop v] until done、next costume、show、hide。
+5. 需要碰撞時可用 if <touching [Apple v]?> then；需要計分時使用變數 score、lives 或 time。
+6. 角色固定使用一個主要角色；不要輸出 sprite 名稱、素材 JSON 或自訂語法。
+
+範例：
+when green flag clicked
+set [score v] to (0)
+forever
+  move (5) steps
+  if <touching [Apple v]?> then
+    change [score v] by (1)
+    play sound [Pop v] until done
+  end
+end
+when [left arrow v] key pressed
+change x by (-10)

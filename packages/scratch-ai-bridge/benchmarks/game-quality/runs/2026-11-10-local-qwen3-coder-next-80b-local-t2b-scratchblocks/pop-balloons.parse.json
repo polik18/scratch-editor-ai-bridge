@@ -1,0 +1,8 @@
+{
+  "id": "pop-balloons",
+  "request": "點氣球遊戲：氣球會從下面飄上來，用滑鼠點破氣球得分，30 秒倒數結束顯示分數",
+  "responseCharacters": 622,
+  "recognizedLines": 26,
+  "skippedLines": 0,
+  "warnings": []
+}

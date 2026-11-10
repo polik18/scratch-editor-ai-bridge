@@ -1,0 +1,906 @@
+{
+  "results": [
+    {
+      "id": "catch-apples",
+      "status": "scored",
+      "promptCharacters": 5901,
+      "responseCharacters": 13502,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "Player Δ10"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "Player Δ20"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Player/lives"
+        },
+        {
+          "name": "library-art",
+          "pass": true,
+          "detail": "3 library, 0 placeholder, 0 model SVG replaced"
+        },
+        {
+          "name": "plays-sound",
+          "pass": true,
+          "detail": "1 sound blocks, 0 silent"
+        },
+        {
+          "name": "animated-sprite",
+          "pass": false,
+          "detail": "0 animated"
+        }
+      ],
+      "score": 0.8888888888888888,
+      "assets": {
+        "libraryCostumes": 3,
+        "addedAnimationCostumes": 1,
+        "librarySounds": 2,
+        "placeholderCostumes": [],
+        "silentSounds": [],
+        "cacheHits": [],
+        "replacedModelSvg": 0,
+        "fetchFailures": [],
+        "animatedSprites": 0,
+        "soundBlocks": 1
+      },
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 10
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 20
+          }
+        ],
+        "changedVariables": [
+          "Player/lives"
+        ]
+      }
+    },
+    {
+      "id": "space-dodge",
+      "status": "scored",
+      "promptCharacters": 5922,
+      "responseCharacters": 11811,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": false
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "Player Δ10"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "Player Δ10"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": false,
+          "detail": "no variable changed"
+        },
+        {
+          "name": "library-art",
+          "pass": true,
+          "detail": "3 library, 0 placeholder, 0 model SVG replaced"
+        },
+        {
+          "name": "plays-sound",
+          "pass": true,
+          "detail": "1 sound blocks, 0 silent"
+        },
+        {
+          "name": "animated-sprite",
+          "pass": false,
+          "detail": "0 animated"
+        }
+      ],
+      "score": 0.6666666666666666,
+      "assets": {
+        "libraryCostumes": 3,
+        "addedAnimationCostumes": 1,
+        "librarySounds": 2,
+        "placeholderCostumes": [],
+        "silentSounds": [],
+        "cacheHits": [],
+        "replacedModelSvg": 0,
+        "fetchFailures": [],
+        "animatedSprites": 0,
+        "soundBlocks": 1
+      },
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 10
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 10
+          }
+        ],
+        "changedVariables": []
+      }
+    },
+    {
+      "id": "space-shooter",
+      "status": "scored",
+      "promptCharacters": 5893,
+      "responseCharacters": 12346,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": false
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "Player Δ272"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "Player Δ380"
+        },
+        {
+          "name": "key space y+",
+          "pass": false,
+          "detail": "Player Δ0"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": false,
+          "detail": "no variable changed"
+        },
+        {
+          "name": "library-art",
+          "pass": false,
+          "detail": "2 library, 1 placeholder, 0 model SVG replaced"
+        },
+        {
+          "name": "plays-sound",
+          "pass": true,
+          "detail": "1 sound blocks, 0 silent"
+        },
+        {
+          "name": "animated-sprite",
+          "pass": false,
+          "detail": "0 animated"
+        }
+      ],
+      "score": 0.5,
+      "assets": {
+        "libraryCostumes": 2,
+        "addedAnimationCostumes": 1,
+        "librarySounds": 1,
+        "placeholderCostumes": [
+          "Alien/Alien"
+        ],
+        "silentSounds": [],
+        "cacheHits": [],
+        "replacedModelSvg": 0,
+        "fetchFailures": [],
+        "animatedSprites": 0,
+        "soundBlocks": 1
+      },
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 272
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 380
+          },
+          {
+            "key": " ",
+            "expected": "y+",
+            "moved": false,
+            "sprite": "Player",
+            "delta": 0
+          }
+        ],
+        "changedVariables": []
+      }
+    },
+    {
+      "id": "mouse-maze",
+      "status": "scored",
+      "promptCharacters": 5887,
+      "responseCharacters": 11195,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "key ArrowUp y+",
+          "pass": true,
+          "detail": "Player Δ10"
+        },
+        {
+          "name": "key ArrowDown y-",
+          "pass": true,
+          "detail": "Player Δ10"
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "Player Δ10"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "Player Δ10"
+        },
+        {
+          "name": "library-art",
+          "pass": false,
+          "detail": "2 library, 2 placeholder, 0 model SVG replaced"
+        },
+        {
+          "name": "plays-sound",
+          "pass": false,
+          "detail": "0 sound blocks, 0 silent"
+        },
+        {
+          "name": "animated-sprite",
+          "pass": false,
+          "detail": "0 animated"
+        }
+      ],
+      "score": 0.6666666666666666,
+      "assets": {
+        "libraryCostumes": 2,
+        "addedAnimationCostumes": 1,
+        "librarySounds": 1,
+        "placeholderCostumes": [
+          "Cheese/Cheese",
+          "Wall/Wall"
+        ],
+        "silentSounds": [],
+        "cacheHits": [],
+        "replacedModelSvg": 0,
+        "fetchFailures": [],
+        "animatedSprites": 0,
+        "soundBlocks": 0
+      },
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [
+          {
+            "key": "ArrowUp",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 10
+          },
+          {
+            "key": "ArrowDown",
+            "expected": "y-",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 10
+          },
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 10
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 10
+          }
+        ],
+        "changedVariables": []
+      }
+    },
+    {
+      "id": "jump-collect",
+      "status": "scored",
+      "promptCharacters": 5878,
+      "responseCharacters": 16182,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "Player Δ272"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "Player Δ380"
+        },
+        {
+          "name": "key space y+",
+          "pass": true,
+          "detail": "Player Δ50"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": false,
+          "detail": "no variable changed"
+        },
+        {
+          "name": "library-art",
+          "pass": false,
+          "detail": "3 library, 1 placeholder, 0 model SVG replaced"
+        },
+        {
+          "name": "plays-sound",
+          "pass": false,
+          "detail": "0 sound blocks, 0 silent"
+        },
+        {
+          "name": "animated-sprite",
+          "pass": false,
+          "detail": "0 animated"
+        }
+      ],
+      "score": 0.5555555555555556,
+      "assets": {
+        "libraryCostumes": 3,
+        "addedAnimationCostumes": 1,
+        "librarySounds": 2,
+        "placeholderCostumes": [
+          "Edge/Edge"
+        ],
+        "silentSounds": [],
+        "cacheHits": [],
+        "replacedModelSvg": 0,
+        "fetchFailures": [],
+        "animatedSprites": 0,
+        "soundBlocks": 0
+      },
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 272
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 380
+          },
+          {
+            "key": " ",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 50
+          }
+        ],
+        "changedVariables": []
+      }
+    },
+    {
+      "id": "pop-balloons",
+      "status": "scored",
+      "promptCharacters": 5921,
+      "responseCharacters": 10175,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Player/score"
+        },
+        {
+          "name": "library-art",
+          "pass": false,
+          "detail": "2 library, 1 placeholder, 0 model SVG replaced"
+        },
+        {
+          "name": "plays-sound",
+          "pass": true,
+          "detail": "2 sound blocks, 0 silent"
+        },
+        {
+          "name": "animated-sprite",
+          "pass": false,
+          "detail": "0 animated"
+        }
+      ],
+      "score": 0.7142857142857143,
+      "assets": {
+        "libraryCostumes": 2,
+        "addedAnimationCostumes": 1,
+        "librarySounds": 1,
+        "placeholderCostumes": [
+          "mouse pointer/mouse pointer"
+        ],
+        "silentSounds": [],
+        "cacheHits": [],
+        "replacedModelSvg": 0,
+        "fetchFailures": [],
+        "animatedSprites": 0,
+        "soundBlocks": 2
+      },
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [],
+        "changedVariables": [
+          "Player/score"
+        ]
+      }
+    },
+    {
+      "id": "two-player-pong",
+      "status": "scored",
+      "promptCharacters": 5939,
+      "responseCharacters": 16552,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": true
+        },
+        {
+          "name": "key w y+",
+          "pass": true,
+          "detail": "Player Δ45"
+        },
+        {
+          "name": "key s y-",
+          "pass": false,
+          "detail": "Left Paddle Δ0"
+        },
+        {
+          "name": "key ArrowUp y+",
+          "pass": false,
+          "detail": "Player Δ1.7"
+        },
+        {
+          "name": "key ArrowDown y-",
+          "pass": false,
+          "detail": "Player Δ0"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": false,
+          "detail": "no variable changed"
+        },
+        {
+          "name": "library-art",
+          "pass": true,
+          "detail": "4 library, 0 placeholder, 0 model SVG replaced"
+        },
+        {
+          "name": "plays-sound",
+          "pass": true,
+          "detail": "3 sound blocks, 0 silent"
+        },
+        {
+          "name": "animated-sprite",
+          "pass": false,
+          "detail": "0 animated"
+        }
+      ],
+      "score": 0.5454545454545454,
+      "assets": {
+        "libraryCostumes": 4,
+        "addedAnimationCostumes": 1,
+        "librarySounds": 3,
+        "placeholderCostumes": [],
+        "silentSounds": [],
+        "cacheHits": [],
+        "replacedModelSvg": 0,
+        "fetchFailures": [],
+        "animatedSprites": 0,
+        "soundBlocks": 3
+      },
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": true,
+        "controls": [
+          {
+            "key": "w",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 45
+          },
+          {
+            "key": "s",
+            "expected": "y-",
+            "moved": false,
+            "sprite": "Left Paddle",
+            "delta": 0
+          },
+          {
+            "key": "ArrowUp",
+            "expected": "y+",
+            "moved": false,
+            "sprite": "Player",
+            "delta": 1.7
+          },
+          {
+            "key": "ArrowDown",
+            "expected": "y-",
+            "moved": false,
+            "sprite": "Player",
+            "delta": 0
+          }
+        ],
+        "changedVariables": []
+      }
+    },
+    {
+      "id": "deep-sea-rescue",
+      "status": "scored",
+      "promptCharacters": 5919,
+      "responseCharacters": 17666,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": false
+        },
+        {
+          "name": "key ArrowUp y+",
+          "pass": true,
+          "detail": "Player Δ110"
+        },
+        {
+          "name": "key ArrowDown y-",
+          "pass": true,
+          "detail": "Player Δ199"
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": true,
+          "detail": "Player Δ132"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": true,
+          "detail": "Player Δ390"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": false,
+          "detail": "no variable changed"
+        },
+        {
+          "name": "library-art",
+          "pass": false,
+          "detail": "3 library, 1 placeholder, 0 model SVG replaced"
+        },
+        {
+          "name": "plays-sound",
+          "pass": true,
+          "detail": "2 sound blocks, 0 silent"
+        },
+        {
+          "name": "animated-sprite",
+          "pass": false,
+          "detail": "0 animated"
+        }
+      ],
+      "score": 0.6363636363636364,
+      "assets": {
+        "libraryCostumes": 3,
+        "addedAnimationCostumes": 4,
+        "librarySounds": 3,
+        "placeholderCostumes": [
+          "Oxygen/Oxygen"
+        ],
+        "silentSounds": [],
+        "cacheHits": [],
+        "replacedModelSvg": 0,
+        "fetchFailures": [],
+        "animatedSprites": 0,
+        "soundBlocks": 2
+      },
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [
+          {
+            "key": "ArrowUp",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 110
+          },
+          {
+            "key": "ArrowDown",
+            "expected": "y-",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 199
+          },
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 132
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": true,
+            "sprite": "Player",
+            "delta": 390
+          }
+        ],
+        "changedVariables": []
+      }
+    },
+    {
+      "id": "car-racing",
+      "status": "scored",
+      "promptCharacters": 5913,
+      "responseCharacters": 7217,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": false
+        },
+        {
+          "name": "key ArrowLeft x-",
+          "pass": false,
+          "detail": "Player Δ0"
+        },
+        {
+          "name": "key ArrowRight x+",
+          "pass": false,
+          "detail": "Player Δ0"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": false,
+          "detail": "no variable changed"
+        },
+        {
+          "name": "library-art",
+          "pass": false,
+          "detail": "2 library, 1 placeholder, 0 model SVG replaced"
+        },
+        {
+          "name": "plays-sound",
+          "pass": false,
+          "detail": "0 sound blocks, 0 silent"
+        },
+        {
+          "name": "animated-sprite",
+          "pass": false,
+          "detail": "0 animated"
+        }
+      ],
+      "score": 0.2222222222222222,
+      "assets": {
+        "libraryCostumes": 2,
+        "addedAnimationCostumes": 1,
+        "librarySounds": 1,
+        "placeholderCostumes": [
+          "Car/Car"
+        ],
+        "silentSounds": [],
+        "cacheHits": [],
+        "replacedModelSvg": 0,
+        "fetchFailures": [],
+        "animatedSprites": 0,
+        "soundBlocks": 0
+      },
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [
+          {
+            "key": "ArrowLeft",
+            "expected": "x-",
+            "moved": false,
+            "sprite": "Player",
+            "delta": 0
+          },
+          {
+            "key": "ArrowRight",
+            "expected": "x+",
+            "moved": false,
+            "sprite": "Player",
+            "delta": 0
+          }
+        ],
+        "changedVariables": []
+      }
+    },
+    {
+      "id": "whack-a-mole",
+      "status": "scored",
+      "promptCharacters": 5901,
+      "responseCharacters": 8509,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": false
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": true,
+          "detail": "Player/score"
+        },
+        {
+          "name": "library-art",
+          "pass": true,
+          "detail": "2 library, 0 placeholder, 0 model SVG replaced"
+        },
+        {
+          "name": "plays-sound",
+          "pass": true,
+          "detail": "1 sound blocks, 0 silent"
+        },
+        {
+          "name": "animated-sprite",
+          "pass": false,
+          "detail": "0 animated"
+        }
+      ],
+      "score": 0.7142857142857143,
+      "assets": {
+        "libraryCostumes": 2,
+        "addedAnimationCostumes": 1,
+        "librarySounds": 1,
+        "placeholderCostumes": [],
+        "silentSounds": [],
+        "cacheHits": [],
+        "replacedModelSvg": 0,
+        "fetchFailures": [],
+        "animatedSprites": 0,
+        "soundBlocks": 1
+      },
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [],
+        "changedVariables": [
+          "Player/score"
+        ]
+      }
+    }
+  ]
+}

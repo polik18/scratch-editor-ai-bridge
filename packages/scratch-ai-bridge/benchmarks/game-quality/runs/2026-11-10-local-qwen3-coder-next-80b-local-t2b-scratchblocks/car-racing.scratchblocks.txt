@@ -1,0 +1,17 @@
+when green flag clicked  
+set [score v] to (0)  
+hide  
+forever  
+  if <touching [Car v]?> then  
+    change [score v] by (1)  
+  end  
+  move (5) steps  
+  if <y position < (-150)?> then  
+    go to x: (0) y: (180)  
+    change x by (pick random (-100) to (100))  
+  end  
+end  
+when [left arrow v] key pressed  
+change x by (-20)  
+when [right arrow v] key pressed  
+change x by (20)

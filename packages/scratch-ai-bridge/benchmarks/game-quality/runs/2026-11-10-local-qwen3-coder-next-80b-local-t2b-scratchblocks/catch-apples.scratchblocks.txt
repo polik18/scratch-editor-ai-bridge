@@ -1,0 +1,37 @@
+when green flag clicked
+set [score v] to (0)
+set [lives v] to (3)
+hide
+go to x: (0) y: (-100)
+show
+forever
+  if <key [left arrow v] pressed?> then
+    change x by (-10)
+  end
+  if <key [right arrow v] pressed?> then
+    change x by (10)
+  end
+  if <touching [Apple v]?> then
+    change [score v] by (1)
+    play sound [Pop v] until done
+    hide
+    wait (0.1) seconds
+    show
+    go to x: (0) y: (-100)
+  end
+  if <y position < (-150)?> then
+    change [lives v] by (-1)
+    hide
+    wait (0.5) seconds
+    show
+    go to x: (0) y: (-100)
+  end
+  if <lives < (0)?> then
+    say [Game Over!] for (2) seconds
+    stop [this script v]
+  end
+end
+when [left arrow v] key pressed
+change x by (-10)
+when [right arrow v] key pressed
+change x by (10)

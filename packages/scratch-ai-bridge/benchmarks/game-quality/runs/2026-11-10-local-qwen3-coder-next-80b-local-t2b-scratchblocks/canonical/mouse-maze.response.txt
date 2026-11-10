@@ -1,0 +1,410 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "mouse-maze scratchblocks prototype",
+  "broadcasts": [
+    {
+      "name": "[level up v]"
+    }
+  ],
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [],
+    "lists": [],
+    "costumes": [
+      {
+        "name": "Blue Sky",
+        "dataFormat": "svg"
+      }
+    ],
+    "sounds": [],
+    "scripts": [],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Player",
+      "variables": [
+        {
+          "name": "score",
+          "value": 0
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Cat",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [
+        {
+          "name": "Pop",
+          "dataFormat": "wav"
+        }
+      ],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "data_setvariableto",
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              },
+              "fields": {
+                "VARIABLE": "score"
+              }
+            },
+            {
+              "opcode": "control_forever",
+              "inputs": {
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "sensing_touchingobject",
+                            "inputs": {
+                              "TOUCHINGOBJECTMENU": {
+                                "type": "literal",
+                                "value": "Cheese"
+                              }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "data_changevariableby",
+                              "inputs": {
+                                "VALUE": {
+                                  "type": "literal",
+                                  "value": 1
+                                }
+                              },
+                              "fields": {
+                                "VARIABLE": "score"
+                              }
+                            },
+                            {
+                              "opcode": "event_broadcast",
+                              "inputs": {
+                                "BROADCAST_INPUT": {
+                                  "type": "broadcast",
+                                  "name": "[level up v]"
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "control_wait",
+                              "inputs": {
+                                "DURATION": {
+                                  "type": "literal",
+                                  "value": 1
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "data_setvariableto",
+                              "inputs": {
+                                "VALUE": {
+                                  "type": "literal",
+                                  "value": 0
+                                }
+                              },
+                              "fields": {
+                                "VARIABLE": "score"
+                              }
+                            },
+                            {
+                              "opcode": "motion_gotoxy",
+                              "inputs": {
+                                "X": {
+                                  "type": "literal",
+                                  "value": 0
+                                },
+                                "Y": {
+                                  "type": "literal",
+                                  "value": 0
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "left arrow"
+              }
+            },
+            {
+              "opcode": "motion_changexby",
+              "inputs": {
+                "DX": {
+                  "type": "literal",
+                  "value": -10
+                }
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "sensing_touchingobject",
+                    "inputs": {
+                      "TOUCHINGOBJECTMENU": {
+                        "type": "literal",
+                        "value": "Wall"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_changexby",
+                      "inputs": {
+                        "DX": {
+                          "type": "literal",
+                          "value": 10
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "right arrow"
+              }
+            },
+            {
+              "opcode": "motion_changexby",
+              "inputs": {
+                "DX": {
+                  "type": "literal",
+                  "value": 10
+                }
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "sensing_touchingobject",
+                    "inputs": {
+                      "TOUCHINGOBJECTMENU": {
+                        "type": "literal",
+                        "value": "Wall"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_changexby",
+                      "inputs": {
+                        "DX": {
+                          "type": "literal",
+                          "value": -10
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "up arrow"
+              }
+            },
+            {
+              "opcode": "motion_changeyby",
+              "inputs": {
+                "DY": {
+                  "type": "literal",
+                  "value": 10
+                }
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "sensing_touchingobject",
+                    "inputs": {
+                      "TOUCHINGOBJECTMENU": {
+                        "type": "literal",
+                        "value": "Wall"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_changeyby",
+                      "inputs": {
+                        "DY": {
+                          "type": "literal",
+                          "value": -10
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenkeypressed",
+              "fields": {
+                "KEY_OPTION": "down arrow"
+              }
+            },
+            {
+              "opcode": "motion_changeyby",
+              "inputs": {
+                "DY": {
+                  "type": "literal",
+                  "value": -10
+                }
+              }
+            },
+            {
+              "opcode": "control_if",
+              "inputs": {
+                "CONDITION": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "sensing_touchingobject",
+                    "inputs": {
+                      "TOUCHINGOBJECTMENU": {
+                        "type": "literal",
+                        "value": "Wall"
+                      }
+                    }
+                  }
+                },
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_changeyby",
+                      "inputs": {
+                        "DY": {
+                          "type": "literal",
+                          "value": 10
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": [],
+      "x": 0,
+      "y": -100,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "left-right"
+    },
+    {
+      "kind": "sprite",
+      "name": "Cheese",
+      "variables": [],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Cheese",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [],
+      "procedures": [],
+      "x": 0,
+      "y": 80,
+      "direction": 90,
+      "size": 60,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "all around"
+    },
+    {
+      "kind": "sprite",
+      "name": "Wall",
+      "variables": [],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Wall",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [],
+      "procedures": [],
+      "x": 0,
+      "y": 80,
+      "direction": 90,
+      "size": 60,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "id": "catch-apples",
+  "request": "做一個貓咪接蘋果的遊戲，用左右鍵移動貓咪，蘋果從天上掉下來，接到加分，漏接扣生命",
+  "responseCharacters": 743,
+  "recognizedLines": 31,
+  "skippedLines": 0,
+  "warnings": []
+}

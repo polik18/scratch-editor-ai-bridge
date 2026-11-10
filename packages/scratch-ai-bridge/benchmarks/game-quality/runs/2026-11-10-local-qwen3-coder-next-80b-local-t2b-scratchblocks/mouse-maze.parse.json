@@ -1,0 +1,8 @@
+{
+  "id": "mouse-maze",
+  "request": "老鼠走迷宮：用上下左右鍵控制老鼠，碰到牆會退回去，找到起司就過關",
+  "responseCharacters": 627,
+  "recognizedLines": 25,
+  "skippedLines": 0,
+  "warnings": []
+}
