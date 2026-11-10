@@ -1,5 +1,7 @@
 # Scratch AI Bridge — AI Agent Handoff
 
+> **作品品質主線（2026-11-10 起）**：學生一句話生成的遊戲品質、官方素材庫、品質基準等工作，以 [game-quality-plan.md](game-quality-plan.md) 為唯一執行檔與交接入口。
+
 > **Start here.** This file is the current handoff and execution index for an AI CLI agent. Read it before changing files. Follow links only when the task needs the detailed contract. Update this file when verified project status or the next action changes.
 
 > **2026-11-02 新交接**：本檔下方是 2026-10-29 歷史快照；本次使用者要求的 Bridge 總體改善與實際執行狀態，請先讀 [總體計畫](../../../docs/BRIDGE-IMPROVEMENT-PLAN-2026-11-02.md) 與 [執行狀態](../../../docs/BRIDGE-EXECUTION-STATUS.md)。現行程式、最新測試與工作樹優先於舊結論；本提示不代表改善已實施。
