@@ -5,7 +5,12 @@ import { parseAiProjectResponse } from '../../src/core/normalizer'
 
 describe('AI response envelope', () => {
   it('keeps bare Canonical IR v1 responses backward compatible', () => {
-    expect(parseAiProjectResponse(example)).toEqual({ project: example, requirementCoverage: null, envelope: false })
+    expect(parseAiProjectResponse(example)).toEqual({
+      project: example,
+      requirementCoverage: null,
+      features: null,
+      envelope: false,
+    })
   })
 
   it('accepts requirement coverage only when evidence pointers exist', () => {
@@ -41,11 +46,29 @@ describe('AI response envelope', () => {
     ).toThrow('evidence pointer 不存在')
   })
 
+  it('accepts a compact feature list without evidence pointers', () => {
+    const envelope = {
+      format: 'scratch-ai-bridge/ai-response',
+      version: 1,
+      project: example,
+      features: ['左右移動', '收集蘋果', '得分'],
+    }
+
+    expect(parseAiProjectResponse(envelope)).toEqual({
+      project: example,
+      requirementCoverage: null,
+      features: envelope.features,
+      envelope: true,
+    })
+    expect(() => parseAiProjectResponse({ ...envelope, features: ['得分', '得分'] })).toThrow('features 不可重複')
+  })
+
   it('teaches the student generator to separate requirements from the Canonical project', () => {
     expect(createAuthoringInstruction()).toContain('根物件必須包含 format="scratch-ai-bridge/canonical-ir"')
     const instruction = createStudentProjectInstruction('Create a simple platform game')
     expect(instruction).toContain('scratch-ai-bridge/ai-response')
-    expect(instruction).toContain('requirementCoverage')
-    expect(instruction).toContain('implemented-structure')
+    expect(instruction).toContain('features')
+    expect(instruction).not.toContain('requirementCoverage')
+    expect(instruction).not.toContain('evidencePointers')
   })
 })

@@ -1,0 +1,556 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "Highway Dodge",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {
+          "name": "score",
+          "value": 0
+        },
+        {
+          "name": "speed",
+          "value": 3
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Blue Sky",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "score"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "speed"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 3
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "Player",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Convertible",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Pop",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": 0
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": -140
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "left arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": -20
+                  }
+                }
+              },
+              {
+                "opcode": "sound_play",
+                "inputs": {
+                  "SOUND_MENU": {
+                    "type": "literal",
+                    "value": "Pop"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "right arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": 20
+                  }
+                }
+              },
+              {
+                "opcode": "sound_play",
+                "inputs": {
+                  "SOUND_MENU": {
+                    "type": "literal",
+                    "value": "Pop"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": -140,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right"
+      },
+      {
+        "kind": "sprite",
+        "name": "Enemy",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Truck-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Truck-b",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Truck-c",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Toy Honk",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "looks_say",
+                "inputs": {
+                  "MESSAGE": {
+                    "type": "literal",
+                    "value": "3"
+                  }
+                }
+              },
+              {
+                "opcode": "control_wait",
+                "inputs": {
+                  "DURATION": {
+                    "type": "literal",
+                    "value": 1
+                  }
+                }
+              },
+              {
+                "opcode": "looks_say",
+                "inputs": {
+                  "MESSAGE": {
+                    "type": "literal",
+                    "value": "2"
+                  }
+                }
+              },
+              {
+                "opcode": "control_wait",
+                "inputs": {
+                  "DURATION": {
+                    "type": "literal",
+                    "value": 1
+                  }
+                }
+              },
+              {
+                "opcode": "looks_say",
+                "inputs": {
+                  "MESSAGE": {
+                    "type": "literal",
+                    "value": "1"
+                  }
+                }
+              },
+              {
+                "opcode": "control_wait",
+                "inputs": {
+                  "DURATION": {
+                    "type": "literal",
+                    "value": 1
+                  }
+                }
+              },
+              {
+                "opcode": "looks_say",
+                "inputs": {
+                  "MESSAGE": {
+                    "type": "literal",
+                    "value": "Go!"
+                  }
+                }
+              },
+              {
+                "opcode": "control_wait",
+                "inputs": {
+                  "DURATION": {
+                    "type": "literal",
+                    "value": 0.8
+                  }
+                }
+              },
+              {
+                "opcode": "looks_say",
+                "inputs": {
+                  "MESSAGE": {
+                    "type": "literal",
+                    "value": ""
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "motion_gotoxy",
+                        "inputs": {
+                          "X": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_random",
+                              "inputs": {
+                                "FROM": {
+                                  "type": "literal",
+                                  "value": -200
+                                },
+                                "TO": {
+                                  "type": "literal",
+                                  "value": 200
+                                }
+                              }
+                            }
+                          },
+                          "Y": {
+                            "type": "literal",
+                            "value": 200
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 2
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "motion_changeyby",
+                        "inputs": {
+                          "DY": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "variable_get",
+                              "inputs": {
+                                "VARIABLE": "speed"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_touchingobject",
+                              "inputs": {
+                                "TOUCHINGOBJECTMENU": {
+                                  "type": "literal",
+                                  "value": "Player"
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "sound_playuntildone",
+                                "inputs": {
+                                  "SOUND_MENU": {
+                                    "type": "literal",
+                                    "value": "Toy Honk"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_say",
+                                "inputs": {
+                                  "MESSAGE": {
+                                    "type": "literal",
+                                    "value": "Game Over!"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "control_wait",
+                                "inputs": {
+                                  "DURATION": {
+                                    "type": "literal",
+                                    "value": 1.5
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_say",
+                                "inputs": {
+                                  "MESSAGE": {
+                                    "type": "literal",
+                                    "value": ""
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "control_stop",
+                                "inputs": {
+                                  "STOP_OPTION": {
+                                    "type": "literal",
+                                    "value": "all"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_lt",
+                              "inputs": {
+                                "OPERAND1": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "motion_yposition"
+                                  }
+                                },
+                                "OPERAND2": {
+                                  "type": "literal",
+                                  "value": -180
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "data_changevariableby",
+                                "fields": {
+                                  "VARIABLE": "score"
+                                },
+                                "inputs": {
+                                  "VALUE": {
+                                    "type": "literal",
+                                    "value": 1
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "sound_play",
+                                "inputs": {
+                                  "SOUND_MENU": {
+                                    "type": "literal",
+                                    "value": "Coin"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_nextcostume"
+                              },
+                              {
+                                "opcode": "control_if",
+                                "inputs": {
+                                  "CONDITION": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "operator_gt",
+                                      "inputs": {
+                                        "OPERAND1": {
+                                          "type": "variable",
+                                          "name": "score"
+                                        },
+                                        "OPERAND2": {
+                                          "type": "literal",
+                                          "value": 5
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "SUBSTACK": {
+                                    "type": "stack",
+                                    "blocks": [
+                                      {
+                                        "opcode": "data_changevariableby",
+                                        "fields": {
+                                          "VARIABLE": "speed"
+                                        },
+                                        "inputs": {
+                                          "VALUE": {
+                                            "type": "literal",
+                                            "value": 0.5
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.03
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 200,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      }
+    ],
+    "broadcasts": []
+  },
+  "features": [
+    "左右鍵換車道",
+    "敵車從上往下移動",
+    "碰撞失敗",
+    "閃過敵車得分",
+    "得分提升速度",
+    "倒數計時開始",
+    "重玩需手動重啟"
+  ]
+}

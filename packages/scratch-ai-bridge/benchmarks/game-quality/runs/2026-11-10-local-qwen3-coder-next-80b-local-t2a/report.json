@@ -1,0 +1,164 @@
+{
+  "results": [
+    {
+      "id": "catch-apples",
+      "status": "pipeline-failed",
+      "failedStage": "semantic",
+      "failure": "[{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/0/scripts/0/blocks/2/inputs/COSTUME\",\"message\":\"缺少 COSTUME input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/sprites/0/scripts/0/blocks/2/fields/COSTUME\",\"message\":\"looks_switchcostumeto 沒有 COSTUME field\"}]",
+      "promptCharacters": 5864,
+      "responseCharacters": 24091,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "semantic: [{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/0/scripts/0/blocks/2/inputs/COSTUME\",\"message\":\"缺少 COSTUME input\"},{\"severity\":\"error\",\"code\":\"unkn"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "space-dodge",
+      "status": "pipeline-failed",
+      "failedStage": "semantic",
+      "failure": "[{\"severity\":\"error\",\"code\":\"hat-not-top-level\",\"path\":\"/sprites/1/scripts/0/blocks/1/inputs/SUBSTACK/blocks/1/inputs/SUBSTACK/blocks/3\",\"message\":\"事件積木 event_whenflagclicked 只能放在 script 開頭\"},{\"severity\":\"error\",\"code\":\"boolean-input-type\",\"path\":\"/sprites/1/scripts/0/blocks/1/inputs/SUBSTACK/blocks/2/inputs/SUBSTACK/blocks/2/inputs/SUBSTACK/blocks/0/inputs/CONDITION\",\"message\":\"CONDITION 必須使用布林 reporter\"}]",
+      "promptCharacters": 5950,
+      "responseCharacters": 17139,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "semantic: [{\"severity\":\"error\",\"code\":\"hat-not-top-level\",\"path\":\"/sprites/1/scripts/0/blocks/1/inputs/SUBSTACK/blocks/1/inputs/SUBSTACK/blocks/3\",\"message\":\"事件積木 event_w"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "space-shooter",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 11071 (line 354 column 37)",
+      "promptCharacters": 5897,
+      "responseCharacters": 29265,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 11071 (line 354 column 37)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "mouse-maze",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 4090 (line 1 column 4091)",
+      "promptCharacters": 5913,
+      "responseCharacters": 5693,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 4090 (line 1 column 4091)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "jump-collect",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 11926 (line 401 column 9)",
+      "promptCharacters": 5907,
+      "responseCharacters": 20433,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 11926 (line 401 column 9)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "pop-balloons",
+      "status": "pipeline-failed",
+      "failedStage": "semantic",
+      "failure": "[{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/10/inputs/MESSAGE/block/inputs/NUM1\",\"message\":\"缺少 NUM1 input\"},{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/10/inputs/MESSAGE/block/inputs/NUM2\",\"message\":\"缺少 NUM2 input\"},{\"severity\":\"error\",\"code\":\"unknown-input\",\"path\":\"/stage/scripts/0/blocks/10/inputs/MESSAGE/block/inputs/OPERAND1\",\"message\":\"operator_add 沒有 OPERAND1 input\"},{\"severity\":\"error\",\"code\":\"unknown-input\",\"path\":\"/stage/scripts/0/blocks/10/inputs/MESSAGE/block/inputs/OPERAND2\",\"message\":\"operator_add 沒有 OPERAND2 input\"},{",
+      "promptCharacters": 5928,
+      "responseCharacters": 20164,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "semantic: [{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/10/inputs/MESSAGE/block/inputs/NUM1\",\"message\":\"缺少 NUM1 input\"},{\"severity\":\"error\","
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "two-player-pong",
+      "status": "pipeline-failed",
+      "failedStage": "schema",
+      "failure": "[{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'format'\",\"params\":{\"missingProperty\":\"format\"}},{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'version'\",\"params\":{\"missingProperty\":\"version\"}},{\"instancePath\":\"/sprites/2/scripts/1/blocks/2\",\"schemaPath\":\"#/additionalProperties\",\"keyword\":\"additionalProperties\",\"message\":\"must NOT have additional properties\",\"params\":{\"additionalProperty\":\"SUBSTACK\"}}]",
+      "promptCharacters": 5989,
+      "responseCharacters": 32923,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "schema: [{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'format'\",\"params\":{\"missingProperty\":\"format\"}},{\"ins"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "deep-sea-rescue",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 24825 (line 778 column 3)",
+      "promptCharacters": 5988,
+      "responseCharacters": 28802,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 24825 (line 778 column 3)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "car-racing",
+      "status": "pipeline-failed",
+      "failedStage": "semantic",
+      "failure": "[{\"severity\":\"error\",\"code\":\"unknown-opcode\",\"path\":\"/sprites/1/scripts/2/blocks/1/inputs/SUBSTACK/blocks/0/inputs/DY/block/opcode\",\"message\":\"不支援 opcode variable_get\"},{\"severity\":\"error\",\"code\":\"missing-field\",\"path\":\"/sprites/1/scripts/2/blocks/1/inputs/SUBSTACK/blocks/1/inputs/SUBSTACK/blocks/4/fields/STOP_OPTION\",\"message\":\"缺少 STOP_OPTION field\"},{\"severity\":\"error\",\"code\":\"unknown-input\",\"path\":\"/sprites/1/scripts/2/blocks/1/inputs/SUBSTACK/blocks/1/inputs/SUBSTACK/blocks/4/inputs/STOP_OPTION\",\"message\":\"control_stop 沒有 STOP_OPTION input\"}]",
+      "promptCharacters": 5892,
+      "responseCharacters": 16991,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "semantic: [{\"severity\":\"error\",\"code\":\"unknown-opcode\",\"path\":\"/sprites/1/scripts/2/blocks/1/inputs/SUBSTACK/blocks/0/inputs/DY/block/opcode\",\"message\":\"不支援 opcode variab"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "whack-a-mole",
+      "status": "pipeline-failed",
+      "failedStage": "semantic",
+      "failure": "[{\"severity\":\"error\",\"code\":\"target-not-supported\",\"path\":\"/stage/scripts/0/blocks/4\",\"message\":\"looks_switchcostumeto 不可用於 stage\"},{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/4/inputs/COSTUME\",\"message\":\"缺少 COSTUME input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/stage/scripts/0/blocks/4/fields/COSTUME\",\"message\":\"looks_switchcostumeto 沒有 COSTUME field\"},{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/0/scripts/0/blocks/2/inputs/COSTUME\",\"message\":\"缺少 COSTUME input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/sprites/0/scripts/0/b",
+      "promptCharacters": 5878,
+      "responseCharacters": 10988,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "semantic: [{\"severity\":\"error\",\"code\":\"target-not-supported\",\"path\":\"/stage/scripts/0/blocks/4\",\"message\":\"looks_switchcostumeto 不可用於 stage\"},{\"severity\":\"error\",\"code\":\""
+        }
+      ],
+      "score": 0
+    }
+  ]
+}

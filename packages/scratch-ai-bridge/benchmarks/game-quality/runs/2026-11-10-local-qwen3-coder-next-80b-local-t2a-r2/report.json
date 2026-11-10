@@ -1,0 +1,164 @@
+{
+  "results": [
+    {
+      "id": "catch-apples",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 3939 (line 1 column 3940)",
+      "promptCharacters": 5948,
+      "responseCharacters": 4897,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 3939 (line 1 column 3940)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "space-dodge",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 2304 (line 1 column 2305)",
+      "promptCharacters": 5969,
+      "responseCharacters": 4695,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected double-quoted property name in JSON at position 2304 (line 1 column 2305)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "space-shooter",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 2726 (line 1 column 2727)",
+      "promptCharacters": 5940,
+      "responseCharacters": 6457,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 2726 (line 1 column 2727)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "mouse-maze",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 1267 (line 1 column 1268)",
+      "promptCharacters": 5934,
+      "responseCharacters": 5252,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 1267 (line 1 column 1268)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "jump-collect",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 1956 (line 1 column 1957)",
+      "promptCharacters": 5925,
+      "responseCharacters": 5469,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 1956 (line 1 column 1957)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "pop-balloons",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 5536 (line 1 column 5537)",
+      "promptCharacters": 5968,
+      "responseCharacters": 6474,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 5536 (line 1 column 5537)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "two-player-pong",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 3329 (line 1 column 3330)",
+      "promptCharacters": 5986,
+      "responseCharacters": 6649,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 3329 (line 1 column 3330)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "deep-sea-rescue",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 3533 (line 1 column 3534)",
+      "promptCharacters": 5966,
+      "responseCharacters": 6819,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 3533 (line 1 column 3534)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "car-racing",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 3622 (line 1 column 3623)",
+      "promptCharacters": 5960,
+      "responseCharacters": 7672,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or ']' after array element in JSON at position 3622 (line 1 column 3623)"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "whack-a-mole",
+      "status": "pipeline-failed",
+      "failedStage": "parse",
+      "failure": "找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 2516 (line 1 column 2517)",
+      "promptCharacters": 5948,
+      "responseCharacters": 8461,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "parse: 找不到完整的 Scratch AI Bridge Canonical IR JSON：Expected ',' or '}' after property value in JSON at position 2516 (line 1 column 2517)"
+        }
+      ],
+      "score": 0
+    }
+  ]
+}

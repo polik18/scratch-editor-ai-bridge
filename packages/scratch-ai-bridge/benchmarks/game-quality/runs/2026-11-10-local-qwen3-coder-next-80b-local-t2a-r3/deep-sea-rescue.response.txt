@@ -1,0 +1,607 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "Deep Sea Rescue",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {
+          "name": "oxygen",
+          "value": 100
+        },
+        {
+          "name": "score",
+          "value": 0
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Underwater 2",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "oxygen"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 100
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "score"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "event_broadcast",
+              "fields": {
+                "BROADCAST_INPUT": "start"
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "Player",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Fish-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Fish-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Collect",
+            "dataFormat": "wav"
+          },
+          {
+            "name": "Bubbles",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": 0
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": -150
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "left arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": -15
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "right arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": 15
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": -150,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right"
+      },
+      {
+        "kind": "sprite",
+        "name": "OxygenBubble",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Bubble",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Collect",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "operator_random",
+                      "inputs": {
+                        "FROM": {
+                          "type": "literal",
+                          "value": -220
+                        },
+                        "TO": {
+                          "type": "literal",
+                          "value": 220
+                        }
+                      }
+                    }
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": 180
+                  }
+                }
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "motion_changeyby",
+                        "inputs": {
+                          "DY": {
+                            "type": "literal",
+                            "value": -4
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_touchingobject",
+                              "inputs": {
+                                "TOUCHINGOBJECTMENU": {
+                                  "type": "literal",
+                                  "value": "Player"
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "data_changevariableby",
+                                "fields": {
+                                  "VARIABLE": "oxygen"
+                                },
+                                "inputs": {
+                                  "VALUE": {
+                                    "type": "literal",
+                                    "value": 20
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "data_changevariableby",
+                                "fields": {
+                                  "VARIABLE": "score"
+                                },
+                                "inputs": {
+                                  "VALUE": {
+                                    "type": "literal",
+                                    "value": 10
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "sound_playuntildone",
+                                "inputs": {
+                                  "SOUND_MENU": {
+                                    "type": "literal",
+                                    "value": "Collect"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "motion_gotoxy",
+                                "inputs": {
+                                  "X": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "operator_random",
+                                      "inputs": {
+                                        "FROM": {
+                                          "type": "literal",
+                                          "value": -220
+                                        },
+                                        "TO": {
+                                          "type": "literal",
+                                          "value": 220
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "Y": {
+                                    "type": "literal",
+                                    "value": 180
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_lt",
+                              "inputs": {
+                                "OPERAND1": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "motion_yposition"
+                                  }
+                                },
+                                "OPERAND2": {
+                                  "type": "literal",
+                                  "value": -180
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_gotoxy",
+                                "inputs": {
+                                  "X": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "operator_random",
+                                      "inputs": {
+                                        "FROM": {
+                                          "type": "literal",
+                                          "value": -220
+                                        },
+                                        "TO": {
+                                          "type": "literal",
+                                          "value": 220
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "Y": {
+                                    "type": "literal",
+                                    "value": 180
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.05
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 180,
+        "direction": 90,
+        "size": 70,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "Jellyfish",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Jellyfish-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Jellyfish-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Lose",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "operator_random",
+                      "inputs": {
+                        "FROM": {
+                          "type": "literal",
+                          "value": -200
+                        },
+                        "TO": {
+                          "type": "literal",
+                          "value": 200
+                        }
+                      }
+                    }
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": 180
+                  }
+                }
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "motion_changeyby",
+                        "inputs": {
+                          "DY": {
+                            "type": "literal",
+                            "value": -6
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "looks_nextcostume"
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_touchingobject",
+                              "inputs": {
+                                "TOUCHINGOBJECTMENU": {
+                                  "type": "literal",
+                                  "value": "Player"
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "sound_playuntildone",
+                                "inputs": {
+                                  "SOUND_MENU": {
+                                    "type": "literal",
+                                    "value": "Lose"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_say",
+                                "inputs": {
+                                  "MESSAGE": {
+                                    "type": "literal",
+                                    "value": "Game Over!"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "event_broadcast",
+                                "fields": {
+                                  "BROADCAST_INPUT": "gameover"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_lt",
+                              "inputs": {
+                                "OPERAND1": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "motion_yposition"
+                                  }
+                                },
+                                "OPERAND2": {
+                                  "type": "literal",
+                                  "value": -180
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_gotoxy",
+                                "inputs": {
+                                  "X": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "operator_random",
+                                      "inputs": {
+                                        "FROM": {
+                                          "type": "literal",
+                                          "value": -200
+                                        },
+                                        "TO": {
+                                          "type": "literal",
+                                          "value": 200
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "Y": {
+                                    "type": "literal",
+                                    "value": 180
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.05
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 180,
+        "direction": 90,
+        "size": 90,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      }
+    ],
+    "broadcasts": [
+      {
+        "name": "start"
+      },
+      {
+        "name": "gameover"
+      }
+    ]
+  },
+  "features": [
+    "方向鍵左右移動小魚",
+    "收集氧氣泡泡恢復氧氣",
+    "躲開下落水母避免觸碰",
+    "氧氣歸零自動失敗",
+    "得分累計與遊戲重啟",
+    "角色造型切換動畫"
+  ]
+}

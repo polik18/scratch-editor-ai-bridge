@@ -1,0 +1,32 @@
+這是「依設計 brief 製作遊戲」階段。這份訊息可能在新的 AI 對話中使用；以下原始需求和已確認 brief 是完整設計依據，不需要讀取前一段聊天紀錄。
+
+原始作品需求：
+雙人乒乓球：左邊玩家用 W/S，右邊玩家用上下鍵，球碰到球拍反彈，漏球對方得分
+
+已確認遊戲設計 brief：
+尚未提供。請先自行完成一份精簡設計：確定玩家角色與目標、核心循環（操作→挑戰→回饋）、至少一種有趣障礙、逐步進展/獎勵、成功/失敗與快速重玩；採用合理預設並在 features 中列出實際完成的核心玩法，不要退化成只有移動和說話的空殼示範。
+
+指定類型：請依已確認 brief 選擇最合適的類型，不要套用固定遊戲模板。
+
+製作要求：
+- 保留原始需求及 brief 中每一項核心玩法；開始前先在內部建立「需求→角色/狀態/事件/腳本」映射，並用有意義的變化、回饋和重玩動機完成核心循環。
+- 至少規劃初始化/reset、玩家主要操作、挑戰/碰撞或選擇、進展/獎勵、成功/失敗回饋。依遊戲類型選擇所需架構，不要硬套平台遊戲模板。
+- 若有必要需求超過工具能力，保留最接近的核心體驗；不可靜默省略，也不可杜撰 opcode。
+- 每個角色選外型符合用途的官方素材，背景配合主題；在得分、碰撞、勝負等時刻加入官方音效，會動的角色用造型切換做動畫。
+- 產生前檢查腳本能否形成完整玩法，尤其是開始狀態、可觀察回饋、勝敗條件與重開流程；最後只輸出規定的完整 JSON。
+
+完整可玩範例（官方素材名稱、得分、碰撞、音效與造型動畫；請仿照結構，不要照抄遊戲內容）：
+{"format":"scratch-ai-bridge/canonical-ir","version":1,"name":"Apple Catcher","stage":{"kind":"stage","name":"Stage","variables":[{"name":"score","value":0}],"lists":[],"costumes":[{"name":"Forest","dataFormat":"svg"}],"sounds":[],"scripts":[{"blocks":[{"opcode":"event_whenflagclicked"},{"opcode":"data_setvariableto","fields":{"VARIABLE":"score"},"inputs":{"VALUE":{"type":"literal","value":0}}}]}],"procedures":[]},"sprites":[{"kind":"sprite","name":"Player","variables":[],"lists":[],"costumes":[{"name":"Cat-a","dataFormat":"svg"},{"name":"Cat-b","dataFormat":"svg"}],"sounds":[{"name":"Pop","dataFormat":"wav"}],"scripts":[{"blocks":[{"opcode":"event_whenflagclicked"},{"opcode":"motion_gotoxy","inputs":{"X":{"type":"literal","value":0},"Y":{"type":"literal","value":-120}}},{"opcode":"looks_show"}]},{"blocks":[{"opcode":"event_whenkeypressed","fields":{"KEY_OPTION":"left arrow"}},{"opcode":"motion_changexby","inputs":{"DX":{"type":"literal","value":-10}}},{"opcode":"looks_nextcostume"},{"opcode":"sound_play","inputs":{"SOUND_MENU":{"type":"literal","value":"Pop"}}}]},{"blocks":[{"opcode":"event_whenkeypressed","fields":{"KEY_OPTION":"right arrow"}},{"opcode":"motion_changexby","inputs":{"DX":{"type":"literal","value":10}}},{"opcode":"looks_nextcostume"},{"opcode":"sound_play","inputs":{"SOUND_MENU":{"type":"literal","value":"Pop"}}}]}],"procedures":[],"x":0,"y":-120,"direction":90,"size":100,"visible":true,"draggable":false,"rotationStyle":"left-right"},{"kind":"sprite","name":"Apple","variables":[],"lists":[],"costumes":[{"name":"Apple","dataFormat":"svg"}],"sounds":[{"name":"Chomp","dataFormat":"wav"}],"scripts":[{"blocks":[{"opcode":"event_whenflagclicked"},{"opcode":"motion_gotoxy","inputs":{"X":{"type":"block","block":{"opcode":"operator_random","inputs":{"FROM":{"type":"literal","value":-210},"TO":{"type":"literal","value":210}}}},"Y":{"type":"literal","value":150}}},{"opcode":"control_forever","inputs":{"SUBSTACK":{"type":"stack","blocks":[{"opcode":"motion_changeyby","inputs":{"DY":{"type":"literal","value":-5}}},{"opcode":"control_if","inputs":{"CONDITION":{"type":"block","block":{"opcode":"sensing_touchingobject","inputs":{"TOUCHINGOBJECTMENU":{"type":"literal","value":"Player"}}}},"SUBSTACK":{"type":"stack","blocks":[{"opcode":"data_changevariableby","fields":{"VARIABLE":"score"},"inputs":{"VALUE":{"type":"literal","value":1}}},{"opcode":"sound_playuntildone","inputs":{"SOUND_MENU":{"type":"literal","value":"Chomp"}}},{"opcode":"control_if","inputs":{"CONDITION":{"type":"block","block":{"opcode":"operator_gt","inputs":{"OPERAND1":{"type":"variable","name":"score"},"OPERAND2":{"type":"literal","value":4}}}},"SUBSTACK":{"type":"stack","blocks":[{"opcode":"looks_say","inputs":{"MESSAGE":{"type":"literal","value":"You win!"}}}]}}},{"opcode":"motion_gotoxy","inputs":{"X":{"type":"block","block":{"opcode":"operator_random","inputs":{"FROM":{"type":"literal","value":-210},"TO":{"type":"literal","value":210}}}},"Y":{"type":"literal","value":150}}}]}}},{"opcode":"control_if","inputs":{"CONDITION":{"type":"block","block":{"opcode":"operator_lt","inputs":{"OPERAND1":{"type":"block","block":{"opcode":"motion_yposition"}},"OPERAND2":{"type":"literal","value":-170}}}},"SUBSTACK":{"type":"stack","blocks":[{"opcode":"motion_gotoxy","inputs":{"X":{"type":"block","block":{"opcode":"operator_random","inputs":{"FROM":{"type":"literal","value":-210},"TO":{"type":"literal","value":210}}}},"Y":{"type":"literal","value":150}}}]}}},{"opcode":"control_wait","inputs":{"DURATION":{"type":"literal","value":0.03}}}]}}}]}],"procedures":[],"x":0,"y":150,"direction":90,"size":80,"visible":true,"draggable":false,"rotationStyle":"all around"}],"broadcasts":[]}
+
+只輸出一個 scratch-ai-bridge/ai-response v1 JSON，不要 Markdown、說明。
+Canonical IR 根物件含 format="scratch-ai-bridge/canonical-ir"、version=1、name、stage、sprites、broadcasts；stage/sprite 欄位照範例，script 一律是 {"blocks":[...]}。小型作品：Stage+最多 3 sprite，每個 target ≤3 scripts。
+input 只能是 literal、variable、broadcast、block 或 stack；fields 填純量。不要輸出 Scratch id、parent、next、shadow id、自製素材或未列 opcode。
+造型、背景、音效只用官方名稱；costume/sound 含 name、dataFormat。布林條件用布林 reporter；rotationStyle 只能是 "all around"、"left-right"、"don't rotate"。
+角色/造型：Avery Walking(Avery Walking-a/Avery Walking-b)、Pico Walking(Pico Walk1/Pico Walk2)
+背景：Room 1、Bedroom 1
+音效：Coin、Collect、Pop、Jump
+常用 opcode（只能從這份清單選；參數依範例仿寫）：
+event_whenflagclicked,event_whenkeypressed,event_broadcast,control_forever,control_if,control_repeat,control_wait,motion_movesteps,motion_changexby,motion_changeyby,motion_gotoxy,motion_yposition,looks_say,looks_nextcostume,sound_play,sound_playuntildone,data_setvariableto,data_changevariableby,operator_random,operator_gt,operator_lt,sensing_touchingobject,sensing_keypressed,sensing_mousedown,sensing_mousex,sensing_mousey
+格式對照：script 禁 next；gotoxy X/Y、change x/y 用 DX/DY；sound 的 SOUND_MENU→inputs literal；data 的 VARIABLE→field、VALUE→input；touching menu→input literal；event_broadcast 的 BROADCAST_INPUT→broadcast、接收廣播的 OPTION→field；broadcasts=[{"name":"..."}]；變數值→input variable，不可用 variable opcode。括號逗號要配對，輸出完整 JSON。
+features 是你實際嘗試完成的核心玩法短清單，例如 ["左右移動","收集蘋果","得分"]；不要輸出 evidence、JSON Pointer 或積木路徑。
+回覆格式：{"format":"scratch-ai-bridge/ai-response","version":1,"project":{...Canonical IR...},"features":["..."]}

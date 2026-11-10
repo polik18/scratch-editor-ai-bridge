@@ -1,0 +1,906 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "Space Defender",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {
+          "name": "score",
+          "value": 0
+        },
+        {
+          "name": "lives",
+          "value": 3
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Space",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "score"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "lives"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 3
+                }
+              }
+            },
+            {
+              "opcode": "looks_say",
+              "inputs": {
+                "MESSAGE": {
+                  "type": "literal",
+                  "value": "Press space to start!"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "Player",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Gobo-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Gobo-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Laser1",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": 0
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": -140
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "left arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": -10
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "right arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": 10
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "space"
+                }
+              },
+              {
+                "opcode": "sound_play",
+                "inputs": {
+                  "SOUND_MENU": {
+                    "type": "literal",
+                    "value": "Laser1"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": -140,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right"
+      },
+      {
+        "kind": "sprite",
+        "name": "Alien",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Nano-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Nano-b",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Nano-c",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Coin",
+            "dataFormat": "wav"
+          },
+          {
+            "name": "Pew",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "motion_gotoxy",
+                        "inputs": {
+                          "X": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_random",
+                              "inputs": {
+                                "FROM": {
+                                  "type": "literal",
+                                  "value": -220
+                                },
+                                "TO": {
+                                  "type": "literal",
+                                  "value": 220
+                                }
+                              }
+                            }
+                          },
+                          "Y": {
+                            "type": "literal",
+                            "value": 180
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_repeat",
+                        "inputs": {
+                          "TIMES": {
+                            "type": "literal",
+                            "value": 36
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_changeyby",
+                                "inputs": {
+                                  "DY": {
+                                    "type": "literal",
+                                    "value": -5
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_nextcostume"
+                              },
+                              {
+                                "opcode": "control_if",
+                                "inputs": {
+                                  "CONDITION": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "sensing_touchingobject",
+                                      "inputs": {
+                                        "TOUCHINGOBJECTMENU": {
+                                          "type": "literal",
+                                          "value": "Player"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "SUBSTACK": {
+                                    "type": "stack",
+                                    "blocks": [
+                                      {
+                                        "opcode": "data_changevariableby",
+                                        "fields": {
+                                          "VARIABLE": "lives"
+                                        },
+                                        "inputs": {
+                                          "VALUE": {
+                                            "type": "literal",
+                                            "value": -1
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "opcode": "sound_play",
+                                        "inputs": {
+                                          "SOUND_MENU": {
+                                            "type": "literal",
+                                            "value": "Pew"
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "opcode": "looks_say",
+                                        "inputs": {
+                                          "MESSAGE": {
+                                            "type": "literal",
+                                            "value": "Ouch!"
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "opcode": "control_wait",
+                                        "inputs": {
+                                          "DURATION": {
+                                            "type": "literal",
+                                            "value": 1
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "opcode": "looks_say",
+                                        "inputs": {
+                                          "MESSAGE": {
+                                            "type": "literal",
+                                            "value": ""
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "opcode": "control_stop",
+                                        "inputs": {
+                                          "STOP_OPTION": {
+                                            "type": "literal",
+                                            "value": "this script"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "Cbranches": [
+                                    {
+                                      "type": "branch",
+                                      "SUBSTACK": {
+                                        "type": "stack",
+                                        "blocks": []
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "opcode": "control_if",
+                                "inputs": {
+                                  "CONDITION": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "sensing_touchingobject",
+                                      "inputs": {
+                                        "TOUCHINGOBJECTMENU": {
+                                          "type": "literal",
+                                          "value": "Laser"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "SUBSTACK": {
+                                    "type": "stack",
+                                    "blocks": [
+                                      {
+                                        "opcode": "data_changevariableby",
+                                        "fields": {
+                                          "VARIABLE": "score"
+                                        },
+                                        "inputs": {
+                                          "VALUE": {
+                                            "type": "literal",
+                                            "value": 10
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "opcode": "sound_play",
+                                        "inputs": {
+                                          "SOUND_MENU": {
+                                            "type": "literal",
+                                            "value": "Coin"
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "opcode": "control_stop",
+                                        "inputs": {
+                                          "STOP_OPTION": {
+                                            "type": "literal",
+                                            "value": "this script"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "Cbranches": [
+                                    {
+                                      "type": "branch",
+                                      "SUBSTACK": {
+                                        "type": "stack",
+                                        "blocks": []
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              {
+                                "opcode": "control_wait",
+                                "inputs": {
+                                  "DURATION": {
+                                    "type": "literal",
+                                    "value": 0.05
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_lt",
+                              "inputs": {
+                                "OPERAND1": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "motion_yposition"
+                                  }
+                                },
+                                "OPERAND2": {
+                                  "type": "literal",
+                                  "value": -160
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "data_changevariableby",
+                                "fields": {
+                                  "VARIABLE": "lives"
+                                },
+                                "inputs": {
+                                  "VALUE": {
+                                    "type": "literal",
+                                    "value": -1
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "sound_play",
+                                "inputs": {
+                                  "SOUND_MENU": {
+                                    "type": "literal",
+                                    "value": "Pew"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_say",
+                                "inputs": {
+                                  "MESSAGE": {
+                                    "type": "literal",
+                                    "value": "Missed!"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "control_wait",
+                                "inputs": {
+                                  "DURATION": {
+                                    "type": "literal",
+                                    "value": 1
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_say",
+                                "inputs": {
+                                  "MESSAGE": {
+                                    "type": "literal",
+                                    "value": ""
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 180,
+        "direction": 90,
+        "size": 90,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "Laser",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Pico-a",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "looks_hide"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "space"
+                }
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "motion_xposition"
+                    }
+                  },
+                  "Y": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "motion_yposition"
+                    }
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              },
+              {
+                "opcode": "control_repeat",
+                "inputs": {
+                  "TIMES": {
+                    "type": "literal",
+                    "value": 30
+                  },
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "motion_changeyby",
+                        "inputs": {
+                          "DY": {
+                            "type": "literal",
+                            "value": 15
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.03
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "opcode": "looks_hide"
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": -140,
+        "direction": 90,
+        "size": 50,
+        "visible": false,
+        "draggable": false,
+        "rotationStyle": "don't rotate"
+      },
+      {
+        "kind": "sprite",
+        "name": "ScoreDisplay",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Pico-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": -180
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": 160
+                  }
+                }
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "looks_say",
+                        "inputs": {
+                          "MESSAGE": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_add",
+                              "inputs": {
+                                "OPERAND1": {
+                                  "type": "literal",
+                                  "value": "Score: "
+                                },
+                                "OPERAND2": {
+                                  "type": "variable",
+                                  "name": "score"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.1
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": -180,
+        "y": 160,
+        "direction": 90,
+        "size": 70,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "don't rotate"
+      },
+      {
+        "kind": "sprite",
+        "name": "LivesDisplay",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Pico-c",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": 100
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": 160
+                  }
+                }
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "looks_say",
+                        "inputs": {
+                          "MESSAGE": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_add",
+                              "inputs": {
+                                "OPERAND1": {
+                                  "type": "literal",
+                                  "value": "Lives: "
+                                },
+                                "OPERAND2": {
+                                  "type": "variable",
+                                  "name": "lives"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.1
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 100,
+        "y": 160,
+        "direction": 90,
+        "size": 70,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "don't rotate"
+      },
+      {
+        "kind": "sprite",
+        "name": "GameStatus",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Pico-d",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": 0
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": 0
+                  }
+                }
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_equals",
+                              "inputs": {
+                                "OPERAND1": {
+                                  "type": "variable",
+                                  "name": "lives"
+                                },
+                                "OPERAND2": {
+                                  "type": "literal",
+                                  "value": 0
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "looks_say",
+                                "inputs": {
+                                  "MESSAGE": {
+                                    "type": "literal",
+                                    "value": "Game Over! Press flag to restart"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "control_stop",
+                                "inputs": {
+                                  "STOP_OPTION": {
+                                    "type": "literal",
+                                    "value": "all"
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "don't rotate"
+      }
+    ],
+    "broadcasts": []
+  },
+  "features": [
+    "左右鍵移動",
+    "空白鍵發射雷射",
+    "擊中外星人得分",
+    "外星人觸碰玩家扣血並結束該波",
+    "外星人漏掉扣血",
+    "血量歸零遊戲結束",
+    "得分與血量即時顯示",
+    "重開遊戲"
+  ]
+}

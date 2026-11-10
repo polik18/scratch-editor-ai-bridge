@@ -1,0 +1,256 @@
+{
+  "results": [
+    {
+      "id": "catch-apples",
+      "status": "pipeline-failed",
+      "failedStage": "semantic",
+      "failure": "[{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/3/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/stage/scripts/0/blocks/3/fields/BROADCAST_INPUT\",\"message\":\"event_broadcast 沒有 BROADCAST_INPUT field\"},{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/1/scripts/1/blocks/0/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/sprites/1/scripts/1/blocks/0/fields/BROADCAST_INPUT\",\"message\":\"event_broadcast 沒有 BROADCAST_INPUT field\"},{\"s",
+      "promptCharacters": 5901,
+      "responseCharacters": 25811,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "semantic: [{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/3/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\","
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "space-dodge",
+      "status": "pipeline-failed",
+      "failedStage": "schema",
+      "failure": "[{\"instancePath\":\"/sprites/1/scripts/1/blocks/1/inputs/SUBSTACK\",\"schemaPath\":\"#/oneOf/0/required\",\"keyword\":\"required\",\"message\":\"must have required property 'value'\",\"params\":{\"missingProperty\":\"value\"}},{\"instancePath\":\"/sprites/1/scripts/1/blocks/1/inputs/SUBSTACK\",\"schemaPath\":\"#/oneOf/0/additionalProperties\",\"keyword\":\"additionalProperties\",\"message\":\"must NOT have additional properties\",\"params\":{\"additionalProperty\":\"blocks\"}},{\"instancePath\":\"/sprites/1/scripts/1/blocks/1/inputs/SUBSTACK/type\",\"schemaPath\":\"#/oneOf/0/properties/type/const\",\"keyword\":\"const\",\"message\":\"must be equal to",
+      "promptCharacters": 5922,
+      "responseCharacters": 13865,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "schema: [{\"instancePath\":\"/sprites/1/scripts/1/blocks/1/inputs/SUBSTACK\",\"schemaPath\":\"#/oneOf/0/required\",\"keyword\":\"required\",\"message\":\"must have required property '"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "space-shooter",
+      "status": "pipeline-failed",
+      "failedStage": "schema",
+      "failure": "[{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'format'\",\"params\":{\"missingProperty\":\"format\"}},{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'version'\",\"params\":{\"missingProperty\":\"version\"}}]",
+      "promptCharacters": 5893,
+      "responseCharacters": 18133,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "schema: [{\"instancePath\":\"\",\"schemaPath\":\"#/required\",\"keyword\":\"required\",\"message\":\"must have required property 'format'\",\"params\":{\"missingProperty\":\"format\"}},{\"ins"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "mouse-maze",
+      "status": "pipeline-failed",
+      "failedStage": "semantic",
+      "failure": "[{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/3/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/stage/scripts/0/blocks/3/fields/BROADCAST_INPUT\",\"message\":\"event_broadcast 沒有 BROADCAST_INPUT field\"},{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/1/scripts/1/blocks/0/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/sprites/1/scripts/1/blocks/0/fields/BROADCAST_INPUT\",\"message\":\"event_broadcast 沒有 BROADCAST_INPUT field\"},{\"s",
+      "promptCharacters": 5887,
+      "responseCharacters": 9895,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "semantic: [{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/3/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\","
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "jump-collect",
+      "status": "pipeline-failed",
+      "failedStage": "semantic",
+      "failure": "[{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/0/scripts/3/blocks/1/inputs/CONDITION/block/inputs/KEY_OPTION\",\"message\":\"缺少 KEY_OPTION input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/sprites/0/scripts/3/blocks/1/inputs/CONDITION/block/fields/KEY_OPTION\",\"message\":\"sensing_keypressed 沒有 KEY_OPTION field\"},{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/2/scripts/1/blocks/0/inputs/SUBSTACK/blocks/1/inputs/SUBSTACK/blocks/2/inputs/SUBSTACK/blocks/1/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":",
+      "promptCharacters": 5878,
+      "responseCharacters": 22714,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "semantic: [{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/0/scripts/3/blocks/1/inputs/CONDITION/block/inputs/KEY_OPTION\",\"message\":\"缺少 KEY_OPTION input\"},{\"s"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "pop-balloons",
+      "status": "pipeline-failed",
+      "failedStage": "schema",
+      "failure": "[{\"instancePath\":\"\",\"schemaPath\":\"#/additionalProperties\",\"keyword\":\"additionalProperties\",\"message\":\"must NOT have additional properties\",\"params\":{\"additionalProperty\":\"procedures\"}}]",
+      "promptCharacters": 5921,
+      "responseCharacters": 14577,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "schema: [{\"instancePath\":\"\",\"schemaPath\":\"#/additionalProperties\",\"keyword\":\"additionalProperties\",\"message\":\"must NOT have additional properties\",\"params\":{\"additional"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "two-player-pong",
+      "status": "scored",
+      "promptCharacters": 5939,
+      "responseCharacters": 22688,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": true
+        },
+        {
+          "name": "runs",
+          "pass": true
+        },
+        {
+          "name": "moves-on-its-own",
+          "pass": false
+        },
+        {
+          "name": "key w y+",
+          "pass": true,
+          "detail": "LeftPaddle Δ15"
+        },
+        {
+          "name": "key s y-",
+          "pass": true,
+          "detail": "LeftPaddle Δ15"
+        },
+        {
+          "name": "key ArrowUp y+",
+          "pass": true,
+          "detail": "RightPaddle Δ15"
+        },
+        {
+          "name": "key ArrowDown y-",
+          "pass": true,
+          "detail": "RightPaddle Δ15"
+        },
+        {
+          "name": "state-changes-in-play",
+          "pass": false,
+          "detail": "no variable changed"
+        },
+        {
+          "name": "library-art",
+          "pass": true,
+          "detail": "6 library, 0 placeholder, 0 model SVG replaced"
+        },
+        {
+          "name": "plays-sound",
+          "pass": true,
+          "detail": "6 sound blocks, 0 silent"
+        },
+        {
+          "name": "animated-sprite",
+          "pass": true,
+          "detail": "2 animated"
+        }
+      ],
+      "score": 0.8181818181818182,
+      "assets": {
+        "libraryCostumes": 6,
+        "addedAnimationCostumes": 0,
+        "librarySounds": 6,
+        "placeholderCostumes": [],
+        "silentSounds": [],
+        "replacedModelSvg": 0,
+        "fetchFailures": [],
+        "animatedSprites": 2,
+        "soundBlocks": 6
+      },
+      "playtest": {
+        "ready": true,
+        "pageErrors": [],
+        "autonomousMotion": false,
+        "controls": [
+          {
+            "key": "w",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "LeftPaddle",
+            "delta": 15
+          },
+          {
+            "key": "s",
+            "expected": "y-",
+            "moved": true,
+            "sprite": "LeftPaddle",
+            "delta": 15
+          },
+          {
+            "key": "ArrowUp",
+            "expected": "y+",
+            "moved": true,
+            "sprite": "RightPaddle",
+            "delta": 15
+          },
+          {
+            "key": "ArrowDown",
+            "expected": "y-",
+            "moved": true,
+            "sprite": "RightPaddle",
+            "delta": 15
+          }
+        ],
+        "changedVariables": []
+      }
+    },
+    {
+      "id": "deep-sea-rescue",
+      "status": "pipeline-failed",
+      "failedStage": "semantic",
+      "failure": "[{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/3/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/stage/scripts/0/blocks/3/fields/BROADCAST_INPUT\",\"message\":\"event_broadcast 沒有 BROADCAST_INPUT field\"},{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/2/scripts/0/blocks/2/inputs/SUBSTACK/blocks/2/inputs/SUBSTACK/blocks/2/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/sprites/2/scripts/0/blocks/2/inputs/SUBSTACK/blocks/2/inputs",
+      "promptCharacters": 5919,
+      "responseCharacters": 19203,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "semantic: [{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/3/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\","
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "car-racing",
+      "status": "pipeline-failed",
+      "failedStage": "semantic",
+      "failure": "[{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/1/scripts/1/blocks/0/inputs/SUBSTACK/blocks/1/inputs/SUBSTACK/blocks/3/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/sprites/1/scripts/1/blocks/0/inputs/SUBSTACK/blocks/1/inputs/SUBSTACK/blocks/3/fields/BROADCAST_INPUT\",\"message\":\"event_broadcast 沒有 BROADCAST_INPUT field\"}]",
+      "promptCharacters": 5913,
+      "responseCharacters": 13280,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "semantic: [{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/1/scripts/1/blocks/0/inputs/SUBSTACK/blocks/1/inputs/SUBSTACK/blocks/3/inputs/BROADCAST_INPUT\",\"mes"
+        }
+      ],
+      "score": 0
+    },
+    {
+      "id": "whack-a-mole",
+      "status": "pipeline-failed",
+      "failedStage": "semantic",
+      "failure": "[{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/3/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/stage/scripts/0/blocks/3/fields/BROADCAST_INPUT\",\"message\":\"event_broadcast 沒有 BROADCAST_INPUT field\"},{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/sprites/0/scripts/1/blocks/0/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\",\"code\":\"unknown-field\",\"path\":\"/sprites/0/scripts/1/blocks/0/fields/BROADCAST_INPUT\",\"message\":\"event_broadcast 沒有 BROADCAST_INPUT field\"},{\"s",
+      "promptCharacters": 5901,
+      "responseCharacters": 12654,
+      "checks": [
+        {
+          "name": "builds",
+          "pass": false,
+          "detail": "semantic: [{\"severity\":\"error\",\"code\":\"missing-input\",\"path\":\"/stage/scripts/0/blocks/3/inputs/BROADCAST_INPUT\",\"message\":\"缺少 BROADCAST_INPUT input\"},{\"severity\":\"error\","
+        }
+      ],
+      "score": 0
+    }
+  ]
+}

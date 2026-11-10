@@ -1,0 +1,244 @@
+{
+  "format": "scratch-ai-bridge/canonical-ir",
+  "version": 1,
+  "name": "Apple Catcher",
+  "stage": {
+    "kind": "stage",
+    "name": "Stage",
+    "variables": [{ "name": "score", "value": 0 }],
+    "lists": [],
+    "costumes": [{ "name": "Forest", "dataFormat": "svg" }],
+    "sounds": [],
+    "scripts": [
+      {
+        "blocks": [
+          { "opcode": "event_whenflagclicked" },
+          {
+            "opcode": "data_setvariableto",
+            "fields": { "VARIABLE": "score" },
+            "inputs": { "VALUE": { "type": "literal", "value": 0 } }
+          }
+        ]
+      }
+    ],
+    "procedures": []
+  },
+  "sprites": [
+    {
+      "kind": "sprite",
+      "name": "Player",
+      "variables": [],
+      "lists": [],
+      "costumes": [
+        { "name": "Cat-a", "dataFormat": "svg" },
+        { "name": "Cat-b", "dataFormat": "svg" }
+      ],
+      "sounds": [{ "name": "Pop", "dataFormat": "wav" }],
+      "scripts": [
+        {
+          "blocks": [
+            { "opcode": "event_whenflagclicked" },
+            {
+              "opcode": "motion_gotoxy",
+              "inputs": {
+                "X": { "type": "literal", "value": 0 },
+                "Y": { "type": "literal", "value": -120 }
+              }
+            },
+            { "opcode": "looks_show" }
+          ]
+        },
+        {
+          "blocks": [
+            { "opcode": "event_whenkeypressed", "fields": { "KEY_OPTION": "left arrow" } },
+            {
+              "opcode": "motion_changexby",
+              "inputs": { "DX": { "type": "literal", "value": -10 } }
+            },
+            { "opcode": "looks_nextcostume" },
+            { "opcode": "sound_play", "inputs": { "SOUND_MENU": { "type": "literal", "value": "Pop" } } }
+          ]
+        },
+        {
+          "blocks": [
+            { "opcode": "event_whenkeypressed", "fields": { "KEY_OPTION": "right arrow" } },
+            {
+              "opcode": "motion_changexby",
+              "inputs": { "DX": { "type": "literal", "value": 10 } }
+            },
+            { "opcode": "looks_nextcostume" },
+            { "opcode": "sound_play", "inputs": { "SOUND_MENU": { "type": "literal", "value": "Pop" } } }
+          ]
+        }
+      ],
+      "procedures": [],
+      "x": 0,
+      "y": -120,
+      "direction": 90,
+      "size": 100,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "left-right"
+    },
+    {
+      "kind": "sprite",
+      "name": "Apple",
+      "variables": [],
+      "lists": [],
+      "costumes": [{ "name": "Apple", "dataFormat": "svg" }],
+      "sounds": [{ "name": "Chomp", "dataFormat": "wav" }],
+      "scripts": [
+        {
+          "blocks": [
+            { "opcode": "event_whenflagclicked" },
+            {
+              "opcode": "motion_gotoxy",
+              "inputs": {
+                "X": {
+                  "type": "block",
+                  "block": {
+                    "opcode": "operator_random",
+                    "inputs": {
+                      "FROM": { "type": "literal", "value": -210 },
+                      "TO": { "type": "literal", "value": 210 }
+                    }
+                  }
+                },
+                "Y": { "type": "literal", "value": 150 }
+              }
+            },
+            {
+              "opcode": "control_forever",
+              "inputs": {
+                "SUBSTACK": {
+                  "type": "stack",
+                  "blocks": [
+                    {
+                      "opcode": "motion_changeyby",
+                      "inputs": { "DY": { "type": "literal", "value": -5 } }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "sensing_touchingobject",
+                            "inputs": { "TOUCHINGOBJECTMENU": { "type": "literal", "value": "Player" } }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "data_changevariableby",
+                              "fields": { "VARIABLE": "score" },
+                              "inputs": { "VALUE": { "type": "literal", "value": 1 } }
+                            },
+                            {
+                              "opcode": "sound_playuntildone",
+                              "inputs": { "SOUND_MENU": { "type": "literal", "value": "Chomp" } }
+                            },
+                            {
+                              "opcode": "control_if",
+                              "inputs": {
+                                "CONDITION": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "operator_gt",
+                                    "inputs": {
+                                      "OPERAND1": { "type": "variable", "name": "score" },
+                                      "OPERAND2": { "type": "literal", "value": 4 }
+                                    }
+                                  }
+                                },
+                                "SUBSTACK": {
+                                  "type": "stack",
+                                  "blocks": [
+                                    {
+                                      "opcode": "looks_say",
+                                      "inputs": { "MESSAGE": { "type": "literal", "value": "You win!" } }
+                                    }
+                                  ]
+                                }
+                              }
+                            },
+                            {
+                              "opcode": "motion_gotoxy",
+                              "inputs": {
+                                "X": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "operator_random",
+                                    "inputs": {
+                                      "FROM": { "type": "literal", "value": -210 },
+                                      "TO": { "type": "literal", "value": 210 }
+                                    }
+                                  }
+                                },
+                                "Y": { "type": "literal", "value": 150 }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "opcode": "control_if",
+                      "inputs": {
+                        "CONDITION": {
+                          "type": "block",
+                          "block": {
+                            "opcode": "operator_lt",
+                            "inputs": {
+                              "OPERAND1": {
+                                "type": "block",
+                                "block": { "opcode": "motion_yposition" }
+                              },
+                              "OPERAND2": { "type": "literal", "value": -170 }
+                            }
+                          }
+                        },
+                        "SUBSTACK": {
+                          "type": "stack",
+                          "blocks": [
+                            {
+                              "opcode": "motion_gotoxy",
+                              "inputs": {
+                                "X": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "operator_random",
+                                    "inputs": {
+                                      "FROM": { "type": "literal", "value": -210 },
+                                      "TO": { "type": "literal", "value": 210 }
+                                    }
+                                  }
+                                },
+                                "Y": { "type": "literal", "value": 150 }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    { "opcode": "control_wait", "inputs": { "DURATION": { "type": "literal", "value": 0.03 } } }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": [],
+      "x": 0,
+      "y": 150,
+      "direction": 90,
+      "size": 80,
+      "visible": true,
+      "draggable": false,
+      "rotationStyle": "all around"
+    }
+  ],
+  "broadcasts": []
+}

@@ -27,7 +27,7 @@
 | 1a   | 官方素材庫接入生成（提示、下載、補齊）     | ✅ 完成（Node 驗證）      | 611/611 測試、build 與打包預算通過                        |
 | 1b   | 在真實瀏覽器驗證素材下載與 CSP             | ✅ 完成                   | Playwright Chromium 線上／斷網 smoke；官方 Apple MD5、CSP、fallback 均通過 |
 | 1c   | 學生「換一個素材」介面、離線備援、隱私說明 | ⏳ 待做                   | 見 T1c                                                    |
-| 2a   | 精簡製作指令並附完整範例（目標 ≤ 6K 字元） | ⏳ 待做                   | 見 T2a                                                    |
+| 2a   | 精簡製作指令並附完整範例（目標 ≤ 6K 字元） | ✅ 完成（同模型平均 8%） | 10 題提示 5,878–5,939 字；最終重跑 `t2a-r3`，builds 1/10、plays-sound 1/1、animated-sprite 1/1 |
 | 2b   | scratchblocks 文字格式可行性實驗           | ⏳ 待做                   | 見 T2b，依 2a 結果再決定                                  |
 | 3    | 網頁內自動試玩，玩法錯誤回饋給學生         | ⏳ 待做                   | 見 T3                                                     |
 | 4    | 首頁精簡成單一路線                         | ⏳ 待做                   | 見 T4                                                     |
@@ -91,6 +91,7 @@
 - `npm run test:student-flow`：學生候選預覽、捨棄、採用、重新載入與儲存失敗流程通過。
 - `npm run test:asset-library-browser`：Chromium 線上下載官方 Apple 素材，SB3 內原始位元組 MD5 為 `3826a4091a33e4d26f87a2fac7cf796b`，狀態列顯示官方造型／音效且 CSP 違規為 0；斷網時退回簡單圖形並顯示下載失敗，CSP 違規仍為 0。
 - T0b 本機 baseline：使用 `qwen3-coder-next-80b-local`（`http://172.22.35.142:8091/v1`），10/10 題回覆生成完成；pipeline build 0/10，parse 2/10、normalize 8/10，runtime／素材／音效／動畫檢查皆未執行。最常見失敗為 `requirementCoverage` evidence pointer 不存在或指向非 block（8 題），另有 2 題 JSON 語法不完整。證據：`benchmarks/game-quality/runs/2026-11-10-local-qwen3-coder-next-80b-local/report.{json,md}` 與 10 份 prompt／response。
+- T2a 最終本機對照：同一 `qwen3-coder-next-80b-local`、同一 10 題，學生提示由原本約 13K 壓到 5,878–5,939 字；最終 `t2a-r3` 平均 check pass rate 8%，`builds` 1/10、`runs` 1/1、`plays-sound` 1/1、`animated-sprite` 1/1，`two-player-pong` 單題 82%。`t2a`／`t2a-r2` 是提示詞迭代證據：前者 0/10（語意錯誤），後者 0/10（模型輸出 JSON 語法錯誤）。證據：`benchmarks/game-quality/runs/2026-11-10-local-qwen3-coder-next-80b-local-t2a-r3/`。
 - 為保留官方素材的精確 `md5ext`，修正 compiler／project JSON／decompiler 的 raw-byte MD5 路徑；新增 exact-archive-MD5 回歸測試。
 - 新增和修改的檔案 ESLint 零錯誤、Prettier 通過。全套件 lint 沒有跑，既有基準約 1,388 個錯誤。
 - 基準試跑：兩份手寫回覆，平均 78%，未通過的是 plays-sound 和 animated-sprite。截圖確認畫面是官方貓、蘋果和 Forest 背景。
@@ -101,7 +102,7 @@
 1. 補齊造型會帶入該官方角色的**全部**造型。有些角色的造型是不同顏色或款式（Ball-a～e、Fish-a～d），用 `looks_nextcostume` 時會換色而不是動作動畫。可以考慮對這類角色只補「看起來像動畫」的造型。
 2. `latestLibraryReport` 是模組層級的變數。如果兩次編譯同時進行，例如即時修改預覽和製作作品並行，狀態訊息可能顯示別次編譯的結果。
 3. 試玩不追蹤分身（clone），點擊只會點原始角色；按鍵是在 iframe 內用合成的 KeyboardEvent 送出。遊戲如果在測按鍵前就結束了，按鍵檢查會失敗，這屬於真實的品質訊號，但判讀時要看截圖。
-4. 製作指令約 13.1K 字元，比原本多約 600 字，因為加了候選素材清單。T2a 要壓縮。
+4. T2a 已把學生製作指令壓到 6K 內，但本地 Qwen 仍常把廣播 input、變數 reporter 或事件腳本寫錯；提示改善後已有 1/10 可完整 build，尚不足以宣稱模型能穩定產出作品。
 5. 首頁寫著「專案不上傳」。現在會向 Scratch 官方伺服器下載素材，作品本身不會上傳，但說明文字應該補上（T1c）。
 6. 中文對照表約 300 詞，靠人工挑選，還沒有命中率數據。可用 0b 報告裡的 placeholder 清單補詞。
 
@@ -151,6 +152,8 @@
   - 同一個模型跑 0b，builds、plays-sound、animated-sprite 的通過率都不低於 baseline，且平均分數提高；
   - 既有測試同步更新。
 
+- **完成紀錄（2026-11-10 Codex）**：新增 `src/core/ir/examples/07-apple-catcher.json` 與可編譯測試；學生版改用常用 opcode、官方素材短候選、完整接蘋果範例及 `features` 清單；response envelope 與學生結果 UI 同步支援 `features`，舊的 `requirementCoverage` 仍向後相容。最終同模型重跑 10 題，提示 5,878–5,939 字，平均 8%（baseline 0%），符合本卡最低驗收；非零結果集中在一題，後續若要提升模型穩定性應處理廣播／輸入契約或進入 T2b scratchblocks 實驗。
+
 ### T3 網頁內自動試玩與玩法回饋
 
 - **目的**：學生按「製作」後，Bridge 先自己試玩幾秒，抓出「按鍵沒反應、什麼都不動、分數不會變」，並給出可以直接複製回 AI 的修正訊息（R3）。
@@ -193,6 +196,8 @@
 - lint 只要求新改的檔案零錯誤；讓 CI 恢復跑 browser smoke。
 
 ## 7. 交接紀錄（新的寫在最上面）
+
+- **2026-11-10 Codex**：完成 T2a。新增可編譯的官方素材接蘋果範例，學生提示改成 ≤6K、常用 opcode 與 `features` envelope；`npm test` 75/75 檔、616/616 測試，build、改檔 ESLint／Prettier 全通過。用同一 Qwen 80B 本地模型重跑三輪，最終 `t2a-r3` 10 題平均 8%，builds 1/10、runs 1/1、plays-sound 1/1、animated-sprite 1/1；尚未 push／部署。下一步依主線可做 T1c，或針對廣播 input 穩定性進入 T2b。
 
 - **2026-11-10 Codex**：完成 T0b 本機 baseline。依 AI 系管師／Hermes 私有 provider 使用 `qwen3-coder-next-80b-local`（`http://172.22.35.142:8091/v1`）生成 10 題；10/10 回覆成功，但 0/10 通過 Bridge pipeline：8 題是 `requirementCoverage` evidence pointer 錯誤，2 題是 JSON 語法錯誤。這是目前 Qwen 80B 的品質基線，不是瀏覽器執行失敗；下一步依序進入 T2a，或先修正 requirementCoverage 輸出契約後重跑對照。
 - **2026-11-10 Codex**：完成 T1b。新增 `scripts/asset-library-browser-smoke.mjs` 與 `test:asset-library-browser`，以真實 Chromium 驗證官方 Apple 素材下載、CSP、斷網 fallback；發現並修正 VM 編譯後官方 SVG raw-byte MD5 被正規化的缺陷，保留官方 `3826a4091a33e4d26f87a2fac7cf796b`。`vitest` 74/613、build、`test:browser`、`test:student-flow` 均通過；未 push、未部署。下一步仍是 T0b，需向使用者取得模型端點／金鑰或 10 份模型回覆。

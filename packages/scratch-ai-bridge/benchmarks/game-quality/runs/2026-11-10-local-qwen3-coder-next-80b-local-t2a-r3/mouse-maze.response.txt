@@ -1,0 +1,415 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "Mouse Maze",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {
+          "name": "score",
+          "value": 0
+        },
+        {
+          "name": "level",
+          "value": 1
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Forest",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "score"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "level"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 1
+                }
+              }
+            },
+            {
+              "opcode": "event_broadcast",
+              "fields": {
+                "BROADCAST_INPUT": "StartLevel"
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "Mouse",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Mouse1-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Mouse1-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Pop",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": -150
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": -150
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "up arrow"
+                }
+              },
+              {
+                "opcode": "motion_changeyby",
+                "inputs": {
+                  "DY": {
+                    "type": "literal",
+                    "value": 20
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              },
+              {
+                "opcode": "sound_play",
+                "inputs": {
+                  "SOUND_MENU": {
+                    "type": "literal",
+                    "value": "Pop"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "down arrow"
+                }
+              },
+              {
+                "opcode": "motion_changeyby",
+                "inputs": {
+                  "DY": {
+                    "type": "literal",
+                    "value": -20
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              },
+              {
+                "opcode": "sound_play",
+                "inputs": {
+                  "SOUND_MENU": {
+                    "type": "literal",
+                    "value": "Pop"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "left arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": -20
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              },
+              {
+                "opcode": "sound_play",
+                "inputs": {
+                  "SOUND_MENU": {
+                    "type": "literal",
+                    "value": "Pop"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "right arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": 20
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              },
+              {
+                "opcode": "sound_play",
+                "inputs": {
+                  "SOUND_MENU": {
+                    "type": "literal",
+                    "value": "Pop"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": -150,
+        "y": -150,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right"
+      },
+      {
+        "kind": "sprite",
+        "name": "Cheese",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Cheese",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Coin",
+            "dataFormat": "wav"
+          },
+          {
+            "name": "Win",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "looks_hide"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_broadcast",
+                "fields": {
+                  "BROADCAST_INPUT": "StartLevel"
+                }
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "operator_random",
+                      "inputs": {
+                        "FROM": {
+                          "type": "literal",
+                          "value": 100
+                        },
+                        "TO": {
+                          "type": "literal",
+                          "value": 150
+                        }
+                      }
+                    }
+                  },
+                  "Y": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "operator_random",
+                      "inputs": {
+                        "FROM": {
+                          "type": "literal",
+                          "value": 100
+                        },
+                        "TO": {
+                          "type": "literal",
+                          "value": 150
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 150,
+        "y": 150,
+        "direction": 90,
+        "size": 80,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "Wall",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Wall",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "looks_hide"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_broadcast",
+                "fields": {
+                  "BROADCAST_INPUT": "StartLevel"
+                }
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": -100
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": 0
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": -100,
+        "y": 0,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "don't rotate"
+      }
+    ],
+    "broadcasts": [
+      {
+        "name": "StartLevel"
+      }
+    ]
+  },
+  "features": [
+    "上下左右移動",
+    "牆壁碰撞回退",
+    "找到起司得分",
+    "關卡進展",
+    "勝利音效與提示"
+  ]
+}

@@ -1357,6 +1357,8 @@ let latestStudentValidationReport: AiOutputValidationReport | null = null
 
 let latestRequirementCoverage: readonly RequirementCoverageEntry[] | null = null
 
+let latestFeatures: readonly string[] | null = null
+
 const renderRepairTools = (): void => {
   const report = latestRepairContext?.report
 
@@ -4446,6 +4448,8 @@ const clearStudentResult = (): void => {
 
   latestRequirementCoverage = null
 
+  latestFeatures = null
+
   downloadStudentValidationReport.hidden = true
 
   studentResult.hidden = true
@@ -5121,6 +5125,8 @@ const buildStudentProject = async (): Promise<void> => {
 
     latestRequirementCoverage = aiResponse.requirementCoverage
 
+    latestFeatures = aiResponse.features
+
     normalized = addExtractionRepair(normalizeAiDraft(aiResponse.project), parsed)
   } catch (normalizationError) {
     const report = createRepairReport({ normalizationError })
@@ -5312,7 +5318,7 @@ const buildStudentProject = async (): Promise<void> => {
     setStudentResult(
       isCandidate ? `新版候選「${validation.data.name}」` : `已完成「${validation.data.name}」`,
 
-      `作品包含 ${validation.data.sprites.length} 個角色。${describeLatestAutomaticVisuals()}${describeLatestLibraryAssets()}${describeOfflineCloudVariables(validation.data)}${latestRequirementCoverage ? '下方需求完成度是 AI 自述，Bridge 已檢查引用位置，但不代表已執行驗證。' : 'AI 回覆未提供需求完成度清單；格式與編譯通過不代表原始需求全數完成。'}${isCandidate ? '先試玩，再選擇是否使用新版。' : '請開啟下載的 .sb3 檔案繼續創作。'}本次驗證報告也可以下載。`,
+      `作品包含 ${validation.data.sprites.length} 個角色。${describeLatestAutomaticVisuals()}${describeLatestLibraryAssets()}${describeOfflineCloudVariables(validation.data)}${latestRequirementCoverage ? '下方需求完成度是 AI 自述，Bridge 已檢查引用位置，但不代表已執行驗證。' : latestFeatures ? `AI 列出的功能：${latestFeatures.join('、')}。這是 AI 自述，不代表已執行驗證。` : 'AI 回覆未提供功能清單；格式與編譯通過不代表原始需求全數完成。'}${isCandidate ? '先試玩，再選擇是否使用新版。' : '請開啟下載的 .sb3 檔案繼續創作。'}本次驗證報告也可以下載。`,
 
       'success',
     )
@@ -5336,6 +5342,14 @@ const buildStudentProject = async (): Promise<void> => {
 
           item.textContent = `${entry.id} · ${entry.requirement} — AI 自述：${labels[entry.status]}${entry.evidencePointers.length ? `（${entry.evidencePointers.join('、')}）` : ''}`
 
+          return item
+        }),
+      )
+    } else if (latestFeatures) {
+      studentRequirementCoverage.replaceChildren(
+        ...latestFeatures.map((feature) => {
+          const item = document.createElement('li')
+          item.textContent = `AI 列出的功能：${feature}`
           return item
         }),
       )

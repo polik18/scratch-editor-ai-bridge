@@ -1,3 +1,4 @@
+import appleCatcherExample from '../ir/examples/07-apple-catcher.json'
 import { formatLibraryCandidates, selectLibraryCandidates } from '../visuals/library'
 
 export type CanonicalBlockCategory =
@@ -909,6 +910,39 @@ export const CANONICAL_OPCODES: readonly KnownOpcode[] = Object.freeze(
   Object.keys(CANONICAL_BLOCK_CAPABILITIES) as KnownOpcode[],
 )
 
+/**
+ * Compact opcode catalog for the student authoring prompt. Keep the full registry available to teachers, repair
+ * flows, and fragment prompts; new students first need the small set that covers ordinary games.
+ */
+export const STUDENT_AUTHORING_OPCODES = [
+  'event_whenflagclicked',
+  'event_whenkeypressed',
+  'event_broadcast',
+  'control_forever',
+  'control_if',
+  'control_repeat',
+  'control_wait',
+  'motion_movesteps',
+  'motion_changexby',
+  'motion_changeyby',
+  'motion_gotoxy',
+  'motion_yposition',
+  'looks_say',
+  'looks_nextcostume',
+  'sound_play',
+  'sound_playuntildone',
+  'data_setvariableto',
+  'data_changevariableby',
+  'operator_random',
+  'operator_gt',
+  'operator_lt',
+  'sensing_touchingobject',
+  'sensing_keypressed',
+  'sensing_mousedown',
+  'sensing_mousex',
+  'sensing_mousey',
+] as const satisfies readonly KnownOpcode[]
+
 /** Legacy VM no-ops stay available to raw preservation workflows, not strict authoring. */
 export const CORE_PRESERVED_LEGACY_OPCODES = [
   'looks_changestretchby',
@@ -957,6 +991,8 @@ const describeBlock = (opcode: KnownOpcode): string => {
   return `- ${opcode} [${capability.shape}; ${capability.targets.join('|')}]${argumentsText ? ` (${argumentsText})` : ''}`
 }
 
+const COMPLETE_STUDENT_EXAMPLE = JSON.stringify(appleCatcherExample)
+
 /**
  * Asset rules shared by all authoring prompts: the model names official Scratch library assets and never draws.
  * @param assetContext - Project idea used to pick relevant library candidates.
@@ -971,7 +1007,12 @@ export const createLibraryAssetInstruction = (
 - 角色 name 可用中文；造型、背景、音效名稱必須照抄素材原文。沒有完全合適的素材時，選外型最接近的（例如子彈用 Ball 或 Dot），不要輸出自製圖像。
 ${formatLibraryCandidates(selectLibraryCandidates(assetContext))}`
 
-export const createAuthoringInstruction = (withRequirementCoverage = false, assetContext = ''): string => `${
+export const createAuthoringInstruction = (
+  withRequirementCoverage = false,
+  assetContext = '',
+  opcodeList: readonly KnownOpcode[] = CANONICAL_OPCODES,
+  coverageMode: 'requirementCoverage' | 'features' = 'requirementCoverage',
+): string => `${
   withRequirementCoverage
     ? '最外層只輸出一個 scratch-ai-bridge/ai-response v1 JSON 物件；Canonical IR 放在 project 欄位。'
     : '你要輸出 Scratch AI Bridge Canonical IR JSON。'
@@ -997,19 +1038,56 @@ Stage 至少要有一個背景 costume；Stage 與 sprite 的 scripts 都可用�
 Pen（pen_*）與 Music（music_*）是已驗證的官方擴充積木；使用到時 compiler 會從 opcode 自動加入 project.extensions，不必手動猜 extension id。其他尚未列出的擴充、硬體或自製積木仍須先加入 capability registry 並驗證 runtime，不能假設會執行。
 布林條件必須使用 capability registry 標示為 boolean 的 reporter，不可直接把數值變數當條件。registry 的 shape 僅供辨識積木類型；Canonical IR block 禁止輸出 shape 欄位，積木形狀由 opcode 決定。
 可用積木與必要參數：
-${CANONICAL_OPCODES.map(describeBlock).join('\n')}
+${opcodeList.map(describeBlock).join('\n')}
 鍵盤 KEY_OPTION 可用 space、方向鍵（up/down/right/left arrow）、any、a-z、0-9。
 碰撞 TOUCHINGOBJECTMENU 可用角色名稱、_edge_ 或 _mouse_。
 不要自行加入 Scratch block id、parent、next 或 shadow id；這些由 compiler 產生。
 Scratch 的 control_forever 每輪都會讓出執行時間，不要只為消除分析器警告而額外插入 control_wait。若迴圈內設定變數是碰撞、計分或狀態更新，保留在迴圈內；只把只需執行一次的初始值設定放在迴圈前。
 若需求超出上述 capability，不得靜默刪除玩法或假裝已完成；優先提出最接近且仍有趣的替代方案，並依需求覆蓋欄位標記近似、未支援或環境受限項目。重要玩法會因此改變時，先請使用者選擇或明確採用替代方案。不得杜撰 opcode.${
   withRequirementCoverage
-    ? `
+    ? coverageMode === 'features'
+      ? `
+features 是簡短的功能清單，只列出你實際嘗試做出的核心玩法，例如 ["左右移動","收集蘋果","得分"]。不要輸出 JSON Pointer、evidence 或任何積木路徑；Bridge 會另外檢查 project 的格式與編譯結果。
+回覆格式：{"format":"scratch-ai-bridge/ai-response","version":1,"project":{...Canonical IR...},"features":["左右移動","收集蘋果","得分"]}`
+      : `
 requirementCoverage 必須逐項列出原作品需求中的角色、玩法與目標，使用 id、requirement、status、evidencePointers 欄位。status 只能是 implemented-structure、approximated、not-implemented、runtime-unavailable、not-verifiable-from-ir。implemented-structure 必須引用 project 內實際存在的 block JSON Pointer；路徑以 project 物件為根，不要加 /project 前綴（例如 /sprites/0/scripts/0/blocks/0）。只近似或未做的項目不得標成 implemented-structure。FPS、手感及未執行行為使用 not-verifiable-from-ir。Bridge 會檢查 pointer，但 AI 自述不等於 runtime 驗證。
 rotationStyle 只能使用 "all around"、"left-right" 或 "don't rotate"，不要使用 "all-around"。
 回覆格式：{"format":"scratch-ai-bridge/ai-response","version":1,"project":{...Canonical IR...},"requirementCoverage":[{"id":"R1","requirement":"...","status":"implemented-structure","evidencePointers":["/sprites/0/scripts/0/blocks/0"]}]}`
     : ''
 }`
+
+/**
+ * Student-only authoring contract. The full registry remains available to teacher and repair prompts, while a
+ * student request gets the common game opcodes plus the complete example without spending context on every field.
+ * @param assetContext - Student request and brief used to select short official-asset candidates.
+ * @returns Compact student authoring contract with the response envelope and feature-list format.
+ */
+const createCompactStudentAuthoringInstruction = (assetContext = '') => {
+  const candidates = selectLibraryCandidates(assetContext, { sprites: 2, backdrops: 2, sounds: 4 })
+  const compactAssets = [
+    `角色/造型：${candidates.sprites
+      .map(
+        (sprite) =>
+          `${sprite.name}(${sprite.costumes
+            .slice(0, 2)
+            .map(([name]) => name)
+            .join('/')})`,
+      )
+      .join('、')}`,
+    `背景：${candidates.backdrops.map((backdrop) => backdrop.name).join('、')}`,
+    `音效：${candidates.sounds.join('、')}`,
+  ].join('\n')
+  return `只輸出一個 scratch-ai-bridge/ai-response v1 JSON，不要 Markdown、說明。
+Canonical IR 根物件含 format="scratch-ai-bridge/canonical-ir"、version=1、name、stage、sprites、broadcasts；stage/sprite 欄位照範例，script 一律是 {"blocks":[...]}。小型作品：Stage+最多 3 sprite，每個 target ≤3 scripts。
+input 只能是 literal、variable、broadcast、block 或 stack；fields 填純量。不要輸出 Scratch id、parent、next、shadow id、自製素材或未列 opcode。
+造型、背景、音效只用官方名稱；costume/sound 含 name、dataFormat。布林條件用布林 reporter；rotationStyle 只能是 "all around"、"left-right"、"don't rotate"。
+${compactAssets}
+常用 opcode（只能從這份清單選；參數依範例仿寫）：
+${STUDENT_AUTHORING_OPCODES.join(',')}
+格式對照：script 禁 next；gotoxy X/Y、change x/y 用 DX/DY；sound 的 SOUND_MENU→inputs literal；data 的 VARIABLE→field、VALUE→input；touching menu→input literal；event_broadcast 的 BROADCAST_INPUT→broadcast、接收廣播的 OPTION→field；broadcasts=[{"name":"..."}]；變數值→input variable，不可用 variable opcode。括號逗號要配對，輸出完整 JSON。
+features 是你實際嘗試完成的核心玩法短清單，例如 ["左右移動","收集蘋果","得分"]；不要輸出 evidence、JSON Pointer 或積木路徑。
+回覆格式：{"format":"scratch-ai-bridge/ai-response","version":1,"project":{...Canonical IR...},"features":["..."]}`
+}
 
 export type GameGenreProfile = 'auto' | 'platformer' | 'arcade' | 'puzzle-story' | 'rhythm' | 'drawing' | 'simulation'
 
@@ -1129,18 +1207,21 @@ export const createStudentProjectInstruction = (
 ${request.trim()}
 
 已確認遊戲設計 brief：
-${brief && brief.length > 0 ? brief : '尚未提供。請先自行完成一份精簡設計：確定玩家角色與目標、核心循環（操作→挑戰→回饋）、至少一種有趣障礙、逐步進展/獎勵、成功/失敗與快速重玩；採用合理預設並在 requirementCoverage 中標明近似或未實作項目，不要退化成只有移動和說話的空殼示範。'}
+${brief && brief.length > 0 ? brief : '尚未提供。請先自行完成一份精簡設計：確定玩家角色與目標、核心循環（操作→挑戰→回饋）、至少一種有趣障礙、逐步進展/獎勵、成功/失敗與快速重玩；採用合理預設並在 features 中列出實際完成的核心玩法，不要退化成只有移動和說話的空殼示範。'}
 
 指定類型：${genreNames[genre]}
 
 製作要求：
 - 保留原始需求及 brief 中每一項核心玩法；開始前先在內部建立「需求→角色/狀態/事件/腳本」映射，並用有意義的變化、回饋和重玩動機完成核心循環。
 - 至少規劃初始化/reset、玩家主要操作、挑戰/碰撞或選擇、進展/獎勵、成功/失敗回饋。依遊戲類型選擇所需架構，不要硬套平台遊戲模板。
-- 若有必要需求超過工具能力，保留最接近的核心體驗，並在 requirementCoverage 明確標示 approximated、runtime-unavailable 或 not-implemented；不可靜默省略，也不可杜撰 opcode。
+- 若有必要需求超過工具能力，保留最接近的核心體驗；不可靜默省略，也不可杜撰 opcode。
 - 每個角色選外型符合用途的官方素材，背景配合主題；在得分、碰撞、勝負等時刻加入官方音效，會動的角色用造型切換做動畫。
 - 產生前檢查腳本能否形成完整玩法，尤其是開始狀態、可觀察回饋、勝敗條件與重開流程；最後只輸出規定的完整 JSON。
 
-${createAuthoringInstruction(true, `${request}\n${brief ?? ''}`)}`
+完整可玩範例（官方素材名稱、得分、碰撞、音效與造型動畫；請仿照結構，不要照抄遊戲內容）：
+${COMPLETE_STUDENT_EXAMPLE}
+
+${createCompactStudentAuthoringInstruction(`${request}\n${brief ?? ''}`)}`
 }
 
 export const estimatePromptSize = (

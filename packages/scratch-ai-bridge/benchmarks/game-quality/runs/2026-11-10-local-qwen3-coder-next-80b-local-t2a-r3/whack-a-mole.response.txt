@@ -1,0 +1,469 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "Whack-a-Mole",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {
+          "name": "score",
+          "value": 0
+        },
+        {
+          "name": "timeLeft",
+          "value": 30
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Forest",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "score"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "timeLeft"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 30
+                }
+              }
+            },
+            {
+              "opcode": "event_broadcast",
+              "fields": {
+                "BROADCAST_INPUT": "startGame"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "Player",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Hammer-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Hammer-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Coin",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": 0
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": -100
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_broadcast",
+                "fields": {
+                  "BROADCAST_INPUT": "startGame"
+                }
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "sensing_mousedown"
+                      },
+                      {
+                        "opcode": "looks_nextcostume"
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.1
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "looks_nextcostume"
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": -100,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right"
+      },
+      {
+        "kind": "sprite",
+        "name": "Mouse1",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Mouse1-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Mouse1-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Dun Dun Dunnn",
+            "dataFormat": "wav"
+          },
+          {
+            "name": "Lose",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_broadcast",
+                "fields": {
+                  "BROADCAST_INPUT": "startGame"
+                }
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": -120
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": -20
+                  }
+                }
+              },
+              {
+                "opcode": "looks_hide"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.5
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "operator_random",
+                        "inputs": {
+                          "FROM": {
+                            "type": "literal",
+                            "value": 0
+                          },
+                          "TO": {
+                            "type": "literal",
+                            "value": 2
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_broadcast",
+                "fields": {
+                  "BROADCAST_INPUT": "startGame"
+                }
+              },
+              {
+                "opcode": "control_repeat",
+                "inputs": {
+                  "TIMES": {
+                    "type": "literal",
+                    "value": 100
+                  },
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.5
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "operator_random",
+                        "inputs": {
+                          "FROM": {
+                            "type": "literal",
+                            "value": 0
+                          },
+                          "TO": {
+                            "type": "literal",
+                            "value": 2
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": -120,
+        "y": -20,
+        "direction": 90,
+        "size": 100,
+        "visible": false,
+        "draggable": false,
+        "rotationStyle": "don't rotate"
+      },
+      {
+        "kind": "sprite",
+        "name": "Dot",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Dot-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Dot-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Coin",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": 0
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": -20
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_broadcast",
+                "fields": {
+                  "BROADCAST_INPUT": "startGame"
+                }
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "sensing_mousedown"
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_touchingobject",
+                              "inputs": {
+                                "TOUCHINGOBJECTMENU": {
+                                  "type": "literal",
+                                  "value": "Mouse1"
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "data_changevariableby",
+                                "fields": {
+                                  "VARIABLE": "score"
+                                },
+                                "inputs": {
+                                  "VALUE": {
+                                    "type": "literal",
+                                    "value": 1
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "sound_play",
+                                "inputs": {
+                                  "SOUND_MENU": {
+                                    "type": "literal",
+                                    "value": "Coin"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_nextcostume"
+                              },
+                              {
+                                "opcode": "control_wait",
+                                "inputs": {
+                                  "DURATION": {
+                                    "type": "literal",
+                                    "value": 0.2
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_nextcostume"
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.03
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": -20,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "don't rotate"
+      }
+    ],
+    "broadcasts": [
+      {
+        "name": "startGame"
+      }
+    ]
+  },
+  "features": [
+    "隨機冒出地鼠",
+    "滑鼠點擊地鼠得分",
+    "計時遊戲",
+    "得分與音效回饋",
+    "時間到遊戲結束"
+  ]
+}

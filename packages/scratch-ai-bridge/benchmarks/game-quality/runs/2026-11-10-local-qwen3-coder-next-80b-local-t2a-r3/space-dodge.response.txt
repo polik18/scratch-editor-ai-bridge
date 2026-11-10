@@ -1,0 +1,489 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "Space Dodge",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {
+          "name": "score",
+          "value": 0
+        },
+        {
+          "name": "speed",
+          "value": 5
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Galaxy",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "score"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "speed"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 5
+                }
+              }
+            },
+            {
+              "opcode": "event_broadcast",
+              "fields": {
+                "BROADCAST_INPUT": "Start Game"
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "Player",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Rocketship-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Rocketship-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Space Flyby",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": 0
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": -140
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "left arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": -15
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              },
+              {
+                "opcode": "sound_play",
+                "inputs": {
+                  "SOUND_MENU": {
+                    "type": "literal",
+                    "value": "Space Flyby"
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "right arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": 15
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              },
+              {
+                "opcode": "sound_play",
+                "inputs": {
+                  "SOUND_MENU": {
+                    "type": "literal",
+                    "value": "Space Flyby"
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": -140,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right"
+      },
+      {
+        "kind": "sprite",
+        "name": "Asteroid",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Rocks",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Bonk",
+            "dataFormat": "wav"
+          },
+          {
+            "name": "Crash Cymbal",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "looks_hide"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_broadcast",
+                "fields": {
+                  "BROADCAST_INPUT": "Start Game"
+                }
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "looks_show"
+                      },
+                      {
+                        "opcode": "motion_gotoxy",
+                        "inputs": {
+                          "X": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_random",
+                              "inputs": {
+                                "FROM": {
+                                  "type": "literal",
+                                  "value": -220
+                                },
+                                "TO": {
+                                  "type": "literal",
+                                  "value": 220
+                                }
+                              }
+                            }
+                          },
+                          "Y": {
+                            "type": "literal",
+                            "value": 200
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_repeat",
+                        "inputs": {
+                          "TIMES": {
+                            "type": "literal",
+                            "value": 30
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_changeyby",
+                                "inputs": {
+                                  "DY": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "data_variable",
+                                      "name": "speed"
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "control_if",
+                                "inputs": {
+                                  "CONDITION": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "sensing_touchingobject",
+                                      "inputs": {
+                                        "TOUCHINGOBJECTMENU": {
+                                          "type": "literal",
+                                          "value": "Player"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "SUBSTACK": {
+                                    "type": "stack",
+                                    "blocks": [
+                                      {
+                                        "opcode": "sound_playuntildone",
+                                        "inputs": {
+                                          "SOUND_MENU": {
+                                            "type": "literal",
+                                            "value": "Bonk"
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "opcode": "looks_say",
+                                        "inputs": {
+                                          "MESSAGE": {
+                                            "type": "literal",
+                                            "value": "Game Over!"
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "opcode": "event_broadcast",
+                                        "fields": {
+                                          "BROADCAST_INPUT": "Reset Game"
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "control_wait",
+                                "inputs": {
+                                  "DURATION": {
+                                    "type": "literal",
+                                    "value": 0.03
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "looks_hide"
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 1
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_broadcast",
+                "fields": {
+                  "BROADCAST_INPUT": "Reset Game"
+                }
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": 0
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": 300
+                  }
+                }
+              },
+              {
+                "opcode": "looks_hide"
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 200,
+        "direction": 90,
+        "size": 80,
+        "visible": false,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "ScoreDisplay",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Arrow2",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "looks_hide"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_broadcast",
+                "fields": {
+                  "BROADCAST_INPUT": "Start Game"
+                }
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "looks_say",
+                        "inputs": {
+                          "MESSAGE": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "data_variable",
+                              "name": "score"
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.1
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 180,
+        "y": 160,
+        "direction": 90,
+        "size": 60,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      }
+    ],
+    "broadcasts": [
+      {
+        "name": "Start Game"
+      },
+      {
+        "name": "Reset Game"
+      }
+    ]
+  },
+  "features": [
+    "左右鍵移動火箭",
+    "隕石自動下落",
+    "撞擊判定與音效",
+    "得分顯示",
+    "速度隨時間遞增",
+    "遊戲結束與重玩"
+  ]
+}

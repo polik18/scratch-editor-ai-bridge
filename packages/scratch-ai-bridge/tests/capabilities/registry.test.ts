@@ -168,7 +168,7 @@ describe('Canonical block capability registry', () => {
     const instruction = createStudentProjectInstruction('  做一個可以收集金幣的平台遊戲  ')
 
     expect(instruction).toContain('作品需求：\n做一個可以收集金幣的平台遊戲')
-    expect(instruction).toContain('只輸出一個最終 JSON 根物件')
+    expect(instruction).toContain('只輸出一個 scratch-ai-bridge/ai-response v1 JSON')
     expect(instruction).toContain('event_whenkeypressed')
     expect(instruction).not.toContain('  做一個')
   })

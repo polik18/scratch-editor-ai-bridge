@@ -1,0 +1,616 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "name": "Space Shooter",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {
+          "name": "score",
+          "value": 0
+        },
+        {
+          "name": "lives",
+          "value": 3
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Space",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "score"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "lives"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 3
+                }
+              }
+            },
+            {
+              "opcode": "event_broadcast",
+              "fields": {
+                "BROADCAST_INPUT": "start game"
+              }
+            }
+          ]
+        }
+      ],
+      "procedures": []
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "Player",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Gobo-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Gobo-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Laser1",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": 0
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": -130
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "left arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": -15
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "right arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": 15
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "space"
+                }
+              },
+              {
+                "opcode": "sound_play",
+                "inputs": {
+                  "SOUND_MENU": {
+                    "type": "literal",
+                    "value": "Laser1"
+                  }
+                }
+              },
+              {
+                "opcode": "event_broadcast",
+                "fields": {
+                  "BROADCAST_INPUT": "fire bullet"
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": -130,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right"
+      },
+      {
+        "kind": "sprite",
+        "name": "Alien",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Nano-a",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Nano-b",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Coin",
+            "dataFormat": "wav"
+          },
+          {
+            "name": "Collect",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "looks_hide"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "fields": {
+                  "BROADCAST_OPTION": "start game"
+                }
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "looks_show"
+                      },
+                      {
+                        "opcode": "motion_gotoxy",
+                        "inputs": {
+                          "X": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_random",
+                              "inputs": {
+                                "FROM": {
+                                  "type": "literal",
+                                  "value": -220
+                                },
+                                "TO": {
+                                  "type": "literal",
+                                  "value": 220
+                                }
+                              }
+                            }
+                          },
+                          "Y": {
+                            "type": "literal",
+                            "value": 180
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 2
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "fields": {
+                  "BROADCAST_OPTION": "fire bullet"
+                }
+              },
+              {
+                "opcode": "control_repeat",
+                "inputs": {
+                  "TIMES": {
+                    "type": "literal",
+                    "value": 20
+                  },
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "motion_changeyby",
+                        "inputs": {
+                          "DY": {
+                            "type": "literal",
+                            "value": -10
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_touchingobject",
+                              "inputs": {
+                                "TOUCHINGOBJECTMENU": {
+                                  "type": "literal",
+                                  "value": "Player"
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "data_changevariableby",
+                                "fields": {
+                                  "VARIABLE": "lives"
+                                },
+                                "inputs": {
+                                  "VALUE": {
+                                    "type": "literal",
+                                    "value": -1
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "sound_play",
+                                "inputs": {
+                                  "SOUND_MENU": {
+                                    "type": "literal",
+                                    "value": "Collect"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_say",
+                                "inputs": {
+                                  "MESSAGE": {
+                                    "type": "literal",
+                                    "value": "Ouch!"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "control_wait",
+                                "inputs": {
+                                  "DURATION": {
+                                    "type": "literal",
+                                    "value": 1
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_say",
+                                "inputs": {
+                                  "MESSAGE": {
+                                    "type": "literal",
+                                    "value": ""
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_touchingobject",
+                            "inputs": {
+                                "TOUCHINGOBJECTMENU": {
+                                  "type": "literal",
+                                  "value": "Bullet"
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "data_changevariableby",
+                                "fields": {
+                                  "VARIABLE": "score"
+                                },
+                                "inputs": {
+                                  "VALUE": {
+                                    "type": "literal",
+                                    "value": 10
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "sound_play",
+                                "inputs": {
+                                  "SOUND_MENU": {
+                                    "type": "literal",
+                                    "value": "Coin"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_nextcostume"
+                              },
+                              {
+                                "opcode": "looks_hide"
+                              },
+                              {
+                                "opcode": "control_wait",
+                                "inputs": {
+                                  "DURATION": {
+                                    "type": "literal",
+                                    "value": 0.5
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_lt",
+                              "inputs": {
+                                "OPERAND1": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "motion_yposition"
+                                  }
+                                },
+                                "OPERAND2": {
+                                  "type": "literal",
+                                  "value": -180
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "looks_hide"
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.05
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 180,
+        "direction": 90,
+        "size": 90,
+        "visible": false,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "Bullet",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Nano-a",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "looks_hide"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenbroadcastreceived",
+                "fields": {
+                  "BROADCAST_OPTION": "fire bullet"
+                }
+              },
+              {
+                "opcode": "looks_show"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "motion_xposition",
+                      "inputs": {}
+                    }
+                  },
+                  "Y": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "motion_yposition",
+                      "inputs": {}
+                    }
+                  }
+                }
+              },
+              {
+                "opcode": "control_repeat",
+                "inputs": {
+                  "TIMES": {
+                    "type": "literal",
+                    "value": 30
+                  },
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "motion_changeyby",
+                        "inputs": {
+                          "DY": {
+                            "type": "literal",
+                            "value": 12
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.02
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "opcode": "looks_hide"
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": -130,
+        "direction": 90,
+        "size": 50,
+        "visible": false,
+        "draggable": false,
+        "rotationStyle": "all around"
+      }
+    ],
+    "broadcasts": [
+      {
+        "name": "start game"
+      },
+      {
+        "name": "fire bullet"
+      }
+    ]
+  },
+  "features": [
+    "左右鍵移動",
+    "空白鍵發射雷射",
+    "打中外星人加分",
+    "外星人碰到玩家減生命",
+    "外星人掉落到底部消失",
+    "得分與生命值顯示",
+    "重玩機制"
+  ]
+}

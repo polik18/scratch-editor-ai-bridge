@@ -1,0 +1,66 @@
+{
+  "model": "qwen3-coder-next-80b-local",
+  "baseUrl": "http://172.22.35.142:8091/v1",
+  "meta": [
+    {
+      "id": "catch-apples",
+      "model": "qwen3-coder-next-80b-local",
+      "seconds": 147.952,
+      "characters": 24091
+    },
+    {
+      "id": "space-dodge",
+      "model": "qwen3-coder-next-80b-local",
+      "seconds": 101.866,
+      "characters": 17139
+    },
+    {
+      "id": "space-shooter",
+      "model": "qwen3-coder-next-80b-local",
+      "seconds": 159.611,
+      "characters": 29265
+    },
+    {
+      "id": "mouse-maze",
+      "model": "qwen3-coder-next-80b-local",
+      "seconds": 66.72,
+      "characters": 5693
+    },
+    {
+      "id": "jump-collect",
+      "model": "qwen3-coder-next-80b-local",
+      "seconds": 125.209,
+      "characters": 20433
+    },
+    {
+      "id": "pop-balloons",
+      "model": "qwen3-coder-next-80b-local",
+      "seconds": 115.631,
+      "characters": 20164
+    },
+    {
+      "id": "two-player-pong",
+      "model": "qwen3-coder-next-80b-local",
+      "seconds": 180.63,
+      "characters": 32923
+    },
+    {
+      "id": "deep-sea-rescue",
+      "model": "qwen3-coder-next-80b-local",
+      "seconds": 160.595,
+      "characters": 28802
+    },
+    {
+      "id": "car-racing",
+      "model": "qwen3-coder-next-80b-local",
+      "seconds": 93.266,
+      "characters": 16991
+    },
+    {
+      "id": "whack-a-mole",
+      "model": "qwen3-coder-next-80b-local",
+      "seconds": 83.018,
+      "characters": 10988
+    }
+  ]
+}

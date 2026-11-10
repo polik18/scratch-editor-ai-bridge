@@ -1,0 +1,459 @@
+{
+  "format": "scratch-ai-bridge/ai-response",
+  "version": 1,
+  "project": {
+    "format": "scratch-ai-bridge/canonical-ir",
+    "version": 1,
+    "name": "Highway Dodge",
+    "stage": {
+      "kind": "stage",
+      "name": "Stage",
+      "variables": [
+        {
+          "name": "score",
+          "value": 0
+        },
+        {
+          "name": "speed",
+          "value": 3
+        }
+      ],
+      "lists": [],
+      "costumes": [
+        {
+          "name": "Blue Sky",
+          "dataFormat": "svg"
+        }
+      ],
+      "sounds": [],
+      "scripts": [
+        {
+          "blocks": [
+            {
+              "opcode": "event_whenflagclicked"
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "score"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 0
+                }
+              }
+            },
+            {
+              "opcode": "data_setvariableto",
+              "fields": {
+                "VARIABLE": "speed"
+              },
+              "inputs": {
+                "VALUE": {
+                  "type": "literal",
+                  "value": 3
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "sprites": [
+      {
+        "kind": "sprite",
+        "name": "PlayerCar",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Convertible",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Convertible 2",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Car Horn",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "literal",
+                    "value": 0
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": -140
+                  }
+                }
+              },
+              {
+                "opcode": "looks_show"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "left arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": -15
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenkeypressed",
+                "fields": {
+                  "KEY_OPTION": "right arrow"
+                }
+              },
+              {
+                "opcode": "motion_changexby",
+                "inputs": {
+                  "DX": {
+                    "type": "literal",
+                    "value": 15
+                  }
+                }
+              },
+              {
+                "opcode": "looks_nextcostume"
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": -140,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "left-right"
+      },
+      {
+        "kind": "sprite",
+        "name": "EnemyCar",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Convertible 2",
+            "dataFormat": "svg"
+          },
+          {
+            "name": "Convertible",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Car Vroom",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "motion_gotoxy",
+                "inputs": {
+                  "X": {
+                    "type": "block",
+                    "block": {
+                      "opcode": "operator_random",
+                      "inputs": {
+                        "FROM": {
+                          "type": "literal",
+                          "value": -180
+                        },
+                        "TO": {
+                          "type": "literal",
+                          "value": 180
+                        }
+                      }
+                    }
+                  },
+                  "Y": {
+                    "type": "literal",
+                    "value": 200
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "motion_changeyby",
+                        "inputs": {
+                          "DY": {
+                            "type": "variable",
+                            "name": "speed"
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "sensing_touchingobject",
+                              "inputs": {
+                                "TOUCHINGOBJECTMENU": {
+                                  "type": "literal",
+                                  "value": "PlayerCar"
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "sound_playuntildone",
+                                "inputs": {
+                                  "SOUND_MENU": {
+                                    "type": "literal",
+                                    "value": "Car Horn"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "looks_say",
+                                "inputs": {
+                                  "MESSAGE": {
+                                    "type": "literal",
+                                    "value": "Game Over!"
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "control_wait",
+                                "inputs": {
+                                  "DURATION": {
+                                    "type": "literal",
+                                    "value": 1
+                                  }
+                                }
+                              },
+                              {
+                                "opcode": "event_broadcast",
+                                "fields": {
+                                  "BROADCAST_INPUT": "restart"
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_if",
+                        "inputs": {
+                          "CONDITION": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_lt",
+                              "inputs": {
+                                "OPERAND1": {
+                                  "type": "block",
+                                  "block": {
+                                    "opcode": "motion_yposition"
+                                  }
+                                },
+                                "OPERAND2": {
+                                  "type": "literal",
+                                  "value": -170
+                                }
+                              }
+                            }
+                          },
+                          "SUBSTACK": {
+                            "type": "stack",
+                            "blocks": [
+                              {
+                                "opcode": "motion_gotoxy",
+                                "inputs": {
+                                  "X": {
+                                    "type": "block",
+                                    "block": {
+                                      "opcode": "operator_random",
+                                      "inputs": {
+                                        "FROM": {
+                                          "type": "literal",
+                                          "value": -180
+                                        },
+                                        "TO": {
+                                          "type": "literal",
+                                          "value": 180
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "Y": {
+                                    "type": "literal",
+                                    "value": 200
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.03
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": 0,
+        "y": 200,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      },
+      {
+        "kind": "sprite",
+        "name": "ScoreBoard",
+        "variables": [],
+        "lists": [],
+        "costumes": [
+          {
+            "name": "Convertible",
+            "dataFormat": "svg"
+          }
+        ],
+        "sounds": [
+          {
+            "name": "Coin",
+            "dataFormat": "wav"
+          }
+        ],
+        "scripts": [
+          {
+            "blocks": [
+              {
+                "opcode": "event_whenflagclicked"
+              },
+              {
+                "opcode": "looks_show"
+              },
+              {
+                "opcode": "control_forever",
+                "inputs": {
+                  "SUBSTACK": {
+                    "type": "stack",
+                    "blocks": [
+                      {
+                        "opcode": "looks_say",
+                        "inputs": {
+                          "MESSAGE": {
+                            "type": "block",
+                            "block": {
+                              "opcode": "operator_join",
+                              "inputs": {
+                                "STRING1": {
+                                  "type": "literal",
+                                  "value": "Score: "
+                                },
+                                "STRING2": {
+                                  "type": "variable",
+                                  "name": "score"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "opcode": "control_wait",
+                        "inputs": {
+                          "DURATION": {
+                            "type": "literal",
+                            "value": 0.1
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ],
+        "procedures": [],
+        "x": -120,
+        "y": 140,
+        "direction": 90,
+        "size": 100,
+        "visible": true,
+        "draggable": false,
+        "rotationStyle": "all around"
+      }
+    ],
+    "broadcasts": [
+      {
+        "name": "restart"
+      }
+    ]
+  },
+  "features": [
+    "左右鍵換車道",
+    "敵車自上而下",
+    "碰撞失敗與重玩",
+    "得分顯示",
+    "速度隨時間提升"
+  ]
+}

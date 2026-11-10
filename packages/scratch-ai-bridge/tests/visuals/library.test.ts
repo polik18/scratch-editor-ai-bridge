@@ -123,9 +123,9 @@ describe('Scratch asset library index', () => {
 
   it('puts library candidates in the student prompt instead of hand-drawn presets', () => {
     const prompt = createStudentProjectInstruction('貓咪接蘋果')
-    expect(prompt).toContain('- Apple → Apple；Chomp')
-    expect(prompt).toContain('- Cat → Cat-a, Cat-b；Meow')
-    expect(prompt).toContain('不要自己畫 SVG')
+    expect(prompt).toContain('Apple(Apple)')
+    expect(prompt).toContain('Cat(Cat-a/Cat-b)')
+    expect(prompt).toContain('自製素材')
     expect(prompt).not.toContain('generic-character')
   })
 })
