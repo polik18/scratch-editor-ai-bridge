@@ -107,7 +107,11 @@ import {
   type LibraryResolutionReport,
   type ResolveLibraryAssetsOptions,
 } from './core/visuals/library'
-import { resolveAutomaticVisual } from './core/visuals/presets'
+import {
+  resolveAutomaticVisual,
+  summarizeAutomaticVisuals,
+  type AutomaticVisualSummary,
+} from './core/visuals/presets'
 import { SCRATCH_LINK_HARDWARE_EXTENSION_IDS } from './scratch/extensions'
 import {
   createVM,
@@ -4976,6 +4980,7 @@ byId<HTMLButtonElement>('validate').addEventListener('click', () => {
 const libraryAssetFetcher = createScratchAssetFetcher()
 
 let latestLibraryReport: LibraryResolutionReport | null = null
+let latestAutomaticVisuals: AutomaticVisualSummary | null = null
 
 const compileProjectToBlob = async (
   project: CanonicalProject,
@@ -4983,8 +4988,19 @@ const compileProjectToBlob = async (
 ): Promise<Blob> => {
   const resolved = await resolveLibraryAssets(project, libraryAssetFetcher, options)
   latestLibraryReport = resolved.report
+  latestAutomaticVisuals = summarizeAutomaticVisuals(resolved.project)
   return compileCanonicalProjectToSb3(resolved.project)
 }
+
+const describeAutomaticVisuals = (summary: AutomaticVisualSummary | null): string => {
+  if (!summary) return ''
+  const additions: string[] = []
+  if (summary.backdropCostumes > 0) additions.push(`${summary.backdropCostumes} 個背景`)
+  if (summary.spriteCostumes > 0) additions.push(`${summary.spriteCostumes} 個角色造型`)
+  return additions.length > 0 ? `已自動補上 ${additions.join('、')}。` : ''
+}
+
+const describeLatestAutomaticVisuals = (): string => describeAutomaticVisuals(latestAutomaticVisuals)
 
 const describeLatestLibraryAssets = (): string =>
   latestLibraryReport ? describeLibraryResolution(latestLibraryReport) : ''
@@ -5036,7 +5052,7 @@ const compileProject = async () => {
     setStatus(
       generateStatus,
 
-      `完成：.sb3 已由 Scratch VM 產生。${describeLatestLibraryAssets()}${semanticWarning}${cloudWarning ? `\n${cloudWarning}` : ''}`,
+      `完成：.sb3 已由 Scratch VM 產生。${describeLatestAutomaticVisuals()}${describeLatestLibraryAssets()}${semanticWarning}${cloudWarning ? `\n${cloudWarning}` : ''}`,
 
       'ok',
     )
@@ -5296,7 +5312,7 @@ const buildStudentProject = async (): Promise<void> => {
     setStudentResult(
       isCandidate ? `新版候選「${validation.data.name}」` : `已完成「${validation.data.name}」`,
 
-      `作品包含 ${validation.data.sprites.length} 個角色。${describeLatestLibraryAssets()}${describeOfflineCloudVariables(validation.data)}${latestRequirementCoverage ? '下方需求完成度是 AI 自述，Bridge 已檢查引用位置，但不代表已執行驗證。' : 'AI 回覆未提供需求完成度清單；格式與編譯通過不代表原始需求全數完成。'}${isCandidate ? '先試玩，再選擇是否使用新版。' : '請開啟下載的 .sb3 檔案繼續創作。'}本次驗證報告也可以下載。`,
+      `作品包含 ${validation.data.sprites.length} 個角色。${describeLatestAutomaticVisuals()}${describeLatestLibraryAssets()}${describeOfflineCloudVariables(validation.data)}${latestRequirementCoverage ? '下方需求完成度是 AI 自述，Bridge 已檢查引用位置，但不代表已執行驗證。' : 'AI 回覆未提供需求完成度清單；格式與編譯通過不代表原始需求全數完成。'}${isCandidate ? '先試玩，再選擇是否使用新版。' : '請開啟下載的 .sb3 檔案繼續創作。'}本次驗證報告也可以下載。`,
 
       'success',
     )

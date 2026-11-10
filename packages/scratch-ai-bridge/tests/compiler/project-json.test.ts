@@ -1,5 +1,7 @@
+import { createHash } from 'node:crypto'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
+import { compileCanonicalProjectToSb3 } from '../../src/core/compiler/compiler'
 import { buildScratchProjectArchive, buildScratchProjectJson } from '../../src/core/compiler/project-json'
 import emptyVisuals from '../../src/core/ir/examples/02-green-flag-move-say.json'
 import example from '../../src/core/ir/examples/03-repeat-score.json'
@@ -56,6 +58,43 @@ describe('Scratch project JSON compiler', () => {
     expect(sprite.costumes[0].rotationCenterX).toBe(38)
     expect(sprite.costumes[0].rotationCenterY).toBe(38)
     expect(stage.costumes[0].assetId).not.toBe(sprite.costumes[0].assetId)
+  })
+
+  it('uses the MD5 of the exact archived bytes for every asset entry', async () => {
+    const project = structuredClone(emptyVisuals) as CanonicalProject
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8">\n<rect width="12" height="8"/>\n</svg>'
+    project.sprites[0].costumes = [{ name: 'raw-svg', dataFormat: 'svg', data: svg }]
+    const expectedAssetId = createHash('md5').update(new TextEncoder().encode(svg)).digest('hex')
+
+    const compiled = await buildScratchProjectJson(project)
+    const costume = compiled.targets[1].costumes[0]
+    const archive = await JSZip.loadAsync(await buildScratchProjectArchive(project))
+    const stored = await archive.file(costume.md5ext)?.async('uint8array')
+
+    expect(costume.assetId).toBe(expectedAssetId)
+    expect(costume.md5ext).toBe(`${expectedAssetId}.svg`)
+    expect(stored).toEqual(new TextEncoder().encode(svg))
+  })
+
+  it('keeps exact asset MD5s after the VM compile validation pass', async () => {
+    const project = structuredClone(emptyVisuals) as CanonicalProject
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8">\n<rect width="12" height="8"/>\n</svg>'
+    project.sprites[0].costumes = [{ name: 'raw-svg', dataFormat: 'svg', data: svg }]
+    const expectedAssetId = createHash('md5').update(new TextEncoder().encode(svg)).digest('hex')
+
+    const sb3 = await compileCanonicalProjectToSb3(project)
+    const archive = await JSZip.loadAsync(await sb3.arrayBuffer())
+    const projectFile = archive.file('project.json')
+    if (!projectFile) throw new Error('Compiled SB3 has no project.json')
+    const compiled = JSON.parse(await projectFile.async('string')) as CompiledProject
+    const costume = compiled.targets[1].costumes[0]
+    const stored = await archive.file(costume.md5ext)?.async('uint8array')
+
+    expect(costume.assetId).toBe(expectedAssetId)
+    expect(costume.md5ext).toBe(`${expectedAssetId}.svg`)
+    expect(stored).toEqual(new TextEncoder().encode(svg))
   })
 
   it('gives the reported Gemini platformer distinct role-based artwork', async () => {

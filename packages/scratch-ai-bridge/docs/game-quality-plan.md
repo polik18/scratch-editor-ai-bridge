@@ -25,7 +25,7 @@
 | 0a   | 品質基準工具：10 題＋無頭試玩評分          | ✅ 完成                   | commit `b78adb48f1`；兩份手寫回覆試跑 78%（不是真實基準） |
 | 0b   | **用真實模型跑出 baseline 分數**           | ⏳ 待做：缺模型端點與金鑰 | 見 T0b                                                    |
 | 1a   | 官方素材庫接入生成（提示、下載、補齊）     | ✅ 完成（Node 驗證）      | 611/611 測試、build 與打包預算通過                        |
-| 1b   | 在真實瀏覽器驗證素材下載與 CSP             | ⏳ 待做                   | 見 T1b，**優先**                                          |
+| 1b   | 在真實瀏覽器驗證素材下載與 CSP             | ✅ 完成                   | Playwright Chromium 線上／斷網 smoke；官方 Apple MD5、CSP、fallback 均通過 |
 | 1c   | 學生「換一個素材」介面、離線備援、隱私說明 | ⏳ 待做                   | 見 T1c                                                    |
 | 2a   | 精簡製作指令並附完整範例（目標 ≤ 6K 字元） | ⏳ 待做                   | 見 T2a                                                    |
 | 2b   | scratchblocks 文字格式可行性實驗           | ⏳ 待做                   | 見 T2b，依 2a 結果再決定                                  |
@@ -85,11 +85,15 @@
 
 ### 4.3 驗證紀錄（2026-11-10）
 
-- `vitest run`：74 個測試檔、611 個測試全部通過。
+- `vitest run`：74 個測試檔、613 個測試全部通過。
 - `npm run build`：通過；APP 打包 1.51 MiB gzip，上限 1.75 MiB。
+- `npm run test:browser`：Chromium 完整回歸 smoke 通過，含修復／重匯入迴圈、學生操作、離線 reload、CSP、官方 SB3 預覽與品質量測。
+- `npm run test:student-flow`：學生候選預覽、捨棄、採用、重新載入與儲存失敗流程通過。
+- `npm run test:asset-library-browser`：Chromium 線上下載官方 Apple 素材，SB3 內原始位元組 MD5 為 `3826a4091a33e4d26f87a2fac7cf796b`，狀態列顯示官方造型／音效且 CSP 違規為 0；斷網時退回簡單圖形並顯示下載失敗，CSP 違規仍為 0。
+- 為保留官方素材的精確 `md5ext`，修正 compiler／project JSON／decompiler 的 raw-byte MD5 路徑；新增 exact-archive-MD5 回歸測試。
 - 新增和修改的檔案 ESLint 零錯誤、Prettier 通過。全套件 lint 沒有跑，既有基準約 1,388 個錯誤。
 - 基準試跑：兩份手寫回覆，平均 78%，未通過的是 plays-sound 和 animated-sprite。截圖確認畫面是官方貓、蘋果和 Forest 背景。
-- **沒跑的**：`test:browser`、`test:student-flow`、真實模型、在主站頁面裡實際下載素材（Node 端的 fetch 已驗證）、部署。
+- **沒跑的**：真實模型、部署。
 
 ### 4.4 已知限制與風險
 
@@ -189,4 +193,5 @@
 
 ## 7. 交接紀錄（新的寫在最上面）
 
+- **2026-11-10 Codex**：完成 T1b。新增 `scripts/asset-library-browser-smoke.mjs` 與 `test:asset-library-browser`，以真實 Chromium 驗證官方 Apple 素材下載、CSP、斷網 fallback；發現並修正 VM 編譯後官方 SVG raw-byte MD5 被正規化的缺陷，保留官方 `3826a4091a33e4d26f87a2fac7cf796b`。`vitest` 74/613、build、`test:browser`、`test:student-flow` 均通過；未 push、未部署。下一步仍是 T0b，需向使用者取得模型端點／金鑰或 10 份模型回覆。
 - **2026-11-10 Claude Code**：完成診斷（第 1 節），完成 0a 和 1a，commit `b78adb48f1`，未 push、未部署。下一步請先做 T1b，再向使用者取得模型端點做 T0b。使用者已明確表示：Scratch 內建素材完全沒有發揮用途，AI 也畫不出像樣的 SVG。所以 AI 不得繪圖、一律使用官方素材，這是本主線的設計前提。

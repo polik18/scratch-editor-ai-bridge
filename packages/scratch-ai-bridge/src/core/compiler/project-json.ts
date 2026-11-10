@@ -1,5 +1,6 @@
+import { md5 } from '@noble/hashes/legacy'
+import { bytesToHex } from '@noble/hashes/utils'
 import JSZip from 'jszip'
-import { createOfflineScratchStorage } from '../../scratch/storage'
 import { getBlockCapability } from '../capabilities/registry'
 import { encodeCanonicalScriptsToBlockGraph, type EncodedScratchBlockGraph } from '../graph'
 import type {
@@ -116,20 +117,12 @@ const decodeAssetData = (data: string, dataFormat: string): Uint8Array => {
   return decodeBase64(data)
 }
 
-const createAssetRegistry = async () => {
-  const storage = await createOfflineScratchStorage()
+const createAssetRegistry = () => {
   const assets = new Map<string, Uint8Array>()
 
-  const add = (kind: 'costume' | 'sound', dataFormat: string, data: Uint8Array): string => {
+  const add = (dataFormat: string, data: Uint8Array): string => {
     if (data.byteLength === 0) throw new Error(`Asset data for ${dataFormat} is empty`)
-    const assetType =
-      kind === 'sound'
-        ? storage.AssetType.Sound
-        : dataFormat === 'svg'
-          ? storage.AssetType.ImageVector
-          : storage.AssetType.ImageBitmap
-    const asset = storage.createAsset(assetType, dataFormat, data, '', true)
-    const assetId = String(asset.assetId)
+    const assetId = bytesToHex(md5(data))
     assets.set(`${assetId}.${dataFormat}`, data)
     return assetId
   }
@@ -158,7 +151,7 @@ const compileCostume = (
   const data = hasData
     ? decodeAssetData(costumeData, dataFormat)
     : new TextEncoder().encode(automaticVisual?.data ?? '')
-  const assetId = registry.add('costume', dataFormat, data)
+  const assetId = registry.add(dataFormat, data)
 
   return {
     assetId,
@@ -179,7 +172,7 @@ const compileSound = (sound: CanonicalSound, registry: AssetRegistry): ScratchSo
   const hasData = typeof soundData === 'string' && soundData.length > 0
   const dataFormat = hasData ? sound.dataFormat : 'wav'
   const data = hasData ? decodeAssetData(soundData, dataFormat) : silentWav()
-  const assetId = registry.add('sound', dataFormat, data)
+  const assetId = registry.add(dataFormat, data)
 
   return {
     assetId,
@@ -464,9 +457,9 @@ const inferExtensions = (project: CanonicalProject): string[] => {
   return [...extensions].sort()
 }
 
-const buildScratchProjectBundle = async (project: CanonicalProject): Promise<ScratchProjectBundle> => {
+const buildScratchProjectBundle = (project: CanonicalProject): ScratchProjectBundle => {
   const symbols = createSymbolTable(project)
-  const registry = await createAssetRegistry()
+  const registry = createAssetRegistry()
   const stage = compileTarget(project.stage, true, 0, project.name, symbols, registry)
   const sprites = project.sprites.map((sprite, index) =>
     compileTarget(sprite, false, index + 1, project.name, symbols, registry),
@@ -491,8 +484,8 @@ const buildScratchProjectBundle = async (project: CanonicalProject): Promise<Scr
   return { project: scratchProject, assets: registry.assets }
 }
 
-export const buildScratchProjectJson = async (project: CanonicalProject): Promise<ScratchProjectJson> =>
-  (await buildScratchProjectBundle(project)).project
+export const buildScratchProjectJson = (project: CanonicalProject): Promise<ScratchProjectJson> =>
+  Promise.resolve().then(() => buildScratchProjectBundle(project).project)
 
 /**
  * Build a Scratch project archive from a Canonical Project.
@@ -506,7 +499,7 @@ export const buildScratchProjectArchive = async (
   project: CanonicalProject,
   opts?: { retainOriginalEntries?: Map<string, Uint8Array> },
 ): Promise<Uint8Array> => {
-  const bundle = await buildScratchProjectBundle(project)
+  const bundle = buildScratchProjectBundle(project)
   const archive = new JSZip()
   archive.file('project.json', new TextEncoder().encode(JSON.stringify(bundle.project)))
   for (const [filename, data] of bundle.assets) archive.file(filename, data)

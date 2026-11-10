@@ -34,6 +34,7 @@
     "test:browser:firefox": "BROWSER=firefox node scripts/browser-smoke.mjs",
     "test:browser:safari": "node scripts/safari-smoke.mjs",
     "test:browser:webkit": "BROWSER=webkit node scripts/browser-smoke.mjs",
+    "test:asset-library-browser": "node scripts/asset-library-browser-smoke.mjs",
     "test:student-flow": "node scripts/student-flow-smoke.mjs"
   },
   "dependencies": {

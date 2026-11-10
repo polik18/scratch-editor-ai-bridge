@@ -1,4 +1,4 @@
-import { loadSb3, saveSb3, type ScratchVMHandle } from '../../scratch'
+import { loadSb3, type ScratchVMHandle } from '../../scratch'
 import type { CanonicalProject } from '../ir/types'
 import { validateCanonicalProject, validateCanonicalSemantics } from '../validator'
 import { buildScratchProjectArchive } from './project-json'
@@ -238,13 +238,9 @@ export const compileCanonicalProject = async (project: CanonicalProject): Promis
     throw new ProjectCompileError('scratch-vm-load', error)
   }
 
-  try {
-    const sb3 = await saveSb3(vm)
-    return { vm, sb3 }
-  } catch (error) {
-    vm.quit()
-    throw new ProjectCompileError('scratch-vm-save', error)
-  }
+  const blobBytes = new Uint8Array(archive.byteLength)
+  blobBytes.set(archive)
+  return { vm, sb3: new Blob([blobBytes.buffer], { type: 'application/x.scratch.sb3' }) }
 }
 
 export const compileCanonicalProjectToSb3 = async (project: CanonicalProject): Promise<Blob> => {

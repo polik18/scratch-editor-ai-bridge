@@ -1,3 +1,5 @@
+import { md5 } from '@noble/hashes/legacy'
+import { bytesToHex } from '@noble/hashes/utils'
 import { DataFormat } from '@scratch/scratch-storage'
 import {
   createVM,
@@ -82,10 +84,11 @@ const createVmSafeProject = async (
       const bytes = entry?.bytes
       const expectedId = typeof costume.assetId === 'string' ? costume.assetId : path.split('/').at(-1)?.split('.')[0]
       const assetType = dataFormat === DataFormat.SVG ? storage.AssetType.ImageVector : storage.AssetType.ImageBitmap
-      const actualId = bytes
+      const rawId = bytes ? bytesToHex(md5(bytes)).toLowerCase() : ''
+      const normalizedId = bytes
         ? String(storage.createAsset(assetType, dataFormat, bytes, '', true).assetId).toLowerCase()
         : ''
-      if (bytes && expectedId?.toLowerCase() === actualId) continue
+      if (bytes && expectedId && [rawId, normalizedId].includes(expectedId.toLowerCase())) continue
 
       const visual = resolveAutomaticVisual({
         isStage: target.isStage === true,
@@ -94,8 +97,7 @@ const createVmSafeProject = async (
         costumeName: typeof costume.name === 'string' ? costume.name : `Costume ${fallbackIndex + 1}`,
       })
       let fallbackBytes = new TextEncoder().encode(visual.data)
-      let fallbackAsset = storage.createAsset(storage.AssetType.ImageVector, DataFormat.SVG, fallbackBytes, '', true)
-      let assetId = String(fallbackAsset.assetId).toLowerCase()
+      let assetId = bytesToHex(md5(fallbackBytes)).toLowerCase()
       let fallbackPath = `${assetId}.svg`
       let collisionIndex = 0
       while (entryByName.has(fallbackPath) && entryByName.get(fallbackPath)?.bytes !== fallbackBytes) {
@@ -103,8 +105,7 @@ const createVmSafeProject = async (
         fallbackBytes = new TextEncoder().encode(
           `${visual.data}\n<!-- Scratch VM import fallback ${collisionIndex} -->`,
         )
-        fallbackAsset = storage.createAsset(storage.AssetType.ImageVector, DataFormat.SVG, fallbackBytes, '', true)
-        assetId = String(fallbackAsset.assetId).toLowerCase()
+        assetId = bytesToHex(md5(fallbackBytes)).toLowerCase()
         fallbackPath = `${assetId}.svg`
       }
 
@@ -203,8 +204,9 @@ const retainAssetData = async (
             : format === 'svg'
               ? storage.AssetType.ImageVector
               : storage.AssetType.ImageBitmap
-        const actualId = storage.createAsset(assetType, format, asset, '', true).assetId
-        if (expectedId && String(actualId).toLowerCase() !== expectedId.toLowerCase()) {
+        const rawId = bytesToHex(md5(asset)).toLowerCase()
+        const normalizedId = String(storage.createAsset(assetType, format, asset, '', true).assetId).toLowerCase()
+        if (expectedId && ![rawId, normalizedId].includes(expectedId.toLowerCase())) {
           canonicalAsset.assetIssue = 'checksum-mismatch'
         }
         const mime =
