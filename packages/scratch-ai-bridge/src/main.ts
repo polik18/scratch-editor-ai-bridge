@@ -588,7 +588,7 @@ app.innerHTML = `
 
 
 
-      <button id="analyze-tab" class="tab" role="tab" aria-selected="false" aria-controls="analyze-panel" data-tab="analyze">請 AI 幫我檢查作品</button>
+      <button id="analyze-tab" class="tab" role="tab" aria-label="請 AI 幫我檢查作品" aria-selected="false" aria-controls="analyze-panel" data-tab="analyze">進階：檢查已有作品</button>
 
 
 
@@ -612,19 +612,19 @@ app.innerHTML = `
 
 
 
-          <li class="current"><span>1</span>描述作品</li>
+          <li class="current"><span>1</span>寫下想法</li>
 
 
 
-          <li><span>2</span>請 AI 製作</li>
+          <li><span>2</span>交給 AI</li>
 
 
 
-          <li><span>3</span>貼回並檢查</li>
+          <li><span>3</span>貼回回答</li>
 
 
 
-          <li><span>4</span>試玩與下載</li>
+          <li><span>4</span>試玩下載</li>
 
 
 
@@ -648,6 +648,8 @@ app.innerHTML = `
 
 
 
+          <details class="idea-examples-panel">
+            <summary>找靈感（選用）</summary>
           <div class="idea-examples" aria-label="作品想法範例">
 
 
@@ -669,10 +671,11 @@ app.innerHTML = `
 
 
           </div>
+          </details>
 
 
 
-          <div class="button-row"><button id="copy-direct-instruction" class="button primary" disabled>複製製作訊息給 AI</button><button id="copy-design-instruction" class="button secondary" disabled>先和 AI 討論玩法</button></div>
+          <div class="button-row"><button id="copy-direct-instruction" class="button primary" disabled>複製製作訊息給 AI</button></div>
           <p>不要在想法中填入姓名、班級等個人資料。複製後，打開老師允許的 AI 網頁貼上訊息並送出。</p>
           <p>Bridge 只會向 Scratch 官方伺服器下載素材；作品本身不會上傳，已下載素材可能暫存在這個瀏覽器的本機快取。</p>
           <p id="student-draft-status" role="status" aria-live="polite">這個分頁會暫存你的作品；關閉分頁或清除資料後可能無法找回，請下載作品。</p>
@@ -691,7 +694,7 @@ app.innerHTML = `
         </section>
 
         <details class="card game-brief-panel" id="optional-game-brief">
-          <summary>想先和 AI 討論玩法（選用）</summary>
+          <summary>進階：先和 AI 討論玩法（選用）</summary>
 
           <label for="game-genre" class="field-label">想做哪一類？（可讓 AI 從點子判斷）</label>
 
@@ -709,7 +712,7 @@ app.innerHTML = `
 
             <textarea id="game-brief" class="request-input brief-input" maxlength="3000" placeholder="例如：玩家操控小魚游動，收集氧氣泡泡並躲避水母；每救到一隻海龜就解鎖新海域，碰到水母會失去氧氣，耗盡後可立即重來。"></textarea>
 
-            <div class="button-row"><button id="copy-build-instruction" class="button primary" disabled>用已確認玩法複製製作指令</button></div>
+            <div class="button-row"><button id="copy-design-instruction" class="button secondary" disabled>複製玩法討論訊息</button><button id="copy-build-instruction" class="button primary" disabled>用已確認玩法複製製作指令</button></div>
 
             <p id="build-prompt-status" class="inline-status" role="status" aria-live="polite">討論完成後貼上確認的玩法，再複製製作指令。也可以直接用「複製製作訊息給 AI」。</p>
 
@@ -748,7 +751,11 @@ app.innerHTML = `
             <div class="button-row"><button id="add-fragment" class="button primary">加入片段</button><button id="reset-fragments" class="button secondary">清除片段組合</button></div>
             <p id="fragment-status" class="inline-status" role="status" aria-live="polite">片段組合保存在本機瀏覽器；目前尚無片段。</p>
           </details>
-          <div class="button-row student-actions"><button id="student-build" class="button primary">檢查並製作 Scratch</button><button id="load-sample" class="button secondary">試用平台遊戲範例</button></div>
+          <div class="button-row student-actions"><button id="student-build" class="button primary">檢查並製作 Scratch</button></div>
+          <details class="sample-workflow">
+            <summary>先試用範例（選用）</summary>
+            <div class="button-row"><button id="load-sample" class="button secondary">載入平台遊戲範例</button></div>
+          </details>
 
 
 

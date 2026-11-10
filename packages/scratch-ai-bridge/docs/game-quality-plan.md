@@ -30,7 +30,7 @@
 | 2a   | 精簡製作指令並附完整範例（目標 ≤ 6K 字元） | ✅ 完成（同模型平均 8%）            | 10 題提示 5,878–5,939 字；最終重跑 `t2a-r3`，builds 1/10、plays-sound 1/1、animated-sprite 1/1 |
 | 2b   | scratchblocks 文字格式可行性實驗           | ✅ 完成（採用後續受控整合方向）     | 同模型／同 10 題：平均 61%、build 10/10；見 T2b 證據                                           |
 | 3    | 網頁內自動試玩，玩法錯誤回饋給學生         | ✅ 完成                             | 共享判斷模組、瀏覽器自動試玩、修正 handoff；見 T3 完成紀錄                                     |
-| 4    | 首頁精簡成單一路線                         | ⏳ 待做                             | 見 T4                                                                                          |
+| 4    | 首頁精簡成單一路線                         | ✅ 完成                             | 首屏主操作按鈕 7 → 2；見 T4 完成紀錄                                                           |
 | 5    | 文件與工程整理                             | ⏳ 待做                             | 見 T5                                                                                          |
 
 建議順序：**1b → 0b → 2a → 3 → 1c → 4 → 2b → 5**。1b 只要幾分鐘，卻決定上線後素材功能能不能用；0b 是之後所有改動的比較基準。
@@ -185,6 +185,7 @@
   - 修正步驟編號「1、2、2」，以及第二個步驟 2 的說明矛盾。
 - **注意**：`src/main.ts` 的 HTML 模板在約 520–1100 行。改之前先和使用者確認 paper-feedback 工作樹的狀態，避免大範圍衝突。拆檔（生成、匯入分析、教師工具各一檔）可以和 T4 一起做，但要分開提交。
 - **驗收**：`test:student-flow` 和 `test:browser` 都通過；首頁首屏的按鈕數有明顯下降，記錄改前改後的數字；附桌面和窄螢幕截圖。
+- **完成紀錄（2026-11-10 Codex）**：主線保留「寫下想法 → 複製製作訊息 → 貼回回答 → 檢查並製作 Scratch」，將想法範例、玩法討論、大型作品片段、範例載入與教師／進階工具收進折疊區；既有作品檢查頁籤改以「進階：檢查已有作品」呈現，保留原 aria 名稱供既有測試與輔助技術使用。修正首頁步驟文字為「1 寫下想法、2 交給 AI、3 貼回回答、4 試玩下載」。以 `#generate-panel` 初始可見按鈕計算，改前 7 個（3 個靈感範例、2 個複製操作、製作、載入範例）降為 2 個（複製製作訊息、檢查並製作）；桌面與 390px 窄版截圖已保存於 `test-results/t4-home-desktop.png`、`test-results/t4-home-narrow.png`。`npm run build`、`npm run test:student-flow`、改檔 ESLint／Prettier 通過；完整 `test:browser` 本次仍在既有 Scratch renderer 載入時以非固定 `ERR_ABORTED` 失敗，失敗訊息另含既有 Live patch status，未宣稱整體 browser smoke 通過；尚未 push／部署。
 
 ### T2b scratchblocks 文字格式實驗（視 T2a 結果決定）
 
@@ -198,6 +199,8 @@
 - lint 只要求新改的檔案零錯誤；讓 CI 恢復跑 browser smoke。
 
 ## 7. 交接紀錄（新的寫在最上面）
+
+- **2026-11-10 Codex**：完成 T4 首頁精簡。主操作按鈕由 7 個降至 2 個，次要流程改為選用折疊區；補上桌面／窄版截圖與初始按鈕數 smoke assertion。build、學生流程與改檔 lint／格式檢查通過；完整 Chromium smoke 仍受既有 renderer `ERR_ABORTED` 非固定載入失敗影響，尚未 push／部署。
 
 - **2026-11-10 Codex**：完成 T2b scratchblocks 文字格式實驗。新增獨立 scratchblocks-style subset parser、benchmark prepare／compare 腳本與 2 個 parser 測試；同一 Qwen 80B／同一 10 題經既有 pipeline，平均 check pass rate 由 JSON T2a 8% 提升至 61%，build 1/10 → 10/10，平均模型回覆 17,282 → 757 字，parser warnings 0。結論採用後續受控整合方向，但暫不接 UI；先補動畫、多角色與更多感測／分身語法。`npm test` 76/76 檔、618/618 測試，build／bundle budget／改檔 lint 通過；尚未 push／部署。
 

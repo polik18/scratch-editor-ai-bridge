@@ -482,6 +482,22 @@ h1 {
   color: var(--muted);
   font-size: 14px;
 }
+.idea-examples-panel,
+.sample-workflow {
+  margin-top: 12px;
+  color: var(--forest-dark);
+}
+.idea-examples-panel summary,
+.sample-workflow summary {
+  width: fit-content;
+  color: var(--forest-dark);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.sample-workflow .button-row {
+  margin-top: 8px;
+}
 .idea-chip {
   min-height: 44px;
   padding: 7px 12px;

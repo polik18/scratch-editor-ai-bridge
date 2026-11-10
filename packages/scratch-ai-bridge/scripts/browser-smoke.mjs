@@ -1037,6 +1037,7 @@ try {
     )
   if (unlabeledTextareas.length > 0) throw new Error(`Unlabeled textareas: ${unlabeledTextareas.join(', ')}`)
   await page.locator('#project-request').fill('做一個可以收集金幣的平台遊戲')
+  await page.locator('#optional-game-brief > summary').click()
   await page.locator('#copy-design-instruction').click()
   const discussionInstruction = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
   if (
@@ -2720,6 +2721,7 @@ try {
   }
   await page.locator('#generate-tab').click()
 
+  await page.locator('.sample-workflow > summary').click()
   await page.locator('#load-sample').click()
   const previewProject = JSON.parse(await page.locator('#json-editor').inputValue())
   previewProject.extensions = ['microbit']
@@ -2794,6 +2796,7 @@ try {
   const restorePage = await browser.newPage({ acceptDownloads: true })
   try {
     await restorePage.goto(`http://127.0.0.1:${address.port}${sitePrefix}`, { waitUntil: 'networkidle' })
+    await restorePage.locator('.sample-workflow > summary').click()
     await restorePage.locator('#load-sample').click()
     const originalResponse = await restorePage.locator('#json-editor').inputValue()
     const firstDownload = restorePage.waitForEvent('download')

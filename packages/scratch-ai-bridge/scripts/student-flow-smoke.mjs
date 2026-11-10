@@ -42,6 +42,10 @@ try {
     }),
   )
   await page.goto(`http://127.0.0.1:${address.port}/`, { waitUntil: 'networkidle' })
+  assert.deepEqual(await page.locator('#generate-panel button:visible').allTextContents(), [
+    '複製製作訊息給 AI',
+    '檢查並製作 Scratch',
+  ])
   assert.equal(await page.locator('.student-share-panel').isVisible(), false)
   await page.locator('.teacher-share > summary').click()
   assert.equal(await page.locator('.student-share-panel').isVisible(), true)
@@ -53,6 +57,7 @@ try {
   assert.ok((await page.evaluate(() => globalThis.__studentCopied)).includes('小貓冒險'))
   await page.locator('#student-ai-answer-ready').click()
   assert.equal(await page.locator('#json-editor').evaluate((element) => document.activeElement === element), true)
+  await page.locator('.sample-workflow > summary').click()
   await page.locator('#load-sample').click()
   const original = await page.locator('#json-editor').inputValue()
   await page.locator('#json-editor').fill('{incomplete')
