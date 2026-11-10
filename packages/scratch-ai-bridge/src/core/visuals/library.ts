@@ -178,7 +178,11 @@ export const formatLibraryCandidates = (candidates: LibraryCandidates): string =
     `可用音效：${candidates.sounds.join(', ')}`,
   ].join('\n')
 
-export type LibraryAssetFetcher = (md5ext: string) => Promise<Uint8Array>
+export type LibraryAssetFetcher = ((md5ext: string) => Promise<Uint8Array>) & {
+  readonly cacheHits?: ReadonlySet<string>
+}
+
+const LIBRARY_CACHE_NAME = 'scratch-ai-bridge.asset-library.v1'
 
 /**
  * Fetch official library assets by md5ext and verify the bytes against the MD5 in the name before use.
@@ -187,21 +191,49 @@ export type LibraryAssetFetcher = (md5ext: string) => Promise<Uint8Array>
  */
 export const createScratchAssetFetcher = (fetcher: typeof fetch = fetch): LibraryAssetFetcher => {
   const cache = new Map<string, Promise<Uint8Array>>()
-  return (md5ext) => {
-    const cached = cache.get(md5ext)
-    if (cached) return cached
-    const request = (async () => {
-      if (!/^[0-9a-f]{32}\.(svg|png|wav)$/.test(md5ext)) throw new Error(`Unexpected library asset name ${md5ext}`)
-      const response = await fetcher(`${SCRATCH_ASSET_ORIGIN}/internalapi/asset/${md5ext}/get/`)
-      if (!response.ok) throw new Error(`Scratch asset ${md5ext} returned HTTP ${response.status}`)
-      const bytes = new Uint8Array(await response.arrayBuffer())
-      if (bytesToHex(md5(bytes)) !== md5ext.slice(0, 32)) throw new Error(`Scratch asset ${md5ext} failed MD5 check`)
-      return bytes
-    })()
-    cache.set(md5ext, request)
-    request.catch(() => cache.delete(md5ext))
-    return request
+  const cacheHits = new Set<string>()
+  const persistentCachePromise =
+    typeof globalThis.caches === 'undefined'
+      ? Promise.resolve<Cache | undefined>(undefined)
+      : globalThis.caches.open(LIBRARY_CACHE_NAME).catch(() => undefined)
+  const requestAsset = async (md5ext: string): Promise<Uint8Array> => {
+    if (!/^[0-9a-f]{32}\.(svg|png|wav)$/.test(md5ext)) throw new Error(`Unexpected library asset name ${md5ext}`)
+    const url = `${SCRATCH_ASSET_ORIGIN}/internalapi/asset/${md5ext}/get/`
+    const persistentCache = await persistentCachePromise
+    const cachedResponse = await persistentCache?.match(url)
+    if (cachedResponse) {
+      const cachedBytes = new Uint8Array(await cachedResponse.arrayBuffer())
+      if (bytesToHex(md5(cachedBytes)) === md5ext.slice(0, 32)) {
+        cacheHits.add(md5ext)
+        return cachedBytes
+      }
+    }
+    const response = await fetcher(url)
+    if (!response.ok) throw new Error(`Scratch asset ${md5ext} returned HTTP ${response.status}`)
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    if (bytesToHex(md5(bytes)) !== md5ext.slice(0, 32)) throw new Error(`Scratch asset ${md5ext} failed MD5 check`)
+    try {
+      await persistentCache?.put(
+        url,
+        new Response(bytes, { headers: { 'content-type': response.headers.get('content-type') ?? '' } }),
+      )
+    } catch {
+      // Cache Storage is an enhancement; a private browser or quota failure must not block compilation.
+    }
+    return bytes
   }
+  const request = Object.assign(
+    (md5ext: string) => {
+      const cached = cache.get(md5ext)
+      if (cached) return cached
+      const request = requestAsset(md5ext)
+      cache.set(md5ext, request)
+      request.catch(() => cache.delete(md5ext))
+      return request
+    },
+    { cacheHits },
+  )
+  return request
 }
 
 const MIME: Record<string, string> = { svg: 'image/svg+xml', png: 'image/png', wav: 'audio/wav' }
@@ -226,6 +258,8 @@ export interface LibraryResolutionReport {
   readonly placeholderCostumes: readonly string[]
   /** Sounds still without audio; the compiler stores silence for these. */
   readonly silentSounds: readonly string[]
+  /** Official assets served from the browser's persistent Cache Storage. */
+  readonly cacheHits: readonly string[]
   /** Inline SVG written by the model that was replaced with library artwork. */
   readonly replacedModelSvg: number
   readonly fetchFailures: readonly string[]
@@ -280,11 +314,14 @@ export const resolveLibraryAssets = async (
   let replacedModelSvg = 0
   const placeholderCostumes: string[] = []
   const silentSounds: string[] = []
+  const cacheHits = new Set<string>()
   const fetchFailures: string[] = []
 
   const load = async (md5ext: string): Promise<string | undefined> => {
     try {
-      return toDataUrl(await fetchAsset(md5ext), formatOf(md5ext))
+      const bytes = await fetchAsset(md5ext)
+      if (fetchAsset.cacheHits?.has(md5ext)) cacheHits.add(md5ext)
+      return toDataUrl(bytes, formatOf(md5ext))
     } catch (error) {
       fetchFailures.push(`${md5ext}: ${error instanceof Error ? error.message : String(error)}`)
       return undefined
@@ -384,6 +421,7 @@ export const resolveLibraryAssets = async (
       librarySounds,
       placeholderCostumes,
       silentSounds,
+      cacheHits: [...cacheHits],
       replacedModelSvg,
       fetchFailures,
     },
@@ -407,6 +445,7 @@ export const describeLibraryResolution = (report: LibraryResolutionReport): stri
     )
   if (report.silentSounds.length > 0)
     sentences.push(`${report.silentSounds.length} 個音效找不到對應素材，目前是無聲的。`)
+  if (report.cacheHits.length > 0) sentences.push(`離線時使用了 ${report.cacheHits.length} 個本機快取素材。`)
   if (report.fetchFailures.length > 0) sentences.push('部分官方素材下載失敗（可能沒有網路），已改用簡單圖形。')
   return sentences.join('')
 }

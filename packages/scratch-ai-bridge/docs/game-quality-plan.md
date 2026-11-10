@@ -26,7 +26,7 @@
 | 0b   | **用真實模型跑出 baseline 分數**           | ✅ 完成（本機 baseline，0/10 編譯） | Qwen 80B local；10 題已生成，build 0/10；見 T0b |
 | 1a   | 官方素材庫接入生成（提示、下載、補齊）     | ✅ 完成（Node 驗證）      | 611/611 測試、build 與打包預算通過                        |
 | 1b   | 在真實瀏覽器驗證素材下載與 CSP             | ✅ 完成                   | Playwright Chromium 線上／斷網 smoke；官方 Apple MD5、CSP、fallback 均通過 |
-| 1c   | 學生「換一個素材」介面、離線備援、隱私說明 | ⏳ 待做                   | 見 T1c                                                    |
+| 1c   | 學生「換一個素材」介面、離線備援、隱私說明 | ✅ 完成                   | Chromium 線上／暖快取離線／冷離線、換素材重編譯與復原均通過 |
 | 2a   | 精簡製作指令並附完整範例（目標 ≤ 6K 字元） | ✅ 完成（同模型平均 8%） | 10 題提示 5,878–5,939 字；最終重跑 `t2a-r3`，builds 1/10、plays-sound 1/1、animated-sprite 1/1 |
 | 2b   | scratchblocks 文字格式可行性實驗           | ⏳ 待做                   | 見 T2b，依 2a 結果再決定                                  |
 | 3    | 網頁內自動試玩，玩法錯誤回饋給學生         | ⏳ 待做                   | 見 T3                                                     |
@@ -171,9 +171,9 @@
 - **做法**：
   - 作品完成後顯示「本作品使用的素材」縮圖列。每個角色有「換一個」按鈕，候選來自同標籤或同中文關鍵字的官方素材；換的時候只改 costumes 和 sounds，不動積木，然後重新編譯。
   - 首頁說明補一句：只會向 Scratch 官方伺服器下載素材，作品本身不會上傳。
-  - 離線備援：在本機快取或打包一小組常用素材。打包進 repo 之前，先確認 Scratch 素材庫的授權條款，並記錄在本檔。
+  - 離線備援：使用瀏覽器 Cache Storage 以 `md5ext` 驗證後保存已下載素材；暖快取可離線重建，冷離線則顯示清楚的下載失敗與簡單圖形 fallback，不把第三方素材直接打包進 repo。
   - 處理限制 4.4-1：對顏色款式型的官方角色只補第一個造型，或改用標籤判斷。
-- **驗收**：互動測試涵蓋換素材後重新編譯、復原；離線時有清楚的說明。
+- **驗收**：`npm run test:asset-library-browser` 以 Chromium 驗證線上官方 Apple MD5、角色換成 Cat 後重新編譯下載、按「回到上一個可用作品」復原、同一 context 暖快取離線與全新 context 冷離線 fallback；兩種離線情境 CSP 違規皆為 0。`npm test` 75/75 檔、616/616 測試，build 與 bundle budget 通過；首頁隱私文字明確說明只下載 Scratch 官方素材且作品不會上傳。
 
 ### T4 首頁精簡（R4）
 
@@ -196,6 +196,8 @@
 - lint 只要求新改的檔案零錯誤；讓 CI 恢復跑 browser smoke。
 
 ## 7. 交接紀錄（新的寫在最上面）
+
+- **2026-11-10 Codex**：完成 T1c。新增完成作品的官方素材縮圖與「換一個並下載新版」介面，替換只改素材欄位、不改積木，並可用既有「回到上一個可用作品」復原；首頁補上官方素材下載／作品不上傳的隱私說明。`createScratchAssetFetcher` 以 Cache Storage 保存並驗證官方素材，加入暖快取離線訊息與冷離線 fallback。Chromium smoke 驗證線上下載、Apple raw-byte MD5、換成 Cat、復原、暖／冷離線、CSP 0 違規；`npm test` 75/75、616/616，build 與 bundle budget 通過；尚未 push／部署。下一步可進入 T2b scratchblocks 實驗或 T3 自動試玩回饋。
 
 - **2026-11-10 Codex**：完成 T2a。新增可編譯的官方素材接蘋果範例，學生提示改成 ≤6K、常用 opcode 與 `features` envelope；`npm test` 75/75 檔、616/616 測試，build、改檔 ESLint／Prettier 全通過。用同一 Qwen 80B 本地模型重跑三輪，最終 `t2a-r3` 10 題平均 8%，builds 1/10、runs 1/1、plays-sound 1/1、animated-sprite 1/1；尚未 push／部署。下一步依主線可做 T1c，或針對廣播 input 穩定性進入 T2b。
 

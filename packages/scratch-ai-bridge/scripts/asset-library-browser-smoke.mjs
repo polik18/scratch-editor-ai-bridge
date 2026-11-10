@@ -135,7 +135,8 @@ let browser
 try {
   browser = await browserType.launch({ headless: process.env.BROWSER_HEADLESS !== 'false' })
 
-  const onlinePage = await browser.newPage({ acceptDownloads: true })
+  const warmContext = await browser.newContext({ acceptDownloads: true })
+  const onlinePage = await warmContext.newPage()
   await installCspRecorder(onlinePage)
   const requests = []
   onlinePage.on('request', (request) => requests.push(request.url()))
@@ -150,23 +151,57 @@ try {
   assert.equal(md5(onlineAppleBytes), appleMd5ext.slice(0, 32))
   assert.match(online.resultMessage, /已放入 \d+ 個 Scratch 官方造型／背景/)
   assert.match(online.resultMessage, /官方音效/)
+  await onlinePage.locator('#student-assets').waitFor({ state: 'visible' })
+  assert.match((await onlinePage.locator('#student-assets').textContent()) ?? '', /本作品使用的素材/)
+  const replacement = await onlinePage
+    .locator('#student-asset-list .student-asset-select')
+    .first()
+    .evaluate((select) => [...select.options].find((option) => option.value !== 'Apple')?.value)
+  assert.ok(replacement, 'Asset replacement list did not offer another official sprite')
+  await onlinePage.locator('#student-asset-list .student-asset-select').first().selectOption(replacement)
+  const replacementDownloadPromise = onlinePage.waitForEvent('download')
+  await onlinePage.locator('#student-asset-list .student-asset-change').first().click()
+  await onlinePage.locator('#student-assets-status').filter({ hasText: '已換成官方素材' }).waitFor()
+  const replacementDownload = await replacementDownloadPromise
+  const replaced = await readDownloadedProject(replacementDownload)
+  const replacedApple = replaced.project.targets.find((target) => target.name === 'Apple')
+  assert.notEqual(replacedApple?.costumes[0]?.name, 'Apple')
+  const restoreButton = onlinePage.locator('#restore-student-project')
+  await restoreButton.waitFor({ state: 'visible' })
+  await restoreButton.click()
+  await onlinePage.locator('#student-asset-list').filter({ hasText: '目前造型：Apple' }).waitFor()
   assert.ok(requests.includes(appleAssetUrl), 'Browser did not request the official Apple asset URL')
   const onlineCspViolations = await onlinePage.evaluate(() => globalThis.__assetLibraryCspViolations)
   assert.deepEqual(onlineCspViolations, [])
   await onlinePage.close()
 
-  const offlinePage = await browser.newPage({ acceptDownloads: true })
+  const offlinePage = await warmContext.newPage()
   await installCspRecorder(offlinePage)
   const offline = await runBuild(offlinePage, { offline: true })
-  assert.match(offline.resultMessage, /官方素材下載失敗/)
-  assert.match(offline.resultMessage, /簡單圖形/)
+  assert.match(offline.resultMessage, /本機快取素材/)
   const offlineApple = offline.project.targets
     .find((target) => target.name === 'Apple')
     ?.costumes.find((costume) => costume.name === 'Apple')
-  assert.notEqual(offlineApple?.md5ext, appleMd5ext)
+  assert.equal(offlineApple?.md5ext, appleMd5ext)
   const offlineCspViolations = await offlinePage.evaluate(() => globalThis.__assetLibraryCspViolations)
   assert.deepEqual(offlineCspViolations, [])
   await offlinePage.close()
+  await warmContext.close()
+
+  const coldContext = await browser.newContext({ acceptDownloads: true })
+  const coldOfflinePage = await coldContext.newPage()
+  await installCspRecorder(coldOfflinePage)
+  const coldOffline = await runBuild(coldOfflinePage, { offline: true })
+  assert.match(coldOffline.resultMessage, /官方素材下載失敗/)
+  assert.match(coldOffline.resultMessage, /簡單圖形/)
+  const coldOfflineApple = coldOffline.project.targets
+    .find((target) => target.name === 'Apple')
+    ?.costumes.find((costume) => costume.name === 'Apple')
+  assert.notEqual(coldOfflineApple?.md5ext, appleMd5ext)
+  const coldOfflineCspViolations = await coldOfflinePage.evaluate(() => globalThis.__assetLibraryCspViolations)
+  assert.deepEqual(coldOfflineCspViolations, [])
+  await coldOfflinePage.close()
+  await coldContext.close()
 
   const evidence = {
     browser: browserName,
@@ -177,6 +212,7 @@ try {
       archiveAssetMd5: onlineAppleBytes ? md5(onlineAppleBytes) : null,
       resultMessage: online.resultMessage,
       status: online.status,
+      replacedAsset: replacement,
       cspViolations: onlineCspViolations,
     },
     offline: {
@@ -184,6 +220,12 @@ try {
       resultMessage: offline.resultMessage,
       status: offline.status,
       cspViolations: offlineCspViolations,
+    },
+    coldOffline: {
+      fallbackAssetMd5ext: coldOfflineApple?.md5ext ?? null,
+      resultMessage: coldOffline.resultMessage,
+      status: coldOffline.status,
+      cspViolations: coldOfflineCspViolations,
     },
   }
   console.log(JSON.stringify(evidence, null, 2))

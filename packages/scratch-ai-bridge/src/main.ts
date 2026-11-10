@@ -103,6 +103,7 @@ import {
 import {
   createScratchAssetFetcher,
   describeLibraryResolution,
+  selectLibraryCandidates,
   resolveLibraryAssets,
   type LibraryResolutionReport,
   type ResolveLibraryAssetsOptions,
@@ -661,6 +662,7 @@ app.innerHTML = `
 
           <div class="button-row"><button id="copy-direct-instruction" class="button primary" disabled>複製製作訊息給 AI</button><button id="copy-design-instruction" class="button secondary" disabled>先和 AI 討論玩法</button></div>
           <p>不要在想法中填入姓名、班級等個人資料。複製後，打開老師允許的 AI 網頁貼上訊息並送出。</p>
+          <p>Bridge 只會向 Scratch 官方伺服器下載素材；作品本身不會上傳，已下載素材可能暫存在這個瀏覽器的本機快取。</p>
           <p id="student-draft-status" role="status" aria-live="polite">這個分頁會暫存你的作品；關閉分頁或清除資料後可能無法找回，請下載作品。</p>
           <p><a href="https://gemini.google.com/" target="_blank" rel="noopener noreferrer">開啟 Gemini ↗</a> <a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">開啟 ChatGPT ↗</a></p>
 
@@ -756,6 +758,13 @@ app.innerHTML = `
 
 
             <ul id="student-requirement-coverage"></ul>
+
+            <section id="student-assets" class="student-assets" hidden aria-labelledby="student-assets-title">
+              <h3 id="student-assets-title">本作品使用的素材</h3>
+              <p>可以替角色換成另一個官方素材；程式積木、變數和玩法不會改變，換好後會重新編譯並下載新版 .sb3。</p>
+              <div id="student-asset-list" class="student-asset-list"></div>
+              <p id="student-assets-status" class="inline-status" role="status" aria-live="polite"></p>
+            </section>
 
 
 
@@ -1248,6 +1257,12 @@ const downloadStudentValidationReport = byId<HTMLButtonElement>('download-studen
 
 const studentRequirementCoverage = byId<HTMLUListElement>('student-requirement-coverage')
 
+const studentAssets = byId<HTMLElement>('student-assets')
+
+const studentAssetList = byId<HTMLDivElement>('student-asset-list')
+
+const studentAssetsStatus = byId<HTMLParagraphElement>('student-assets-status')
+
 const progressSteps = [...document.querySelectorAll<HTMLElement>('.progress-steps li')]
 
 instruction.value = AI_INSTRUCTION
@@ -1457,6 +1472,136 @@ const costumeImageSource = (costume: CanonicalProject['stage']['costumes'][numbe
   }
 
   return null
+}
+
+const libraryCostumeFormat = (md5ext: string): CanonicalProject['stage']['costumes'][number]['dataFormat'] =>
+  md5ext.endsWith('.png') ? 'png' : 'svg'
+
+const renderStudentAssetLibrary = (project: CanonicalProject, snapshot: StudentSnapshot): void => {
+  studentAssetList.replaceChildren()
+  studentAssets.hidden = false
+  studentAssetsStatus.textContent = '素材可以替換；替換時不會改變程式積木。'
+
+  const stageCard = document.createElement('article')
+  stageCard.className = 'student-asset-card'
+  const stageCostume = project.stage.costumes.at(project.stage.currentCostume ?? 0) ?? project.stage.costumes.at(0)
+  const stageImage = costumeImageSource(stageCostume)
+  if (stageImage) {
+    const image = document.createElement('img')
+    image.className = 'student-asset-thumb'
+    image.alt = `背景 ${stageCostume?.name ?? '未命名'}`
+    image.src = stageImage
+    stageCard.append(image)
+  }
+  const stageInfo = document.createElement('div')
+  stageInfo.className = 'student-asset-info'
+  const stageTitle = document.createElement('strong')
+  stageTitle.textContent = `背景：${stageCostume?.name ?? '未命名'}`
+  const stageNote = document.createElement('span')
+  stageNote.textContent = 'Scratch 官方背景／目前使用的背景'
+  stageInfo.append(stageTitle, stageNote)
+  stageCard.append(stageInfo)
+  studentAssetList.append(stageCard)
+
+  project.sprites.forEach((sprite, spriteIndex) => {
+    const candidates = selectLibraryCandidates(`${project.name} ${sprite.name}`, {
+      sprites: 6,
+      backdrops: 1,
+      sounds: 4,
+    }).sprites
+    const uniqueCandidates = [...new Map(candidates.map((candidate) => [candidate.name, candidate])).values()]
+    if (uniqueCandidates.length === 0) return
+
+    const card = document.createElement('article')
+    card.className = 'student-asset-card'
+    const sourceCostume = sprite.costumes.at(sprite.currentCostume ?? 0) ?? sprite.costumes.at(0)
+    const source = costumeImageSource(sourceCostume)
+    if (source) {
+      const image = document.createElement('img')
+      image.className = 'student-asset-thumb'
+      image.alt = `${sprite.name}目前造型`
+      image.src = source
+      card.append(image)
+    }
+
+    const info = document.createElement('div')
+    info.className = 'student-asset-info'
+    const title = document.createElement('strong')
+    title.textContent = `角色：${sprite.name}`
+    const current = document.createElement('span')
+    current.textContent = `目前造型：${sourceCostume?.name ?? '未命名'}`
+    const controls = document.createElement('div')
+    controls.className = 'student-asset-controls'
+    const select = document.createElement('select')
+    select.className = 'student-asset-select'
+    select.setAttribute('aria-label', `${sprite.name}的新官方素材`)
+    uniqueCandidates.forEach((candidate) => {
+      const option = document.createElement('option')
+      option.value = candidate.name
+      option.textContent = candidate.name
+      select.append(option)
+    })
+    const change = document.createElement('button')
+    change.type = 'button'
+    change.className = 'button secondary student-asset-change'
+    change.textContent = '換一個並下載新版'
+    change.addEventListener('click', () => {
+      const activeSnapshot = pendingStudentSnapshot ?? latestStudentSnapshot
+      if (activeSnapshot !== snapshot) {
+        studentAssetsStatus.textContent = '作品已變更，請先重新檢查後再換素材。'
+        return
+      }
+      const candidate = uniqueCandidates.find(({ name }) => name === select.value)
+      const tuple = candidate?.costumes[0]
+      const target = activeSnapshot.project.sprites.at(spriteIndex)
+      if (!candidate || !tuple || !target) return
+      change.disabled = true
+      select.disabled = true
+      studentAssetsStatus.textContent = `正在下載官方素材「${candidate.name}」並重新編譯…`
+      void (async () => {
+        try {
+          const nextProject = structuredClone(activeSnapshot.project)
+          const nextTarget = nextProject.sprites.at(spriteIndex)
+          if (!nextTarget) throw new Error('找不到要替換的角色。')
+          nextTarget.costumes = [{ name: tuple[0], dataFormat: libraryCostumeFormat(tuple[1]) }]
+          nextTarget.currentCostume = 0
+          nextTarget.sounds = []
+          const resolved = await resolveLibraryAssets(nextProject, libraryAssetFetcher, { replaceModelSvg: true })
+          const nextSb3 = await compileCanonicalProjectToSb3(resolved.project)
+          latestLibraryReport = resolved.report
+          latestAutomaticVisuals = summarizeAutomaticVisuals(resolved.project)
+          const nextSnapshot: StudentSnapshot = {
+            project: resolved.project,
+            source: activeSnapshot.source,
+            sb3: nextSb3,
+          }
+          if (pendingStudentSnapshot === activeSnapshot) pendingStudentSnapshot = nextSnapshot
+          else {
+            previousStudentSnapshot = activeSnapshot
+            latestStudentSnapshot = nextSnapshot
+            restoreStudentProject.hidden = false
+          }
+          latestStudentProject = resolved.project
+          download(
+            nextSb3,
+            `${resolved.project.name.replace(/[^\w\-\u4e00-\u9fff]+/g, '-') || 'scratch-project'}.sb3`,
+          )
+          renderStudentAssetLibrary(resolved.project, nextSnapshot)
+          renderStudentPreview(resolved.project, nextSb3)
+          studentAssetsStatus.textContent = `已換成官方素材「${candidate.name}」並下載新版。${describeLibraryResolution(resolved.report)}`
+          saveStudentDraft()
+        } catch (error) {
+          studentAssetsStatus.textContent = error instanceof Error ? error.message : '替換素材失敗，原作品未改變。'
+          change.disabled = false
+          select.disabled = false
+        }
+      })()
+    })
+    controls.append(select, change)
+    info.append(title, current, controls)
+    card.append(info)
+    studentAssetList.append(card)
+  })
 }
 
 const createAnimationPreviewArchive = async (
@@ -4470,6 +4615,12 @@ const clearStudentResult = (): void => {
 
   studentRequirementCoverage.replaceChildren()
 
+  studentAssets.hidden = true
+
+  studentAssetList.replaceChildren()
+
+  studentAssetsStatus.textContent = ''
+
   studentPreview.replaceChildren()
 
   studentPreview.hidden = true
@@ -5356,6 +5507,9 @@ const buildStudentProject = async (): Promise<void> => {
     }
 
     renderStudentPreview(validation.data, sb3)
+
+    renderStudentAssetLibrary(validation.data, candidate)
+
     saveStudentDraft()
   } catch (compileError) {
     const compileFailureStage = compileError instanceof ProjectCompileError ? compileError.stage : 'unknown'
@@ -5433,6 +5587,7 @@ byId<HTMLButtonElement>('discard-student-candidate').addEventListener('click', (
   setStatus(generateStatus, '已回到原本的作品。', 'ok')
   setStudentResult(`已回到「${latestStudentProject.name}」`, '可以繼續試玩原本的作品。', 'success')
   renderStudentPreview(latestStudentProject, latestStudentSnapshot.sb3)
+  renderStudentAssetLibrary(latestStudentProject, latestStudentSnapshot)
   iterationCard.hidden = false
   restoreStudentProject.hidden = previousStudentSnapshot === null
   saveStudentDraft()
@@ -5454,6 +5609,7 @@ restoreStudentProject.addEventListener('click', () => {
   setStatus(generateStatus, '已回到上一個可用作品。', 'ok')
   setStudentResult(`已回到「${snapshot.project.name}」`, '可以繼續試玩，或重新檢查並下載這個作品。', 'success')
   renderStudentPreview(snapshot.project, snapshot.sb3)
+  renderStudentAssetLibrary(snapshot.project, snapshot)
   iterationCard.hidden = false
   restoreStudentProject.hidden = previousStudentSnapshot === null
   setProgress(4)
@@ -6669,6 +6825,7 @@ const restoreStudentDraft = async (): Promise<void> => {
         'success',
       )
       renderStudentPreview(visible.project, visible.sb3)
+      renderStudentAssetLibrary(visible.project, visible)
       studentCandidateActions.hidden = pending !== visible
       iterationCard.hidden = pending === visible
       restoreStudentProject.hidden = pending === visible || previous === null
