@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const cli = path.join(packageRoot, 'bin/scratch-session.mjs')
-const fixture = path.resolve(packageRoot, '../../scratch-vm/test/fixtures/draggable.sb3')
+const fixture = path.resolve(packageRoot, '../scratch-vm/test/fixtures/draggable.sb3')
 const cwd = await mkdtemp(path.join(os.tmpdir(), 'scratch-session-browser-'))
 const run = (...args) =>
   new Promise((resolve, reject) => {
