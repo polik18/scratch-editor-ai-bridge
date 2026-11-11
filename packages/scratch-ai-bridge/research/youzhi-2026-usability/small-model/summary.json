@@ -1,0 +1,302 @@
+[
+  {
+    "no": 1,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 52,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/時空渡船-淡水河的故事/時空渡船-淡水河的故事.sb3",
+    "title": "時空渡船：淡水河的故事"
+  },
+  {
+    "no": 2,
+    "kind": "game",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 1,
+    "seconds": 21,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/尋找消失的水道-瑠公圳探險/尋找消失的水道-瑠公圳探險.sb3",
+    "title": "尋找消失的水道：瑠公圳探險"
+  },
+  {
+    "no": 3,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 32,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/壩穴裡的小石魚/壩穴裡的小石魚.sb3",
+    "title": "壩穴裡的小石魚"
+  },
+  {
+    "no": 4,
+    "kind": "game",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 1,
+    "seconds": 36,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/新店溪香魚逆流回游/新店溪香魚逆流回游.sb3",
+    "title": "新店溪香魚逆流回游"
+  },
+  {
+    "no": 5,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 40,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/景美溪-竹筏與捷運的對話/景美溪-竹筏與捷運的對話.sb3",
+    "title": "景美溪：竹筏與捷運的對話"
+  },
+  {
+    "no": 6,
+    "kind": "game",
+    "status": "failed",
+    "playtest": "not-run",
+    "attempts": 3,
+    "seconds": 33,
+    "output": null,
+    "title": null
+  },
+  {
+    "no": 7,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 29,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/小白鷺的新家/小白鷺的新家.sb3",
+    "title": "小白鷺的新家"
+  },
+  {
+    "no": 8,
+    "kind": "game",
+    "status": "failed",
+    "playtest": "not-run",
+    "attempts": 3,
+    "seconds": 41,
+    "output": null,
+    "title": null
+  },
+  {
+    "no": 9,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 26,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/黑泥釀的稻香/黑泥釀的稻香.sb3",
+    "title": "黑泥釀的稻香"
+  },
+  {
+    "no": 10,
+    "kind": "game",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 3,
+    "seconds": 60,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/台中綠川水岸廊道/台中綠川水岸廊道.sb3",
+    "title": "台中綠川水岸廊道"
+  },
+  {
+    "no": 11,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 39,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/柳樹下的記憶交響曲/柳樹下的記憶交響曲.sb3",
+    "title": "柳樹下的記憶交響曲"
+  },
+  {
+    "no": 12,
+    "kind": "game",
+    "status": "success",
+    "playtest": "fail",
+    "attempts": 3,
+    "seconds": 150,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/石虎過河-筏子溪生態廊道/石虎過河-筏子溪生態廊道.sb3",
+    "title": "石虎過河：筏子溪生態廊道"
+  },
+  {
+    "no": 13,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 35,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/林先生與籠仔篙-八堡圳的引水智慧/林先生與籠仔篙-八堡圳的引水智慧.sb3",
+    "title": "林先生與籠仔篙：八堡圳的引水智慧"
+  },
+  {
+    "no": 14,
+    "kind": "game",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 153,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/大甲溪-櫻花鉤吻鮭的冰河大冒險/大甲溪-櫻花鉤吻鮭的冰河大冒險.sb3",
+    "title": "大甲溪：櫻花鉤吻鮭的冰河大冒險"
+  },
+  {
+    "no": 15,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 36,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/紅磚鐵橋與媽祖香火/紅磚鐵橋與媽祖香火.sb3",
+    "title": "紅磚鐵橋與媽祖香火"
+  },
+  {
+    "no": 16,
+    "kind": "game",
+    "status": "failed",
+    "playtest": "not-run",
+    "attempts": 3,
+    "seconds": 28,
+    "output": null,
+    "title": null
+  },
+  {
+    "no": 17,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 32,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/黑面琵鷺的冬日約定/黑面琵鷺的冬日約定.sb3",
+    "title": "黑面琵鷺的冬日約定"
+  },
+  {
+    "no": 18,
+    "kind": "game",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 1,
+    "seconds": 24,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/台南鹽水溪紅樹林生態/台南鹽水溪紅樹林生態.sb3",
+    "title": "台南鹽水溪紅樹林生態"
+  },
+  {
+    "no": 19,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 30,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/愛河的顏色變奏曲/愛河的顏色變奏曲.sb3",
+    "title": "愛河的顏色變奏曲"
+  },
+  {
+    "no": 20,
+    "kind": "game",
+    "status": "success",
+    "playtest": "fail",
+    "attempts": 3,
+    "seconds": 154,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/曹公圳-鳳山城引水記/曹公圳-鳳山城引水記.sb3",
+    "title": "曹公圳：鳳山城引水記"
+  },
+  {
+    "no": 21,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 34,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/斜張橋下的生命大樂章/斜張橋下的生命大樂章.sb3",
+    "title": "斜張橋下的生命大樂章"
+  },
+  {
+    "no": 22,
+    "kind": "game",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 1,
+    "seconds": 24,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/萬年溪綠帶復活戰/萬年溪綠帶復活戰.sb3",
+    "title": "萬年溪綠帶復活戰"
+  },
+  {
+    "no": 23,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 27,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/暖暖的溫泉溪/暖暖的溫泉溪.sb3",
+    "title": "暖暖的溫泉溪"
+  },
+  {
+    "no": 24,
+    "kind": "story",
+    "status": "failed",
+    "playtest": "not-run",
+    "attempts": 3,
+    "seconds": 19,
+    "output": null,
+    "title": null
+  },
+  {
+    "no": 25,
+    "kind": "game",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 1,
+    "seconds": 32,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/秀姑巒溪-奇美部落的泛舟與石煮魚/秀姑巒溪-奇美部落的泛舟與石煮魚.sb3",
+    "title": "秀姑巒溪：奇美部落的泛舟與石煮魚"
+  },
+  {
+    "no": 26,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 39,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/日本禿頭鯊的逆瀑記/日本禿頭鯊的逆瀑記.sb3",
+    "title": "日本禿頭鯊的逆瀑記"
+  },
+  {
+    "no": 27,
+    "kind": "game",
+    "status": "failed",
+    "playtest": "not-run",
+    "attempts": 3,
+    "seconds": 29,
+    "output": null,
+    "title": null
+  },
+  {
+    "no": 28,
+    "kind": "story",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 2,
+    "seconds": 26,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/抓不住的風飛砂/抓不住的風飛砂.sb3",
+    "title": "抓不住的風飛砂"
+  },
+  {
+    "no": 29,
+    "kind": "game",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 3,
+    "seconds": 55,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/峽谷裡的苦花魚-新武呂溪的冒險/峽谷裡的苦花魚-新武呂溪的冒險.sb3",
+    "title": "峽谷裡的苦花魚：新武呂溪的冒險"
+  },
+  {
+    "no": 30,
+    "kind": "game",
+    "status": "success",
+    "playtest": "pass",
+    "attempts": 1,
+    "seconds": 24,
+    "output": "/Users/huangjianzhe/Git/scratch-editor-ai-bridge/output/游智盃-小模型/games/浯江溪-活化石鱟的家園/浯江溪-活化石鱟的家園.sb3",
+    "title": "浯江溪：活化石鱟的家園"
+  }
+]
