@@ -97,7 +97,10 @@ describe('game spec normalization', () => {
       codes(
         normalizeGameSpec({ map: ['c'], legend: { c: 'Coin' }, entities: { Coin: ['collectible'] } }).diagnostics,
       ),
-    ).toEqual(expect.arrayContaining(['NO_PLAYER', 'NO_WIN_CONDITION']))
+    ).toEqual(expect.arrayContaining(['NO_PLAYER', 'DEFAULT_CLEAR']))
+    expect(
+      codes(normalizeGameSpec({ map: ['P.s'], entities: { P: ['topdown'], s: ['hazard'] } }).diagnostics),
+    ).toContain('NO_WIN_CONDITION')
     expect(
       codes(
         normalizeGameSpec({

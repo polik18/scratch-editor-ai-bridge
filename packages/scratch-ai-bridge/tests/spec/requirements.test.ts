@@ -4,9 +4,14 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { makeGame } from '../../src/cli/make-command'
 import { checkRequirements, readRequirements } from '../../src/cli/requirements'
-import { buildStoryFromText } from '../../src/story'
+import { buildStoryFromText, storySeconds } from '../../src/story'
 
 const prompt = (lines: string[]): string => lines.join('\n')
+
+const defined = <T>(value: T | undefined): T => {
+  if (value === undefined) throw new Error('expected a value')
+  return value
+}
 
 describe('requirements read from a request', () => {
   it('finds levels, length and river names in contest prompts', () => {
@@ -56,7 +61,7 @@ describe('make keeps repairing until the request is met', () => {
         圖例: { P: '香魚' },
       })
       const two = JSON.stringify({
-        標題: '新店溪香魚',
+        標題: '香魚回家',
         圖例: { P: '香魚', a: '藻', G: '出口' },
         角色: { 香魚: ['俯視移動'], 藻: [{ 收集品: { 分數: 10 } }], 出口: ['終點'] },
         關卡: [
@@ -81,6 +86,8 @@ describe('make keeps repairing until the request is met', () => {
       expect(prompts[1]).toContain('[需求未達成] 關卡數')
       expect(report.requirements?.every((check) => check.pass)).toBe(true)
       expect(await readFile(report.specFile ?? '', 'utf-8')).toContain('關卡')
+      // The first reply never named the river; the tool added it to the title.
+      expect(report.autoFixes).toEqual(['標題加上「新店溪」（需求要求出現這個名稱）'])
     } finally {
       await rm(directory, { recursive: true, force: true })
     }
@@ -88,15 +95,31 @@ describe('make keeps repairing until the request is met', () => {
 })
 
 describe('target length in a story', () => {
-  it('warns how many seconds to add when the animation is far from the target', () => {
-    const story = JSON.stringify({
+  const story = (wait: number, target: number): string =>
+    JSON.stringify({
       標題: '淡水河',
       主角: '魚',
       角色: { 魚: { 外觀: 'Fish' } },
-      目標秒數: 120,
-      場景: ['溪流', '城市'].map((背景) => ({ 背景, 動作: ['魚 說「淡水河」', '等 25秒'] })),
+      目標秒數: target,
+      場景: ['溪流', '城市'].map((背景) => ({ 背景, 動作: ['魚 說「淡水河」', `等 ${wait}秒`] })),
     })
-    const warning = buildStoryFromText(story).diagnostics.find((item) => item.code === 'TARGET_LENGTH')
-    expect(warning?.suggestion).toMatch(/^再加約 \d+ 秒/)
+
+  it('pads a short animation to its target with pauses, and says so', () => {
+    const result = buildStoryFromText(story(25, 110))
+    expect(result.diagnostics.find((item) => item.code === 'LENGTH_FITTED')?.message).toContain('多停')
+    expect(Math.abs(storySeconds(defined(result.story)) - 110)).toBeLessThanOrEqual(11)
+  })
+
+  it('speeds up a long animation, but not past readable', () => {
+    const result = buildStoryFromText(story(60, 100))
+    expect(result.diagnostics.find((item) => item.code === 'LENGTH_FITTED')?.message).toContain('加快')
+    expect(Math.abs(storySeconds(defined(result.story)) - 100)).toBeLessThanOrEqual(10)
+  })
+
+  it('still asks for more content when pauses would more than double it', () => {
+    const result = buildStoryFromText(story(5, 120))
+    expect(
+      result.diagnostics.find((item) => item.code === 'TARGET_LENGTH' || item.code === 'STORY_LENGTH'),
+    ).toBeDefined()
   })
 })

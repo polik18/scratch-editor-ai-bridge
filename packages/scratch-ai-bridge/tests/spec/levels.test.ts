@@ -77,7 +77,7 @@ describe('two levels', () => {
   })
 
   it('needs a way to win on every level, judged by what that level draws', () => {
-    const result = buildFromSpecText(twoLevels({ 關卡: [{ 地圖: ['P..aG'] }, { 地圖: ['P..a'] }] }))
+    const result = buildFromSpecText(twoLevels({ 關卡: [{ 地圖: ['P..aG'] }, { 地圖: ['P...'] }] }))
     const missing = result.diagnostics.find((item) => item.code === 'NO_WIN_CONDITION')
     expect(missing?.severity).toBe('error')
     expect(missing?.where).toBe('第二關')
@@ -153,5 +153,21 @@ describe('two levels', () => {
     const result = buildFromSpecText(JSON.stringify(spec))
     expect(result.spec?.levels).toHaveLength(2)
     expect(result.project).toBeDefined()
+  })
+
+  it('gives a level without a win rule a collect-everything rule when it has something to collect', () => {
+    const result = buildFromSpecText(twoLevels({ 關卡: [{ 地圖: ['P..aG'] }, { 地圖: ['P..a..a'] }] }))
+    expect(result.project).toBeDefined()
+    expect(result.diagnostics.find((item) => item.code === 'DEFAULT_CLEAR')?.message).toContain('20 分')
+  })
+
+  it('reads a level list wrapped in the map field, and explains a map that is only a word', () => {
+    const spec = JSON.parse(twoLevels()) as Record<string, unknown>
+    const wrapped = { ...spec, 地圖: { 關卡: spec.關卡 } }
+    delete (wrapped as Record<string, unknown>).關卡
+    expect(buildFromSpecText(JSON.stringify(wrapped)).spec?.levels).toHaveLength(2)
+    const word = { ...spec, 地圖: '關卡' }
+    delete (word as Record<string, unknown>).關卡
+    expect(codes(buildFromSpecText(JSON.stringify(word)).diagnostics)).toEqual(['MAP_IS_A_WORD'])
   })
 })

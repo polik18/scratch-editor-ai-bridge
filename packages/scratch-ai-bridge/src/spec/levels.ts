@@ -32,14 +32,22 @@ const MAX_INSTRUCTION_LINES = 6
 export const INSTRUCTION_LINE_CHARS = 22
 const ORDINALS = ['一', '二', '三']
 
+const isLevelArray = (value: unknown): value is unknown[] =>
+  Array.isArray(value) && value.some((item) => isJsonObject(item))
+
+/**
+ * Finds the level list, also when a model wraps it in the map field: `"地圖": { "關卡": [ … ] }`.
+ * @param raw - Parsed spec.
+ * @returns The field holding the list and the list, or undefined for a single-level spec.
+ */
 const levelList = (raw: JsonObject): { readonly key: string; readonly levels: unknown[] } | undefined => {
-  for (const [key, value] of Object.entries(raw))
-    if (
-      LEVEL_KEYS.includes(key.trim().toLowerCase()) &&
-      Array.isArray(value) &&
-      value.some((item) => isJsonObject(item))
-    )
-      return { key, levels: value }
+  for (const [key, value] of Object.entries(raw)) {
+    if (!LEVEL_KEYS.includes(key.trim().toLowerCase())) continue
+    if (isLevelArray(value)) return { key, levels: value }
+    if (isJsonObject(value))
+      for (const [inner, levels] of Object.entries(value))
+        if (LEVEL_KEYS.includes(inner.trim().toLowerCase()) && isLevelArray(levels)) return { key, levels }
+  }
   return undefined
 }
 
@@ -156,6 +164,65 @@ export const defaultInstructions = (spec: Omit<GameSpec, 'instructions'>): strin
   return [...new Set(lines)].slice(0, MAX_INSTRUCTION_LINES)
 }
 
+/**
+ * A win rule for a level that has none: collect everything drawn on its map, or click everything. In a two-level
+ * game the score target counts from the level's start, so this works on either level.
+ * @param level - A normalized level without a way to win.
+ * @param entities - The game's entities.
+ * @returns The rule and a note for the report, or undefined when the level has nothing to collect or click.
+ */
+const defaultClear = (
+  level: SpecLevel,
+  entities: readonly SpecEntity[],
+): { readonly rule: SpecRule; readonly note: string } | undefined => {
+  const counts = new Map<string, number>()
+  for (const row of level.map)
+    for (const char of row) {
+      const name = level.legend[char]
+      if (name) counts.set(name, (counts.get(name) ?? 0) + 1)
+    }
+  for (const kind of ['collectible', 'clickable'] as const) {
+    let total = 0
+    const names: string[] = []
+    for (const entity of entities) {
+      const use = entity.behaviors.find((item) => item.name === kind)
+      const count = counts.get(entity.name) ?? 0
+      if (!use || count === 0 || entity.behaviors.some((item) => item.name === 'faller')) continue
+      total += ('points' in use.params ? use.params.points : 0) * count
+      names.push(entity.name)
+    }
+    if (total > 0)
+      return {
+        rule: { when: { kind: 'score-at-least', value: total }, actions: [{ kind: 'win' }] },
+        note: `沒有寫過關條件，已改成${kind === 'collectible' ? '收集' : '點'}完所有「${names.join('」「')}」（${total} 分）就過關。`,
+      }
+  }
+  return undefined
+}
+
+/**
+ * Gives every level that cannot be won a default win rule when it has something to collect or click.
+ * @param levels - Normalized levels.
+ * @param entities - The game's entities.
+ * @param label - Where to report, per level index.
+ * @returns The levels with defaults added, and a note per added rule.
+ */
+const withDefaultClears = (
+  levels: readonly SpecLevel[],
+  entities: readonly SpecEntity[],
+  label: (index: number) => string,
+): { readonly levels: SpecLevel[]; readonly notes: SpecDiagnostic[] } => {
+  const notes: SpecDiagnostic[] = []
+  const filled = levels.map((level, index) => {
+    if (clearPhrase(level, entities)) return level
+    const fallback = defaultClear(level, entities)
+    if (!fallback) return level
+    notes.push({ severity: 'fixed', code: 'DEFAULT_CLEAR', where: label(index), message: fallback.note })
+    return { ...level, rules: [...level.rules, fallback.rule] }
+  })
+  return { levels: filled, notes }
+}
+
 const levelFrom = (spec: SingleLevelSpec, name: string): SpecLevel => ({
   name,
   map: spec.map,
@@ -179,14 +246,34 @@ export const normalizeGameSpec = (raw: unknown): NormalizeResult => {
     return written.length > 0 ? written : defaultInstructions(spec)
   }
   const found = isJsonObject(raw) ? levelList(raw) : undefined
+  const mapWord = isJsonObject(raw) ? pickField(raw, 'map') : undefined
+  if (typeof mapWord === 'string' && LEVEL_KEYS.includes(mapWord.trim().toLowerCase()))
+    return {
+      diagnostics: [
+        {
+          severity: 'error',
+          code: 'MAP_IS_A_WORD',
+          where: '地圖',
+          message: `「地圖」只寫了「${mapWord}」兩個字，沒有地圖內容。`,
+          suggestion:
+            '一關的遊戲把「地圖」寫成字串陣列，例如 ["P..a..G", "#######"]；兩關請寫 "關卡": [ { "名稱", "地圖": [...], "過關" }, { "名稱", "地圖": [...], "過關" } ]。',
+        },
+      ],
+    }
   if (!isJsonObject(raw) || !found) {
     const single = normalizeSingleLevel(raw)
     if (!single.spec) return { diagnostics: single.diagnostics }
-    const base = { ...single.spec, levels: [levelFrom(single.spec, '')] }
+    const filled = withDefaultClears([levelFrom(single.spec, '')], single.spec.entities, () => '過關')
+    const base = { ...single.spec, rules: filled.levels[0].rules, levels: filled.levels }
     const instructions = instructionsOf(base, isJsonObject(raw) ? raw : {})
+    const resolved = filled.notes.length > 0
     return {
       spec: { ...base, instructions },
-      diagnostics: [...single.diagnostics, ...instructionWarnings(instructions)],
+      diagnostics: [
+        ...single.diagnostics.filter((item) => !(resolved && item.code === 'NO_WIN_CONDITION')),
+        ...filled.notes,
+        ...instructionWarnings(instructions),
+      ],
     }
   }
 
@@ -305,7 +392,9 @@ export const normalizeGameSpec = (raw: unknown): NormalizeResult => {
     for (const entity of spec.entities)
       if (!entities.some((known) => known.name === entity.name)) entities.push(entity)
   const levels = specs.map((spec, index) => levelFrom(spec, results[index]?.name ?? ''))
-  levels.forEach((level, index) => {
+  const filled = withDefaultClears(levels, entities, levelLabel)
+  diagnostics.push(...filled.notes)
+  filled.levels.forEach((level, index) => {
     if (!clearPhrase(level, entities))
       diagnostics.push({
         severity: 'error',
@@ -316,7 +405,13 @@ export const normalizeGameSpec = (raw: unknown): NormalizeResult => {
       })
   })
   const variables = Object.assign({}, ...specs.map((spec) => spec.variables)) as Record<string, number>
-  const base = { ...specs[0], entities, variables, levels }
+  const base = {
+    ...specs[0],
+    rules: filled.levels[0].rules,
+    entities,
+    variables,
+    levels: filled.levels,
+  }
   const instructions = instructionsOf(base, raw)
   diagnostics.push(...instructionWarnings(instructions))
   return { spec: { ...base, instructions }, diagnostics }

@@ -48,9 +48,15 @@ describe('story actions', () => {
     expect(parseAction('等 4秒', actors)).toEqual({ action: { kind: 'wait', seconds: 4 } })
   })
 
-  it('explains a line it cannot read', () => {
-    const result = parseAction('小魚 飛天遁地', actors)
-    expect('message' in result && result.suggestion).toContain('移到')
+  it('turns an unknown verb into an animation and says so', () => {
+    const result = parseAction('小魚 覓食 3秒', actors)
+    expect(result).toMatchObject({ action: { kind: 'animate', actor: '小魚', seconds: 3 } })
+    expect('note' in result && result.note).toContain('覓食')
+  })
+
+  it('explains a line that names no character', () => {
+    const result = parseAction('飛天遁地', actors)
+    expect('message' in result && result.suggestion).toContain('角色')
   })
 
   it('plays 同時 lines together with the line before', () => {

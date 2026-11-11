@@ -6,7 +6,13 @@ import { extractJson } from '../spec/normalize'
 import { createGameSpecInstruction, createGameSpecRepairInstruction } from '../spec/prompt'
 import { createStoryInstruction } from '../story/prompt'
 import { exists, gameFiles, gamesRoot, gameTarget, safeName, writeProcessFile } from './output-layout'
-import { checkRequirements, readRequirements, requirementFeedback, type RequirementCheck } from './requirements'
+import {
+  checkRequirements,
+  readRequirements,
+  requirementFeedback,
+  type RequirementCheck,
+  type Requirements,
+} from './requirements'
 import { buildSpecText, type SpecBuildReport } from './spec-command'
 import { runStoryBuild } from './story-command'
 
@@ -68,6 +74,8 @@ export interface MakeReport {
   readonly unsupported: readonly string[]
   /** What the request asked for (levels, length, names) and whether the kept attempt meets it. */
   readonly requirements?: readonly RequirementCheck[]
+  /** Changes the tool made to the model's reply, such as adding a required name to the title. */
+  readonly autoFixes?: readonly string[]
   readonly attempts: readonly MakeAttempt[]
   /** What is still wrong with the kept attempt, as plain lines. */
   readonly feedback: string
@@ -209,6 +217,33 @@ const withTargetSeconds = (text: string, seconds: number | undefined): string =>
   }
 }
 
+/**
+ * Adds names the request requires but the reply never mentions (a river name, for example) to the title. Models
+ * kept missing these even when told, and the fix is mechanical.
+ * @param text - The model's reply.
+ * @param requirements - From the request.
+ * @returns The reply and the names that were added.
+ */
+const withRequiredNames = (
+  text: string,
+  requirements: Requirements,
+): { readonly text: string; readonly added: readonly string[] } => {
+  const missing = requirements.mustAppear.filter((options) => !options.some((name) => text.includes(name)))
+  if (missing.length === 0) return { text, added: [] }
+  try {
+    const { value } = extractJson(text)
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return { text, added: [] }
+    const spec = value as Record<string, unknown>
+    const titleKey = Object.keys(spec).find((key) => /^(標題|title|名稱)$/i.test(key)) ?? '標題'
+    const names = missing.map((options) => options[0] ?? '').filter(Boolean)
+    const title = typeof spec[titleKey] === 'string' ? spec[titleKey] : ''
+    spec[titleKey] = title ? `${title}（${names.join('、')}）` : names.join('、')
+    return { text: JSON.stringify(spec, null, 1), added: names }
+  } catch {
+    return { text, added: [] }
+  }
+}
+
 const rank = (report: AttemptReport): number =>
   report.status !== 'success' ? 0 : report.playtestStatus === 'pass' ? 3 : report.playtestStatus === 'not-run' ? 2 : 1
 
@@ -245,6 +280,7 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
     let best: { report: AttemptReport; text: string; sb3: string; checks: RequirementCheck[] } | undefined
     const story = options.kind === 'story'
     const placeholders = placeholderNames(options.request)
+    const autoFixes = new Set<string>()
     const requirements = readRequirements(options.request, story ? 'story' : 'game')
     // A built attempt that misses what the request asked for (two levels, two minutes) is not done yet.
     const score = (report: AttemptReport, checks: readonly RequirementCheck[]): number =>
@@ -262,6 +298,9 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
       const started = Date.now()
       text = resolvePlaceholders(await complete(prompt), placeholders)
       if (story) text = withTargetSeconds(text, requirements.seconds)
+      const named = withRequiredNames(text, requirements)
+      text = named.text
+      for (const name of named.added) autoFixes.add(`標題加上「${name}」（需求要求出現這個名稱）`)
       replies.push(text)
       const sb3 = path.join(workDirectory, `attempt-${round}.sb3`)
       progress(options.playtest ? '建置並自動試玩…' : '建置…')
@@ -326,6 +365,7 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
         ...(best.report.seconds === undefined ? {} : { seconds: best.report.seconds }),
         unsupported: best.report.unsupported ?? [],
         ...(best.checks.length > 0 ? { requirements: best.checks } : {}),
+        ...(autoFixes.size > 0 ? { autoFixes: [...autoFixes] } : {}),
         feedback: [best.report.feedback, requirementFeedback(best.checks)].filter(Boolean).join('\n'),
       }
     }

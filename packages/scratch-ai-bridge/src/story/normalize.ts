@@ -133,7 +133,9 @@ const quoted = (words: string): string =>
 export const parseAction = (
   line: string,
   actors: readonly string[],
-): { readonly action: StoryAction } | { readonly message: string; readonly suggestion: string } => {
+):
+  | { readonly action: StoryAction; readonly note?: string }
+  | { readonly message: string; readonly suggestion: string } => {
   const trimmed = line.trim()
   const { rest: body, seconds } = takeSeconds(trimmed)
   if (/^(等|等待|停頓|暫停)\s*$/.test(body) || /^(等|等待|停頓|暫停)$/.test(trimmed.replace(SECONDS, '')))
@@ -186,9 +188,10 @@ export const parseAction = (
   if (/^(轉身|轉向|回頭|掉頭)$/.test(verb)) return { action: { kind: 'turn', actor } }
   if (/^(動起來|走動|游動|飛行|擺動|跳舞|揮手)$/.test(verb))
     return { action: { kind: 'animate', actor, seconds: seconds ?? 2 } }
+  // An unknown verb (覓食, 攀爬, 揮手致意) still shows the character doing something, and says so.
   return {
-    message: `看不懂「${trimmed}」的動作「${verb}」。`,
-    suggestion: '可用：出現、消失、移到 位置、說「…」、想「…」、變大、變小、轉身、動起來，後面可加「N秒」。',
+    action: { kind: 'animate', actor, seconds: seconds ?? 2 },
+    note: `不認得動作「${verb}」，先讓「${actor}」動起來 ${seconds ?? 2} 秒。`,
   }
 }
 
@@ -404,6 +407,14 @@ export const normalizeStory = (raw: unknown): StoryResult => {
         return
       }
       const action = parsed.action
+      if (parsed.note)
+        report(
+          'warning',
+          'UNKNOWN_VERB',
+          `${where}.動作[${lineIndex + 1}]`,
+          parsed.note,
+          '可用：出現、消失、移到 位置、說「…」、想「…」、變大、變小、轉身、動起來，後面可加「N秒」。',
+        )
       if (action.kind === 'narrate' && [...action.text].length > SUBTITLE_MAX_CHARS)
         report(
           'warning',
@@ -490,11 +501,15 @@ export const normalizeStory = (raw: unknown): StoryResult => {
     .map((line) => line.trim())
     .filter(Boolean)
   for (const line of unsupported) report('fixed', 'UNSUPPORTED_REQUEST', '做不到', `作品沒有做到：${line}`)
+  const written = Number(pick(raw, 'target'))
+  const target = Number.isFinite(written) && written > 0 ? written : undefined
+  const fitted = target === undefined ? undefined : fitToTarget(scenes, target)
+  if (fitted?.note) report('fixed', 'LENGTH_FITTED', '目標秒數', fitted.note)
   const story = {
     title,
     hero,
     actors,
-    scenes,
+    scenes: fitted?.scenes ?? scenes,
     ending: ending.length > 0 ? ending : ['劇終'],
     sources,
     sounds: [...sounds],
@@ -502,8 +517,6 @@ export const normalizeStory = (raw: unknown): StoryResult => {
   }
 
   const total = storySeconds(story)
-  const written = Number(pick(raw, 'target'))
-  const target = Number.isFinite(written) && written > 0 ? written : undefined
   // One message with one number: aim for the target when there is one, otherwise just into 60–180 s. Saying both
   // (再加 21 秒 to reach 60, 再加 81 秒 to reach 120) made models take the smaller step.
   const goal =
@@ -545,3 +558,52 @@ export const storySeconds = (story: { readonly scenes: readonly StoryScene[] }):
   story.scenes.reduce((sum, scene) => sum + scene.duration, 0) +
   STORY_TIMING.transition * (story.scenes.length + 1) +
   STORY_TIMING.ending
+
+/** Slowest speed-up allowed when an animation is too long, so speech bubbles and subtitles stay readable. */
+const MIN_PACE = 0.6
+
+const scaleAction = (action: StoryAction, factor: number): StoryAction =>
+  'seconds' in action ? { ...action, seconds: Math.round(action.seconds * factor * 10) / 10 } : action
+
+/**
+ * Fits an animation to its target length without asking the author to rewrite it. Every action has a known
+ * length, so a short animation gets an even pause at the end of each scene and a long one plays faster, down to
+ * {@link MIN_PACE} of its speed. Lengths within 10% of the target are left alone.
+ * @param scenes - Normalized scenes.
+ * @param target - Requested length in seconds.
+ * @returns The adjusted scenes and a note for the report, or the scenes unchanged.
+ */
+export const fitToTarget = (
+  scenes: readonly StoryScene[],
+  target: number,
+): { readonly scenes: readonly StoryScene[]; readonly note?: string } => {
+  const total = storySeconds({ scenes })
+  if (scenes.length === 0 || Math.abs(total - target) <= target * 0.1) return { scenes }
+  const fixedPart = total - scenes.reduce((sum, scene) => sum + scene.duration, 0)
+  const content = total - fixedPart
+  if (total < target) {
+    // Pauses at most double the content, so a nearly empty animation is not stretched into silence; the rest is
+    // still reported as too short for the author to fill.
+    const added = Math.min(target - total, content)
+    const pause = Math.round((added / scenes.length) * 10) / 10
+    const fitted = scenes.map((scene) => ({ ...scene, duration: scene.duration + pause }))
+    return {
+      scenes: fitted,
+      note: `動畫約 ${Math.round(total)} 秒，比目標 ${target} 秒短，已在每一幕結尾多停 ${pause} 秒（現在約 ${Math.round(storySeconds({ scenes: fitted }))} 秒）。想要更豐富，可以把停頓換成對白或旁白。`,
+    }
+  }
+  const factor = Math.max(MIN_PACE, (target - fixedPart) / content)
+  const fitted = scenes.map((scene) => ({
+    ...scene,
+    duration: Math.round(scene.duration * factor * 10) / 10,
+    actions: scene.actions.map((item) => ({
+      action: scaleAction(item.action, factor),
+      start: Math.round(item.start * factor * 10) / 10,
+      duration: Math.round(item.duration * factor * 10) / 10,
+    })),
+  }))
+  return {
+    scenes: fitted,
+    note: `動畫約 ${Math.round(total)} 秒，比目標 ${target} 秒長，已把所有動作加快到 ${Math.round(factor * 100)}% 的時間（約 ${Math.round(storySeconds({ scenes: fitted }))} 秒）。`,
+  }
+}
