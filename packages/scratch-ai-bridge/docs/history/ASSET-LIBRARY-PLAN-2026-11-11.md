@@ -203,3 +203,16 @@ searchAssets({ kind, query, tag?, limit }) // 全庫搜尋：英文名、中文�
 - **近似會誤導**：近似對照一律標示，報告列出替代選項，不要讓學生以為那就是正確的物種。
 - **提示詞變長**：候選清單要量 token，本地模型的上限沿用 `measure-game-prompt-budget.ts` 的檢查。
 - **網路**：全部預先下載的容量要先量過，再決定 `--all` 要不要預設。
+
+## 10. 進度
+
+### A 階段（2026-11-11 完成，commit `d86899cbcd`）
+
+- `src/core/visuals/library-catalog.ts`：343 個角色、85 個背景、354 個音效全部都有中文名稱和分類，有測試把關。
+  另外有近似對照表（台灣物種、地點、交通工具等）和人物稱謂表（伯、阿公、老師、農夫…）。
+- `src/core/visuals/assets.ts`：`pickSprite`、`pickBackdrop`、`pickSound`、`eventSound`、`searchAssets`、
+  `motionCostumes`、`costumeSize`、`soundSeconds`、`describePick`。中文比對時，詞越長分數越高，出現在名稱結尾（中心語）的再加分。
+- `library-index.json`：997 個造型都量好了寬高。素材快取在 `output/cache/assets/`，約 39MB。
+- 原有的關鍵字表已經併入目錄的中文名稱，網頁和 AI 路徑馬上就能找到更多素材。
+
+待確認：老人用「巫師／女巫」代替，是依名稱推測的。B 階段整理人物目錄時要實際看圖確認。
