@@ -81,15 +81,21 @@ jobs:
       - run: npm run build --workspace=@scratch/scratch-ai-bridge
       - run: npm run bench --workspace=@scratch/scratch-ai-bridge
       - run: test -f packages/scratch-ai-bridge/dist/index.html
-      - run: npx playwright install --with-deps chromium firefox webkit
+      # Only the student flow runs here, and it uses Chromium. The runner sometimes cannot reach the Ubuntu
+      # package mirrors and apt then hangs, so each try is capped and the install is retried.
+      - name: Install Chromium for the student flow
+        timeout-minutes: 12
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            if timeout --kill-after=15 240 npx playwright install --with-deps chromium; then exit 0; fi
+            echo "Chromium install try $attempt failed; retrying"
+            sleep 15
+          done
+          exit 1
       - name: Verify student create, repair and revision flow
         run: npm run test:student-flow --workspace=@scratch/scratch-ai-bridge
-      - name: Start PulseAudio for Firefox WebAudio
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes pulseaudio
-          pulseaudio --start --exit-idle-time=-1
-          pactl info
+      # PulseAudio (for Firefox WebAudio) and Firefox/WebKit go back with the cross-browser smoke below.
       # Full cross-browser smoke and Linux PSS evidence remain disabled pending repair; the focused student flow runs above.
       # - name: Run cross-browser release smoke
       #   working-directory: ./packages/scratch-ai-bridge
