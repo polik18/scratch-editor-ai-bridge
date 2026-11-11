@@ -38,6 +38,11 @@ export const broadcast = (name: string): CanonicalBlock => ({
   inputs: { BROADCAST_INPUT: { type: 'broadcast', name } },
 })
 
+export const broadcastAndWait = (name: string): CanonicalBlock => ({
+  opcode: 'event_broadcastandwait',
+  inputs: { BROADCAST_INPUT: { type: 'broadcast', name } },
+})
+
 export const setVar = (name: string, value: Value): CanonicalBlock =>
   op('data_setvariableto', { VALUE: value }, { VARIABLE: name })
 export const changeVar = (name: string, value: Value): CanonicalBlock =>
@@ -70,6 +75,7 @@ export const not = (a: CanonicalBlock): CanonicalBlock => op('operator_not', { O
 export const keyPressed = (key: string): CanonicalBlock => op('sensing_keypressed', { KEY_OPTION: key })
 export const anyKey = (...keys: string[]): CanonicalBlock =>
   keys.map(keyPressed).reduce((left, right) => or(left, right))
+export const mouseDown = (): CanonicalBlock => op('sensing_mousedown')
 export const touching = (target: string): CanonicalBlock =>
   op('sensing_touchingobject', { TOUCHINGOBJECTMENU: target })
 

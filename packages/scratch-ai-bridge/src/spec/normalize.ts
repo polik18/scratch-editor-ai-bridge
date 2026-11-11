@@ -47,6 +47,8 @@ const KEY_ALIASES: Record<string, readonly string[]> = {
   when: ['when', 'on', 'trigger', '當', '條件'],
   do: ['do', 'then', 'actions', 'action', '做', '動作', '就'],
   unsupported: ['unsupported', 'cannot', 'limitations', 'notdone', '做不到', '無法做到', '沒做到', '限制'],
+  instructions: ['instructions', 'howtoplay', 'help', '說明', '規則說明', '操作說明', '玩法', '遊戲說明'],
+  clear: ['clear', 'win', 'wincondition', '過關', '過關條件', '通關', '通關條件'],
 }
 
 const BEHAVIOR_ALIASES: Record<BehaviorUse['name'], readonly string[]> = {
@@ -377,12 +379,30 @@ const liftMisplacedFields = (
   return lifted
 }
 
-export interface NormalizeResult {
-  readonly spec?: GameSpec
+/** One level's worth of spec, before levels and the opening card are added. */
+export type SingleLevelSpec = Omit<GameSpec, 'instructions' | 'levels'>
+
+export interface SingleLevelResult {
+  readonly spec?: SingleLevelSpec
   readonly diagnostics: readonly SpecDiagnostic[]
 }
 
-export const normalizeGameSpec = (raw: Json): NormalizeResult => {
+export interface SingleLevelOptions {
+  /**
+   * Entities drawn on another level's map. Missing from this map is then on purpose: they are not placed here
+   * automatically, not turned into falling copies and not reported as missing.
+   */
+  readonly drawnElsewhere?: ReadonlySet<string>
+}
+
+/**
+ * Normalizes a spec with one map. {@link normalizeGameSpec} in `levels.ts` calls it once per level.
+ * @param raw - Parsed spec JSON.
+ * @param options - Context from the other levels.
+ * @returns The normalized single-level spec and diagnostics.
+ */
+export const normalizeSingleLevel = (raw: Json, options: SingleLevelOptions = {}): SingleLevelResult => {
+  const elsewhere = options.drawnElsewhere ?? new Set<string>()
   const diagnostics: SpecDiagnostic[] = []
   const error = (code: string, where: string, message: string, suggestion?: string): void => {
     diagnostics.push({ severity: 'error', code, where, message, ...(suggestion ? { suggestion } : {}) })
@@ -884,7 +904,7 @@ export const normalizeGameSpec = (raw: Json): NormalizeResult => {
     map.some((row) => [...row].some((char) => legend[char] === name || ([...name][0] === char && !legend[char])))
   if (player) {
     for (const entity of entities) {
-      if (entity === player || isDrawn(entity.name)) continue
+      if (entity === player || isDrawn(entity.name) || elsewhere.has(entity.name)) continue
       const spots = standingCells()
       if (spots.length === 0) break
       if (hasUse(entity, 'goal')) {
@@ -906,7 +926,7 @@ export const normalizeGameSpec = (raw: Json): NormalizeResult => {
   }
   // Things that are not on the map can still take part by entering from the stage edges.
   for (const entity of [...entities]) {
-    if (isPlayer(entity) || isDrawn(entity.name)) continue
+    if (isPlayer(entity) || isDrawn(entity.name) || elsewhere.has(entity.name)) continue
     if (hasUse(entity, 'faller') || hasUse(entity, 'projectile') || hasUse(entity, 'popup')) continue
     if (!['collectible', 'hazard', 'target', 'clickable'].some((name) => hasUse(entity, name as BehaviorUse['name'])))
       continue
@@ -944,7 +964,7 @@ export const normalizeGameSpec = (raw: Json): NormalizeResult => {
     // Falling copies and projectiles enter from the stage edges, so they need no map cell.
     if (entity.behaviors.some((item) => item.name === 'faller' || item.name === 'projectile')) continue
     const placed = Object.entries(legend).some(([char, name]) => name === entity.name && used.has(char))
-    if (!placed)
+    if (!placed && !elsewhere.has(entity.name))
       warn(
         'ENTITY_NOT_PLACED',
         `角色.${entity.name}`,
@@ -1160,7 +1180,7 @@ export const normalizeGameSpec = (raw: Json): NormalizeResult => {
       '加一個有「終點」行為的角色，或加規則「分數 >= N → 過關」。',
     )
 
-  const spec: GameSpec = {
+  const spec: SingleLevelSpec = {
     title,
     map,
     legend,
@@ -1174,3 +1194,6 @@ export const normalizeGameSpec = (raw: Json): NormalizeResult => {
   }
   return { spec, diagnostics }
 }
+
+export { asText as fieldText, isObject as isJsonObject, pick as pickField, resolveAlias as resolveFieldAlias }
+export { KEY_ALIASES }

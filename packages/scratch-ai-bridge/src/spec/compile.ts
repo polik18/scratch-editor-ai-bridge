@@ -55,7 +55,9 @@ import {
   yPos,
   add,
   anyKey,
+  broadcastAndWait,
   divide,
+  mouseDown,
   gotoSprite,
   keyPressed,
   moveSteps,
@@ -65,7 +67,8 @@ import {
   timer,
   whenClicked,
 } from './blocks'
-import { backdropCostume, bannerCostumes, lookCostumes, narratorCostume, wallCostume } from './looks'
+import { INSTRUCTION_LINE_CHARS, levelView } from './levels'
+import { backdropCostume, bannerCostumes, introCostume, lookCostumes, narratorCostume, wallCostume } from './looks'
 import {
   CELL,
   FALL_SPEED,
@@ -98,6 +101,13 @@ export const SPEC_NAMES = {
   timeUp: 'time-up',
   narrator: '_Narrator',
   tick: 'player tick',
+  intro: '_Intro',
+  level: '關卡',
+  playing: '_playing',
+  start: '_start',
+  levelStart: '_level-start',
+  levelDone: '_level-done',
+  clear: '_clear',
 } as const
 
 const N = SPEC_NAMES
@@ -153,12 +163,12 @@ const script = (...blocks: CanonicalBlock[]): CanonicalScript => ({ blocks })
 
 /**
  * Damage, respawn and blinking, shared by every player movement behavior.
- * @param spawn - Stage position the player returns to after losing a life.
- * @param spawn.x - Stage x.
+ * @param spawn - Where the player returns to after losing a life.
+ * @param spawn.x - Stage x, usually read from the player's per-level spawn list.
  * @param spawn.y - Stage y.
  * @returns Blocks run every physics tick.
  */
-const damageBlocks = (spawn: { x: number; y: number }): CanonicalBlock[] => [
+const damageBlocks = (spawn: { x: CanonicalBlock | number; y: CanonicalBlock | number }): CanonicalBlock[] => [
   ifThen(
     eq(variable(N.hurt), 1),
     setVar(N.hurt, 0),
@@ -272,7 +282,7 @@ const actionBlocks = (action: RuleAction): CanonicalBlock[] => {
     case 'say':
       return [sayFor(action.text, 2)]
     case 'win':
-      return [broadcast(N.win)]
+      return [broadcast(N.levelDone)]
     case 'lose':
       return [broadcast(N.lose)]
   }
@@ -324,14 +334,42 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
   const player = findPlayer(spec)
   const movement = player ? playerBehavior(player) : undefined
   if (player && !movement) throw new Error(`compileGameSpec: player "${player.name}" has no movement behavior.`)
-  const cells = entityCells(spec)
-  const center = (cell: { row: number; column: number }): { x: number; y: number } =>
-    cellCenter(cell.row, cell.column, spec.map.length)
-  const playerCell = player ? cells.get(player.name)?.[0] : undefined
-  const spawn = playerCell ? center(playerCell) : { x: 0, y: 0 }
+  const levels = spec.levels
+  const multi = levels.length > 1
+  const views = levels.map((_, index) => levelView(spec, index))
+  // Every entity position over all levels, tagged with its level (1-based), so clones appear only in their level.
+  const placed = (name: string): { x: number; y: number; level: number }[] =>
+    views.flatMap((view, index) =>
+      (entityCells(view).get(name) ?? []).map((cell) => ({
+        ...cellCenter(cell.row, cell.column, view.map.length),
+        level: index + 1,
+      })),
+    )
+  const spawns = player
+    ? views.map((view) => {
+        const cell = entityCells(view).get(player.name)?.[0]
+        return cell ? cellCenter(cell.row, cell.column, view.map.length) : { x: 0, y: 0 }
+      })
+    : []
+  const spawn = spawns[0] ?? { x: 0, y: 0 }
   const isPlatformer = movement?.name === 'platformer'
-  const broadcasts = new Set<string>([N.win, N.lose, ...(spec.timeLimit === undefined ? [] : [N.timeUp])])
-  const touchRules = new Set(spec.rules.flatMap((rule) => (rule.when.kind === 'touch' ? [rule.when.entity] : [])))
+  const broadcasts = new Set<string>([
+    N.win,
+    N.lose,
+    N.start,
+    N.levelStart,
+    N.levelDone,
+    N.clear,
+    ...(spec.timeLimit === undefined ? [] : [N.timeUp]),
+  ])
+  const touchRules = new Set(
+    levels.flatMap((level) => level.rules.flatMap((rule) => (rule.when.kind === 'touch' ? [rule.when.entity] : []))),
+  )
+  // Runs `body` only while level `index` (from 0) is being played; a single-level game needs no check.
+  const inLevel = (index: number, body: CanonicalBlock[]): CanonicalBlock[] =>
+    multi ? [ifThen(eq(variable(N.level), index + 1), ...body)] : body
+  const levelSwitch = (make: (index: number) => CanonicalBlock[]): CanonicalBlock[] =>
+    multi ? levels.map((_, index) => ifThen(eq(variable(N.level), index + 1), ...make(index))) : make(0)
   const has =
     (name: BehaviorUse['name']) =>
     (entity: SpecEntity): boolean =>
@@ -340,17 +378,22 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
   const targets = spec.entities.filter(has('target')).map((entity) => entity.name)
 
   // ---------- rules live on the player, or on a narrator sprite in games without one ----------
-  const ruleScripts: CanonicalScript[] = spec.rules.map((rule) => {
+  const ruleScripts: CanonicalScript[] = levels.flatMap((level, index) =>
+    level.rules.map((rule) => ruleScript(rule, index)),
+  )
+  function ruleScript(rule: GameSpec['rules'][number], index: number): CanonicalScript {
     const body = rule.actions.flatMap(actionBlocks)
+    const atStart = (...blocks: CanonicalBlock[]): CanonicalScript =>
+      script(whenReceive(N.levelStart), ...inLevel(index, [wait(0.1), ...blocks]))
     switch (rule.when.kind) {
       case 'start':
-        return script(whenFlag(), wait(0.1), ...body)
+        return atStart(...body)
       case 'score-at-least':
-        return script(whenFlag(), wait(0.1), waitUntil(gt(variable(N.score), rule.when.value - 1)), ...body)
+        return atStart(waitUntil(gt(variable(N.score), rule.when.value - 1)), ...body)
       case 'time-up':
-        return script(whenReceive(N.timeUp), ...body)
+        return script(whenReceive(N.timeUp), ...inLevel(index, body))
       case 'every':
-        return script(whenFlag(), wait(0.1), forever(wait(rule.when.seconds), ...body))
+        return atStart(forever(wait(rule.when.seconds), ...body))
       case 'compare': {
         const value = variable(rule.when.variable)
         const target = rule.when.value
@@ -364,15 +407,17 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
                 : rule.when.op === '<'
                   ? lt(value, target)
                   : eq(value, target)
-        return script(whenFlag(), wait(0.1), waitUntil(condition), ...body)
+        return atStart(waitUntil(condition), ...body)
       }
       default: {
         const message = `${rule.when.kind}:${rule.when.entity}`
         broadcasts.add(message)
-        return script(whenReceive(message), ...body)
+        return script(whenReceive(message), ...inLevel(index, body))
       }
     }
-  })
+  }
+  // Rules wait on conditions; leaving a level stops them, and the next level start runs its own set again.
+  const leaveLevel = script(whenReceive(N.clear), stop('other scripts in sprite'), hide())
 
   const host: CanonicalSprite =
     player && movement
@@ -381,12 +426,17 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
           x: spawn.x,
           y: spawn.y,
           rotationStyle: 'left-right',
+          visible: false,
           variables: [
             { name: 'vx', value: 0 },
             { name: 'onGround', value: 0 },
             { name: 'invincible', value: 0 },
             { name: '_offset', value: 0 },
             { name: '_adjust', value: 0 },
+          ],
+          lists: [
+            { name: '_sx', value: spawns.map((point) => point.x) },
+            { name: '_sy', value: spawns.map((point) => point.y) },
           ],
           procedures: [
             {
@@ -396,15 +446,16 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
               body: [
                 ...(movement.name === 'platformer' ? platformerTick(movement.params) : topdownTick(movement.params)),
                 setVar(N.playerY, yPos()),
-                ...damageBlocks(spawn),
+                ...damageBlocks({ x: itemOf(variable(N.level), '_sx'), y: itemOf(variable(N.level), '_sy') }),
               ],
             },
           ],
           scripts: [
+            script(whenFlag(), hide()),
             script(
-              whenFlag(),
+              whenReceive(N.levelStart),
               pointIn(90),
-              gotoXY(spawn.x, spawn.y),
+              gotoXY(itemOf(variable(N.level), '_sx'), itemOf(variable(N.level), '_sy')),
               setVar('vx', 0),
               setVar('onGround', 0),
               setVar('invincible', 0),
@@ -415,6 +466,7 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
             ),
             script(whenReceive(N.win), say('過關！'), stop('other scripts in sprite')),
             script(whenReceive(N.lose), say('哎呀…'), stop('other scripts in sprite')),
+            leaveLevel,
             ...ruleScripts,
           ],
         })
@@ -422,7 +474,7 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
           costumes: [narratorCostume()],
           x: 0,
           y: 150,
-          scripts: [script(whenFlag(), gotoXY(0, 150), show()), ...ruleScripts],
+          scripts: [script(whenFlag(), gotoXY(0, 150), show()), leaveLevel, ...ruleScripts],
         })
 
   // ---------- other entities: a hidden original that clones itself onto map cells or stage edges ----------
@@ -431,10 +483,13 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
     .map((entity): CanonicalSprite => {
       const fromEdges = has('faller')(entity) || has('projectile')(entity)
       const popsUp = has('popup')(entity)
-      const positions = fromEdges ? [] : (cells.get(entity.name) ?? []).map(center)
+      const positions = fromEdges ? [] : placed(entity.name)
       const originalScripts: CanonicalScript[] = []
       const cloneScripts: CanonicalScript[] = []
-      const localVariables = [{ name: '_i', value: 1 }]
+      const localVariables = [
+        { name: '_i', value: 1 },
+        { name: '_clone', value: 0 },
+      ]
       const touchingPlayer = player ? touching(player.name) : undefined
       for (const use of entity.behaviors) {
         switch (use.name) {
@@ -454,7 +509,8 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
             break
           }
           case 'goal':
-            if (touchingPlayer) cloneScripts.push(script(whenCloned(), waitUntil(touchingPlayer), broadcast(N.win)))
+            if (touchingPlayer)
+              cloneScripts.push(script(whenCloned(), waitUntil(touchingPlayer), broadcast(N.levelDone)))
             break
           case 'hazard':
             if (touchingPlayer)
@@ -512,7 +568,7 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
             const speed = use.params.accelerate ? mul(base, add(1, divide(timer(), 30))) : base
             originalScripts.push(
               script(
-                whenFlag(),
+                whenReceive(N.levelStart),
                 wait(0.5),
                 forever(
                   enterStage(use.params.direction),
@@ -539,7 +595,7 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
                 : DIRECTION_DEGREES[use.params.direction]
             originalScripts.push(
               script(
-                whenFlag(),
+                whenReceive(N.levelStart),
                 forever(
                   waitUntil(keyPressed(use.params.key)),
                   gotoSprite(player.name),
@@ -623,18 +679,29 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
         lists: [
           { name: '_x', value: positions.map((position) => position.x) },
           { name: '_y', value: positions.map((position) => position.y) },
+          { name: '_lv', value: positions.map((position) => position.level) },
         ],
         scripts: [
+          script(whenFlag(), hide(), setVar('_clone', 0)),
           script(
-            whenFlag(),
+            whenReceive(N.levelStart),
             hide(),
             setVar('_i', 1),
             repeat(
               lengthOf('_x'),
-              gotoXY(itemOf(variable('_i'), '_x'), itemOf(variable('_i'), '_y')),
-              cloneSelf(),
+              ifThen(
+                eq(itemOf(variable('_i'), '_lv'), variable(N.level)),
+                gotoXY(itemOf(variable('_i'), '_x'), itemOf(variable('_i'), '_y')),
+                cloneSelf(),
+              ),
               changeVar('_i', 1),
             ),
+          ),
+          script(whenCloned(), setVar('_clone', 1)),
+          // Leaving a level removes this level's copies and stops the original's spawners.
+          script(
+            whenReceive(N.clear),
+            ifElse(eq(variable('_clone'), 1), [deleteClone()], [stop('other scripts in sprite'), hide()]),
           ),
           ...originalScripts,
           ...(showsOnClone ? [script(whenCloned(), show())] : []),
@@ -644,27 +711,82 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
     })
 
   const walls = sprite(N.walls, {
-    costumes: [wallCostume(spec.map, spec.wallChars, isPlatformer ? 'ground' : 'stone')],
-    scripts: [script(whenFlag(), gotoXY(0, 0), show())],
+    costumes: levels.map((level, index) => ({
+      ...wallCostume(level.map, level.wallChars, isPlatformer ? 'ground' : 'stone'),
+      name: `level-${index + 1}`,
+    })),
+    visible: false,
+    scripts: [
+      script(whenFlag(), hide(), gotoXY(0, 0)),
+      script(whenReceive(N.levelStart), ...levelSwitch((index) => [costume(`level-${index + 1}`)]), show()),
+    ],
   })
+  // Between levels: clear the finished one, show the next level's card, then start it. The last level wins.
+  const nextLevel: CanonicalBlock[] = multi
+    ? [
+        broadcastAndWait(N.clear),
+        ...levelSwitch((index) => (index + 1 < levels.length ? [costume(`level-${index + 2}`)] : [])),
+        show(),
+        toFront(),
+        wait(2),
+        hide(),
+        changeVar(N.level, 1),
+        broadcast(N.levelStart),
+      ]
+    : []
   const banner = sprite(N.banner, {
-    costumes: bannerCostumes(),
+    costumes: bannerCostumes(levels.map((level) => level.name)),
     visible: false,
     y: 40,
     scripts: [
       script(whenFlag(), hide(), gotoXY(0, 40)),
       script(whenReceive(N.win), costume('win'), show(), toFront(), wait(0.3), stop('all')),
       script(whenReceive(N.lose), costume('lose'), show(), toFront(), wait(0.3), stop('all')),
+      script(
+        whenReceive(N.levelDone),
+        // A goal touched for several frames sends this more than once; only the first one counts.
+        ifThen(
+          eq(variable(N.playing), 1),
+          setVar(N.playing, 0),
+          ...(multi
+            ? [ifElse(lt(variable(N.level), levels.length), nextLevel, [broadcast(N.win)])]
+            : [broadcast(N.win)]),
+        ),
+      ),
+    ],
+  })
+  const intro = sprite(N.intro, {
+    costumes: [introCostume(spec.title, spec.instructions, INSTRUCTION_LINE_CHARS)],
+    scripts: [
+      script(
+        whenFlag(),
+        gotoXY(0, 0),
+        show(),
+        toFront(),
+        // Wait for the key or click to be let go first, so the press that started the game is not also a move.
+        waitUntil(or(keyPressed('space'), mouseDown())),
+        waitUntil(not(or(keyPressed('space'), mouseDown()))),
+        hide(),
+        broadcast(N.start),
+      ),
     ],
   })
 
-  const internals = [N.hurt, N.bounce, N.playerVy, N.playerY]
+  const internals = [N.hurt, N.bounce, N.playerVy, N.playerY, N.playing]
+  const shownCounters = [
+    N.score,
+    N.lives,
+    ...(spec.timeLimit === undefined ? [] : [N.time]),
+    ...Object.keys(spec.variables),
+    ...(multi ? [N.level] : []),
+  ]
   const stage: CanonicalStage = {
     kind: 'stage',
     name: 'Stage',
     variables: [
       { name: N.score, value: 0 },
       { name: N.lives, value: spec.lives },
+      { name: N.level, value: 1 },
       ...(spec.timeLimit === undefined ? [] : [{ name: N.time, value: spec.timeLimit }]),
       ...Object.entries(spec.variables).map(([name, value]) => ({ name, value })),
       ...internals.map((name) => ({ name, value: 0 })),
@@ -676,22 +798,31 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
     scripts: [
       script(
         whenFlag(),
-        resetTimer(),
         setVar(N.score, 0),
         setVar(N.lives, spec.lives),
+        setVar(N.level, 1),
+        ...(spec.timeLimit === undefined ? [] : [setVar(N.time, spec.timeLimit)]),
         ...internals.map((name) => setVar(name, 0)),
-        ...Object.entries(spec.variables).flatMap(([name, value]) => [setVar(name, value), showVar(name)]),
-        showVar(N.score),
-        showVar(N.lives),
+        ...Object.entries(spec.variables).map(([name, value]) => setVar(name, value)),
+        // Counters stay hidden behind the opening card and appear when play starts.
+        ...shownCounters.map(hideVar),
         ...internals.map(hideVar),
+        ...(multi ? [] : [hideVar(N.level)]),
       ),
+      script(
+        whenReceive(N.start),
+        resetTimer(),
+        ...shownCounters.map(showVar),
+        setVar(N.level, 1),
+        broadcast(N.levelStart),
+      ),
+      script(whenReceive(N.levelStart), setVar(N.playing, 1)),
       ...(spec.timeLimit === undefined
         ? []
         : [
             script(
-              whenFlag(),
+              whenReceive(N.start),
               setVar(N.time, spec.timeLimit),
-              showVar(N.time),
               repeatUntil(lt(variable(N.time), 1), wait(1), changeVar(N.time, -1)),
               broadcast(N.timeUp),
             ),
@@ -704,7 +835,7 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
     version: 1,
     name: spec.title,
     stage,
-    sprites: [walls, ...entitySprites, host, banner],
+    sprites: [walls, ...entitySprites, host, banner, intro],
     broadcasts: [...broadcasts].map((name) => ({ name })),
   }
 }

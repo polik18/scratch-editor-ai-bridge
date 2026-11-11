@@ -1,4 +1,5 @@
 import { entityCells, findPlayer, playerBehavior, SPEC_NAMES } from './compile'
+import { levelView } from './levels'
 import { CELL, cellCenter } from './physics'
 import type { GameSpec } from './types'
 
@@ -10,6 +11,7 @@ import type { GameSpec } from './types'
 
 export type Subject =
   | { readonly sprite: string; readonly field: 'x' | 'y' | 'visible' | 'costume' }
+  | { readonly stage: 'backdrop' }
   | { readonly variable: string; readonly target?: string }
 
 export interface Expectation {
@@ -67,6 +69,8 @@ export type ScenarioStep =
 
 export interface SpecScenario {
   readonly name: string
+  /** Leave the instructions card up; by default the runner dismisses it before the first step. */
+  readonly keepIntro?: boolean
   readonly steps: readonly ScenarioStep[]
 }
 
@@ -209,7 +213,12 @@ const effectScenarios = (spec: GameSpec, cells: Map<string, { row: number; colum
   return scenarios
 }
 
-export const createSpecScenarios = (spec: GameSpec): SpecScenario[] => {
+export const createSpecScenarios = (spec: GameSpec): SpecScenario[] => [
+  ...flowScenarios(spec),
+  ...singleLevelScenarios(levelView(spec, 0)),
+]
+
+const singleLevelScenarios = (spec: GameSpec): SpecScenario[] => {
   const cells = entityCells(spec)
   const scenarios: SpecScenario[] = [...effectScenarios(spec, cells)]
   const player = findPlayer(spec)
@@ -327,87 +336,235 @@ export const createSpecScenarios = (spec: GameSpec): SpecScenario[] => {
   scenarios.unshift({ name: '基本操作', steps: controls })
 
   // ---------- reach the goal ----------
-  const goalEntity = spec.entities.find((entity) => entity.behaviors.some((item) => item.name === 'goal'))
+  const reach = reachGoal(spec)
+  if (reach)
+    scenarios.push({
+      name: '通關',
+      steps: [
+        { kind: 'wait', ms: 600 },
+        reach.bot,
+        {
+          kind: 'expect',
+          label: `自動玩家走到「${reach.goal}」並過關`,
+          subject: { sprite: SPEC_NAMES.banner, field: 'visible' },
+          op: '==',
+          value: 1,
+          hint: '自動玩家沒有過關：路線可能太難或被擋住（自動玩家很簡單，未過關不一定代表遊戲壞掉，請看軌跡）。',
+        },
+      ],
+    })
+  return scenarios
+}
+
+/**
+ * A bot run from the player's start to the goal of a single-level view: a breadth-first path that avoids
+ * hazards in top-down games, jumps over threats and pits in platformers.
+ * @param spec - A single-level spec or level view.
+ * @returns The bot step and the goal's name, or undefined when the level has no reachable goal.
+ */
+const reachGoal = (spec: GameSpec): { readonly goal: string; readonly bot: BotStep } | undefined => {
+  const player = findPlayer(spec)
+  const movement = player ? playerBehavior(player) : undefined
+  const cells = entityCells(spec)
+  const start = player ? cells.get(player.name)?.[0] : undefined
+  const goalEntity = spec.entities.find(
+    (entity) => entity.behaviors.some((item) => item.name === 'goal') && cells.has(entity.name),
+  )
   const goalCell = goalEntity ? cells.get(goalEntity.name)?.[0] : undefined
-  if (goalEntity && goalCell) {
-    const goal = cellCenter(goalCell.row, goalCell.column, rows)
-    const expectWin: Expectation = {
-      kind: 'expect',
-      label: `自動玩家走到「${goalEntity.name}」並過關`,
-      subject: { sprite: SPEC_NAMES.banner, field: 'visible' },
-      op: '==',
-      value: 1,
-      hint: '自動玩家沒有過關：路線可能太難或被擋住（自動玩家很簡單，未過關不一定代表遊戲壞掉，請看軌跡）。',
+  if (!player || !movement || !start || !goalEntity || !goalCell) return undefined
+  const rows = spec.map.length
+  const columns = [...spec.map[0]].length
+  const wall = (row: number, column: number): boolean =>
+    row < 0 || row >= rows || column < 0 || column >= columns || spec.wallChars.includes([...spec.map[row]][column])
+  const goal = cellCenter(goalCell.row, goalCell.column, rows)
+  if (movement.name === 'topdown') {
+    const hazards = new Set(
+      spec.entities
+        .filter((entity) => entity.behaviors.some((item) => item.name === 'hazard'))
+        .flatMap((entity) => (cells.get(entity.name) ?? []).map((cell) => `${cell.row},${cell.column}`)),
+    )
+    const previous = new Map<string, string>()
+    const queue = [`${start.row},${start.column}`]
+    const seen = new Set(queue)
+    // for-of also visits entries pushed during the loop, which makes this a breadth-first search.
+    for (const current of queue) {
+      const [row, column] = current.split(',').map(Number)
+      for (const [dr, dc] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const next = `${row + dr},${column + dc}`
+        if (wall(row + dr, column + dc) || seen.has(next) || hazards.has(next)) continue
+        seen.add(next)
+        previous.set(next, current)
+        queue.push(next)
+      }
     }
-    if (movement.name === 'topdown') {
-      const hazards = new Set(
-        spec.entities
-          .filter((entity) => entity.behaviors.some((item) => item.name === 'hazard'))
-          .flatMap((entity) => (cells.get(entity.name) ?? []).map((cell) => `${cell.row},${cell.column}`)),
-      )
-      const previous = new Map<string, string>()
-      const queue = [`${start.row},${start.column}`]
-      const seen = new Set(queue)
-      // for-of also visits entries pushed during the loop, which makes this a breadth-first search.
-      for (const current of queue) {
-        const [row, column] = current.split(',').map(Number)
-        for (const [dr, dc] of [
-          [1, 0],
-          [-1, 0],
-          [0, 1],
-          [0, -1],
-        ]) {
-          const next = `${row + dr},${column + dc}`
-          if (wall(row + dr, column + dc) || seen.has(next) || hazards.has(next)) continue
-          seen.add(next)
-          previous.set(next, current)
-          queue.push(next)
-        }
-      }
-      const target = `${goalCell.row},${goalCell.column}`
-      if (seen.has(target)) {
-        const path: string[] = [target]
-        while (path[0] !== `${start.row},${start.column}`) {
-          const before = previous.get(path[0])
-          if (!before) throw new Error(`createSpecScenarios: no path step recorded before ${path[0]}`)
-          path.unshift(before)
-        }
-        scenarios.push({
-          name: '通關',
-          steps: [
-            { kind: 'wait', ms: 600 },
-            {
-              kind: 'bot',
-              mode: 'topdown',
-              player: p,
-              goal,
-              path: path.map((text) => {
-                const [row, column] = text.split(',').map(Number)
-                return cellCenter(row, column, rows)
-              }),
-              timeoutMs: 30_000,
-            },
-            expectWin,
-          ],
-        })
-      }
-    } else {
-      const threats = spec.entities
-        .filter((entity) => entity.behaviors.some((item) => item.name === 'patrol' || item.name === 'hazard'))
-        .map((entity) => entity.name)
-      const pits: number[] = []
-      for (let column = 0; column < columns; column += 1)
-        if (!Array.from({ length: rows }, (_, row) => wall(row, column)).some(Boolean))
-          pits.push(cellCenter(0, column, rows).x)
-      scenarios.push({
-        name: '通關',
-        steps: [
-          { kind: 'wait', ms: 600 },
-          { kind: 'bot', mode: 'platformer', player: p, goal, threats, pits, timeoutMs: 30_000 },
-          expectWin,
-        ],
-      })
+    const target = `${goalCell.row},${goalCell.column}`
+    if (!seen.has(target)) return undefined
+    const path: string[] = [target]
+    while (path[0] !== `${start.row},${start.column}`) {
+      const before = previous.get(path[0])
+      if (!before) throw new Error(`reachGoal: no path step recorded before ${path[0]}`)
+      path.unshift(before)
+    }
+    return {
+      goal: goalEntity.name,
+      bot: {
+        kind: 'bot',
+        mode: 'topdown',
+        player: player.name,
+        goal,
+        path: path.map((text) => {
+          const [row, column] = text.split(',').map(Number)
+          return cellCenter(row, column, rows)
+        }),
+        timeoutMs: 30_000,
+      },
     }
   }
+  const threats = spec.entities
+    .filter((entity) => entity.behaviors.some((item) => item.name === 'patrol' || item.name === 'hazard'))
+    .map((entity) => entity.name)
+  const pits: number[] = []
+  for (let column = 0; column < columns; column += 1)
+    if (!Array.from({ length: rows }, (_, row) => wall(row, column)).some(Boolean))
+      pits.push(cellCenter(0, column, rows).x)
+  return {
+    goal: goalEntity.name,
+    bot: { kind: 'bot', mode: 'platformer', player: player.name, goal, threats, pits, timeoutMs: 30_000 },
+  }
+}
+
+/**
+ * Steps that finish one level without playing it, when its win rule is a score or counter target the runner can set.
+ * @param view - The level's view.
+ * @returns Steps, or undefined when the level is won another way.
+ */
+const finishBySetting = (view: GameSpec): ScenarioStep[] | undefined => {
+  for (const rule of view.rules) {
+    if (!rule.actions.some((action) => action.kind === 'win')) continue
+    if (rule.when.kind === 'score-at-least')
+      return [{ kind: 'set', variable: SPEC_NAMES.score, value: rule.when.value }]
+    if (rule.when.kind === 'compare') {
+      const { op, value } = rule.when
+      const wanted = op === '>' ? value + 1 : op === '<' ? value - 1 : value
+      return [{ kind: 'set', variable: rule.when.variable, value: wanted }]
+    }
+  }
+  return undefined
+}
+
+/**
+ * Scenarios for the game flow around the levels: the opening card holds the game until it is dismissed, and a
+ * multi-level game moves from one level to the next and ends on the win card.
+ * @param spec - The whole game, with every level.
+ * @returns The opening-card scenario, plus the level-change scenario for two-level games.
+ */
+const flowScenarios = (spec: GameSpec): SpecScenario[] => {
+  const player = findPlayer(spec)
+  const intro = { sprite: SPEC_NAMES.intro, field: 'visible' } as const
+  const scenarios: SpecScenario[] = [
+    {
+      name: '開場說明',
+      keepIntro: true,
+      steps: [
+        { kind: 'wait', ms: 800 },
+        {
+          kind: 'expect',
+          label: '開場先顯示遊戲說明',
+          subject: intro,
+          op: '==',
+          value: 1,
+          hint: '開場說明沒有出現。',
+        },
+        ...(player
+          ? [
+              {
+                kind: 'expect',
+                label: '看說明時遊戲還沒開始',
+                subject: { sprite: player.name, field: 'visible' },
+                op: '==',
+                value: 0,
+                hint: '說明還在畫面上時，玩家角色就出現了。',
+              } satisfies Expectation,
+            ]
+          : []),
+        { kind: 'hold', keys: [' '], ms: 200 },
+        { kind: 'wait', ms: 800 },
+        {
+          kind: 'expect',
+          label: '按空白鍵後說明消失、遊戲開始',
+          subject: intro,
+          op: '==',
+          value: 0,
+          hint: '按空白鍵後說明沒有關閉。',
+        },
+      ],
+    },
+  ]
+  if (spec.levels.length < 2) return scenarios
+
+  const finish = (index: number): ScenarioStep[] | undefined => {
+    const view = levelView(spec, index)
+    const setting = finishBySetting(view)
+    if (setting) return setting
+    const reach = reachGoal(view)
+    return reach ? [reach.bot] : undefined
+  }
+  const first = finish(0)
+  if (!first) return scenarios
+  const second = finish(1)
+  const banner = { sprite: SPEC_NAMES.banner, field: 'visible' } as const
+  scenarios.push({
+    name: '換關',
+    steps: [
+      { kind: 'wait', ms: 600 },
+      { kind: 'set', variable: SPEC_NAMES.lives, value: 99 },
+      ...first,
+      { kind: 'wait', ms: 3500 },
+      {
+        kind: 'expect',
+        label: '第一關過關後進入第二關',
+        subject: { variable: SPEC_NAMES.level },
+        op: '==',
+        value: 2,
+        hint: '第一關過關後沒有進入第二關。',
+      },
+      {
+        kind: 'expect',
+        label: '第二關換成第二張地圖',
+        subject: { sprite: SPEC_NAMES.walls, field: 'costume' },
+        op: '==',
+        value: 1,
+        hint: '進入第二關後地圖沒有換。',
+      },
+      ...(second
+        ? [
+            { kind: 'set', variable: SPEC_NAMES.lives, value: 99 } satisfies ScenarioStep,
+            ...second,
+            { kind: 'wait', ms: 1000 } satisfies ScenarioStep,
+            {
+              kind: 'expect',
+              label: '第二關過關後出現過關畫面',
+              subject: banner,
+              op: '==',
+              value: 1,
+              hint: '第二關過關後沒有出現過關畫面。',
+            } satisfies Expectation,
+            {
+              kind: 'expect',
+              label: '最後顯示的是「過關」而不是下一關',
+              subject: { sprite: SPEC_NAMES.banner, field: 'costume' },
+              op: '==',
+              value: 0,
+              hint: '最後一關過關後顯示的不是過關畫面。',
+            } satisfies Expectation,
+          ]
+        : []),
+    ],
+  })
   return scenarios
 }

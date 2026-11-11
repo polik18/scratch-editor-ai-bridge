@@ -244,14 +244,82 @@ export const backdropCostume = (style: 'sky' | 'grass'): CanonicalCostume =>
         180,
       )
 
-export const bannerCostumes = (): CanonicalCostume[] => {
-  const banner = (name: string, text: string, color: string): CanonicalCostume =>
-    svg(
-      name,
-      300,
-      100,
-      `<rect x="2" y="2" width="296" height="96" rx="18" fill="${color}" stroke="#222" stroke-width="4"/>` +
-        `<text x="150" y="62" font-size="36" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#fff">${escapeXml(text)}</text>`,
+const banner = (name: string, text: string, color: string, footer = ''): CanonicalCostume => {
+  const size = Math.min(36, Math.floor(560 / Math.max(1, [...text].length)))
+  return svg(
+    name,
+    300,
+    100,
+    `<rect x="2" y="2" width="296" height="96" rx="18" fill="${color}" stroke="#222" stroke-width="4"/>` +
+      `<text x="150" y="${footer ? 54 : 62}" font-size="${size}" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#fff">${escapeXml(text)}</text>` +
+      (footer
+        ? `<text x="150" y="84" font-size="15" font-family="sans-serif" text-anchor="middle" fill="#fff">${escapeXml(footer)}</text>`
+        : ''),
+  )
+}
+
+/**
+ * End cards, then one card per later level shown while the game moves on to it.
+ * @param levelNames - Names of every level; cards are made for the second one on.
+ * @returns `win`, `lose` and `level-2`… costumes.
+ */
+export const bannerCostumes = (levelNames: readonly string[] = []): CanonicalCostume[] => [
+  banner('win', '過關！', '#3cb371', '按綠旗可以再玩一次'),
+  banner('lose', '遊戲結束', '#d9534f', '按綠旗可以再玩一次'),
+  ...levelNames.slice(1).map((name, index) => banner(`level-${index + 2}`, name, '#3b7dd8', '準備開始！')),
+]
+
+/**
+ * Wraps a line into pieces of at most `width` characters, breaking after punctuation when possible.
+ * @param line - One instruction line.
+ * @param width - Characters per piece.
+ * @returns The wrapped pieces.
+ */
+export const wrapLine = (line: string, width: number): string[] => {
+  const chars = [...line]
+  const pieces: string[] = []
+  while (chars.length > width) {
+    const window = chars.slice(0, width)
+    const breakAt = Math.max(...['，', '、', '。', ' ', '；'].map((mark) => window.lastIndexOf(mark)))
+    const cut = breakAt >= width / 2 ? breakAt + 1 : width
+    pieces.push(chars.splice(0, cut).join('').trim())
+  }
+  pieces.push(chars.join('').trim())
+  return pieces.filter(Boolean)
+}
+
+/** Opening card size; it covers most of the stage so the map stays hidden until play starts. */
+const INTRO_WIDTH = 440
+const INTRO_HEIGHT = 320
+
+/**
+ * The opening card: title, how to play and how to start.
+ * @param title - Game title.
+ * @param lines - Instruction lines.
+ * @param width - Characters per line before wrapping.
+ * @returns A costume centred on the stage.
+ */
+export const introCostume = (title: string, lines: readonly string[], width: number): CanonicalCostume => {
+  const wrapped = lines.flatMap((line) =>
+    wrapLine(line, width).map((piece, index) => (index === 0 ? `• ${piece}` : `  ${piece}`)),
+  )
+  const shown = wrapped.slice(0, 9)
+  const titleSize = Math.min(30, Math.floor(400 / Math.max(1, [...title].length)))
+  const body = shown
+    .map(
+      (line, index) =>
+        `<text x="34" y="${104 + index * 24}" font-size="17" font-family="sans-serif" fill="#1f2d3d">${escapeXml(line)}</text>`,
     )
-  return [banner('win', '過關！', '#3cb371'), banner('lose', '遊戲結束', '#d9534f')]
+    .join('')
+  return svg(
+    'intro',
+    INTRO_WIDTH,
+    INTRO_HEIGHT,
+    `<rect x="3" y="3" width="${INTRO_WIDTH - 6}" height="${INTRO_HEIGHT - 6}" rx="22" fill="#fffdf5" stroke="#2f6fb3" stroke-width="5"/>` +
+      `<text x="${INTRO_WIDTH / 2}" y="50" font-size="${titleSize}" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#2f6fb3">${escapeXml(title)}</text>` +
+      `<text x="34" y="80" font-size="15" font-family="sans-serif" font-weight="bold" fill="#8a5a00">遊戲說明</text>` +
+      body +
+      `<rect x="${INTRO_WIDTH / 2 - 130}" y="${INTRO_HEIGHT - 52}" width="260" height="36" rx="18" fill="#3cb371"/>` +
+      `<text x="${INTRO_WIDTH / 2}" y="${INTRO_HEIGHT - 28}" font-size="17" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#fff">按空白鍵或點一下開始</text>`,
+  )
 }

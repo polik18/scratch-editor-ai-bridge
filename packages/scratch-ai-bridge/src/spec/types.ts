@@ -124,8 +124,26 @@ export interface SpecRule {
   readonly actions: readonly RuleAction[]
 }
 
+/** One level of a game: its own map and the rules that apply while it is being played. */
+export interface SpecLevel {
+  /** Shown on the card between levels; empty for a single-level game. */
+  readonly name: string
+  readonly map: readonly string[]
+  readonly legend: Readonly<Record<string, string>>
+  readonly wallChars: readonly string[]
+  /** Every rule active in this level, game-wide ones included. */
+  readonly rules: readonly SpecRule[]
+}
+
+/** At most this many levels: enough for the contest format and small enough for small models to write. */
+export const MAX_LEVELS = 2
+
 export interface GameSpec {
   readonly title: string
+  /** Lines on the opening card shown before play starts. */
+  readonly instructions: readonly string[]
+  /** One or two levels; the top-level map, legend, wall characters and rules are the first level's. */
+  readonly levels: readonly SpecLevel[]
   /** Map rows, top to bottom; every row has the same width after normalization. */
   readonly map: readonly string[]
   /** Map character → entity name. Wall characters are kept separately. */

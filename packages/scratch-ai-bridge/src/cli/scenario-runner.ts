@@ -27,11 +27,14 @@ interface State {
     Partial<Record<string, { x: number; y: number; visible: boolean; currentCostume: number }>>
   >
   readonly variables: readonly { targetName: string; name: string; value: unknown }[]
+  /** Index of the stage's current backdrop. */
+  readonly backdrop: number
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 const read = (state: State, subject: Subject): number => {
+  if ('stage' in subject) return state.backdrop
   if ('sprite' in subject) {
     const sprite = state.sprites[subject.sprite]
     if (!sprite) return Number.NaN
@@ -102,7 +105,8 @@ export const runSpecScenario = async (
       const sprites: State['sprites'] = Object.fromEntries(
         (reply.targets ?? []).filter((target) => !target.isStage).map((target) => [target.name, target]),
       )
-      return { sprites, variables: reply.snapshot ?? [] }
+      const stage = (reply.targets ?? []).find((target) => target.isStage)
+      return { sprites, variables: reply.snapshot ?? [], backdrop: stage?.currentCostume ?? Number.NaN }
     }
     const clones = async (): Promise<readonly { name: string; x: number; y: number }[]> => {
       const requestId = randomUUID()
@@ -110,6 +114,22 @@ export const runSpecScenario = async (
       return (await takeReply('playtest-clones-result', requestId)).clones ?? []
     }
     const key = (name: string, isDown: boolean): Promise<void> => post({ type: 'playtest-key', key: name, isDown })
+
+    const dismissIntro = async (): Promise<void> => {
+      const deadline = Date.now() + 3000
+      while (Date.now() < deadline) {
+        if ((await state()).sprites[SPEC_NAMES.intro]?.visible) break
+        await sleep(50)
+      }
+      if (!(await state()).sprites[SPEC_NAMES.intro]?.visible) return
+      await key(' ', true)
+      await sleep(150)
+      await key(' ', false)
+      while (Date.now() < deadline + 3000) {
+        if (!(await state()).sprites[SPEC_NAMES.intro]?.visible) return
+        await sleep(50)
+      }
+    }
 
     const marks = new Map<string, State>()
     const expectations: ExpectationResult[] = []
@@ -214,6 +234,9 @@ export const runSpecScenario = async (
       }
       await hold([])
     }
+
+    // Spec games open on an instructions card; scenarios that test the game itself start by dismissing it.
+    if (!scenario.keepIntro) await dismissIntro()
 
     for (const step of scenario.steps) {
       switch (step.kind) {

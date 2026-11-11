@@ -187,12 +187,14 @@ describe('game spec compilation', () => {
 describe('generated scenarios', () => {
   it('derives control checks from the map and a goal run for each example', () => {
     const platformer = createSpecScenarios(defined(buildFromSpecText(example('platformer')).spec))
-    expect(platformer.map((scenario) => scenario.name)).toEqual(['基本操作', '通關'])
+    expect(platformer.map((scenario) => scenario.name)).toEqual(['開場說明', '基本操作', '通關'])
     const maze = createSpecScenarios(defined(buildFromSpecText(example('maze')).spec))
-    const labels = maze[0].steps.flatMap((step) => (step.kind === 'expect' ? [step.label] : []))
+    const labels = defined(maze.find((scenario) => scenario.name === '基本操作')).steps.flatMap((step) =>
+      step.kind === 'expect' ? [step.label] : [],
+    )
     // The maze start has walls to the left and above, open floor to the right and below.
     expect(labels).toEqual(['按右鍵會移動', '往左是牆，不能穿過', '往上是牆，不能穿過', '按下鍵會移動'])
-    const bot = maze[1].steps.find((step) => step.kind === 'bot')
+    const bot = defined(maze.find((scenario) => scenario.name === '通關')).steps.find((step) => step.kind === 'bot')
     expect(bot?.kind === 'bot' && bot.path?.length).toBeGreaterThan(10)
   })
 })
@@ -387,9 +389,9 @@ describe('falling, shooting and clicking behaviors', () => {
   it('generates effect scenarios from the behaviors and rules', () => {
     const names = (name: string): string[] =>
       createSpecScenarios(defined(buildFromSpecText(example(name)).spec)).map((scenario) => scenario.name)
-    expect(names('catch')).toEqual(['基本操作', '接住掉落物', '漏接扣命'])
-    expect(names('shooter')).toEqual(['基本操作', '射擊'])
-    expect(names('whack')).toEqual(['點擊得分', '倒數計時'])
+    expect(names('catch')).toEqual(['開場說明', '基本操作', '接住掉落物', '漏接扣命'])
+    expect(names('shooter')).toEqual(['開場說明', '基本操作', '射擊'])
+    expect(names('whack')).toEqual(['開場說明', '點擊得分', '倒數計時'])
   })
 })
 

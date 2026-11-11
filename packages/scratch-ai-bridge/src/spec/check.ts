@@ -1,4 +1,5 @@
 import { entityCells, findPlayer, playerBehavior } from './compile'
+import { levelLabel, levelView } from './levels'
 import { jumpReach } from './physics'
 import type { GameSpec, SpecDiagnostic } from './types'
 
@@ -17,7 +18,14 @@ const where = (cell: Cell): string => `地圖 第 ${cell.row + 1} 列第 ${cell.
  * @param spec - Normalized spec.
  * @returns Warnings and errors that name a map cell and a concrete fix.
  */
-export const checkGameSpec = (spec: GameSpec): SpecDiagnostic[] => {
+export const checkGameSpec = (spec: GameSpec): SpecDiagnostic[] =>
+  spec.levels.length === 1
+    ? checkLevel(spec)
+    : spec.levels.flatMap((_, index) =>
+        checkLevel(levelView(spec, index)).map((item) => ({ ...item, where: `${levelLabel(index)}.${item.where}` })),
+      )
+
+const checkLevel = (spec: GameSpec): SpecDiagnostic[] => {
   const diagnostics: SpecDiagnostic[] = []
   const player = findPlayer(spec)
   if (!player) return diagnostics
