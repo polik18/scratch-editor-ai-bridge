@@ -19,22 +19,26 @@ Public beta: [https://polik18.github.io/scratch-editor-ai-bridge/](https://polik
 This package is the single entry point; nothing in the surrounding Scratch Editor monorepo was removed or moved.
 
 ```text
-packages/scratch-ai-bridge/
-├── AGENTS.md  README.md   entry docs (the top level holds only these and config files)
-├── bin/                   command entry points (package.json "bin")
-├── src/  tests/           source and tests, one folder per feature
-├── scripts/               build/  smoke/  bench/  tools/
-├── docs/                  guide/  design/  history/
-├── examples/              example scripts
-├── research/              research data and recorded benchmark runs worth keeping
-└── output/                everything the tools make (git-ignored)
-    ├── games/<name>/      <name>.sb3, <name>.spec.json, _過程/ (reports and model replies)
-    ├── reports/<name>/    batch analysis results
-    ├── bench/<run>/       benchmark runs
-    └── tmp/               scratch space
+scratch-editor-ai-bridge/            repository root: run the commands here
+├── output/                          everything the tools make (git-ignored)
+│   ├── games/<name>/                <name>.sb3, <name>.spec.json, _過程/ (reports, model replies, old versions)
+│   ├── reports/<name>/              batch analysis results
+│   ├── bench/<run>/                 benchmark runs
+│   ├── cache/assets/                downloaded official Scratch assets
+│   └── tmp/                         scratch space
+└── packages/scratch-ai-bridge/
+    ├── AGENTS.md  README.md         entry docs (the top level holds only these and config files)
+    ├── bin/                         command entry points (package.json "bin")
+    ├── src/  tests/                 source and tests, one folder per feature
+    ├── scripts/                     build/  smoke/  bench/  tools/
+    ├── docs/                        guide/  design/  history/
+    ├── examples/                    example scripts
+    └── research/                    research data and recorded benchmark runs worth keeping
 ```
 
-`npm run cli -- clean` removes every `_過程/` folder and `output/tmp/`; `clean --all` removes `output/`.
+`output/` sits at the repository root so people find their games without opening the package. From the root,
+`npm run --silent bridge -- <command>` runs this CLI with paths relative to the root (`output/games/…`).
+`npm run --silent bridge -- clean` removes every `_過程/` folder and `output/tmp/`; `clean --all` removes `output/`.
 `tests/repo-layout.test.ts` fails when something new lands at the top level or tool output gets committed.
 
 The older prebuilt direct-use page is kept for reference at
@@ -118,7 +122,7 @@ npm run test:browser --workspace=@scratch/scratch-ai-bridge
 npm run cli --workspace=@scratch/scratch-ai-bridge -- --help
 ```
 
-The local CLI has `make`, `guide`, `spec`, `inspect`, `batch`, `generate` and `clean` commands; without `--out`, `make`, `spec` and `batch` write into `output/` (see Package layout). `generate` accepts Canonical IR JSON or the
+The local CLI has `make`, `guide`, `spec`, `inspect`, `batch`, `generate` and `clean` commands; without `--out`, `make`, `spec`, `story` and `batch` write into the repository-root `output/` (see Package layout). `generate` accepts Canonical IR JSON or the
 validated `spritesDef` GameDesign JSON form and writes a new SB3 through the official Scratch VM. It validates
 the archive, project JSON, block graph, referenced asset bytes/MD5, and a VM save/reload round-trip. Pass
 `--preview <stage.png>` to load the project in Scratch's browser renderer and capture its initial stage. Gameplay
@@ -131,11 +135,12 @@ Examples:
 ```sh
 npm run cli --workspace=@scratch/scratch-ai-bridge -- inspect ./作品.sb3 --format markdown
 npm run cli --workspace=@scratch/scratch-ai-bridge -- inspect ./作品.sb3 --format student-markdown
-npm run cli --workspace=@scratch/scratch-ai-bridge -- batch ./班級作品 --jobs 1
+npm run --silent bridge -- batch ./班級作品 --jobs 1
 npm run cli --workspace=@scratch/scratch-ai-bridge -- generate ./遊戲設計.json --out ./新遊戲.sb3 --report ./新遊戲.report.json
-npm run cli --workspace=@scratch/scratch-ai-bridge -- spec ./作品描述.json --playtest
-npm run cli --workspace=@scratch/scratch-ai-bridge -- make "做一個接蘋果遊戲，左右鍵移動，接到加分" --playtest
-npm run cli --workspace=@scratch/scratch-ai-bridge -- guide
+npm run --silent bridge -- spec ./作品描述.json --playtest
+npm run --silent bridge -- make "做一個接蘋果遊戲，左右鍵移動，接到加分" --playtest
+npm run --silent bridge -- guide
+npm run --silent bridge -- story output/games/<名稱>/<名稱>.spec.json --playtest
 npm run session --workspace=@scratch/scratch-ai-bridge -- new-game --design=./遊戲設計.json --output=./build
 npm run mcp --workspace=@scratch/scratch-ai-bridge -- --project ./canonical-ir.json
 ```

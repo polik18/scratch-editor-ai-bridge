@@ -6,7 +6,7 @@
 
 1. **不要自己寫 `project.json`、`.sb3` 或 Scratch 積木 JSON。** 一律交給下面的工具產生。
 2. **工具回報失敗時，照 `feedback` 每一行「→」後面的建議修改，再呼叫一次。** 不要換別的方法繞過。
-3. **檔案只放在「檔案放哪裡」規定的位置。** 做出來的東西一律在 `output/`；不要在本目錄最上層新增檔案。
+3. **檔案只放在「檔案放哪裡」規定的位置。** 做出來的東西一律在 `output/`；不要在套件資料夾裡新增檔案。
 4. **遇到權限錯誤（`Operation not permitted`、`EPERM`）就停下來，向使用者回報。** 不要用 `sudo`、改屬性或換路徑去繞過。
 
 ## 你想做什麼？
@@ -20,13 +20,13 @@
 | 分析學生交的 `.sb3`                  | `inspect`／`batch` 指令                             | `docs/guide/CLI-REFERENCE.md`   |
 | 修改 Bridge 本身的程式碼             | 開發流程                                            | `README.md`、根目錄 `AGENTS.md` |
 
-以下指令都要先 `cd packages/scratch-ai-bridge`（本目錄）再執行。套件通常已經安裝好，直接執行就好。
+以下指令都在 **repo 第一層**（`packages/` 和 `output/` 所在的那一層）執行。套件通常已經安裝好，直接執行就好。
 `--silent` 讓輸出只剩 JSON 報告。
 
 ### 1. 用一句話做新遊戲：`make`
 
 ```sh
-npm run --silent cli -- make "做一個貓咪接蘋果的遊戲，用左右鍵移動貓咪，蘋果從天上掉下來，接到加分，漏接扣生命" --playtest
+npm run --silent bridge -- make "做一個貓咪接蘋果的遊戲，用左右鍵移動貓咪，蘋果從天上掉下來，接到加分，漏接扣生命" --playtest
 ```
 
 - 指令會自己呼叫本機模型寫作品描述、建置 `.sb3`、自動試玩。失敗時會把問題回饋給模型，再修一輪（`--rounds 0-3`，預設 1）。
@@ -49,12 +49,12 @@ npm run --silent cli -- make "做一個貓咪接蘋果的遊戲，用左右鍵�
 ### 2. 你自己寫 Game Spec
 
 ```sh
-npm run --silent cli -- guide                                   # 印出完整格式（約 850 token）
+npm run --silent bridge -- guide                                   # 印出完整格式（約 850 token）
 # 把 Game Spec 存成 output/games/<名稱>/<名稱>.spec.json，然後：
-npm run --silent cli -- spec output/games/<名稱>/<名稱>.spec.json --playtest
+npm run --silent bridge -- spec output/games/<名稱>/<名稱>.spec.json --playtest
 ```
 
-- **新遊戲要用還不存在的資料夾名稱**（先在本目錄執行 `ls output/games/` 看一下）；同名資料夾裡可能是別的遊戲，不要覆蓋。
+- **新遊戲要用還不存在的資料夾名稱**（先執行 `ls output/games/` 看一下）；同名資料夾裡可能是別的遊戲，不要覆蓋。
 - `.sb3` 會產生在描述檔旁邊，報告存在同一個資料夾的 `_過程/`。
 - 先看報告最前面的 `status`、`playtestStatus` 和 `feedback`。照 `feedback` 修改描述後，**加 `--force`** 重建同一個遊戲；被取代的舊版會留在 `_過程/舊版/`。
 - 不需要刪檔，也不要用 `grep` 過濾報告，否則會漏掉建議。
@@ -85,9 +85,9 @@ npm run --silent cli -- spec output/games/<名稱>/<名稱>.spec.json --playtest
 ### 2b. 做動畫：`story`
 
 ```sh
-npm run --silent cli -- guide story                                            # 印出動畫描述的格式
+npm run --silent bridge -- guide story                                            # 印出動畫描述的格式
 # 把描述存成 output/games/<名稱>/<名稱>.spec.json，然後：
-npm run --silent cli -- story output/games/<名稱>/<名稱>.spec.json --playtest
+npm run --silent bridge -- story output/games/<名稱>/<名稱>.spec.json --playtest
 ```
 
 - 一部動畫由「角色」和「場景」組成，每一幕有背景和一行一行的動作（出現、移到、說、旁白、等…）。
@@ -101,7 +101,7 @@ npm run --silent cli -- story output/games/<名稱>/<名稱>.spec.json --playtes
 啟動 MCP（stdio）：
 
 ```sh
-node bin/scratch-ai-bridge-mcp.mjs [--games-dir <資料夾>]
+node packages/scratch-ai-bridge/bin/scratch-ai-bridge-mcp.mjs [--games-dir <資料夾>]
 ```
 
 使用者要先開啟 Bridge 網頁並連線。順序是：
@@ -113,9 +113,9 @@ node bin/scratch-ai-bridge-mcp.mjs [--games-dir <資料夾>]
 ### 4. 分析 `.sb3`
 
 ```sh
-npm run --silent cli -- inspect ./作品.sb3 --format student-markdown   # 給學生看的提醒
-npm run --silent cli -- inspect ./作品.sb3 --format markdown           # 給老師的完整報告：分數、各面向、證據
-npm run --silent cli -- batch ./班級作品                                # 結果在 output/reports/班級作品/
+npm run --silent bridge -- inspect ./作品.sb3 --format student-markdown   # 給學生看的提醒
+npm run --silent bridge -- inspect ./作品.sb3 --format markdown           # 給老師的完整報告：分數、各面向、證據
+npm run --silent bridge -- batch ./班級作品                                # 結果在 output/reports/班級作品/
 ```
 
 **`inspect` 的輸出就是分析結果**：直接用它整理回覆，需要更多細節就改用 `--format markdown`。
@@ -125,27 +125,26 @@ npm run --silent cli -- batch ./班級作品                                # �
 ## 檔案放哪裡
 
 ```text
-packages/scratch-ai-bridge/       ← 唯一入口
-├── AGENTS.md  README.md          給 AI／給人看的入口（最上層只放入口文件和設定檔）
-├── bin/                          指令入口（scratch-ai-bridge、-mcp、scratch-session…）
-├── src/  tests/                  程式碼與測試，依功能分資料夾
-├── scripts/                      build/ smoke/ bench/ tools/
-├── docs/
-│   ├── guide/                    使用說明
-│   ├── design/                   設計規格
-│   └── history/                  計畫、狀態報告、交接紀錄
-├── examples/                     範例程式
-├── research/                     值得留下的研究資料與基準紀錄
-└── output/                       工具產生的一切（不進 git）
-    ├── games/<名稱>/             <名稱>.sb3、<名稱>.spec.json、_過程/（報告、模型回覆）
-    ├── reports/<名稱>/           batch 分析結果
-    ├── bench/<執行名稱>/         benchmark（npm run benchmark:games -- … --run output/bench/<名稱>）
-    └── tmp/                      暫存，隨時可刪
+scratch-editor-ai-bridge/             ← repo 第一層：指令都在這裡執行
+├── output/                           做出來的作品都在這裡（不進 git）
+│   ├── games/<名稱>/                 <名稱>.sb3、<名稱>.spec.json、_過程/（報告、模型回覆、舊版）
+│   ├── reports/<名稱>/               batch 分析結果
+│   ├── bench/<執行名稱>/             benchmark
+│   ├── cache/assets/                 下載過的 Scratch 官方素材
+│   └── tmp/                          暫存，隨時可刪
+└── packages/scratch-ai-bridge/       ← 程式本身
+    ├── AGENTS.md  README.md          給 AI／給人看的入口（最上層只放入口文件和設定檔）
+    ├── bin/                          指令入口（scratch-ai-bridge、-mcp、scratch-session…）
+    ├── src/  tests/                  程式碼與測試，依功能分資料夾
+    ├── scripts/                      build/ smoke/ bench/ tools/
+    ├── docs/                         guide/ 使用說明、design/ 設計規格、history/ 計畫與交接紀錄
+    ├── examples/                     範例程式
+    └── research/                     值得留下的研究資料與基準紀錄
 ```
 
-- **做遊戲的過程檔**在各遊戲的 `_過程/`。`npm run --silent cli -- clean` 會刪掉所有 `_過程/` 和 `output/tmp/`，
+- **做遊戲的過程檔**在各遊戲的 `_過程/`。`npm run --silent bridge -- clean` 會刪掉所有 `_過程/` 和 `output/tmp/`，
   保留遊戲本身；`clean --all` 刪掉整個 `output/`。
-- **開發過程的文件**（計畫、狀態、交接）只寫在 `docs/history/`。一次性的實驗放 `output/tmp/`；值得保留的才放
+- **開發過程的文件**（計畫、狀態、交接）只寫在 `docs/history/`。一次性的實驗放第一層的 `output/tmp/`；值得保留的才放
   `research/<主題>/`，並附一份 README。
 - `docs/history/` 是開發紀錄，不是使用說明；用工具時不需要讀。
 
@@ -153,5 +152,5 @@ packages/scratch-ai-bridge/       ← 唯一入口
 
 套件通常已經安裝好，**不要主動執行 `npm ci` 或重新 build**。只有在下面兩種情況才處理：
 
-- 指令回報找不到模組：在 repo 根目錄執行 `npm ci`，再執行 `npm run build:ai-bridge-deps`。
-- `--playtest` 回報找不到 `dist/preview.html`：在本目錄執行 `npm run build`。
+- 指令回報找不到模組：執行 `npm ci`，再執行 `npm run build:ai-bridge-deps`。
+- `--playtest` 回報找不到 `dist/preview.html`：執行 `npm run build --workspace=@scratch/scratch-ai-bridge`。

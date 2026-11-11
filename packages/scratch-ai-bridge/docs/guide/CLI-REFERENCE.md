@@ -22,7 +22,7 @@ scratch-ai-bridge batch <資料夾>                                    # 結果�
 scratch-ai-bridge clean [--all]                                    # 刪掉 _過程/ 與 output/tmp/；--all 刪整個 output/
 ```
 
-沒有 `--out` 時，所有產出都在套件的 `output/`（不進 git）；遊戲是 `output/games/<名稱>/` 裡的 `<名稱>.sb3`、
+在 repo 第一層用 `npm run --silent bridge -- <指令>` 執行。沒有 `--out` 時，所有產出都在第一層的 `output/`（不進 git）；遊戲是 `output/games/<名稱>/` 裡的 `<名稱>.sb3`、
 `<名稱>.spec.json` 和 `_過程/`。設定 `SCRATCH_BRIDGE_OUTPUT_DIR` 可以把整個 `output/` 換到別處。
 
 ## 命令列表

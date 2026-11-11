@@ -179,6 +179,22 @@ describe('spec without --out', () => {
     expect(await readFile(path.join(backup, 'apples.spec.json'), 'utf-8')).toBe(original)
   }, 60_000)
 
+  it('removes the game folder it created when the build crashes', async () => {
+    const specPath = path.join(directory, 'draft.json')
+    await writeFile(specPath, await catchSpec())
+    const games = path.join(directory, 'games')
+    await expect(
+      runSpecBuild({
+        specPath,
+        gamesDirectory: games,
+        irPath: path.join(directory, 'missing', 'project.ir.json'),
+        playtest: false,
+        force: false,
+      }),
+    ).rejects.toThrow()
+    expect(await readdir(games)).toEqual([])
+  }, 60_000)
+
   it('names the game folder after 標題 when the spec lives elsewhere', async () => {
     const specPath = path.join(directory, 'draft.json')
     const text = await catchSpec()

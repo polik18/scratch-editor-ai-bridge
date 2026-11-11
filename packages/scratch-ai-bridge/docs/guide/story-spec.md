@@ -3,9 +3,11 @@
 用角色和場景描述一部 Scratch 動畫。工具會自動加上片頭標題卡、換場時的淡出淡入，以及片尾卡，
 並檢查競賽規定：要有主角、至少換一次背景、全長在 60～180 秒之間。
 
+在 repo 第一層執行：
+
 ```sh
-npm run --silent cli -- guide story                                                   # 印出寫作格式
-npm run --silent cli -- story output/games/<名稱>/<名稱>.spec.json --playtest          # 建置並試看
+npm run --silent bridge -- guide story                                                   # 印出寫作格式
+npm run --silent bridge -- story output/games/<名稱>/<名稱>.spec.json --playtest          # 建置並試看
 ```
 
 完整範例：`src/story/examples/river-story.json`（3 幕、約 70 秒）。

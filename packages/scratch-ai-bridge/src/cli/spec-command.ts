@@ -7,6 +7,7 @@ import { generateGame, type GeneratorResult } from './generator'
 import {
   backupGame,
   BUILT_SPEC_SUFFIX,
+  exists,
   gameFiles,
   gamesRoot,
   gameTarget,
@@ -78,9 +79,17 @@ export const runSpecBuild = async (options: SpecBuildOptions): Promise<SpecBuild
   const files = options.outputFile
     ? gameFiles(options.outputFile)
     : await defaultTarget(specPath, text, options.gamesDirectory ?? gamesRoot())
+  const created = !(await exists(files.directory))
   await mkdir(files.directory, { recursive: true })
   const previousVersion = options.force ? await backupGame(files) : undefined
-  const built = await buildSpecText(text, { ...options, outputFile: files.sb3 })
+  let built: SpecBuildReport
+  try {
+    built = await buildSpecText(text, { ...options, outputFile: files.sb3 })
+  } catch (error) {
+    // A build that crashes (for example an --ir path that cannot be written) must not leave an empty game folder.
+    if (created) await rm(files.directory, { recursive: true, force: true })
+    throw error
+  }
   let report: SpecBuildReport = {
     ...built,
     processDirectory: files.processDirectory,

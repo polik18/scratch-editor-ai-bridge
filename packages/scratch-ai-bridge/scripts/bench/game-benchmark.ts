@@ -1,6 +1,6 @@
 // Game-quality benchmark: measures what a student actually gets from one idea sentence.
 //
-//   npm run benchmark:games -- prompts  --run output/bench/<name>
+//   npm run benchmark:games -- prompts  --run ../../output/bench/<name>   (output/ is at the repository root)
 //   npm run benchmark:games -- generate --run <dir>   (needs BENCH_BASE_URL, BENCH_MODEL, optional BENCH_API_KEY;
 //                                                       BENCH_NO_THINKING=1 turns off Qwen-style thinking)
 //   npm run benchmark:games -- score    --run <dir>   (needs `npm run build` for the renderer preview)

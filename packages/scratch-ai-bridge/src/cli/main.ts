@@ -22,7 +22,8 @@ Which command?
     scratch-ai-bridge batch ./class
   Never hand-write project.json or .sb3 files.
 
-Where things go (all under the package's output/ folder, never committed):
+Where things go (the output/ folder at the top of the repository, never committed; from there run
+"npm run --silent bridge -- <command>" so these paths work as written):
   output/games/<name>/<name>.sb3        the game          output/reports/<name>/   batch results
   output/games/<name>/<name>.spec.json  its Game Spec     output/bench/<run>/      benchmark runs
   output/games/<name>/_過程/            reports and model replies; "clean" removes these and output/tmp/

@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url'
 import { extractJson } from '../spec/normalize'
 
 /**
- * Where the tools put what they make. Everything lives under one `output/` folder in the package (git-ignored):
+ * Where the tools put what they make. Everything lives under one `output/` folder at the top of the repository
+ * (git-ignored), next to `packages/`, so people find their games without opening the package:
  *
  *   output/games/<name>/<name>.sb3          the game
  *   output/games/<name>/<name>.spec.json    the Game Spec it was built from
@@ -13,7 +14,7 @@ import { extractJson } from '../spec/normalize'
  *   output/bench/<run>/                     benchmark runs
  *   output/tmp/                             scratch space, safe to delete
  */
-const PACKAGE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const REPOSITORY_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 
 /** Folder next to each game that holds the files produced while making it. */
 export const PROCESS_DIRECTORY = '_過程'
@@ -23,7 +24,7 @@ export const PROCESS_DIRECTORY = '_過程'
  * @returns Absolute path of the output folder.
  */
 export const outputRoot = (environment: NodeJS.ProcessEnv = process.env): string =>
-  path.resolve(environment.SCRATCH_BRIDGE_OUTPUT_DIR ?? path.join(PACKAGE_ROOT, 'output'))
+  path.resolve(environment.SCRATCH_BRIDGE_OUTPUT_DIR ?? path.join(REPOSITORY_ROOT, 'output'))
 
 /**
  * @param environment - Usually `process.env`.

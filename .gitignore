@@ -138,3 +138,6 @@ out
 # OS and Python caches
 .DS_Store
 __pycache__/
+
+# Scratch AI Bridge: games, animations, reports and caches the tools make
+/output/

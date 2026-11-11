@@ -4,12 +4,12 @@
 Bridge 會把它編譯成 Canonical IR，再走既有的 Scratch VM 檢查；物理、碰撞、角色之間的溝通和初始化都由行為庫產生。
 
 ```sh
-npm run cli --workspace=@scratch/scratch-ai-bridge -- spec output/games/接蘋果/接蘋果.spec.json --playtest
-npm run cli --workspace=@scratch/scratch-ai-bridge -- make "一句話需求" --playtest   # 本機模型寫描述
-npm run cli --workspace=@scratch/scratch-ai-bridge -- guide                         # 印出寫作格式
+npm run --silent bridge -- spec output/games/接蘋果/接蘋果.spec.json --playtest   # 在 repo 第一層執行
+npm run --silent bridge -- make "一句話需求" --playtest                         # 本機模型寫描述
+npm run --silent bridge -- guide                                               # 印出寫作格式
 ```
 
-沒有 `--out` 時，遊戲放在 `output/games/<名稱>/`：`<名稱>.sb3`、`<名稱>.spec.json`，以及存放報告與模型回覆的 `_過程/`。
+沒有 `--out` 時，遊戲放在 repo 第一層的 `output/games/<名稱>/`：`<名稱>.sb3`、`<名稱>.spec.json`，以及存放報告與模型回覆的 `_過程/`。
 描述檔已經在某個遊戲資料夾裡時，`.sb3` 就產生在它旁邊；否則用「標題」當資料夾名稱。重建同一個遊戲要加 `--force`；被取代的 `.sb3` 和它當時的描述會先複製到 `_過程/舊版/<時間>/`。
 
 三個入口用同一份寫作說明（`src/spec/prompt.ts` 的 `createGameSpecGuide`）：`make` 把它連同需求送給模型；`guide`
