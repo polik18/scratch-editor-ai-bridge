@@ -2,13 +2,15 @@ import path from 'node:path'
 import { McpServer } from '@modelcontextprotocol/server'
 import * as z from 'zod/v4'
 import { createGameSpecGuide } from '../spec/prompt.js'
+import { createStoryGuide } from '../story/prompt.js'
 import type { BrowserBridgeRelay } from './companion.js'
 
 /** Sent to MCP hosts on initialize so an agent knows which tool fits before reading any docs. */
-export const BRIDGE_MCP_INSTRUCTIONS = `Scratch AI Bridge 有兩種用法：
+export const BRIDGE_MCP_INSTRUCTIONS = `Scratch AI Bridge 有三種用法：
 1. 做新遊戲：用 make_game。你寫一個 Game Spec JSON（格式在 make_game 的說明裡），工具會產生 .sb3 並回報 feedback。
    有錯就照 feedback 中「→」後面的建議修改，再呼叫一次。不要自己寫 project.json 或 .sb3。
-2. 修改使用者在 Bridge 網頁中開著的作品：先 inspect_project，再 propose_live_patch（只會產生待審候選，由使用者在網頁確認）。
+2. 做動畫（60～180 秒、至少換一次背景）：用 make_story，格式在它的說明裡，用法同上。
+3. 修改使用者在 Bridge 網頁中開著的作品：先 inspect_project，再 propose_live_patch（只會產生待審候選，由使用者在網頁確認）。
    這些工具需要使用者先開啟 Bridge 網頁並連線。`
 
 export interface BridgeMcpOptions {
@@ -39,6 +41,44 @@ export const createBridgeMcpFactory = (
       if (requestTimes.length >= 20) throw new Error('MCP 每分鐘工具呼叫上限為 20 次，請稍後再試。')
       requestTimes.push(now)
     }
+
+    server.registerTool(
+      'make_story',
+      {
+        description: `用動畫描述（Story Spec）JSON 做一部 Scratch 動畫（.sb3）。不需要開啟網頁。
+回傳 status、output、seconds（全長）與 feedback；有「錯誤」時照「→」後面的建議修改再呼叫一次。
+
+${createStoryGuide()}`,
+        inputSchema: z.object({
+          spec: z
+            .union([
+              z
+                .string()
+                .min(2)
+                .max(64 * 1024),
+              z.record(z.string(), z.unknown()),
+            ])
+            .describe('動畫描述：JSON 物件，或 JSON 文字'),
+          name: z.string().min(1).max(60).optional().describe('資料夾與檔名；省略時用標題'),
+          playtest: z.boolean().optional().describe('true：以十倍速播完整部動畫，檢查每一幕的背景與片長'),
+        }),
+      },
+      async ({ spec, name, playtest }) => {
+        try {
+          enforceToolLimit()
+          const { makeStoryFromSpec } = await import('./make-game.js')
+          return result(
+            await makeStoryFromSpec(spec, {
+              ...(gamesDir ? { gamesDir } : {}),
+              ...(name ? { name } : {}),
+              playtest: playtest ?? false,
+            }),
+          )
+        } catch (error) {
+          return failure(error)
+        }
+      },
+    )
 
     server.registerTool(
       'make_game',

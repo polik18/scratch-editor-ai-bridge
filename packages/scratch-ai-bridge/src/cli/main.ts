@@ -28,7 +28,7 @@ Where things go (all under the package's output/ folder, never committed):
   output/games/<name>/_過程/            reports and model replies; "clean" removes these and output/tmp/
 
 Usage:
-  scratch-ai-bridge make <request> [--out <new-file.sb3>] [--spec-out <spec.json>] [--rounds <0-3>] [--playtest] [--force]
+  scratch-ai-bridge make <request> [--story] [--out <new-file.sb3>] [--spec-out <spec.json>] [--rounds <0-3>] [--playtest] [--force]
                          [--model <id>] [--base-url <url>] [--thinking]
   scratch-ai-bridge guide [game|story]
   scratch-ai-bridge story <story.json> [--out <file.sb3>] [--playtest] [--force] [--offline]
@@ -122,6 +122,7 @@ ${createGameSpecGuide()}
   let playtest = false
   let force = false
   let thinking = false
+  let story = false
   let argumentError = false
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index]
@@ -136,6 +137,7 @@ ${createGameSpecGuide()}
     } else if (argument === '--playtest') playtest = true
     else if (argument === '--force') force = true
     else if (argument === '--thinking') thinking = true
+    else if (argument === '--story') story = true
     else if (argument.startsWith('-')) {
       argumentError = true
       break
@@ -154,6 +156,7 @@ ${createGameSpecGuide()}
     const report = await withStdoutOnStderr(() =>
       makeGame({
         request,
+        kind: story ? 'story' : 'game',
         ...(outputFile ? { outputFile } : {}),
         ...(values['--spec-out'] ? { specOut: values['--spec-out'] } : {}),
         repairRounds: rounds,

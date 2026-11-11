@@ -3,8 +3,10 @@ import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { createGameSpecInstruction, createGameSpecRepairInstruction } from '../spec/prompt'
+import { createStoryInstruction } from '../story/prompt'
 import { exists, gameFiles, gamesRoot, gameTarget, safeName, writeProcessFile } from './output-layout'
 import { buildSpecText, type SpecBuildReport } from './spec-command'
+import { runStoryBuild } from './story-command'
 
 export interface ModelConfig {
   /** OpenAI-compatible base URL, e.g. `http://127.0.0.1:8000/v1`. */
@@ -18,6 +20,10 @@ export interface ModelConfig {
 
 export interface MakeOptions {
   readonly request: string
+  /** `story` asks the model for an animation (Story Spec) instead of a game. */
+  readonly kind?: 'game' | 'story'
+  /** Story only: skip downloading official library artwork (tests, offline). */
+  readonly offline?: boolean
   /** Defaults to `output/games/<標題>/<標題>.sb3`, adding `-2`, `-3`… rather than reusing a folder. */
   readonly outputFile?: string
   /** Replaces `output/games` (tests). */
@@ -122,7 +128,29 @@ const chat = async (config: ModelConfig, model: string, prompt: string): Promise
  * @param report - One attempt's build report.
  * @returns Rank from 0 (did not build) to 3 (playtest passed).
  */
-const rank = (report: SpecBuildReport): number =>
+/** The parts of a build report that `make` compares and passes on; game and story builds both have them. */
+type AttemptReport = Pick<SpecBuildReport, 'status' | 'playtestStatus' | 'feedback' | 'title' | 'unsupported'>
+
+/**
+ * Builds one model reply as an animation into `outputFile`.
+ * @param text - The model's reply.
+ * @param outputFile - Where the SB3 goes.
+ * @param playtest - Watch the animation at ten times speed.
+ * @param offline - Skip downloading official library artwork.
+ * @returns The story build report.
+ */
+const buildStoryText = async (
+  text: string,
+  outputFile: string,
+  playtest: boolean,
+  offline: boolean,
+): Promise<AttemptReport> => {
+  const specPath = outputFile.replace(/\.sb3$/i, '.story.json')
+  await writeFile(specPath, text)
+  return runStoryBuild({ specPath, outputFile, playtest, force: true, offline })
+}
+
+const rank = (report: AttemptReport): number =>
   report.status !== 'success' ? 0 : report.playtestStatus === 'pass' ? 3 : report.playtestStatus === 'not-run' ? 2 : 1
 
 /**
@@ -155,19 +183,26 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
   try {
     const attempts: MakeAttempt[] = []
     const replies: string[] = []
-    let best: { report: SpecBuildReport; text: string; sb3: string } | undefined
+    let best: { report: AttemptReport; text: string; sb3: string } | undefined
+    const story = options.kind === 'story'
     let text = ''
     let feedback = ''
     for (let round = 0; round <= options.repairRounds; round += 1) {
       const prompt =
-        round === 0 ? createGameSpecInstruction(options.request) : createGameSpecRepairInstruction(text, feedback)
+        round === 0
+          ? story
+            ? createStoryInstruction(options.request)
+            : createGameSpecInstruction(options.request)
+          : createGameSpecRepairInstruction(text, feedback)
       progress(round === 0 ? `請模型 ${model ?? ''} 寫作品描述…` : `第 ${round} 輪修正：把問題回饋給模型…`)
       const started = Date.now()
       text = await complete(prompt)
       replies.push(text)
       const sb3 = path.join(workDirectory, `attempt-${round}.sb3`)
       progress(options.playtest ? '建置並自動試玩…' : '建置…')
-      const report = await buildSpecText(text, { outputFile: sb3, playtest: options.playtest, force: true })
+      const report = story
+        ? await buildStoryText(text, sb3, options.playtest, options.offline ?? false)
+        : await buildSpecText(text, { outputFile: sb3, playtest: options.playtest, force: true })
       feedback = report.feedback
       attempts.push({
         round,

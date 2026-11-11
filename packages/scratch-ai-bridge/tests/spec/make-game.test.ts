@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { makeGame, modelConfigFromEnvironment } from '../../src/cli/make-command'
 import { cleanOutput, safeName } from '../../src/cli/output-layout'
 import { runSpecBuild } from '../../src/cli/spec-command'
-import { makeGameFromSpec } from '../../src/mcp/make-game'
+import { makeGameFromSpec, makeStoryFromSpec } from '../../src/mcp/make-game'
 import { createGameSpecGuide, createGameSpecInstruction } from '../../src/spec/prompt'
 
 const catchSpec = (): Promise<string> => readFile(path.resolve('src/spec/examples/catch.json'), 'utf-8')
@@ -235,4 +235,38 @@ describe('MCP make_game', () => {
     expect(result.feedback).toContain('→')
     expect(result.next).toContain('make_game')
   })
+})
+
+describe('animations through make and MCP', () => {
+  const storyText = (): Promise<string> => readFile(path.resolve('src/story/examples/river-story.json'), 'utf-8')
+
+  it('make --story asks for a Story Spec and builds the animation into its own folder', async () => {
+    const prompts: string[] = []
+    const report = await makeGame({
+      request: '小魚回家的動畫',
+      kind: 'story',
+      offline: true,
+      gamesDirectory: directory,
+      repairRounds: 0,
+      playtest: false,
+      force: false,
+      model,
+      complete: async (prompt) => {
+        prompts.push(prompt)
+        return storyText()
+      },
+    })
+    expect(prompts[0]).toContain('動畫描述')
+    expect(report.status).toBe('success')
+    expect(path.basename(report.output ?? '')).toBe('小魚的回家路.sb3')
+  }, 60_000)
+
+  it('make_story writes the spec into a new folder and reports the length', async () => {
+    const result = await makeStoryFromSpec(await storyText(), { gamesDir: directory, playtest: false, offline: true })
+    expect(result.status).toBe('success')
+    expect(result.seconds).toBeGreaterThanOrEqual(60)
+    expect(path.dirname(path.dirname(result.output ?? ''))).toBe(directory)
+    const again = await makeStoryFromSpec(await storyText(), { gamesDir: directory, playtest: false, offline: true })
+    expect(again.output?.endsWith('-2.sb3')).toBe(true)
+  }, 60_000)
 })
