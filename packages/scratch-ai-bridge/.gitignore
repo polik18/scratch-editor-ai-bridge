@@ -7,3 +7,4 @@ test-results/
 scratch-session.json
 benchmarks/game-quality/.asset-cache/
 benchmarks/game-quality/runs/*/*.png
+scratch-games/

@@ -8,6 +8,7 @@ Public beta: [https://polik18.github.io/scratch-editor-ai-bridge/](https://polik
 
 ## 文件入口
 
+- **AI 使用入口**：[`AGENTS.md`](AGENTS.md)。要用 Bridge 做遊戲、寫 Game Spec、修改網頁作品或分析 `.sb3`，從這裡挑路線。
 - **現行作品品質主線**：[`docs/game-quality-plan.md`](docs/game-quality-plan.md)。學生生成品質、官方素材庫、真實模型基準與首頁流程的進度，以此文件為唯一執行與交接入口。
 - **歷史參考**：本套件 `docs/` 中其他改善計畫、狀態報告與任務規格保留原文供背景查閱，不代表現行進度；其中 `README-IMPROVEMENT.md`、`sb3-generation-reliability-plan*.md`、`sb3-end-to-end-*.md`、`analysis-improvement-*.md`、`teacher-review-improvement-plan.md`、`student-work-feedback-plan.md`、`cli-agent-*.md` 與 `completeness-roadmap.md` 均屬此類。
 
@@ -101,7 +102,7 @@ npm run test:browser --workspace=@scratch/scratch-ai-bridge
 npm run cli --workspace=@scratch/scratch-ai-bridge -- --help
 ```
 
-The local CLI has `inspect`, `batch`, and `generate` commands. `generate` accepts Canonical IR JSON or the
+The local CLI has `make`, `guide`, `spec`, `inspect`, `batch`, and `generate` commands. `generate` accepts Canonical IR JSON or the
 validated `spritesDef` GameDesign JSON form and writes a new SB3 through the official Scratch VM. It validates
 the archive, project JSON, block graph, referenced asset bytes/MD5, and a VM save/reload round-trip. Pass
 `--preview <stage.png>` to load the project in Scratch's browser renderer and capture its initial stage. Gameplay
@@ -117,9 +118,16 @@ npm run cli --workspace=@scratch/scratch-ai-bridge -- inspect ./作品.sb3 --for
 npm run cli --workspace=@scratch/scratch-ai-bridge -- batch ./班級作品 --out ./班級分析結果 --jobs 1
 npm run cli --workspace=@scratch/scratch-ai-bridge -- generate ./遊戲設計.json --out ./新遊戲.sb3 --report ./新遊戲.report.json
 npm run cli --workspace=@scratch/scratch-ai-bridge -- spec ./作品描述.json --out ./新遊戲.sb3 --playtest
+npm run cli --workspace=@scratch/scratch-ai-bridge -- make "做一個接蘋果遊戲，左右鍵移動，接到加分" --out ./新遊戲.sb3 --playtest
+npm run cli --workspace=@scratch/scratch-ai-bridge -- guide
 npm run session --workspace=@scratch/scratch-ai-bridge -- new-game --design=./遊戲設計.json --output=./build
 npm run mcp --workspace=@scratch/scratch-ai-bridge -- --project ./canonical-ir.json
 ```
+
+`make` turns one sentence into a game: it asks an OpenAI-compatible local model (`SCRATCH_BRIDGE_MODEL_URL`,
+`SCRATCH_BRIDGE_MODEL`, `SCRATCH_BRIDGE_API_KEY`) for a Game Spec, builds it, and sends the feedback back for a repair
+round when the build or playtest fails. `guide` prints the Game Spec format for agents that write the spec themselves.
+The MCP server offers the same build as the `make_game` tool, writing into `--games-dir` (default `./scratch-games`).
 
 `spec` builds from a [Game Spec](docs/game-spec.md): entities, behaviors, "when … → do …" rules and a text map,
 which is small enough for small local models to write. It checks reachability with the generated physics and, with

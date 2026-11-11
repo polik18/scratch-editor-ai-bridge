@@ -10,7 +10,8 @@ packages. Use this if you'd like to learn about how the Scratch editor works or 
 
 The `packages` directory in this repository contains:
 
-- `scratch-ai-bridge` provides the browser-only AI ↔ Scratch bridge application.
+- `scratch-ai-bridge` provides the browser-only AI ↔ Scratch bridge application. How to use it (CLI `make`/`spec`, MCP
+  `make_game`, live patches, `.sb3` analysis): [`packages/scratch-ai-bridge/AGENTS.md`](packages/scratch-ai-bridge/AGENTS.md).
 - `scratch-gui` provides the buttons, menus, and other elements that you interact with when creating and editing a
   project. It's also the "glue" that brings most of the other modules together at runtime.
 - `scratch-media-lib-scripts` builds (or rebuilds) media libraries for the editor.

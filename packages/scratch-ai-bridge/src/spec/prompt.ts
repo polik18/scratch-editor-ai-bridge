@@ -26,12 +26,23 @@ const EXAMPLE = `{
  * @param request - What the student wants to make.
  * @returns The complete prompt.
  */
-export const createGameSpecInstruction = (request: string): string => {
+export const createGameSpecInstruction = (request: string): string =>
+  `你要用「作品描述」做一個 Scratch 遊戲。只輸出一個 JSON 物件，不要任何其他文字。
+
+${createGameSpecGuide()}
+
+作品需求：
+${request.trim()}`
+
+/**
+ * The format, behavior cards, rule vocabulary and example without the request, for agents that write the spec
+ * themselves and hand it to a tool (`make_game`, `spec`).
+ * @returns The authoring guide.
+ */
+export const createGameSpecGuide = (): string => {
   const mid = jumpReach('mid', 'mid')
   const high = jumpReach('high', 'mid')
-  return `你要用「作品描述」做一個 Scratch 遊戲。只輸出一個 JSON 物件，不要任何其他文字。
-
-格式：{ "標題", "地圖", "圖例", "角色", "規則", "設定": { "生命": 3, "時間": 秒數 }, "做不到": [] }
+  return `格式：{ "標題", "地圖", "圖例", "角色", "規則", "設定": { "生命": 3, "時間": 秒數 }, "做不到": [] }
 
 地圖：字串陣列，最多 20 欄 × 15 列。# 是牆／地面，. 是空白；其他符號寫在圖例中，對應到角色名稱。
 同一個符號可以放很多次（例如很多金幣）。玩家角色一定要畫在地圖上。
@@ -58,10 +69,7 @@ export const createGameSpecInstruction = (request: string): string => {
 需求中真的做不到的部分（例如雙人、球反彈），寫在 "做不到" 裡，不要假裝做到。
 
 範例：
-${EXAMPLE}
-
-作品需求：
-${request.trim()}`
+${EXAMPLE}`
 }
 
 /**

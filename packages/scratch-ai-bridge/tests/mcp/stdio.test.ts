@@ -42,9 +42,12 @@ describe('MCP stdio entry', () => {
         clientInfo: { name: 'test', version: '1' },
       })
       expect(init.result).toBeDefined()
+      expect(JSON.stringify(init.result)).toContain('make_game')
       child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' })}\n`)
       const tools = await send(2, 'tools/list', {})
       expect(JSON.stringify(tools)).toContain('propose_live_patch')
+      expect(JSON.stringify(tools)).toContain('make_game')
+      expect(JSON.stringify(tools)).toContain('平台移動')
       expect(JSON.stringify(tools)).toContain('blockId')
       expect(JSON.stringify(tools)).toContain('opcode')
       expect(JSON.stringify(tools)).toContain('query')

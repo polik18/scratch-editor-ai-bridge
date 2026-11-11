@@ -21,12 +21,15 @@ export interface SpecBuildReport {
   readonly status: 'success' | 'failed'
   /** `pass` only when every generated scenario expectation passed; `not-run` without `--playtest`. */
   readonly playtestStatus: 'pass' | 'fail' | 'not-run'
+  /** Everything the author (or the model) needs to fix next, as plain lines. Empty when nothing is left to fix. */
+  readonly feedback: string
   readonly output?: string
+  readonly title?: string
+  /** Requests the spec author listed under 做不到; the game was built without them. */
+  readonly unsupported?: readonly string[]
   readonly diagnostics: readonly SpecDiagnostic[]
   readonly generation?: Pick<GeneratorResult, 'status' | 'gates' | 'diagnostics'>
   readonly playtest?: readonly ScenarioResult[]
-  /** Everything the author (or the model) needs to fix next, as plain lines. Empty when nothing is left to fix. */
-  readonly feedback: string
 }
 
 /**
@@ -34,8 +37,19 @@ export interface SpecBuildReport {
  * @param options - Input spec, output paths and whether to playtest.
  * @returns Build report with diagnostics, gates, playtest results and feedback lines.
  */
-export const runSpecBuild = async (options: SpecBuildOptions): Promise<SpecBuildReport> => {
-  const text = await readFile(path.resolve(options.specPath), 'utf-8')
+export const runSpecBuild = async (options: SpecBuildOptions): Promise<SpecBuildReport> =>
+  buildSpecText(await readFile(path.resolve(options.specPath), 'utf-8'), options)
+
+/**
+ * Same as {@link runSpecBuild} for spec text that is already in memory (model replies, MCP tool arguments).
+ * @param text - Spec JSON, optionally wrapped in prose or code fences.
+ * @param options - Output paths and whether to playtest.
+ * @returns Build report with diagnostics, gates, playtest results and feedback lines.
+ */
+export const buildSpecText = async (
+  text: string,
+  options: Omit<SpecBuildOptions, 'specPath'>,
+): Promise<SpecBuildReport> => {
   const built = buildFromSpecText(text)
   const base = { format: 'scratch-ai-bridge/spec-build', version: 1 } as const
   if (!built.project || !built.spec)
@@ -43,8 +57,8 @@ export const runSpecBuild = async (options: SpecBuildOptions): Promise<SpecBuild
       ...base,
       status: 'failed',
       playtestStatus: 'not-run',
-      diagnostics: built.diagnostics,
       feedback: formatSpecDiagnostics(built.diagnostics.filter((item) => item.severity !== 'fixed')),
+      diagnostics: built.diagnostics,
     }
 
   const workDirectory = await mkdtemp(path.join(tmpdir(), 'scratch-spec-'))
@@ -65,14 +79,20 @@ export const runSpecBuild = async (options: SpecBuildOptions): Promise<SpecBuild
     }
     const lines = [formatSpecDiagnostics(built.diagnostics.filter((item) => item.severity === 'warning'))]
     if (!generation.success) {
-      lines.push(...generation.diagnostics.map((item) => `[錯誤] 產生 SB3：${item.message}`))
+      lines.push(
+        ...generation.diagnostics.map((item) =>
+          item.message.startsWith('Output already exists:')
+            ? `[錯誤] ${path.resolve(options.outputFile)} 已經存在 → 用改過的描述重建同一個檔案時加 --force，或換一個 --out 檔名。`
+            : `[錯誤] 產生 SB3：${item.message}`,
+        ),
+      )
       return {
         ...base,
         status: 'failed',
         playtestStatus: 'not-run',
+        feedback: lines.filter(Boolean).join('\n'),
         diagnostics: built.diagnostics,
         generation: generationSummary,
-        feedback: lines.filter(Boolean).join('\n'),
       }
     }
 
@@ -107,10 +127,12 @@ export const runSpecBuild = async (options: SpecBuildOptions): Promise<SpecBuild
       status: 'success',
       playtestStatus: playtest === undefined ? 'not-run' : playtestPassed ? 'pass' : 'fail',
       output: path.resolve(options.outputFile),
+      title: built.spec.title,
+      unsupported: built.spec.unsupported,
+      feedback: lines.filter(Boolean).join('\n'),
       diagnostics: built.diagnostics,
       generation: generationSummary,
       ...(playtest ? { playtest } : {}),
-      feedback: lines.filter(Boolean).join('\n'),
     }
   } finally {
     await rm(workDirectory, { recursive: true, force: true })

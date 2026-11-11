@@ -1,5 +1,9 @@
 # Agent Guide: scratch-editor
 
+> **要使用 Scratch AI Bridge**（用一句話做 Scratch 遊戲、讓 AI 寫 Game Spec、修改網頁中的作品、分析 `.sb3`），
+> 先讀 [`packages/scratch-ai-bridge/AGENTS.md`](packages/scratch-ai-bridge/AGENTS.md)。本檔其餘內容是修改這個 repo
+> 程式碼時的開發規範。
+
 ## AI-assisted development policy
 
 See [CONTRIBUTING.AI.md](https://github.com/scratchfoundation/.github/blob/main/CONTRIBUTING.AI.md) for Scratch's

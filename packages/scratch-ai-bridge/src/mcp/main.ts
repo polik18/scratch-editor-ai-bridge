@@ -2,9 +2,10 @@ import { serveStdio } from '@modelcontextprotocol/server/stdio'
 import { BrowserBridgeRelay } from './companion.js'
 import { createBridgeMcpFactory } from './tools.js'
 
-const parseOptions = (): { readonly origins: string[]; readonly port: number } => {
+const parseOptions = (): { readonly origins: string[]; readonly port: number; readonly gamesDir?: string } => {
   const origins = ['https://polik18.github.io', 'http://localhost:5173', 'http://127.0.0.1:5173']
   let port = 43128
+  let gamesDir: string | undefined
   for (let index = 2; index < process.argv.length; index += 1) {
     const option = process.argv[index]
     const value = process.argv[index + 1]
@@ -19,15 +20,20 @@ const parseOptions = (): { readonly origins: string[]; readonly port: number } =
       if (!Number.isSafeInteger(port) || port < 1024 || port > 65535)
         throw new Error('--port must be an integer between 1024 and 65535.')
       index += 1
+    } else if (option === '--games-dir' && value) {
+      gamesDir = value
+      index += 1
     } else {
-      throw new Error('Usage: scratch-ai-bridge-mcp [--origin <Bridge-page-origin>] [--port <1024-65535>]')
+      throw new Error(
+        'Usage: scratch-ai-bridge-mcp [--origin <Bridge-page-origin>] [--port <1024-65535>] [--games-dir <directory>]',
+      )
     }
   }
-  return { origins: [...new Set(origins)], port }
+  return { origins: [...new Set(origins)], port, ...(gamesDir ? { gamesDir } : {}) }
 }
 
 const main = async (): Promise<void> => {
-  const { origins, port } = parseOptions()
+  const { origins, port, gamesDir } = parseOptions()
   const relay = new BrowserBridgeRelay(origins)
   await relay.listen(port)
 
@@ -36,7 +42,7 @@ const main = async (): Promise<void> => {
   process.once('SIGTERM', () => relay.close())
   console.error(`Scratch AI Bridge MCP relay listening on 127.0.0.1:${port}.`)
   console.error(`Allowed Bridge page origins: ${origins.join(', ')}`)
-  serveStdio(createBridgeMcpFactory(relay))
+  serveStdio(createBridgeMcpFactory(relay, gamesDir ? { gamesDir } : {}))
 }
 
 void main().catch((error: unknown) => {

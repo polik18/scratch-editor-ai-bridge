@@ -1,3 +1,5 @@
+AI 代理人：要使用 Scratch AI Bridge 做遊戲或分析作品，請先讀 packages/scratch-ai-bridge/AGENTS.md。
+
 這份 ZIP 是完整工程版，不是先前的 8 檔 standalone 替代品。
 
 請先看：

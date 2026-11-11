@@ -5,7 +5,13 @@ Bridge 會把它編譯成 Canonical IR，再走既有的 Scratch VM 檢查；物
 
 ```sh
 npm run cli --workspace=@scratch/scratch-ai-bridge -- spec 作品描述.json --out 新遊戲.sb3 --playtest
+npm run cli --workspace=@scratch/scratch-ai-bridge -- make "一句話需求" --out 新遊戲.sb3 --playtest   # 本機模型寫描述
+npm run cli --workspace=@scratch/scratch-ai-bridge -- guide                                           # 印出寫作格式
 ```
+
+三個入口用同一份寫作說明（`src/spec/prompt.ts` 的 `createGameSpecGuide`）：`make` 把它連同需求送給模型；`guide`
+印給自己寫描述的 AI；MCP 工具 `make_game` 把它放在工具說明裡。`make` 在建置或試玩失敗時，會把 `feedback`
+連同上一版描述送回模型修正（`--rounds`，預設 1 輪），並保留最好的一次。
 
 `--playtest` 會依作品描述自動產生試玩劇本（需要先 `npm run build`），在真正的 Scratch 預覽中按鍵、讀狀態並檢查結果。
 輸出 JSON 的 `feedback` 是一行一個問題、附「→ 建議」的白話訊息，可直接貼回給模型修正

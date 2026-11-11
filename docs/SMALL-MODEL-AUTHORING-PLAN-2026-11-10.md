@@ -234,6 +234,25 @@
 
 下一步：第二玩家＋反彈球；需求覆蓋檢查（比對需求文字與作品，例如提到「隕石」卻沒有對應角色）；修正回合；以真正 7B 級模型重複；與 scratchblocks（Codex T2b）同模型同題比較。
 
+### 2026-11-11：AI 一看到專案就知道怎麼用（入口＋工具）
+
+問題：模型只被要求「輸出 JSON」，沒有任何工具可呼叫；repo 中 51 份 md 多為歷史計畫，根目錄 `AGENTS.md` 只講開發規範。
+
+新增：
+- `packages/scratch-ai-bridge/AGENTS.md`（＋`CLAUDE.md`）：「想做什麼 → 用什麼」一張表與四條規則；根目錄 `AGENTS.md`、`README.md`、`OPEN-FIRST.txt` 開頭指路；`.claude/skills/scratch-ai-bridge/SKILL.md`。
+- CLI `make "<需求>"`：本機模型寫 Spec → 建置 → 試玩 → 失敗時回饋修正（`--rounds`，保留最好的一次；失敗時保存原始回覆）。CLI `guide` 印出寫作格式；`--help` 第一屏即路線選擇。
+- MCP `make_game`（工具說明內含完整格式，輸出到 `--games-dir`，不覆蓋）與伺服器 `instructions`。
+- `spec` 報告把 `feedback` 放在最前面；輸出檔已存在時提示加 `--force`。
+
+驗收：本機 Cyber-Tiel-35B-A3B（關閉思考）當 agent，只注入根目錄 `AGENTS.md`、給讀／寫／執行三個工具，在 macOS `sandbox-exec` 中（只能寫 `scratch-games`、不能讀家目錄其他檔案）執行 5 個情境：
+
+| 輪次 | 接蘋果 | 平台跳躍 | 打地鼠 | 分析 sb3 | 修改網頁作品 |
+|---|---|---|---|---|---|
+| v2（入口初版） | 失敗：照「第一次使用前」跑 `npm ci` 後試圖繞過權限 | 成功（4 步） | 成功（照 feedback 修正＋`--force`） | 用對 `inspect` 但再自己解壓、30 步未完成 | 正確說明 |
+| v3（依 v2 修正文件） | 成功（7 步；`make` 未回 JSON，改自己寫 Spec） | 成功（5 步） | 成功（2 步） | 成功（3 步，學生版＋老師版報告） | 正確（1 步） |
+
+依 v2 修正的文件內容：安裝改為「只有出錯時才做」、遇到權限錯誤停下回報、`inspect` 的輸出就是答案、重建加 `--force`、不用 `grep` 過濾報告。
+
 ## 8. 參考
 
 - 2026-11-10 平台遊戲實測產物（暫存，可能已清除）：IR 產生腳本、劇本式試玩 `playtest.mjs`，以及 5 輪 × 15 項全部通過的紀錄。

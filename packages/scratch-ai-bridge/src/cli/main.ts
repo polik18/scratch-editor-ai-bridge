@@ -5,19 +5,58 @@ import { inspectSb3Bytes, inspectionToMarkdown, inspectionToStudentMarkdown } fr
 const VERSION = '0.1.0'
 const USAGE = `Scratch AI Bridge CLI ${VERSION}
 
+Which command?
+  Make a new game from one sentence (a local model writes the spec):
+    scratch-ai-bridge make "做一個接蘋果遊戲，左右鍵移動，接到加分" --out game.sb3 [--playtest]
+  You are the AI and will write the Game Spec yourself:
+    scratch-ai-bridge guide                       print the Game Spec format
+    scratch-ai-bridge spec game.json --out game.sb3 --playtest
+    Read "feedback" in the JSON report, fix the spec, run spec again.
+  Analyse existing .sb3 files:
+    scratch-ai-bridge inspect work.sb3 --format student-markdown
+    scratch-ai-bridge batch ./class --out ./class-report
+  Never hand-write project.json or .sb3 files.
+
 Usage:
+  scratch-ai-bridge make <request> --out <new-file.sb3> [--spec-out <spec.json>] [--rounds <0-3>] [--playtest] [--force]
+                         [--model <id>] [--base-url <url>] [--thinking]
+  scratch-ai-bridge guide
+  scratch-ai-bridge spec <game-spec.json> --out <new-file.sb3> [--ir <canonical-ir.json>] [--report <report.json>] [--playtest] [--force]
   scratch-ai-bridge inspect <file.sb3> [--format json|markdown|student-markdown]
   scratch-ai-bridge batch <directory> --out <new-directory> [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
   scratch-ai-bridge generate <design.json> --out <new-file.sb3> [--report <report.json>] [--preview <stage.png>] [--force]
-  scratch-ai-bridge spec <game-spec.json> --out <new-file.sb3> [--ir <canonical-ir.json>] [--report <report.json>] [--playtest] [--force]
   scratch-ai-bridge --help
   scratch-ai-bridge --version
 
-"spec" builds from a Game Spec (entities + behaviors + rules + text map; see docs/game-spec.md) and, with --playtest, runs scenarios generated from the spec in the real Scratch preview.
-"generate" accepts Canonical IR JSON or the documented GameDesign JSON shape. Pass --preview <stage.png> to run the browser renderer; gameplay behavior requires a separate deterministic smoke test.`
+"make" reads SCRATCH_BRIDGE_MODEL_URL (default http://127.0.0.1:8000/v1), SCRATCH_BRIDGE_MODEL (default: first listed
+model) and SCRATCH_BRIDGE_API_KEY (OMLX_ENDPOINT / OMLX_API_KEY also work). It repairs once by default (--rounds 1).
+"spec" builds from a Game Spec (entities + behaviors + rules + text map; see docs/game-spec.md) and, with --playtest,
+runs scenarios generated from the spec in the real Scratch preview (needs a built dist/).
+"generate" accepts Canonical IR JSON or the documented GameDesign JSON shape. Pass --preview <stage.png> to run the
+browser renderer; gameplay behavior requires a separate deterministic smoke test.`
 
 const writeJson = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`)
+}
+
+/**
+ * Scratch VM logs to stdout; keep stdout reserved for the JSON report while `task` runs.
+ * @param task - Work that may load the VM.
+ * @returns The task's result.
+ */
+const withStdoutOnStderr = async <T>(task: () => Promise<T>): Promise<T> => {
+  const originalStdoutWrite = process.stdout.write.bind(process.stdout)
+  const originalConsoleLog = console.log
+  console.log = (...items: unknown[]) => process.stderr.write(`${items.map(String).join(' ')}\n`)
+  const redirectStdout: typeof process.stdout.write = (chunk: string | Uint8Array, ...rest: unknown[]) =>
+    (process.stderr.write as (...params: unknown[]) => boolean)(chunk, ...rest)
+  process.stdout.write = redirectStdout
+  try {
+    return await task()
+  } finally {
+    process.stdout.write = originalStdoutWrite
+    console.log = originalConsoleLog
+  }
 }
 
 const command = process.argv[2] ?? ''
@@ -27,6 +66,78 @@ if (command === '--help' || command === '-h' || command === '') {
   process.stdout.write(`${USAGE}\n`)
 } else if (command === '--version' || command === '-v') {
   process.stdout.write(`${VERSION}\n`)
+} else if (command === 'guide') {
+  const { createGameSpecGuide } = await import('../spec/prompt')
+  process.stdout.write(
+    `把下面格式的 JSON 存成檔案，再執行：scratch-ai-bridge spec <檔案.json> --out <新遊戲.sb3> --playtest
+報告中的 feedback 每一行「→」後面就是修改建議；照著改完再執行一次。
+
+${createGameSpecGuide()}
+`,
+  )
+} else if (command === 'make') {
+  const positionals: string[] = []
+  const values: Record<string, string> = {}
+  let playtest = false
+  let force = false
+  let thinking = false
+  let argumentError = false
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index]
+    if (['--out', '--spec-out', '--rounds', '--model', '--base-url'].includes(argument)) {
+      const value = args[index + 1]
+      if (!value || value.startsWith('-')) {
+        argumentError = true
+        break
+      }
+      values[argument] = value
+      index += 1
+    } else if (argument === '--playtest') playtest = true
+    else if (argument === '--force') force = true
+    else if (argument === '--thinking') thinking = true
+    else if (argument.startsWith('-')) {
+      argumentError = true
+      break
+    } else positionals.push(argument)
+  }
+  const rounds = Number(values['--rounds'] ?? '1')
+  const request = positionals.join(' ').trim()
+  if (argumentError || !request || !values['--out'] || !Number.isInteger(rounds) || rounds < 0 || rounds > 3) {
+    process.stderr.write(`${USAGE}\n`)
+    process.exitCode = 2
+  } else {
+    const { makeGame, modelConfigFromEnvironment } = await import('./make-command')
+    const fromEnvironment = modelConfigFromEnvironment(process.env)
+    const outputFile = values['--out']
+    const model = values['--model']
+    const report = await withStdoutOnStderr(() =>
+      makeGame({
+        request,
+        outputFile,
+        ...(values['--spec-out'] ? { specOut: values['--spec-out'] } : {}),
+        repairRounds: rounds,
+        playtest,
+        force,
+        model: {
+          ...fromEnvironment,
+          ...(values['--base-url'] ? { baseUrl: values['--base-url'] } : {}),
+          ...(model ? { model } : {}),
+          noThinking: !thinking,
+        },
+        onProgress: (line) => process.stderr.write(`${line}\n`),
+      }).catch((error: unknown) => ({
+        format: 'scratch-ai-bridge/make' as const,
+        version: 1 as const,
+        status: 'failed' as const,
+        playtestStatus: 'not-run' as const,
+        unsupported: [],
+        attempts: [],
+        feedback: `[錯誤] ${error instanceof Error ? error.message : String(error)}`,
+      })),
+    )
+    writeJson(report)
+    if (report.status !== 'success' || report.playtestStatus === 'fail') process.exitCode = 1
+  }
 } else if (command === 'inspect') {
   const positionals: string[] = []
   let format = 'json'
@@ -173,27 +284,17 @@ if (command === '--help' || command === '-h' || command === '') {
     process.exitCode = 2
   } else {
     const { runSpecBuild } = await import('./spec-command')
-    // Scratch VM logs to stdout; keep stdout reserved for the JSON report.
-    const originalStdoutWrite = process.stdout.write.bind(process.stdout)
-    const originalConsoleLog = console.log
-    console.log = (...items: unknown[]) => process.stderr.write(`${items.map(String).join(' ')}\n`)
-    const redirectStdout: typeof process.stdout.write = (chunk: string | Uint8Array, ...rest: unknown[]) =>
-      (process.stderr.write as (...params: unknown[]) => boolean)(chunk, ...rest)
-    process.stdout.write = redirectStdout
-    let report
-    try {
-      report = await runSpecBuild({
+    const outputFile = values['--out']
+    const report = await withStdoutOnStderr(() =>
+      runSpecBuild({
         specPath: positionals[0] ?? '',
-        outputFile: values['--out'],
+        outputFile,
         ...(values['--ir'] ? { irPath: values['--ir'] } : {}),
         ...(values['--report'] ? { reportPath: values['--report'] } : {}),
         playtest,
         force,
-      })
-    } finally {
-      process.stdout.write = originalStdoutWrite
-      console.log = originalConsoleLog
-    }
+      }),
+    )
     writeJson(report)
     if (report.status !== 'success' || report.playtestStatus === 'fail') process.exitCode = 1
   }
