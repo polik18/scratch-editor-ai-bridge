@@ -1,2 +1,5 @@
 src/core/validator/generated/*.mjs
 src/core/visuals/library-index.json
+docs/history/
+output/
+research/

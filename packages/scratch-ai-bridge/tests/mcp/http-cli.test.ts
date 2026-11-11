@@ -31,7 +31,7 @@ describe('MCP HTTP launcher', () => {
       spawn(
         process.execPath,
         [
-          'scripts/scratch-ai-bridge-mcp-http.mjs',
+          'bin/scratch-ai-bridge-mcp-http.mjs',
           '--token-file',
           path,
           '--http-port',

@@ -28,7 +28,7 @@ interface RuntimeHarness {
 const openStarport = async (projectOverride?: CanonicalProject) => {
   const designPath = resolve(
     process.cwd(),
-    '../../research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.canonical.json',
+    'research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.canonical.json',
   )
   const project = projectOverride ?? (JSON.parse(await readFile(designPath, 'utf8')) as CanonicalProject)
   const archive = await compileCanonicalProjectToSb3(project)
@@ -160,7 +160,7 @@ describe('Starport Rift Expedition runtime smoke', () => {
   it('applies a structural balance patch to starting shields and can roll back to the original value', async () => {
     const designPath = resolve(
       process.cwd(),
-      '../../research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.canonical.json',
+      'research/tool-evaluation/2026-10-30-starport/starport-rift-expedition.canonical.json',
     )
     const original = JSON.parse(await readFile(designPath, 'utf8')) as CanonicalProject
     const stageScripts: ((typeof original.stage.scripts)[number] | undefined)[] = original.stage.scripts

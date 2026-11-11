@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 
 const testDirectories: string[] = []
-const checkerPath = fileURLToPath(new URL('../../scripts/check-audit-reachability.mjs', import.meta.url))
+const checkerPath = fileURLToPath(new URL('../../scripts/tools/check-audit-reachability.mjs', import.meta.url))
 
 const createAuditFixture = async (mappedPackage: boolean) => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'scratch-ai-bridge-audit-'))

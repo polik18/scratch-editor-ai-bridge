@@ -20,7 +20,7 @@ interface Harness {
 }
 
 it('simulates gravity, jumping, landing, falling, reaching the goal and restarting', async () => {
-  const file = resolve(process.cwd(), '../../research/dual-front-game/platformer.canonical.json')
+  const file = resolve(process.cwd(), 'research/dual-front-game/platformer.canonical.json')
   const project = JSON.parse(await readFile(file, 'utf8')) as CanonicalProject
   const archive = await compileCanonicalProjectToSb3(project)
   const vm = (await createVM()) as Awaited<ReturnType<typeof createVM>> & Harness

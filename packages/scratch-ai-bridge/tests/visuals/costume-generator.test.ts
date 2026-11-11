@@ -8,7 +8,7 @@ import { compileCanonicalProjectToSb3 } from '../../src/core/compiler/compiler'
 import type { CanonicalProject } from '../../src/core/ir/types'
 
 const run = promisify(execFile)
-const generator = resolve(process.cwd(), '../../research/dual-front-game/generate-costume.py')
+const generator = resolve(process.cwd(), 'research/dual-front-game/generate-costume.py')
 const shapes = [
   { type: 'circle', cx: 50, cy: 25, r: 20, fill: '#0088FF' },
   { type: 'rect', x: 30, y: 45, width: 40, height: 40, rx: 5, fill: '#0088FF' },
@@ -27,7 +27,7 @@ it('renders validated shapes offline and refuses unsafe or malformed input', asy
     expect(svg).toContain('fill="#0088FF"')
     expect(svg).not.toMatch(/<script|href=|<foreignObject/i)
     const game = join(directory, 'game.json')
-    const template = resolve(process.cwd(), '../../research/dual-front-game/build-dual-front.py')
+    const template = resolve(process.cwd(), 'research/dual-front-game/build-dual-front.py')
     await run('python3', [template, '--out', game, '--p1-spec', spec])
     const project = JSON.parse(await readFile(game, 'utf8')) as CanonicalProject
     expect(project.sprites[0].costumes[0].data).toContain('#0088FF')

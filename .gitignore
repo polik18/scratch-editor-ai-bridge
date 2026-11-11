@@ -134,4 +134,7 @@ out
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-packages/scratch-ai-bridge/star-collector.sb3
+
+# OS and Python caches
+.DS_Store
+__pycache__/

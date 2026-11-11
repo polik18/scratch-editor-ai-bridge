@@ -13,14 +13,14 @@ const run = (script: string, ...args: string[]) =>
 
 describe('CLI entry points', () => {
   it('documents the generate command in the installed bridge CLI', () => {
-    const result = run('scripts/scratch-ai-bridge.mjs', '--help')
+    const result = run('bin/scratch-ai-bridge.mjs', '--help')
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('generate <design.json> --out <new-file.sb3>')
     expect(result.stdout).toContain('--preview <stage.png>')
   })
 
   it('starts the session CLI through the package bin wrapper', () => {
-    const result = run('scripts/scratch-session.mjs', '--help')
+    const result = run('bin/scratch-session.mjs', '--help')
     expect(result.status).toBe(0)
     expect(result.stderr).toContain('new-game')
   })
@@ -29,7 +29,7 @@ describe('CLI entry points', () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), 'scratch-cli-generate-'))
     try {
       const result = run(
-        'scripts/scratch-ai-bridge.mjs',
+        'bin/scratch-ai-bridge.mjs',
         'generate',
         'src/core/ir/examples/06-platformer-core.json',
         '--out',

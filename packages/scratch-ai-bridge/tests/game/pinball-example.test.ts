@@ -22,7 +22,7 @@ interface TestVM {
 
 describe('pinball example behavior', () => {
   it('initializes, moves, responds to both flipper keys, and loses a life', async () => {
-    const source = path.resolve('../../research/pinball-candidate-20261031/pinball-refined.json')
+    const source = path.resolve('research/pinball-candidate-20261031/pinball-refined.json')
     const project = JSON.parse(readFileSync(source, 'utf8')) as CanonicalProject
     const archive = await compileCanonicalProjectToSb3(project)
     const handle = await loadSb3(await archive.arrayBuffer())
@@ -69,7 +69,7 @@ describe('pinball example behavior', () => {
   }, 60000)
 
   it('scores once for continuous bumper contact and scores again after separation', async () => {
-    const source = path.resolve('../../research/pinball-candidate-20261031/pinball-refined.json')
+    const source = path.resolve('research/pinball-candidate-20261031/pinball-refined.json')
     const project = JSON.parse(readFileSync(source, 'utf8')) as CanonicalProject
     const archive = await compileCanonicalProjectToSb3(project)
     const handle = await loadSb3(await archive.arrayBuffer())

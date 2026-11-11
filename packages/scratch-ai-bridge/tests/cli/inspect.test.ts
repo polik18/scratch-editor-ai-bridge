@@ -22,7 +22,7 @@ describe('static CLI inspection', () => {
     ]) {
       const result = spawnSync(
         process.execPath,
-        ['scripts/scratch-ai-bridge.mjs', 'inspect', fixture, '--format', format],
+        ['bin/scratch-ai-bridge.mjs', 'inspect', fixture, '--format', format],
         { encoding: 'utf8', timeout: 20_000 },
       )
       expect(result.status, result.stderr).toBe(0)

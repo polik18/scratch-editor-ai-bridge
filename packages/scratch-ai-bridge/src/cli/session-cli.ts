@@ -612,7 +612,7 @@ async function main() {
     console.error(
       'Examples: new MyGame | load game.sb3 | compile checked.sb3 | preview stage.png | open --url http://localhost:8601/',
     )
-    console.error('Guide: packages/scratch-ai-bridge/docs/USAGE-GUIDE.md\n')
+    console.error('Guide: packages/scratch-ai-bridge/docs/guide/USAGE-GUIDE.md\n')
     for (const [name] of Object.entries(commands).sort()) {
       console.error(`  ${name}`)
     }

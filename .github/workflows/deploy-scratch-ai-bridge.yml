@@ -101,7 +101,7 @@ jobs:
       # - name: Require Linux PSS evidence from all release engines
       #   working-directory: ./packages/scratch-ai-bridge
       #   run: >-
-      #     node scripts/check-browser-release-evidence.mjs
+      #     node scripts/smoke/check-browser-release-evidence.mjs
       #     test-results/browser-chromium.json
       #     test-results/browser-firefox.json
       #     test-results/browser-webkit.json
@@ -174,4 +174,4 @@ jobs:
       - name: Verify deployed Pages entrypoint and assets
         env:
           PAGES_URL: ${{ steps.deployment.outputs.page_url }}
-        run: node packages/scratch-ai-bridge/scripts/verify-deployed-pages.mjs "$PAGES_URL"
+        run: node packages/scratch-ai-bridge/scripts/smoke/verify-deployed-pages.mjs "$PAGES_URL"

@@ -9,7 +9,7 @@ import { validateBlockGraph } from '../../src/cli/graph-validator.js'
 import { ScratchSession } from '../../src/cli/session/session.js'
 import { loadSb3 } from '../../src/scratch/vm.js'
 
-const cli = path.resolve('scripts/scratch-session.mjs')
+const cli = path.resolve('bin/scratch-session.mjs')
 const fixture = path.resolve('../scratch-vm/test/fixtures/draggable.sb3')
 interface TestTarget {
   blocks: Record<string, { inputs: Record<string, unknown> }>

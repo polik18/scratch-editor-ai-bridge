@@ -1,10 +1,15 @@
+# Everything the tools produce (games, reports, benchmark runs, caches) goes to output/.
+output/
+
+# Build and test artifacts
 coverage/
 dist/
 audit-dist/
 node_modules/
 test-results/
+
+# Stray generated files outside output/
 *.sb3
+.scratch-session.json
 scratch-session.json
-benchmarks/game-quality/.asset-cache/
-benchmarks/game-quality/runs/*/*.png
-scratch-games/
+research/game-quality-benchmark/runs/*/*.png

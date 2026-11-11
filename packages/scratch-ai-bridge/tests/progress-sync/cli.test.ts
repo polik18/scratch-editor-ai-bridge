@@ -20,7 +20,7 @@ describe('self-hosted sync launcher', () => {
     const run = () =>
       spawn(
         process.execPath,
-        ['scripts/scratch-ai-bridge-sync.mjs', '--root', root, '--token-file', tokenFile, '--port', String(port)],
+        ['bin/scratch-ai-bridge-sync.mjs', '--root', root, '--token-file', tokenFile, '--port', String(port)],
         { cwd: process.cwd(), stdio: ['ignore', 'pipe', 'pipe'] },
       )
     try {

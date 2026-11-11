@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseProcessPssBytes, sumProcessPssBytes } from '../../scripts/process-tree-memory.mjs'
+import { parseProcessPssBytes, sumProcessPssBytes } from '../../scripts/bench/process-tree-memory.mjs'
 
 describe('browser process-tree PSS parsing', () => {
   it('reads PSS in KiB and converts it to bytes', () => {

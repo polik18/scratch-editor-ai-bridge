@@ -16,8 +16,8 @@
 | ------------------------------------ | --------------------------------------------------- | ------------------------------- |
 | 用一句話做新遊戲，讓本機模型寫       | `make` 指令                                         | 不用                            |
 | 你自己就是寫遊戲的 AI                | `guide` → 寫 Game Spec → `spec`，或 MCP `make_game` | 不用，`guide` 已經包含全部格式  |
-| 修改使用者在 Bridge 網頁中開著的作品 | MCP `inspect_project` → `propose_live_patch`        | `docs/AI-PROVIDER-MCP.md`       |
-| 分析學生交的 `.sb3`                  | `inspect`／`batch` 指令                             | `docs/CLI-REFERENCE.md`         |
+| 修改使用者在 Bridge 網頁中開著的作品 | MCP `inspect_project` → `propose_live_patch`        | `docs/guide/AI-PROVIDER-MCP.md` |
+| 分析學生交的 `.sb3`                  | `inspect`／`batch` 指令                             | `docs/guide/CLI-REFERENCE.md`   |
 | 修改 Bridge 本身的程式碼             | 開發流程                                            | `README.md`、根目錄 `AGENTS.md` |
 
 以下指令都要先 `cd packages/scratch-ai-bridge`（本目錄）再執行。套件通常已經安裝好，直接執行就好。
@@ -81,7 +81,7 @@ npm run --silent cli -- spec ./scratch-games/my-game.json --out ./scratch-games/
 啟動 MCP（stdio）：
 
 ```sh
-node scripts/scratch-ai-bridge-mcp.mjs [--games-dir <資料夾>]
+node bin/scratch-ai-bridge-mcp.mjs [--games-dir <資料夾>]
 ```
 
 使用者要先開啟 Bridge 網頁並連線。順序是：

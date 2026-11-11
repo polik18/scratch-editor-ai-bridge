@@ -14,20 +14,20 @@ export default eslintConfigScratch.defineConfig(
     },
   },
   {
-    files: ['*.ts', '*.mjs', 'scripts/*.mjs'],
+    files: ['*.ts', '*.mjs', 'bin/*.mjs', 'scripts/**/*.mjs', 'examples/**/*.mjs'],
     languageOptions: {
       globals: globals.node,
     },
   },
   globalIgnores([
     '*.md',
-    'test-*.ts',
-    'test-*.cjs',
     'audit-dist/**',
     'coverage/**',
     'dist/**',
     'docs/**',
     'node_modules/**',
+    'output/**',
+    'research/**',
     'src/core/validator/generated/*.mjs',
   ]),
 )

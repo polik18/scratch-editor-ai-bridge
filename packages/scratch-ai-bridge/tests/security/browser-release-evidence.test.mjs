@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validateBrowserReleaseEvidence } from '../../scripts/check-browser-release-evidence.mjs'
+import { validateBrowserReleaseEvidence } from '../../scripts/smoke/check-browser-release-evidence.mjs'
 
 const browsers = ['chromium', 'firefox', 'webkit']
 const makeReport = (browser) => ({

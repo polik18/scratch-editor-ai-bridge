@@ -2,14 +2,14 @@
 
 Scratch AI Bridge is a browser-first bridge between AI-authored structured JSON and Scratch projects, with optional local CLI/MCP companions. This package lives **inside the complete Scratch Editor monorepo** and uses the official `@scratch/scratch-vm` workspace.
 
-Optional local AI paths are documented in [`docs/AI-PROVIDER-MCP.md`](docs/AI-PROVIDER-MCP.md): use an OpenAI-compatible model running on localhost from the Bridge page, or expose validated patch tools to an external MCP host.
+Optional local AI paths are documented in [`docs/guide/AI-PROVIDER-MCP.md`](docs/guide/AI-PROVIDER-MCP.md): use an OpenAI-compatible model running on localhost from the Bridge page, or expose validated patch tools to an external MCP host.
 
 Public beta: [https://polik18.github.io/scratch-editor-ai-bridge/](https://polik18.github.io/scratch-editor-ai-bridge/)
 
 ## 文件入口
 
 - **AI 使用入口**：[`AGENTS.md`](AGENTS.md)。要用 Bridge 做遊戲、寫 Game Spec、修改網頁作品或分析 `.sb3`，從這裡挑路線。
-- **現行作品品質主線**：[`docs/game-quality-plan.md`](docs/game-quality-plan.md)。學生生成品質、官方素材庫、真實模型基準與首頁流程的進度，以此文件為唯一執行與交接入口。
+- **現行作品品質主線**：[`docs/history/game-quality-plan.md`](docs/history/game-quality-plan.md)。學生生成品質、官方素材庫、真實模型基準與首頁流程的進度，以此文件為唯一執行與交接入口。
 - **歷史參考**：本套件 `docs/` 中其他改善計畫、狀態報告與任務規格保留原文供背景查閱，不代表現行進度；其中 `README-IMPROVEMENT.md`、`sb3-generation-reliability-plan*.md`、`sb3-end-to-end-*.md`、`analysis-improvement-*.md`、`teacher-review-improvement-plan.md`、`student-work-feedback-plan.md`、`cli-agent-*.md` 與 `completeness-roadmap.md` 均屬此類。
 
 ## Important repository layout
@@ -19,7 +19,7 @@ Nothing in the surrounding Scratch Editor was removed. The normal workspaces rem
 A prebuilt experimental direct-use page is additionally available at repository root:
 
 ```text
-ready-to-use/Scratch-AI-Bridge.html
+packages/scratch-ai-bridge/research/legacy-ready-to-use/Scratch-AI-Bridge.html
 ```
 
 That file is an additive convenience artifact. It does not replace this TypeScript package or the Scratch Editor source tree.
@@ -75,17 +75,17 @@ SB3 匯入目前限制壓縮檔 64 MiB、解壓後所有 entries 合計 256 MiB�
 並為玩家、敵人、金幣、平台、終點、貓、球、飛船或一般角色選擇可見造型。AI 也可直接使用提示詞列出的內建造型名稱；
 所有自動圖像都會包進下載的 `.sb3`，不需要 Scratch CDN 或開啟作品時的網路連線。
 
-See `docs/status.md` and `docs/vm-write-path.md` for exact phase status and design decisions.
-The full L1/L2/L3 completeness definition and staged implementation plan is in `docs/completeness-roadmap.md`.
-The staged one-click AI error feedback loop and remaining precision work are tracked in `docs/ai-repair-feedback-plan.md`.
-Release gates and the documented Pages rollback procedure are in [`docs/release-checklist.md`](docs/release-checklist.md).
+See `docs/history/status.md` and `docs/design/vm-write-path.md` for exact phase status and design decisions.
+The full L1/L2/L3 completeness definition and staged implementation plan is in `docs/history/completeness-roadmap.md`.
+The staged one-click AI error feedback loop and remaining precision work are tracked in `docs/history/ai-repair-feedback-plan.md`.
+Release gates and the documented Pages rollback procedure are in [`docs/guide/release-checklist.md`](docs/guide/release-checklist.md).
 
 ## 功能標記
 
 - **Stable (穩定)**：功能已完整測試，可安全使用
 - **Experimental (實驗性)**：功能仍在實驗階段，可能有變更
 
-詳細功能矩陣請見 [`docs/function-matrix.md`](docs/function-matrix.md)。
+詳細功能矩陣請見 [`docs/guide/function-matrix.md`](docs/guide/function-matrix.md)。
 
 ## Commands
 
@@ -108,7 +108,7 @@ the archive, project JSON, block graph, referenced asset bytes/MD5, and a VM sav
 `--preview <stage.png>` to load the project in Scratch's browser renderer and capture its initial stage. Gameplay
 behavior remains `not-run` in generation reports; a successful compile does not claim that the game was played.
 Batch output is written to a new directory and uses anonymous student IDs unless a validated manifest is supplied. See
-[`docs/cli-agent-plan.md`](docs/cli-agent-plan.md) for the output contract and current implementation status.
+[`docs/history/cli-agent-plan.md`](docs/history/cli-agent-plan.md) for the output contract and current implementation status.
 
 Examples:
 
@@ -129,7 +129,7 @@ npm run mcp --workspace=@scratch/scratch-ai-bridge -- --project ./canonical-ir.j
 round when the build or playtest fails. `guide` prints the Game Spec format for agents that write the spec themselves.
 The MCP server offers the same build as the `make_game` tool, writing into `--games-dir` (default `./scratch-games`).
 
-`spec` builds from a [Game Spec](docs/game-spec.md): entities, behaviors, "when … → do …" rules and a text map,
+`spec` builds from a [Game Spec](docs/guide/game-spec.md): entities, behaviors, "when … → do …" rules and a text map,
 which is small enough for small local models to write. It checks reachability with the generated physics and, with
 `--playtest`, runs scenarios generated from the spec in the real Scratch preview.
 
@@ -146,6 +146,6 @@ the official Scratch workspaces resolve several packages through their generated
 
 The Pages workflow validates pull requests and deploys pushes to `main` or `develop`. The public repository is
 [`polik18/scratch-editor-ai-bridge`](https://github.com/polik18/scratch-editor-ai-bridge), with GitHub Actions selected
-as its Pages source. See `docs/deployment.md` for the release checklist and current limitations.
+as its Pages source. See `docs/guide/deployment.md` for the release checklist and current limitations.
 After the first successful service-worker installation, the app shell and bundled assets can reload offline; speech,
 translation, Scratch Cloud, and hardware features still need their respective network services or devices.

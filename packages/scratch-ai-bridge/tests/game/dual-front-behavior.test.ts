@@ -19,7 +19,7 @@ interface Harness {
 }
 
 it('plays a round: movement, mode, miss, hit, cooldown, winner and restart', async () => {
-  const path = resolve(process.cwd(), '../../research/dual-front-game/dual-front-v2.canonical.json')
+  const path = resolve(process.cwd(), 'research/dual-front-game/dual-front-v2.canonical.json')
   const project = JSON.parse(await readFile(path, 'utf8')) as CanonicalProject
   const archive = await compileCanonicalProjectToSb3(project)
   const vm = (await createVM()) as Awaited<ReturnType<typeof createVM>> & Harness
@@ -117,7 +117,7 @@ it('runs a customized generated template and rejects invalid settings', async ()
   const { promisify } = await import('node:util')
   const run = promisify(execFile)
   const directory = await mkdtemp(join(tmpdir(), 'dual-front-template-'))
-  const generator = resolve(process.cwd(), '../../research/dual-front-game/build-dual-front.py')
+  const generator = resolve(process.cwd(), 'research/dual-front-game/build-dual-front.py')
   const output = join(directory, 'custom.json')
   try {
     await expect(run('python3', [generator, '--out', output, '--damage', '13'])).rejects.toThrow()

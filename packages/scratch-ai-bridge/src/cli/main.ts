@@ -30,7 +30,7 @@ Usage:
 
 "make" reads SCRATCH_BRIDGE_MODEL_URL (default http://127.0.0.1:8000/v1), SCRATCH_BRIDGE_MODEL (default: first listed
 model) and SCRATCH_BRIDGE_API_KEY (OMLX_ENDPOINT / OMLX_API_KEY also work). It repairs once by default (--rounds 1).
-"spec" builds from a Game Spec (entities + behaviors + rules + text map; see docs/game-spec.md) and, with --playtest,
+"spec" builds from a Game Spec (entities + behaviors + rules + text map; see docs/guide/game-spec.md) and, with --playtest,
 runs scenarios generated from the spec in the real Scratch preview (needs a built dist/).
 "generate" accepts Canonical IR JSON or the documented GameDesign JSON shape. Pass --preview <stage.png> to run the
 browser renderer; gameplay behavior requires a separate deterministic smoke test.`

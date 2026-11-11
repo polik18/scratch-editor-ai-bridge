@@ -11,7 +11,7 @@ describe('MCP stdio entry', () => {
     if (!address || typeof address === 'string') throw new Error('No test port')
     const port = address.port
     await new Promise<void>((resolve, reject) => reservation.close((error) => (error ? reject(error) : resolve())))
-    const child = spawn(process.execPath, ['scripts/scratch-ai-bridge-mcp.mjs', '--port', String(port)], {
+    const child = spawn(process.execPath, ['bin/scratch-ai-bridge-mcp.mjs', '--port', String(port)], {
       cwd: process.cwd(),
       stdio: ['pipe', 'pipe', 'pipe'],
     })
