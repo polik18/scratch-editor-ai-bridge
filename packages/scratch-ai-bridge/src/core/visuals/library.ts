@@ -1,8 +1,41 @@
 import { md5 } from '@noble/hashes/legacy.js'
 import { bytesToHex } from '@noble/hashes/utils.js'
 import type { CanonicalCostume, CanonicalProject, CanonicalSound, CanonicalTargetBase } from '../ir/types'
+import { BACKDROP_CATALOG, soundInfo, SPRITE_CATALOG, type CatalogInfo } from './library-catalog'
 import libraryIndex from './library-index.json'
-import { ZH_BACKDROP_KEYWORDS, ZH_SOUND_KEYWORDS, ZH_SPRITE_KEYWORDS } from './library-zh'
+import {
+  ZH_BACKDROP_KEYWORDS as ZH_BACKDROP_BASE,
+  ZH_SOUND_KEYWORDS as ZH_SOUND_BASE,
+  ZH_SPRITE_KEYWORDS as ZH_SPRITE_BASE,
+} from './library-zh'
+
+/**
+ * The hand-written keyword table plus every Chinese name in the catalog, so each library entry can be found by a
+ * Chinese word. Entries from the hand-written table come first for a shared keyword.
+ * @param base - Keyword → library names.
+ * @param catalog - Library name → catalog entry with Chinese names.
+ * @returns Merged keyword table.
+ */
+const withCatalogNames = (
+  base: Readonly<Record<string, readonly string[]>>,
+  catalog: Readonly<Record<string, CatalogInfo<string> | undefined>>,
+): Readonly<Record<string, readonly string[]>> => {
+  const merged = new Map(Object.entries(base).map(([word, names]) => [word, [...names]]))
+  for (const [name, entry] of Object.entries(catalog))
+    for (const word of entry?.zh ?? []) {
+      const names = merged.get(word) ?? []
+      if (!names.includes(name)) names.push(name)
+      merged.set(word, names)
+    }
+  return Object.fromEntries(merged)
+}
+
+const ZH_SPRITE_KEYWORDS = withCatalogNames(ZH_SPRITE_BASE, SPRITE_CATALOG)
+const ZH_BACKDROP_KEYWORDS = withCatalogNames(ZH_BACKDROP_BASE, BACKDROP_CATALOG)
+
+/** Chinese keyword → library names for sprites and backdrops, hand-written entries plus every catalog name. */
+export const SPRITE_KEYWORDS = ZH_SPRITE_KEYWORDS
+export const BACKDROP_KEYWORDS = ZH_BACKDROP_KEYWORDS
 
 type CostumeTuple = [
   name: string,
@@ -10,6 +43,9 @@ type CostumeTuple = [
   rotationCenterX: number,
   rotationCenterY: number,
   bitmapResolution: number,
+  /** Width and height in stage pixels, measured by the index generator. */
+  width?: number,
+  height?: number,
 ]
 type SoundTuple = [name: string, md5ext: string, rate: number, sampleCount: number]
 
@@ -41,6 +77,11 @@ const index = libraryIndex as unknown as {
 export const LIBRARY_SPRITES: readonly LibrarySprite[] = index.sprites
 export const LIBRARY_BACKDROPS: readonly LibraryBackdrop[] = index.backdrops
 export const LIBRARY_SOUNDS: readonly LibrarySound[] = index.sounds
+
+const ZH_SOUND_KEYWORDS = withCatalogNames(
+  ZH_SOUND_BASE,
+  Object.fromEntries(LIBRARY_SOUNDS.map((sound) => [sound.name, soundInfo(sound.name)])),
+)
 
 export const SCRATCH_ASSET_ORIGIN = 'https://assets.scratch.mit.edu'
 
