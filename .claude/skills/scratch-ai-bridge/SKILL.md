@@ -16,7 +16,7 @@ description: 用 Scratch AI Bridge 做 Scratch 遊戲（.sb3）、寫 Game Spec�
 如果你自己可以寫 JSON（建議）：
 
 1. `npm run --silent cli -- guide`：讀格式。
-2. 依需求寫一個 Game Spec，存成 `output/games/<名稱>/<名稱>.spec.json`。
+2. 依需求寫一個 Game Spec，存成 `output/games/<名稱>/<名稱>.spec.json`。<名稱> 要用 `output/games/` 裡還沒有的名字。
 3. `npm run --silent cli -- spec output/games/<名稱>/<名稱>.spec.json --playtest`
 4. 報告的 `status` 是 `success`，而且 `playtestStatus` 不是 `fail`，就完成了，`.sb3` 在同一個資料夾。
    否則照 `feedback` 修改 JSON，在第 3 步的指令加上 `--force` 重建。

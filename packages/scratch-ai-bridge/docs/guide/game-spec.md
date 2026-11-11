@@ -10,7 +10,7 @@ npm run cli --workspace=@scratch/scratch-ai-bridge -- guide                     
 ```
 
 沒有 `--out` 時，遊戲放在 `output/games/<名稱>/`：`<名稱>.sb3`、`<名稱>.spec.json`，以及存放報告與模型回覆的 `_過程/`。
-描述檔已經在某個遊戲資料夾裡時，`.sb3` 就產生在它旁邊；否則用「標題」當資料夾名稱。重建同一個遊戲要加 `--force`。
+描述檔已經在某個遊戲資料夾裡時，`.sb3` 就產生在它旁邊；否則用「標題」當資料夾名稱。重建同一個遊戲要加 `--force`；被取代的 `.sb3` 和它當時的描述會先複製到 `_過程/舊版/<時間>/`。
 
 三個入口用同一份寫作說明（`src/spec/prompt.ts` 的 `createGameSpecGuide`）：`make` 把它連同需求送給模型；`guide`
 印給自己寫描述的 AI；MCP 工具 `make_game` 把它放在工具說明裡。`make` 在建置或試玩失敗時，會把 `feedback`

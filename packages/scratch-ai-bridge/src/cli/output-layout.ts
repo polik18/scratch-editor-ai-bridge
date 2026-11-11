@@ -1,4 +1,4 @@
-import { access, readdir, rm, writeFile, mkdir } from 'node:fs/promises'
+import { access, copyFile, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { extractJson } from '../spec/normalize'
@@ -116,6 +116,27 @@ export const writeProcessFile = async (files: GameFiles, suffix: string, content
   const file = path.join(files.processDirectory, `${files.name}.${suffix}`)
   await writeFile(file, content)
   return file
+}
+
+/** Name of the spec copy saved in `_過程` after every successful build: exactly what the current SB3 came from. */
+export const BUILT_SPEC_SUFFIX = 'built.spec.json'
+
+/**
+ * Before a forced rebuild: copies the current SB3 and the spec it was built from into
+ * `_過程/舊版/<time>/`, so overwriting the wrong game can always be undone.
+ * @param files - The game about to be rebuilt.
+ * @returns The backup folder, or nothing when there was no game yet.
+ */
+export const backupGame = async (files: GameFiles): Promise<string | undefined> => {
+  if (!(await exists(files.sb3))) return undefined
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const backup = path.join(files.processDirectory, '舊版', stamp)
+  await mkdir(backup, { recursive: true })
+  await copyFile(files.sb3, path.join(backup, path.basename(files.sb3)))
+  const builtSpec = path.join(files.processDirectory, `${files.name}.${BUILT_SPEC_SUFFIX}`)
+  const spec = (await exists(builtSpec)) ? builtSpec : (await exists(files.spec)) ? files.spec : undefined
+  if (spec) await copyFile(spec, path.join(backup, `${files.name}.spec.json`))
+  return backup
 }
 
 /**

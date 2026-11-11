@@ -5,6 +5,8 @@ import { buildFromSpecText, createSpecScenarios, formatSpecDiagnostics } from '.
 import type { SpecDiagnostic } from '../spec'
 import { generateGame, type GeneratorResult } from './generator'
 import {
+  backupGame,
+  BUILT_SPEC_SUFFIX,
   gameFiles,
   gamesRoot,
   gameTarget,
@@ -43,6 +45,8 @@ export interface SpecBuildReport {
   readonly specFile?: string
   /** This build's report and other files left over from making the game. */
   readonly processDirectory?: string
+  /** Where the replaced SB3 and its spec were copied before a `--force` rebuild. */
+  readonly previousVersion?: string
   readonly title?: string
   /** Requests the spec author listed under 做不到; the game was built without them. */
   readonly unsupported?: readonly string[]
@@ -75,11 +79,19 @@ export const runSpecBuild = async (options: SpecBuildOptions): Promise<SpecBuild
     ? gameFiles(options.outputFile)
     : await defaultTarget(specPath, text, options.gamesDirectory ?? gamesRoot())
   await mkdir(files.directory, { recursive: true })
+  const previousVersion = options.force ? await backupGame(files) : undefined
   const built = await buildSpecText(text, { ...options, outputFile: files.sb3 })
-  let report: SpecBuildReport = { ...built, processDirectory: files.processDirectory }
-  if (automatic && built.status === 'success') {
-    if (files.spec !== specPath) await copyFile(specPath, files.spec)
-    report = { ...report, specFile: files.spec }
+  let report: SpecBuildReport = {
+    ...built,
+    processDirectory: files.processDirectory,
+    ...(previousVersion ? { previousVersion } : {}),
+  }
+  if (built.status === 'success') {
+    await writeProcessFile(files, BUILT_SPEC_SUFFIX, text)
+    if (automatic) {
+      if (files.spec !== specPath) await copyFile(specPath, files.spec)
+      report = { ...report, specFile: files.spec }
+    }
   }
   await writeProcessFile(files, 'report.json', `${JSON.stringify(report, null, 2)}\n`)
   return report
@@ -127,7 +139,7 @@ export const buildSpecText = async (
       lines.push(
         ...generation.diagnostics.map((item) =>
           item.message.startsWith('Output already exists:')
-            ? `[錯誤] ${path.resolve(options.outputFile)} 已經存在 → 用改過的描述重建同一個檔案時加 --force；要做另一個遊戲就改「標題」或用 --out 指定別的檔名。`
+            ? `[錯誤] ${path.resolve(options.outputFile)} 已經存在 → 如果這是你正在修改的同一個遊戲，加 --force 重建；如果是新遊戲，不要覆蓋別人的作品，把描述放到另一個新的 output/games/<新名稱>/ 資料夾再建置。`
             : `[錯誤] 產生 SB3：${item.message}`,
         ),
       )

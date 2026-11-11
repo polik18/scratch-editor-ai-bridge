@@ -161,6 +161,24 @@ describe('spec without --out', () => {
     expect(again.feedback).toContain('--force')
   }, 60_000)
 
+  it('keeps the replaced game and the spec it came from when --force overwrites it', async () => {
+    const folder = path.join(directory, 'apples')
+    await mkdir(folder)
+    const specPath = path.join(folder, 'apples.spec.json')
+    const original = await catchSpec()
+    await writeFile(specPath, original)
+    await runSpecBuild({ specPath, gamesDirectory: directory, playtest: false, force: false })
+    const firstGame = await readFile(path.join(folder, 'apples.sb3'))
+    // Another game's spec written over this one, then forced: the first game must still be recoverable.
+    await writeFile(specPath, (await readFile(path.resolve('src/spec/examples/whack.json'), 'utf-8')).trim())
+    const forced = await runSpecBuild({ specPath, gamesDirectory: directory, playtest: false, force: true })
+    expect(forced.status).toBe('success')
+    const backup = forced.previousVersion ?? ''
+    expect(path.dirname(path.dirname(backup))).toBe(path.join(folder, '_過程'))
+    expect(await readFile(path.join(backup, 'apples.sb3'))).toEqual(firstGame)
+    expect(await readFile(path.join(backup, 'apples.spec.json'), 'utf-8')).toBe(original)
+  }, 60_000)
+
   it('names the game folder after 標題 when the spec lives elsewhere', async () => {
     const specPath = path.join(directory, 'draft.json')
     const text = await catchSpec()

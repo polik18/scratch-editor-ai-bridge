@@ -53,8 +53,9 @@ npm run --silent cli -- guide                                   # 印出完整�
 npm run --silent cli -- spec output/games/<名稱>/<名稱>.spec.json --playtest
 ```
 
+- **新遊戲要用還不存在的資料夾名稱**（先在本目錄執行 `ls output/games/` 看一下）；同名資料夾裡可能是別的遊戲，不要覆蓋。
 - `.sb3` 會產生在描述檔旁邊，報告存在同一個資料夾的 `_過程/`。
-- 先看報告最前面的 `status`、`playtestStatus` 和 `feedback`。照 `feedback` 修改描述後，**加 `--force`** 重建。
+- 先看報告最前面的 `status`、`playtestStatus` 和 `feedback`。照 `feedback` 修改描述後，**加 `--force`** 重建同一個遊戲；被取代的舊版會留在 `_過程/舊版/`。
 - 不需要刪檔，也不要用 `grep` 過濾報告，否則會漏掉建議。
 
 也可以用 MCP 的 `make_game` 工具做同一件事：參數 `spec` 放 JSON，工具說明裡已有完整格式。每次呼叫都會在

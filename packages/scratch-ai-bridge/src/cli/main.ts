@@ -93,7 +93,7 @@ if (command === '--help' || command === '-h' || command === '') {
 } else if (command === 'guide') {
   const { createGameSpecGuide } = await import('../spec/prompt')
   process.stdout.write(
-    `把下面格式的 JSON 存成 output/games/<名稱>/<名稱>.spec.json，再執行：
+    `把下面格式的 JSON 存成 output/games/<名稱>/<名稱>.spec.json（新遊戲要用還不存在的資料夾名稱），再執行：
   scratch-ai-bridge spec output/games/<名稱>/<名稱>.spec.json --playtest
 .sb3 會產生在同一個資料夾；報告存在旁邊的 _過程/。
 報告中的 feedback 每一行「→」後面就是修改建議；照著改完，加 --force 再執行一次。
