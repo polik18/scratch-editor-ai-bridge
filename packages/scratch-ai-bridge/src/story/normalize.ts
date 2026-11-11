@@ -102,6 +102,25 @@ export const parsePoint = (words: string): StagePoint | undefined => {
   return spot ? SPOTS[spot] : undefined
 }
 
+/**
+ * Action lines the parser understands, one example each, in the order the guide lists them. The agent start page
+ * and the tests read this list, so a new action shows up there as soon as the parser supports it.
+ */
+export const STORY_ACTION_EXAMPLES: readonly { readonly name: string; readonly example: string }[] = [
+  { name: '出現', example: '小魚 出現 在 左邊' },
+  { name: '消失', example: '小魚 消失' },
+  { name: '移到', example: '小魚 游到 中間 3秒' },
+  { name: '說', example: '小魚 說「你好」' },
+  { name: '想', example: '小魚 想「好清澈」' },
+  { name: '變大／變小', example: '小魚 變大' },
+  { name: '轉身', example: '小魚 轉身' },
+  { name: '動起來', example: '小魚 動起來 2秒' },
+  { name: '旁白', example: '旁白 很久以前' },
+  { name: '等', example: '等 2秒' },
+  { name: '播放', example: '播放 Water Drop 1' },
+  { name: '同時', example: '同時 小魚 游到 右邊 2秒' },
+]
+
 const SECONDS = /\s*(\d+(?:\.\d+)?)\s*(?:秒|s|sec)\s*$/i
 
 /**

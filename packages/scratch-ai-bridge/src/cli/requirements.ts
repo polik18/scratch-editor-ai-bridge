@@ -177,3 +177,46 @@ export const requirementFeedback = (checks: readonly RequirementCheck[]): string
     .filter((check) => !check.pass)
     .map((check) => `[需求未達成] ${check.label}：需求是${check.expected}，目前是 ${check.actual} → ${check.fix}`)
     .join('\n')
+
+export interface Completion {
+  /** True when the work is finished: built, playtest not failed, and every requirement met. */
+  readonly done: boolean
+  /** What is still missing, in plain words; empty when done. */
+  readonly notDone: readonly string[]
+}
+
+/**
+ * One verdict an agent can rely on instead of judging the report itself.
+ * @param report - Build report.
+ * @param report.status - Build status.
+ * @param report.playtestStatus - `fail` means the work is not done.
+ * @param checks - Requirement checks, if a request was given.
+ * @returns Whether the work is done and what is missing.
+ */
+export const completion = (
+  report: { readonly status: string; readonly playtestStatus: string },
+  checks: readonly RequirementCheck[] = [],
+): Completion => {
+  const notDone = [
+    ...(report.status === 'success' ? [] : ['建置失敗：照 feedback 修改描述']),
+    ...(report.playtestStatus === 'fail' ? ['試玩未通過：看 feedback 的原因'] : []),
+    ...checks
+      .filter((check) => !check.pass)
+      .map((check) => `${check.label}：需求是${check.expected}，目前是 ${check.actual}`),
+  ]
+  return { done: notDone.length === 0, notDone }
+}
+
+/**
+ * The request text from `--request`: a file's contents when the value is a path that exists, otherwise the value.
+ * @param value - What was passed.
+ * @param readFile - Reads a file as text, or throws when it does not exist.
+ * @returns What was asked, as plain text.
+ */
+export const requestText = async (value: string, readFile: (path: string) => Promise<string>): Promise<string> => {
+  try {
+    return await readFile(value)
+  } catch {
+    return value
+  }
+}

@@ -51,7 +51,7 @@ const KEY_ALIASES: Record<string, readonly string[]> = {
   clear: ['clear', 'win', 'wincondition', '過關', '過關條件', '通關', '通關條件'],
 }
 
-const BEHAVIOR_ALIASES: Record<BehaviorUse['name'], readonly string[]> = {
+export const BEHAVIOR_ALIASES: Readonly<Record<BehaviorUse['name'], readonly string[]>> = {
   platformer: ['platformer', 'platform', 'jumper', '平台移動', '平台跳躍', '跳躍移動', '橫向移動'],
   topdown: ['topdown', 'top-down', 'top down', '俯視移動', '四方向移動', '上下左右移動', '迷宮移動'],
   patrol: ['patrol', 'enemy', 'walker', '巡邏', '來回巡邏', '敵人', '來回走'],
@@ -61,7 +61,7 @@ const BEHAVIOR_ALIASES: Record<BehaviorUse['name'], readonly string[]> = {
   faller: ['faller', 'falling', 'spawner', 'dropper', '掉落物', '掉落', '落下', '生成器', '飄浮物', '移動障礙'],
   projectile: ['projectile', 'bullet', 'shoot', 'shooter', 'laser', '子彈', '射擊', '發射', '雷射', '飛彈'],
   target: ['target', 'shootable', 'hittable', '可射中', '可被射中', '被射中', '靶', '射擊目標'],
-  clickable: ['clickable', 'click', 'tap', '點擊', '點擊目標', '可點擊', '點', '滑鼠點擊'],
+  clickable: ['clickable', 'click', 'tap', '點擊目標', '點擊', '可點擊', '點', '滑鼠點擊'],
   popup: ['popup', 'pop up', 'popper', '冒出', '隨機出現', '出現', '閃現'],
 }
 

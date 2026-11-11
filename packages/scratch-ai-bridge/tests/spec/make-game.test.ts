@@ -206,6 +206,39 @@ describe('spec without --out', () => {
     expect(report.output).toBe(path.join(games, name, `${name}.sb3`))
     expect(await readFile(path.join(games, name, `${name}.spec.json`), 'utf-8')).toBe(text)
   }, 60_000)
+  it('never replaces a game that only shares the title, even with --force', async () => {
+    const specPath = path.join(directory, 'draft.json')
+    const text = await catchSpec()
+    await writeFile(specPath, text)
+    const games = path.join(directory, 'games')
+    const first = await runSpecBuild({ specPath, gamesDirectory: games, playtest: false, force: false })
+    const second = await runSpecBuild({ specPath, gamesDirectory: games, playtest: false, force: true })
+    expect(second.output).not.toBe(first.output)
+    expect(path.basename(path.dirname(second.output ?? ''))).toMatch(/-2$/)
+  }, 60_000)
+
+  it('checks the game against --request and says whether it is done', async () => {
+    const specPath = path.join(directory, 'draft.json')
+    await writeFile(specPath, await catchSpec())
+    const report = await runSpecBuild({
+      specPath,
+      gamesDirectory: path.join(directory, 'games'),
+      request: '遊戲要有第二關，標題必須出現「淡水河」',
+      playtest: false,
+      force: false,
+    })
+    expect(report.status).toBe('success')
+    expect(report.done).toBe(false)
+    expect(report.notDone).toHaveLength(2)
+    expect(report.feedback).toContain('[需求未達成] 出現「淡水河」')
+    const plain = await runSpecBuild({
+      specPath,
+      gamesDirectory: path.join(directory, 'games'),
+      playtest: false,
+      force: false,
+    })
+    expect(plain).toMatchObject({ done: true, notDone: [] })
+  }, 60_000)
 })
 
 describe('clean', () => {

@@ -6,6 +6,8 @@ import { inspectSb3Bytes, inspectionToMarkdown, inspectionToStudentMarkdown } fr
 const VERSION = '0.1.0'
 const USAGE = `Scratch AI Bridge CLI ${VERSION}
 
+AI agents: run "start" first — it lists every command, the rules and what counts as done, generated from this version.
+
 Which command?
   Make a new game from one sentence (a local model writes the spec):
     scratch-ai-bridge make "做一個接蘋果遊戲，左右鍵移動，接到加分" --playtest
@@ -32,8 +34,8 @@ Usage:
   scratch-ai-bridge make <request> [--story] [--out <new-file.sb3>] [--spec-out <spec.json>] [--rounds <0-3>] [--playtest] [--force]
                          [--model <id>] [--base-url <url>] [--thinking]
   scratch-ai-bridge guide [game|story]
-  scratch-ai-bridge story <story.json> [--out <file.sb3>] [--playtest] [--force] [--offline]
-  scratch-ai-bridge spec <game-spec.json> [--out <file.sb3>] [--ir <canonical-ir.json>] [--report <report.json>] [--playtest] [--force]
+  scratch-ai-bridge story <story.json> [--out <file.sb3>] [--request <file-or-text>] [--playtest] [--force] [--offline]
+  scratch-ai-bridge spec <game-spec.json> [--out <file.sb3>] [--ir <canonical-ir.json>] [--report <report.json>] [--request <file-or-text>] [--playtest] [--force]
   scratch-ai-bridge inspect <file.sb3> [--format json|markdown|student-markdown]
   scratch-ai-bridge batch <directory> [--out <new-directory>] [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
   scratch-ai-bridge generate <design.json> --out <new-file.sb3> [--report <report.json>] [--preview <stage.png>] [--force]
@@ -47,6 +49,15 @@ model) and SCRATCH_BRIDGE_API_KEY (OMLX_ENDPOINT / OMLX_API_KEY also work). It r
 runs scenarios generated from the spec in the real Scratch preview (needs a built dist/).
 "generate" accepts Canonical IR JSON or the documented GameDesign JSON shape. Pass --preview <stage.png> to run the
 browser renderer; gameplay behavior requires a separate deterministic smoke test.`
+
+/**
+ * @param value - The `--request` value: a file with the task, or the task itself.
+ * @returns The task text.
+ */
+const readRequest = async (value: string): Promise<string> => {
+  const { requestText } = await import('./requirements')
+  return requestText(value, (file) => readFile(file, 'utf8'))
+}
 
 const writeJson = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`)
@@ -105,6 +116,9 @@ if (command === '--help' || command === '-h' || command === '') {
   process.stdout.write(`${USAGE}\n`)
 } else if (command === '--version' || command === '-v') {
   process.stdout.write(`${VERSION}\n`)
+} else if (command === 'start') {
+  const { createAgentStartPage } = await import('./agent-guide')
+  process.stdout.write(createAgentStartPage())
 } else if (command === 'guide' && args[0] === 'story') {
   const { createStoryGuide } = await import('../story/prompt')
   process.stdout.write(
@@ -320,7 +334,7 @@ ${createGameSpecGuide()}
   let argumentError = false
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index]
-    if (argument === '--out' || argument === '--ir' || argument === '--report') {
+    if (argument === '--out' || argument === '--ir' || argument === '--report' || argument === '--request') {
       const value = args[index + 1]
       if (!value || value.startsWith('-')) {
         argumentError = true
@@ -341,12 +355,14 @@ ${createGameSpecGuide()}
   } else {
     const { runSpecBuild } = await import('./spec-command')
     const outputFile = values['--out']
+    const request = values['--request'] ? await readRequest(values['--request']) : undefined
     const report = await withStdoutOnStderr(() =>
       runSpecBuild({
         specPath: positionals[0] ?? '',
         ...(outputFile ? { outputFile } : {}),
         ...(values['--ir'] ? { irPath: values['--ir'] } : {}),
         ...(values['--report'] ? { reportPath: values['--report'] } : {}),
+        ...(request ? { request } : {}),
         playtest,
         force,
       }),
@@ -413,6 +429,7 @@ ${createGameSpecGuide()}
 } else if (command === 'story') {
   const positionals: string[] = []
   let outputFile: string | undefined
+  let request: string | undefined
   let playtest = false
   let force = false
   let offline = false
@@ -427,6 +444,14 @@ ${createGameSpecGuide()}
       }
       outputFile = value
       index += 1
+    } else if (argument === '--request') {
+      const value = args[index + 1]
+      if (!value || value.startsWith('-')) {
+        argumentError = true
+        break
+      }
+      request = value
+      index += 1
     } else if (argument === '--playtest') playtest = true
     else if (argument === '--force') force = true
     else if (argument === '--offline') offline = true
@@ -440,10 +465,12 @@ ${createGameSpecGuide()}
     process.exitCode = 2
   } else {
     const { runStoryBuild } = await import('./story-command')
+    const requestValue = request ? await readRequest(request) : undefined
     const report = await withStdoutOnStderr(() =>
       runStoryBuild({
         specPath: positionals[0] ?? '',
         ...(outputFile ? { outputFile } : {}),
+        ...(requestValue ? { request: requestValue } : {}),
         playtest,
         force,
         offline,

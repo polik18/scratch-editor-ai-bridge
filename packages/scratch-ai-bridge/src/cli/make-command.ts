@@ -8,6 +8,7 @@ import { createStoryInstruction } from '../story/prompt'
 import { exists, gameFiles, gamesRoot, gameTarget, safeName, writeProcessFile } from './output-layout'
 import {
   checkRequirements,
+  completion,
   readRequirements,
   requirementFeedback,
   type RequirementCheck,
@@ -76,6 +77,9 @@ export interface MakeReport {
   readonly requirements?: readonly RequirementCheck[]
   /** Changes the tool made to the model's reply, such as adding a required name to the title. */
   readonly autoFixes?: readonly string[]
+  /** Whether the work is finished (built, playtest not failed, request met) and what is missing. */
+  readonly done?: boolean
+  readonly notDone?: readonly string[]
   readonly attempts: readonly MakeAttempt[]
   /** What is still wrong with the kept attempt, as plain lines. */
   readonly feedback: string
@@ -369,6 +373,7 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
         feedback: [best.report.feedback, requirementFeedback(best.checks)].filter(Boolean).join('\n'),
       }
     }
+    report = { ...report, ...completion(report, best?.checks ?? []) }
     await writeProcessFile(files, 'report.json', `${JSON.stringify(report, null, 2)}\n`)
     return report
   } finally {

@@ -18,6 +18,13 @@ import {
   writeProcessFile,
   type GameFiles,
 } from './output-layout'
+import {
+  checkRequirements,
+  completion,
+  readRequirements,
+  requirementFeedback,
+  type RequirementCheck,
+} from './requirements'
 import type { ScenarioResult } from './scenario-runner'
 
 export interface StoryBuildOptions {
@@ -30,6 +37,8 @@ export interface StoryBuildOptions {
   readonly force: boolean
   /** Skip downloading official library artwork (tests, offline); library characters get a placeholder. */
   readonly offline?: boolean
+  /** The task this animation answers; its length and required names are checked and reported. */
+  readonly request?: string
 }
 
 export interface StoryBuildReport {
@@ -47,6 +56,10 @@ export interface StoryBuildReport {
   /** Running time in seconds, title and ending cards included. */
   readonly seconds?: number
   readonly scenes?: number
+  /** Whether the animation is finished (built, playtest not failed, request met) and what is missing. */
+  readonly done?: boolean
+  readonly notDone?: readonly string[]
+  readonly requirements?: readonly RequirementCheck[]
   /** Requests the author listed under 做不到; the animation was built without them. */
   readonly unsupported?: readonly string[]
   /** Which official artwork and sounds were used. */
@@ -182,8 +195,19 @@ export const runStoryBuild = async (options: StoryBuildOptions): Promise<StoryBu
       await rm(workDirectory, { recursive: true, force: true })
     }
   }
+  const checks =
+    options.request && report.status === 'success'
+      ? checkRequirements(text, readRequirements(options.request, 'story'))
+      : []
   report = {
     ...report,
+    ...completion(report, checks),
+    ...(checks.length > 0
+      ? {
+          requirements: checks,
+          feedback: [report.feedback, requirementFeedback(checks)].filter(Boolean).join('\n'),
+        }
+      : {}),
     processDirectory: files.processDirectory,
     ...(built.story && built.story.unsupported.length > 0 ? { unsupported: built.story.unsupported } : {}),
   }

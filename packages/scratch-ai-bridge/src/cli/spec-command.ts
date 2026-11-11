@@ -16,6 +16,13 @@ import {
   writeProcessFile,
   type GameFiles,
 } from './output-layout'
+import {
+  checkRequirements,
+  completion,
+  readRequirements,
+  requirementFeedback,
+  type RequirementCheck,
+} from './requirements'
 import type { ScenarioResult } from './scenario-runner'
 
 export interface SpecBuildOptions {
@@ -27,6 +34,8 @@ export interface SpecBuildOptions {
   readonly outputFile?: string
   /** Replaces `output/games` (tests). */
   readonly gamesDirectory?: string
+  /** The task this game answers; its levels and required names are checked and reported. */
+  readonly request?: string
   readonly irPath?: string
   readonly reportPath?: string
   readonly playtest: boolean
@@ -49,6 +58,11 @@ export interface SpecBuildReport {
   /** Where the replaced SB3 and its spec were copied before a `--force` rebuild. */
   readonly previousVersion?: string
   readonly title?: string
+  /** Whether the game is finished (built, playtest not failed, request met) and what is missing. */
+  readonly done?: boolean
+  readonly notDone?: readonly string[]
+  /** What the request asked for and whether the game meets it (with `request`). */
+  readonly requirements?: readonly RequirementCheck[]
   /** Requests the spec author listed under 做不到; the game was built without them. */
   readonly unsupported?: readonly string[]
   readonly diagnostics: readonly SpecDiagnostic[]
@@ -62,7 +76,9 @@ const defaultTarget = async (specPath: string, text: string, gamesDirectory: str
     const name = path.basename(specPath).replace(/(\.spec)?\.json$/i, '')
     return gameFiles(path.join(path.dirname(specPath), `${name}.sb3`))
   }
-  return gameTarget(gamesDirectory, safeName(specTitle(text)), false)
+  // A spec kept elsewhere does not own any game folder, so it gets a new one instead of replacing a game that only
+  // shares its title.
+  return gameTarget(gamesDirectory, safeName(specTitle(text)), true)
 }
 
 /**
@@ -101,6 +117,20 @@ export const runSpecBuild = async (options: SpecBuildOptions): Promise<SpecBuild
       if (files.spec !== specPath) await copyFile(specPath, files.spec)
       report = { ...report, specFile: files.spec }
     }
+  }
+  const checks =
+    options.request && built.status === 'success'
+      ? checkRequirements(text, readRequirements(options.request, 'game'))
+      : []
+  report = {
+    ...report,
+    ...completion(report, checks),
+    ...(checks.length > 0
+      ? {
+          requirements: checks,
+          feedback: [report.feedback, requirementFeedback(checks)].filter(Boolean).join('\n'),
+        }
+      : {}),
   }
   await writeProcessFile(files, 'report.json', `${JSON.stringify(report, null, 2)}\n`)
   return report
