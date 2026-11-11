@@ -67,6 +67,8 @@ export interface Story {
   readonly sources: readonly string[]
   /** Library sounds the story plays. */
   readonly sounds: readonly string[]
+  /** Requests the author listed under 做不到; reported, not built. */
+  readonly unsupported: readonly string[]
 }
 
 /** Fixed parts of every animation, in seconds. They count towards the total length. */

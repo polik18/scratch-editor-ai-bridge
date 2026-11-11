@@ -1,4 +1,5 @@
-import { matchLibraryBackdrop, matchLibrarySound, matchLibrarySprite } from '../core/visuals/library'
+import { pickBackdrop, pickSound, pickSprite, searchAssets } from '../core/visuals/assets'
+import { findLibraryBackdrop, findLibrarySprite } from '../core/visuals/library'
 import type { Look, SpecDiagnostic } from '../spec/types'
 import { matchBackdropPreset, PRESET_EXAMPLES, SUBTITLE_MAX_CHARS } from './backdrops'
 import {
@@ -23,6 +24,7 @@ const ALIASES = {
   scenes: ['scenes', '場景', '分鏡', '幕'],
   ending: ['ending', 'end', '結尾', '結局', '片尾'],
   sources: ['sources', 'references', '資料來源', '參考資料', '來源'],
+  unsupported: ['unsupported', 'cannot', 'limitations', '做不到', '無法做到', '沒做到', '限制'],
   backdrop: ['backdrop', 'background', '背景', '場景背景'],
   actions: ['actions', 'steps', '動作', '劇情', '內容'],
   narration: ['narration', '旁白'],
@@ -189,24 +191,77 @@ export const parseAction = (
   }
 }
 
-const lookFor = (value: unknown, name: string): { readonly look: ActorLook; readonly guessed: boolean } => {
+interface LookChoice {
+  readonly look: ActorLook
+  /** The author left 外觀 out and the tool chose. */
+  readonly guessed: boolean
+  /** Why a stand-in was chosen, from the asset picker. */
+  readonly note?: string
+  /** The author wrote a look that does not exist; the closest names to suggest. */
+  readonly unknown?: readonly string[]
+}
+
+/**
+ * The look for a character: a built-in shape, the official sprite the author named, or one picked from the
+ * character's name.
+ * @param value - What the author wrote for 外觀, if anything.
+ * @param name - Character name, used when 外觀 is missing or unknown.
+ * @returns The look and how it was chosen.
+ */
+const lookFor = (value: unknown, name: string): LookChoice => {
   const wanted = value === undefined ? '' : text(value).trim()
   if ((PRESET_LOOKS as readonly string[]).includes(wanted))
     return { look: { kind: 'preset', look: wanted as Look }, guessed: false }
-  const library = (wanted ? matchLibrarySprite(wanted) : undefined) ?? matchLibrarySprite(name)
-  if (library) return { look: { kind: 'library', name: library.name }, guessed: !wanted }
-  return { look: { kind: 'preset', look: 'hero' }, guessed: true }
+  const exact = wanted ? findLibrarySprite(wanted) : undefined
+  if (exact) return { look: { kind: 'library', name: exact.name }, guessed: false }
+  const fromWanted = wanted ? pickSprite(wanted) : undefined
+  if (fromWanted?.name)
+    return {
+      look: { kind: 'library', name: fromWanted.name },
+      guessed: false,
+      ...(fromWanted.note ? { note: fromWanted.note } : {}),
+    }
+  const fromName = pickSprite(name)
+  const look: ActorLook = fromName.name ? { kind: 'library', name: fromName.name } : { kind: 'preset', look: 'hero' }
+  const unknown = wanted
+    ? [
+        ...new Set([
+          ...(fromName.name ? [fromName.name] : []),
+          ...searchAssets({ kind: 'sprite', query: `${wanted} ${name}`, limit: 3 }).map((entry) => entry.name),
+        ]),
+      ].slice(0, 3)
+    : undefined
+  return {
+    look,
+    guessed: !wanted,
+    ...(fromName.note ? { note: fromName.note } : {}),
+    ...(unknown ? { unknown } : {}),
+  }
 }
 
-const backdropFor = (value: unknown): BackdropSource | undefined => {
+/** Scratch's default names, which say nothing about what the backdrop shows. */
+const PLACEHOLDER_BACKDROP = /^(backdrop|背景|bg|stage|舞台)\s*\d*$/i
+
+/**
+ * The backdrop for a scene: an official backdrop named exactly, a built-in drawn scene, or an official backdrop
+ * picked from the description (possibly a stand-in, with a note).
+ * @param value - What the author wrote for 背景.
+ * @returns The backdrop and, for a stand-in, why it was chosen.
+ */
+const backdropFor = (value: unknown): { readonly source: BackdropSource; readonly note?: string } | undefined => {
   const wanted = text(value).trim()
-  if (!wanted) return undefined
-  const library = /[a-z]/i.test(wanted) ? matchLibraryBackdrop(wanted) : undefined
-  if (library) return { kind: 'library', name: library.name }
+  if (!wanted || PLACEHOLDER_BACKDROP.test(wanted)) return undefined
+  const exact = findLibraryBackdrop(wanted)
+  if (exact) return { source: { kind: 'library', name: exact.name } }
+  const picked = pickBackdrop(wanted)
+  // A named place (河濱公園, 港口) is more specific than the generic water words the built-in scenes match.
+  if (picked.name && picked.match === 'approximate')
+    return { source: { kind: 'library', name: picked.name }, ...(picked.note ? { note: picked.note } : {}) }
   const preset = matchBackdropPreset(wanted)
-  if (preset) return { kind: 'preset', preset }
-  const fallback = matchLibraryBackdrop(wanted)
-  return fallback ? { kind: 'library', name: fallback.name } : undefined
+  if (preset) return { source: { kind: 'preset', preset } }
+  return picked.name
+    ? { source: { kind: 'library', name: picked.name }, ...(picked.note ? { note: picked.note } : {}) }
+    : undefined
 }
 
 const backdropKey = (source: BackdropSource): string =>
@@ -245,12 +300,29 @@ export const normalizeStory = (raw: unknown): StoryResult => {
   const actors: StoryActor[] = []
   const addActor = (name: string, value: unknown, where: string): void => {
     const fields = isObject(value) ? value : { 外觀: value }
-    const { look, guessed } = lookFor(pick(fields, 'look'), name)
+    const { look, guessed, note, unknown } = lookFor(pick(fields, 'look'), name)
     const sizeValue = Number(pick(fields, 'size'))
     const size =
       Number.isFinite(sizeValue) && sizeValue > 0 ? clamp(sizeValue, 10, 400) : look.kind === 'preset' ? 300 : 100
     actors.push({ name, look, size })
-    if (guessed)
+    if (unknown)
+      report(
+        'warning',
+        'UNKNOWN_LOOK',
+        `${where}.外觀`,
+        `找不到外觀「${text(pick(fields, 'look'))}」，先用${look.kind === 'library' ? `「${look.name}」` : '簡單的人物造型'}。`,
+        unknown.length > 0
+          ? `改成 ${unknown.join('、')} 之一，或刪掉「外觀」讓工具依名稱挑選。`
+          : '刪掉「外觀」讓工具依名稱挑選。',
+      )
+    else if (note)
+      report(
+        'fixed',
+        'ACTOR_LOOK_APPROXIMATE',
+        where,
+        `「${name}」用 ${look.kind === 'library' ? look.name : look.look}：${note}。`,
+      )
+    else if (guessed)
       report(
         'fixed',
         'ACTOR_LOOK_GUESSED',
@@ -275,21 +347,30 @@ export const normalizeStory = (raw: unknown): StoryResult => {
   // ---------- scenes ----------
   const scenes: StoryScene[] = []
   const sounds = new Set<string>()
+  const unknownBackdrops: number[] = []
   list(pick(raw, 'scenes')).forEach((item, index) => {
     const where = `場景[${index + 1}]`
     const scene = isObject(item) ? item : {}
     const name = text(pick(scene, 'title') ?? `第 ${index + 1} 幕`).trim()
-    const backdrop = backdropFor(pick(scene, 'backdrop'))
-    if (!backdrop)
+    const written = pick(scene, 'backdrop')
+    const chosen = backdropFor(written)
+    if (!chosen) {
+      unknownBackdrops.push(index)
       report(
         'error',
         'UNKNOWN_BACKDROP',
-        `${where}.背景`,
-        pick(scene, 'backdrop') === undefined
+        `第 ${index + 1} 幕.背景`,
+        written === undefined
           ? '這一幕沒有寫背景。'
-          : `找不到背景「${text(pick(scene, 'backdrop'))}」。`,
-        `寫內建背景（${PRESET_EXAMPLES.join('、')}），或 Scratch 背景名稱，例如 "Underwater 1"。`,
+          : PLACEHOLDER_BACKDROP.test(text(written).trim())
+            ? `「${text(written)}」是 Scratch 的預設名稱，看不出這一幕在哪裡。`
+            : `找不到背景「${text(written)}」。`,
+        `寫出這一幕的場景，例如「清代淡水港」「河濱公園」「溪流」「水底」；內建背景有 ${PRESET_EXAMPLES.join('、')}，也可以寫 Scratch 背景名稱，例如 "Underwater 1"。`,
       )
+    } else if (chosen.note) report('fixed', 'BACKDROP_APPROXIMATE', `第 ${index + 1} 幕.背景`, `${chosen.note}。`)
+    // A scene with an unknown backdrop still counts for the main character and length checks, so one wrong name
+    // does not also report a missing hero, no scene change and a short animation.
+    const backdrop: BackdropSource = chosen?.source ?? { kind: 'preset', preset: 'sky' }
     const lines = [
       ...list(pick(scene, 'narration')).map((line) => `旁白 ${text(line)}`),
       ...list(pick(scene, 'actions')).map(text),
@@ -331,20 +412,23 @@ export const normalizeStory = (raw: unknown): StoryResult => {
           '拆成兩句旁白。',
         )
       if (action.kind === 'sound') {
-        const found = matchLibrarySound(action.sound)
-        if (!found) {
+        const found = pickSound(action.sound)
+        if (!found.name) {
+          const closest = searchAssets({ kind: 'sound', query: action.sound, limit: 3 }).map((entry) => entry.name)
           report(
             'warning',
             'UNKNOWN_SOUND',
             `${where}.動作[${lineIndex + 1}]`,
             `找不到音效「${action.sound}」，已略過。`,
-            '用 Scratch 音效名稱，例如 "Water Drop"、"Birthday"。',
+            closest.length > 0
+              ? `改成 ${closest.join('、')} 之一。`
+              : '用 Scratch 音效名稱或中文描述，例如 "Water Drop 1"、"水花"、"鳥叫"。',
           )
           return
         }
-        sounds.add(found[0])
+        sounds.add(found.name)
         timed.push({
-          action: { kind: 'sound', sound: found[0] },
+          action: { kind: 'sound', sound: found.name },
           start: together ? previousStart : cursor,
           duration: 0,
         })
@@ -359,7 +443,7 @@ export const normalizeStory = (raw: unknown): StoryResult => {
     if (timed.length === 0)
       report('error', 'EMPTY_SCENE', where, '這一幕沒有任何動作。', '加上角色的動作或旁白，例如 "主角 說「你好」"。')
     const duration = Math.max(1, ...timed.map((item) => item.start + item.duration))
-    if (backdrop) scenes.push({ name, backdrop, actions: timed, duration })
+    scenes.push({ name, backdrop, actions: timed, duration })
   })
 
   if (!hero && actors.length > 0) {
@@ -379,7 +463,10 @@ export const normalizeStory = (raw: unknown): StoryResult => {
       `在場景的動作裡加上「${hero} …」。`,
     )
 
-  if (scenes.length < 2 || new Set(scenes.map((scene) => backdropKey(scene.backdrop))).size < 2)
+  if (
+    scenes.length < 2 ||
+    (unknownBackdrops.length === 0 && new Set(scenes.map((scene) => backdropKey(scene.backdrop))).size < 2)
+  )
     report(
       'error',
       'NO_SCENE_CHANGE',
@@ -397,6 +484,11 @@ export const normalizeStory = (raw: unknown): StoryResult => {
     .map(text)
     .map((line) => line.trim())
     .filter(Boolean)
+  const unsupported = list(pick(raw, 'unsupported'))
+    .map(text)
+    .map((line) => line.trim())
+    .filter(Boolean)
+  for (const line of unsupported) report('fixed', 'UNSUPPORTED_REQUEST', '做不到', `作品沒有做到：${line}`)
   const story = {
     title,
     hero,
@@ -405,6 +497,7 @@ export const normalizeStory = (raw: unknown): StoryResult => {
     ending: ending.length > 0 ? ending : ['劇終'],
     sources,
     sounds: [...sounds],
+    unsupported,
   }
 
   const total = storySeconds(story)

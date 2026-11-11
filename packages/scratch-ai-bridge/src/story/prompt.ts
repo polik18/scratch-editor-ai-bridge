@@ -35,11 +35,12 @@ const EXAMPLE = `{
  * @returns The authoring guide.
  */
 export const createStoryGuide = (): string =>
-  `格式：{ "標題", "主角", "角色": { 名稱: { "外觀", "大小" } }, "場景": [ { "名稱", "背景", "動作": [] } ], "結尾": [], "資料來源": [] }
+  `格式：{ "標題", "主角", "角色": { 名稱: { "外觀", "大小" } }, "場景": [ { "名稱", "背景", "動作": [] } ], "結尾": [], "資料來源": [], "做不到": [] }
 
 角色的「外觀」寫 Scratch 內建角色的英文名稱（例如 Fish、Parrot、Duck、Crab、Frog、Penguin、Sailboat、Tree1），
 不寫就用角色名稱找最接近的。「大小」是百分比，預設 100。
-背景：內建的有 ${PRESET_EXAMPLES.join('、')}，也可以寫 Scratch 背景的英文名稱（例如 Underwater 1、Forest、Farm）。
+背景：寫出這一幕的場景（例如「清代淡水港」「河濱公園」「水底」），工具會找最接近的；內建的有 ${PRESET_EXAMPLES.join('、')}，
+也可以寫 Scratch 背景的英文名稱（例如 Underwater 1、Forest、Farm）。不要寫 Backdrop1 這類預設名稱。
 
 動作一行一件事，依順序播放：
 - 角色 出現 [在 位置]／角色 消失
@@ -48,10 +49,11 @@ export const createStoryGuide = (): string =>
 - 角色 變大／變小／大小 N／轉身／動起來 [N秒]
 - 旁白 …（顯示在下方的字幕，每句最多 48 字）
 - 等 N秒
-- 播放 音效名稱（Scratch 音效，例如 Water Drop）
+- 播放 音效（Scratch 音效名稱或中文，例如 Water Drop 1、水花、鳥叫）
 在一行前面加「同時」，會和上一行一起開始。
 
 規定：至少要有主角，主角要出場；至少兩幕而且背景不同（換場會自動淡出淡入）；
+需求裡做不到的部分（例如換成指定造型、自訂廣播名稱、特效）寫在 "做不到"，它只會記在報告裡。
 全長（含片頭 4 秒、片尾 4 秒、每次換場 0.5 秒）必須在 ${STORY_LENGTH.min}～${STORY_LENGTH.max} 秒。太短就多加對白、旁白或「等 N秒」。
 
 範例（太短，只示範格式）：

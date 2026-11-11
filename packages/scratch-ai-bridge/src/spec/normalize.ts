@@ -580,6 +580,13 @@ export const normalizeSingleLevel = (raw: Json, options: SingleLevelOptions = {}
     const lookWord = isObject(definition) ? pick(definition, 'look') : undefined
     const look =
       typeof lookWord === 'string' && LOOKS.includes(lookWord as Look) ? (lookWord as Look) : guessLook(name, uses)
+    if (typeof lookWord === 'string' && lookWord.trim() && look !== lookWord)
+      warn(
+        'UNKNOWN_LOOK',
+        `${where}.外觀`,
+        `遊戲角色的外觀目前只能用內建造型，「${lookWord}」不認得，改用「${look}」。`,
+        `把外觀改成 ${LOOKS.join('、')} 之一，或刪掉「外觀」讓工具依名稱挑選。`,
+      )
     const color = isObject(definition) ? pick(definition, 'color') : undefined
     entities.push({ name, behaviors: uses, look, ...(typeof color === 'string' ? { color } : {}) })
   }
@@ -1168,7 +1175,8 @@ export const normalizeSingleLevel = (raw: Json, options: SingleLevelOptions = {}
     .map(asText)
     .filter((text) => text.trim().length > 0)
   for (const text of unsupported)
-    warn('UNSUPPORTED_REQUEST', '做不到', `作品沒有做到：${text}`, '這部分需要新的行為，或改用進階模式自己寫積木。')
+    // Recorded for the report's `unsupported` list; not something the author can fix by editing the spec.
+    fixed('UNSUPPORTED_REQUEST', '做不到', `作品沒有做到：${text}`)
 
   const hasGoal = entities.some((entity) => entity.behaviors.some((item) => item.name === 'goal'))
   const hasWinRule = rules.some((rule) => rule.actions.some((action) => action.kind === 'win'))

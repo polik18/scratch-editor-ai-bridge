@@ -52,23 +52,33 @@ const writeJson = (value: unknown): void => {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`)
 }
 
+/** Set SCRATCH_BRIDGE_VERBOSE=1 to see the Scratch VM's own log lines while building. */
+const verbose = process.env.SCRATCH_BRIDGE_VERBOSE === '1'
+
 /**
- * Scratch VM logs to stdout; keep stdout reserved for the JSON report while `task` runs.
+ * The Scratch VM logs dozens of warnings to stdout while loading a project. They are hidden, so stdout carries only
+ * the JSON report and stderr only the build's own progress lines, unless SCRATCH_BRIDGE_VERBOSE=1.
  * @param task - Work that may load the VM.
  * @returns The task's result.
  */
 const withStdoutOnStderr = async <T>(task: () => Promise<T>): Promise<T> => {
   const originalStdoutWrite = process.stdout.write.bind(process.stdout)
   const originalConsoleLog = console.log
-  console.log = (...items: unknown[]) => process.stderr.write(`${items.map(String).join(' ')}\n`)
+  const originalConsoleWarn = console.warn
+  const toStderr = (...items: unknown[]): void => {
+    if (verbose) process.stderr.write(`${items.map(String).join(' ')}\n`)
+  }
+  console.log = toStderr
+  console.warn = toStderr
   const redirectStdout: typeof process.stdout.write = (chunk: string | Uint8Array, ...rest: unknown[]) =>
-    (process.stderr.write as (...params: unknown[]) => boolean)(chunk, ...rest)
+    verbose ? (process.stderr.write as (...params: unknown[]) => boolean)(chunk, ...rest) : true
   process.stdout.write = redirectStdout
   try {
     return await task()
   } finally {
     process.stdout.write = originalStdoutWrite
     console.log = originalConsoleLog
+    console.warn = originalConsoleWarn
   }
 }
 

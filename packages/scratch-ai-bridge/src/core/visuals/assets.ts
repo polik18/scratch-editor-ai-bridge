@@ -189,6 +189,11 @@ export const pickSound = (text: string, options: { readonly category?: SoundCate
   })
   const exact = LIBRARY_SOUNDS.find((sound) => simplify(sound.name) === simplify(text))
   if (exact) return done(exact.name, 'exact')
+  // Numbered variants: "Water Drop" names Water Drop 1, "Laser" names Laser1.
+  const numbered = LIBRARY_SOUNDS.find((sound) =>
+    new RegExp(`^${simplify(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s?\\d+$`).test(simplify(sound.name)),
+  )
+  if (simplify(text).length >= 3 && numbered) return done(numbered.name, 'exact')
   const matched = matchLibrarySound(text)
   const stand = Object.entries(APPROXIMATIONS.sound).find(([word]) => text.includes(word))?.[1]
   if (matched) return done(matched[0], 'keyword')

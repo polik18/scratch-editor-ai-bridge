@@ -155,6 +155,36 @@ const buildStoryText = async (
   return runStoryBuild({ specPath, outputFile, playtest, force: true, offline })
 }
 
+/**
+ * Requests often name Scratch defaults with a description, such as 「Backdrop1（清代淡水港）」 or 「老渡船伯（Sprite1）」,
+ * and models copy the default name into the spec. This maps each default to its description.
+ * @param request - The request sent to the model.
+ * @returns Default name → description.
+ */
+export const placeholderNames = (request: string): Map<string, string> => {
+  const names = new Map<string, string>()
+  for (const match of request.matchAll(/\b((?:Backdrop|Sprite|背景|角色)\s?\d+)\s*[（(]\s*([^）)]{1,30}?)\s*[）)]/gi))
+    names.set(match[1], match[2])
+  for (const match of request.matchAll(
+    /([^\s、，,（(：:「」【】；;]{1,12})\s*[（(]\s*((?:Sprite|角色)\s?\d+)\s*[）)]/gi,
+  ))
+    names.set(match[2], match[1].replace(/^(主角|配角|角色)/, ''))
+  return names
+}
+
+/**
+ * Replaces quoted default names in a model reply with the descriptions from the request.
+ * @param text - The model's reply.
+ * @param names - From {@link placeholderNames}.
+ * @returns The reply with every `"Backdrop1"` written as its description.
+ */
+export const resolvePlaceholders = (text: string, names: ReadonlyMap<string, string>): string => {
+  let result = text
+  for (const [name, description] of names)
+    result = result.replace(new RegExp(`(["「])${name.replace(/\s/g, '\\s?')}(["」])`, 'g'), `$1${description}$2`)
+  return result
+}
+
 const rank = (report: AttemptReport): number =>
   report.status !== 'success' ? 0 : report.playtestStatus === 'pass' ? 3 : report.playtestStatus === 'not-run' ? 2 : 1
 
@@ -190,6 +220,7 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
     const replies: string[] = []
     let best: { report: AttemptReport; text: string; sb3: string } | undefined
     const story = options.kind === 'story'
+    const placeholders = placeholderNames(options.request)
     let text = ''
     let feedback = ''
     for (let round = 0; round <= options.repairRounds; round += 1) {
@@ -201,7 +232,7 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
           : createGameSpecRepairInstruction(text, feedback)
       progress(round === 0 ? `請模型 ${model ?? ''} 寫作品描述…` : `第 ${round} 輪修正：把問題回饋給模型…`)
       const started = Date.now()
-      text = await complete(prompt)
+      text = resolvePlaceholders(await complete(prompt), placeholders)
       replies.push(text)
       const sb3 = path.join(workDirectory, `attempt-${round}.sb3`)
       progress(options.playtest ? '建置並自動試玩…' : '建置…')

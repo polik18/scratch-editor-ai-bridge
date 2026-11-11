@@ -47,6 +47,8 @@ export interface StoryBuildReport {
   /** Running time in seconds, title and ending cards included. */
   readonly seconds?: number
   readonly scenes?: number
+  /** Requests the author listed under 做不到; the animation was built without them. */
+  readonly unsupported?: readonly string[]
   /** Which official artwork and sounds were used. */
   readonly assets?: string
   readonly diagnostics: readonly SpecDiagnostic[]
@@ -180,7 +182,11 @@ export const runStoryBuild = async (options: StoryBuildOptions): Promise<StoryBu
       await rm(workDirectory, { recursive: true, force: true })
     }
   }
-  report = { ...report, processDirectory: files.processDirectory }
+  report = {
+    ...report,
+    processDirectory: files.processDirectory,
+    ...(built.story && built.story.unsupported.length > 0 ? { unsupported: built.story.unsupported } : {}),
+  }
   await writeProcessFile(files, 'report.json', `${JSON.stringify(report, null, 2)}\n`)
   return report
 }
