@@ -8,6 +8,20 @@ interface Cell {
   readonly column: number
 }
 
+/**
+ * @param axis - The top-down player's movement directions.
+ * @returns The single-cell steps the player can take.
+ */
+export const topdownSteps = (axis: 'both' | 'horizontal' | 'vertical'): (readonly [number, number])[] =>
+  (
+    [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ] as const
+  ).filter(([dr, dc]) => (axis === 'horizontal' ? dr === 0 : axis === 'vertical' ? dc === 0 : true))
+
 const key = (cell: Cell): string => `${cell.row},${cell.column}`
 const where = (cell: Cell): string => `地圖 第 ${cell.row + 1} 列第 ${cell.column + 1} 欄`
 
@@ -69,27 +83,35 @@ const checkLevel = (spec: GameSpec): SpecDiagnostic[] => {
 
   const reachable = new Set<string>()
   let reaches: (target: Cell) => boolean
+  // Unreachable whatever the player risks: walls or its movement directions shut it out (top-down only).
+  let shutOut: (target: Cell) => boolean = () => false
   let advice: string
 
   if (movement.name === 'topdown') {
-    const queue: Cell[] = [playerCells[0]]
-    reachable.add(key(playerCells[0]))
-    // for-of also visits entries pushed during the loop, which makes this a breadth-first search.
-    for (const cell of queue) {
-      for (const [dr, dc] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ]) {
-        const next = { row: cell.row + dr, column: cell.column + dc }
-        if (!open(next.row, next.column) || reachable.has(key(next)) || hazardCells.has(key(next))) continue
-        reachable.add(key(next))
-        queue.push(next)
+    const steps = topdownSteps(movement.params.axis)
+    const flood = (avoid: Set<string>): Set<string> => {
+      const seen = new Set([key(playerCells[0])])
+      const queue: Cell[] = [playerCells[0]]
+      // for-of also visits entries pushed during the loop, which makes this a breadth-first search.
+      for (const cell of queue) {
+        for (const [dr, dc] of steps) {
+          const next = { row: cell.row + dr, column: cell.column + dc }
+          if (!open(next.row, next.column) || seen.has(key(next)) || avoid.has(key(next))) continue
+          seen.add(key(next))
+          queue.push(next)
+        }
       }
+      return seen
     }
+    for (const cell of flood(hazardCells)) reachable.add(cell)
+    const anyRisk = flood(new Set())
     reaches = (target) => reachable.has(key(target))
-    advice = '打通牆壁，或移開擋路的危險物。'
+    shutOut = (target) => !anyRisk.has(key(target))
+    const axis = movement.params.axis
+    advice =
+      axis === 'horizontal' || axis === 'vertical'
+        ? `「${player.name}」只能${axis === 'horizontal' ? '左右' : '上下'}移動：把它放到同一${axis === 'horizontal' ? '列' : '欄'}，或把「方向」改成「全部」。`
+        : '打通牆壁，或移開擋路的危險物。'
   } else {
     const { jump, speed } = movement.params
     const reach = jumpReach(jump, speed)
@@ -143,15 +165,19 @@ const checkLevel = (spec: GameSpec): SpecDiagnostic[] => {
 
   for (const entity of spec.entities) {
     const important = entity.behaviors.some((item) => item.name === 'goal' || item.name === 'collectible')
-    if (!important) continue
+    // A falling item comes to the player, so where it is drawn does not matter.
+    if (!important || entity.behaviors.some((item) => item.name === 'faller')) continue
     for (const cell of cells.get(entity.name) ?? []) {
       if (reaches(cell)) continue
       const isGoal = entity.behaviors.some((item) => item.name === 'goal')
+      const blocked = isGoal && shutOut(cell)
       diagnostics.push({
         severity: 'warning',
-        code: isGoal ? 'GOAL_UNREACHABLE' : 'ITEM_UNREACHABLE',
+        code: blocked ? 'GOAL_BLOCKED' : isGoal ? 'GOAL_UNREACHABLE' : 'ITEM_UNREACHABLE',
         where: where(cell),
-        message: `玩家可能到不了這個「${entity.name}」${isGoal ? '，遊戲會無法過關' : ''}。`,
+        message: blocked
+          ? `玩家到不了這個「${entity.name}」，這一關無法過關。`
+          : `玩家可能到不了這個「${entity.name}」${isGoal ? '，遊戲會無法過關' : ''}。`,
         suggestion: advice,
       })
     }

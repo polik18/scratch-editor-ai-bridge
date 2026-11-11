@@ -190,15 +190,23 @@ export interface Completion {
  * @param report - Build report.
  * @param report.status - Build status.
  * @param report.playtestStatus - `fail` means the work is not done.
+ * @param report.diagnostics - Spec diagnostics; a goal the player can never reach means the work is not done.
  * @param checks - Requirement checks, if a request was given.
  * @returns Whether the work is done and what is missing.
  */
 export const completion = (
-  report: { readonly status: string; readonly playtestStatus: string },
+  report: {
+    readonly status: string
+    readonly playtestStatus: string
+    readonly diagnostics?: readonly { readonly code: string; readonly where?: string; readonly message: string }[]
+  },
   checks: readonly RequirementCheck[] = [],
 ): Completion => {
   const notDone = [
     ...(report.status === 'success' ? [] : ['建置失敗：照 feedback 修改描述']),
+    ...(report.diagnostics ?? [])
+      .filter((item) => item.code === 'GOAL_BLOCKED')
+      .map((item) => `無法過關：${item.where ? `${item.where}：` : ''}${item.message}`),
     ...(report.playtestStatus === 'fail' ? ['試玩未通過：看 feedback 的原因'] : []),
     ...checks
       .filter((check) => !check.pass)

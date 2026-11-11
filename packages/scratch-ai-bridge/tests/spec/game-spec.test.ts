@@ -144,6 +144,18 @@ describe('game spec checks', () => {
     expect(codes(checkGameSpec(blocked))).toEqual(['GOAL_UNREACHABLE'])
   })
 
+  it('knows a left-right player can never reach a goal on another row, and the bot does not try', () => {
+    const shut = normalized({
+      map: ['P....', '....G'],
+      legend: { P: 'Fish', G: 'Exit' },
+      entities: { Fish: [{ topdown: { direction: '左右' } }], Exit: ['goal'] },
+    })
+    const issues = checkGameSpec(shut)
+    expect(codes(issues)).toEqual(['GOAL_BLOCKED'])
+    expect(issues[0].suggestion).toContain('只能左右移動')
+    expect(createSpecScenarios(shut).map((scenario) => scenario.name)).not.toContain('通關')
+  })
+
   it('accepts the bundled examples without warnings', () => {
     for (const name of ['platformer', 'maze', 'catch', 'shooter', 'whack']) {
       const result = buildFromSpecText(example(name))

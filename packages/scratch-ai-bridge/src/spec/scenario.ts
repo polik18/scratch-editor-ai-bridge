@@ -1,3 +1,4 @@
+import { topdownSteps } from './check'
 import { entityCells, findPlayer, playerBehavior, SPEC_NAMES } from './compile'
 import { levelView } from './levels'
 import { CELL, cellCenter, STAGE_COLUMNS, STAGE_ROWS } from './physics'
@@ -225,8 +226,71 @@ const effectScenarios = (spec: GameSpec, cells: Map<string, { row: number; colum
 
 export const createSpecScenarios = (spec: GameSpec): SpecScenario[] => [
   ...flowScenarios(spec),
-  ...singleLevelScenarios(levelView(spec, 0)),
+  ...singleLevelScenarios(presentIn(spec, 0)),
+  ...secondLevelScenarios(spec),
 ]
+
+/**
+ * Names of the entities a level's map draws.
+ * @param spec - The whole game.
+ * @param index - Level index.
+ * @returns The names.
+ */
+const drawnIn = (spec: GameSpec, index: number): Set<string> => {
+  const level = spec.levels[index]
+  return new Set(level.map.flatMap((row) => [...row].flatMap((char) => level.legend[char] ?? [])))
+}
+
+/**
+ * A level's view with only the entities that take part in it: the player, what its map draws, and entities no map
+ * draws (they spawn in every level). Testing a level-2 character in level 1 would report a fault that is not there.
+ * @param spec - The whole game.
+ * @param index - Level index.
+ * @returns The level view.
+ */
+const presentIn = (spec: GameSpec, index: number): GameSpec => {
+  const view = levelView(spec, index)
+  const player = findPlayer(spec)
+  const drawn = drawnIn(spec, index)
+  const anywhere = new Set(spec.levels.flatMap((_, other) => [...drawnIn(spec, other)]))
+  return {
+    ...view,
+    entities: view.entities.filter(
+      (entity) => entity === player || drawn.has(entity.name) || !anywhere.has(entity.name),
+    ),
+  }
+}
+
+/**
+ * Effect scenarios for what only the second level has, run after passing the first level. Controls and the timer
+ * are the same in both levels and were tested in the first.
+ * @param spec - The whole game.
+ * @returns Scenarios named 第二關／…, empty for one-level games or when level 1 cannot be passed automatically.
+ */
+const secondLevelScenarios = (spec: GameSpec): SpecScenario[] => {
+  if (spec.levels.length < 2) return []
+  const first = finishLevel(spec, 0)
+  if (!first) return []
+  const view = presentIn(spec, 1)
+  const before = new Set(presentIn(spec, 0).entities.map((entity) => entity.name))
+  const player = findPlayer(spec)
+  const onlyHere = {
+    ...view,
+    entities: view.entities.filter((entity) => entity === player || !before.has(entity.name)),
+  }
+  if (onlyHere.entities.every((entity) => entity === player)) return []
+  const reachLevel: ScenarioStep[] = [
+    { kind: 'wait', ms: 600 },
+    { kind: 'set', variable: SPEC_NAMES.lives, value: 99 },
+    ...first,
+    { kind: 'until', subject: { variable: SPEC_NAMES.level }, op: '==', value: 2, ms: 10_000 },
+    { kind: 'wait', ms: 1000 },
+  ]
+  return effectScenarios({ ...onlyHere, timeLimit: undefined }, entityCells(onlyHere)).map((scenario) => ({
+    name: `第二關／${scenario.name}`,
+    steps: [...reachLevel, ...scenario.steps],
+  }))
+}
 
 const singleLevelScenarios = (spec: GameSpec): SpecScenario[] => {
   const cells = entityCells(spec)
@@ -394,14 +458,10 @@ const reachGoal = (spec: GameSpec): { readonly goal: string; readonly bot: BotSt
     const queue = [`${start.row},${start.column}`]
     const seen = new Set(queue)
     // for-of also visits entries pushed during the loop, which makes this a breadth-first search.
+    const steps = topdownSteps(movement.params.axis)
     for (const current of queue) {
       const [row, column] = current.split(',').map(Number)
-      for (const [dr, dc] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ]) {
+      for (const [dr, dc] of steps) {
         const next = `${row + dr},${column + dc}`
         if (wall(row + dr, column + dc) || seen.has(next) || hazards.has(next)) continue
         seen.add(next)
@@ -466,6 +526,24 @@ const finishBySetting = (view: GameSpec, scoreBefore = 0): ScenarioStep[] | unde
 }
 
 /**
+ * Steps that pass one level: set its score or counter target, or let the bot walk to its goal.
+ * @param spec - The whole game.
+ * @param index - Which level, from 0.
+ * @returns Steps, or undefined when the level cannot be passed automatically.
+ */
+const finishLevel = (spec: GameSpec, index: number): ScenarioStep[] | undefined => {
+  // Each level's score target counts from the score the level started with.
+  const firstTarget = finishBySetting(levelView(spec, 0))?.find((step) => step.kind === 'set')
+  const scoreAfterFirst =
+    firstTarget?.kind === 'set' && firstTarget.variable === SPEC_NAMES.score ? firstTarget.value : 0
+  const view = presentIn(spec, index)
+  const setting = finishBySetting(view, index === 0 ? 0 : scoreAfterFirst)
+  if (setting) return setting
+  const reach = reachGoal(view)
+  return reach ? [reach.bot] : undefined
+}
+
+/**
  * Scenarios for the game flow around the levels: the opening card holds the game until it is dismissed, and a
  * multi-level game moves from one level to the next and ends on the win card.
  * @param spec - The whole game, with every level.
@@ -515,20 +593,9 @@ const flowScenarios = (spec: GameSpec): SpecScenario[] => {
   ]
   if (spec.levels.length < 2) return scenarios
 
-  // Each level's score target counts from the score the level started with.
-  const firstTarget = finishBySetting(levelView(spec, 0))?.find((step) => step.kind === 'set')
-  const scoreAfterFirst =
-    firstTarget?.kind === 'set' && firstTarget.variable === SPEC_NAMES.score ? firstTarget.value : 0
-  const finish = (index: number): ScenarioStep[] | undefined => {
-    const view = levelView(spec, index)
-    const setting = finishBySetting(view, index === 0 ? 0 : scoreAfterFirst)
-    if (setting) return setting
-    const reach = reachGoal(view)
-    return reach ? [reach.bot] : undefined
-  }
-  const first = finish(0)
+  const first = finishLevel(spec, 0)
   if (!first) return scenarios
-  const second = finish(1)
+  const second = finishLevel(spec, 1)
   const banner = { sprite: SPEC_NAMES.banner, field: 'visible' } as const
   scenarios.push({
     name: '換關',
@@ -536,7 +603,9 @@ const flowScenarios = (spec: GameSpec): SpecScenario[] => {
       { kind: 'wait', ms: 600 },
       { kind: 'set', variable: SPEC_NAMES.lives, value: 99 },
       ...first,
-      { kind: 'wait', ms: 3500 },
+      // A win rule may say something before 過關, so wait for the change instead of a fixed time.
+      { kind: 'until', subject: { variable: SPEC_NAMES.level }, op: '==', value: 2, ms: 10_000 },
+      { kind: 'wait', ms: 300 },
       {
         kind: 'expect',
         label: '第一關過關後進入第二關',
@@ -557,7 +626,7 @@ const flowScenarios = (spec: GameSpec): SpecScenario[] => {
         ? [
             { kind: 'set', variable: SPEC_NAMES.lives, value: 99 } satisfies ScenarioStep,
             ...second,
-            { kind: 'wait', ms: 1000 } satisfies ScenarioStep,
+            { kind: 'until', subject: banner, op: '==', value: 1, ms: 8000 } satisfies ScenarioStep,
             {
               kind: 'expect',
               label: '第二關過關後出現過關畫面',

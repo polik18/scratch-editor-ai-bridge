@@ -131,6 +131,44 @@ describe('two levels', () => {
     expect(change?.steps.some((step) => step.kind === 'bot')).toBe(true)
   })
 
+  it('tests a character the second level draws only after passing the first level', () => {
+    const { spec } = buildFromSpecText(
+      twoLevels({
+        角色: {
+          魚: { 行為: [{ 俯視移動: {} }] },
+          藻: { 行為: [{ 收集品: { 分數: 10 } }] },
+          泥沙: { 行為: [{ 點擊目標: { 分數: 5 } }] },
+        },
+        圖例: { P: '魚', a: '藻', S: '泥沙' },
+        關卡: [
+          { 地圖: ['P..a..a'], 過關: '分數 >= 20' },
+          { 地圖: ['P.S.S..'], 過關: '分數 >= 10' },
+        ],
+      }),
+    )
+    if (!spec) throw new Error('expected a spec')
+    const scenarios = createSpecScenarios(spec)
+    expect(scenarios.map((scenario) => scenario.name)).not.toContain('點擊得分')
+    const click = scenarios.find((scenario) => scenario.name === '第二關／點擊得分')
+    expect(click?.steps).toContainEqual({ kind: 'set', variable: SPEC_NAMES.score, value: 20 })
+    expect(click?.steps).toContainEqual(
+      expect.objectContaining({ kind: 'until', subject: { variable: SPEC_NAMES.level }, value: 2 }),
+    )
+  })
+
+  it('waits for the level to change instead of a fixed time, since a win rule may speak first', () => {
+    const { spec } = buildFromSpecText(
+      twoLevels({
+        關卡: [{ 地圖: ['P..a..a'], 規則: ['分數 >= 20 → 說 水變乾淨了！, 過關'] }, { 地圖: ['P....aG'] }],
+      }),
+    )
+    if (!spec) throw new Error('expected a spec')
+    const change = createSpecScenarios(spec).find((scenario) => scenario.name === '換關')
+    expect(change?.steps).toContainEqual(
+      expect.objectContaining({ kind: 'until', subject: { variable: SPEC_NAMES.level }, op: '==', value: 2 }),
+    )
+  })
+
   it('accepts characters written inside each level, as small models often do', () => {
     const spec = JSON.parse(twoLevels()) as Record<string, unknown> & {
       角色: unknown

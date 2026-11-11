@@ -149,7 +149,10 @@ const chat = async (config: ModelConfig, model: string, prompt: string): Promise
  * @returns Rank from 0 (did not build) to 3 (playtest passed).
  */
 /** The parts of a build report that `make` compares and passes on; game and story builds both have them. */
-type AttemptReport = Pick<SpecBuildReport, 'status' | 'playtestStatus' | 'feedback' | 'title' | 'unsupported'> & {
+type AttemptReport = Pick<
+  SpecBuildReport,
+  'status' | 'playtestStatus' | 'feedback' | 'title' | 'unsupported' | 'diagnostics'
+> & {
   /** Animations only: running time in seconds. */
   readonly seconds?: number
 }
@@ -373,7 +376,10 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
         feedback: [best.report.feedback, requirementFeedback(best.checks)].filter(Boolean).join('\n'),
       }
     }
-    report = { ...report, ...completion(report, best?.checks ?? []) }
+    report = {
+      ...report,
+      ...completion({ ...report, diagnostics: best?.report.diagnostics ?? [] }, best?.checks ?? []),
+    }
     await writeProcessFile(files, 'report.json', `${JSON.stringify(report, null, 2)}\n`)
     return report
   } finally {

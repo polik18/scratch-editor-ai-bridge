@@ -32,5 +32,9 @@ describe('completion', () => {
     expect(completion({ status: 'success', playtestStatus: 'pass' }, [failed]).notDone).toEqual([
       '關卡數：需求是2 關，目前是 1 關',
     ])
+    const blocked = { code: 'GOAL_BLOCKED', where: '第二關.地圖 第 2 列第 5 欄', message: '玩家到不了這個「終點」。' }
+    expect(completion({ status: 'success', playtestStatus: 'pass', diagnostics: [blocked] }).notDone).toEqual([
+      '無法過關：第二關.地圖 第 2 列第 5 欄：玩家到不了這個「終點」。',
+    ])
   })
 })
