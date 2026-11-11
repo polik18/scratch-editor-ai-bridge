@@ -5,6 +5,7 @@ import path from 'node:path'
 import { createGameSpecInstruction, createGameSpecRepairInstruction } from '../spec/prompt'
 import { createStoryInstruction } from '../story/prompt'
 import { exists, gameFiles, gamesRoot, gameTarget, safeName, writeProcessFile } from './output-layout'
+import { checkRequirements, readRequirements, requirementFeedback, type RequirementCheck } from './requirements'
 import { buildSpecText, type SpecBuildReport } from './spec-command'
 import { runStoryBuild } from './story-command'
 
@@ -42,6 +43,8 @@ export interface MakeOptions {
 
 export interface MakeAttempt {
   readonly round: number
+  /** Requirements read from the request that this attempt did not meet. */
+  readonly unmet?: number
   readonly seconds: number
   readonly status: SpecBuildReport['status']
   readonly playtestStatus: SpecBuildReport['playtestStatus']
@@ -62,6 +65,8 @@ export interface MakeReport {
   /** Animations only: running time in seconds. */
   readonly seconds?: number
   readonly unsupported: readonly string[]
+  /** What the request asked for (levels, length, names) and whether the kept attempt meets it. */
+  readonly requirements?: readonly RequirementCheck[]
   readonly attempts: readonly MakeAttempt[]
   /** What is still wrong with the kept attempt, as plain lines. */
   readonly feedback: string
@@ -218,9 +223,13 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
   try {
     const attempts: MakeAttempt[] = []
     const replies: string[] = []
-    let best: { report: AttemptReport; text: string; sb3: string } | undefined
+    let best: { report: AttemptReport; text: string; sb3: string; checks: RequirementCheck[] } | undefined
     const story = options.kind === 'story'
     const placeholders = placeholderNames(options.request)
+    const requirements = readRequirements(options.request, story ? 'story' : 'game')
+    // A built attempt that misses what the request asked for (two levels, two minutes) is not done yet.
+    const score = (report: AttemptReport, checks: readonly RequirementCheck[]): number =>
+      rank(report) * 10 - checks.filter((check) => !check.pass).length
     let text = ''
     let feedback = ''
     for (let round = 0; round <= options.repairRounds; round += 1) {
@@ -239,22 +248,26 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
       const report = story
         ? await buildStoryText(text, sb3, options.playtest, options.offline ?? false)
         : await buildSpecText(text, { outputFile: sb3, playtest: options.playtest, force: true })
-      feedback = report.feedback
+      const checks = report.status === 'success' ? checkRequirements(text, requirements) : []
+      const unmet = checks.filter((check) => !check.pass).length
+      feedback = [report.feedback, requirementFeedback(checks)].filter(Boolean).join('\n')
       attempts.push({
         round,
         seconds: Math.round((Date.now() - started) / 100) / 10,
         status: report.status,
         playtestStatus: report.playtestStatus,
+        ...(unmet > 0 ? { unmet } : {}),
         feedback,
       })
       progress(
         `第 ${round} 次：${report.status === 'success' ? '建置成功' : '建置失敗'}` +
           (report.playtestStatus === 'not-run'
             ? ''
-            : `，試玩 ${report.playtestStatus === 'pass' ? '通過' : '未通過'}`),
+            : `，試玩 ${report.playtestStatus === 'pass' ? '通過' : '未通過'}`) +
+          (unmet > 0 ? `，有 ${unmet} 項需求沒做到` : ''),
       )
-      if (!best || rank(report) > rank(best.report)) best = { report, text, sb3 }
-      if (rank(report) >= 2) break
+      if (!best || score(report, checks) > score(best.report, best.checks)) best = { report, text, sb3, checks }
+      if (rank(report) >= 2 && unmet === 0) break
     }
 
     const succeeded = best?.report.status === 'success'
@@ -292,7 +305,8 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
         ...(best.report.title ? { title: best.report.title } : {}),
         ...(best.report.seconds === undefined ? {} : { seconds: best.report.seconds }),
         unsupported: best.report.unsupported ?? [],
-        feedback: best.report.feedback,
+        ...(best.checks.length > 0 ? { requirements: best.checks } : {}),
+        feedback: [best.report.feedback, requirementFeedback(best.checks)].filter(Boolean).join('\n'),
       }
     }
     await writeProcessFile(files, 'report.json', `${JSON.stringify(report, null, 2)}\n`)

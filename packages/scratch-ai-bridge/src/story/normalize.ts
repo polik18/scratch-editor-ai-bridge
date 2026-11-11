@@ -25,6 +25,7 @@ const ALIASES = {
   ending: ['ending', 'end', '結尾', '結局', '片尾'],
   sources: ['sources', 'references', '資料來源', '參考資料', '來源'],
   unsupported: ['unsupported', 'cannot', 'limitations', '做不到', '無法做到', '沒做到', '限制'],
+  target: ['target', 'targetseconds', 'length', '目標秒數', '目標長度', '總長度', '片長'],
   backdrop: ['backdrop', 'background', '背景', '場景背景'],
   actions: ['actions', 'steps', '動作', '劇情', '內容'],
   narration: ['narration', '旁白'],
@@ -501,6 +502,17 @@ export const normalizeStory = (raw: unknown): StoryResult => {
   }
 
   const total = storySeconds(story)
+  const target = Number(pick(raw, 'target'))
+  if (Number.isFinite(target) && target > 0 && Math.abs(total - target) > target * 0.1)
+    report(
+      'warning',
+      'TARGET_LENGTH',
+      '目標秒數',
+      `動畫全長約 ${Math.round(total)} 秒，目標是 ${target} 秒。`,
+      total < target
+        ? `再加約 ${Math.ceil(target - total)} 秒：多寫幾句對白或旁白，或加「等 N秒」。`
+        : `減少約 ${Math.ceil(total - target)} 秒：刪掉一些對白，或把秒數改短。`,
+    )
   if (total < STORY_LENGTH.min || total > STORY_LENGTH.max)
     report(
       'error',
