@@ -416,3 +416,17 @@ export const validateCanonicalSemantics = (project: CanonicalProject): readonly 
   project.sprites.forEach((sprite, index) => validateTarget(sprite, `/sprites/${index}`))
   return issues
 }
+
+/**
+ * Semantic checks on a project that may still fail the schema, so a repair request can list schema and semantic
+ * errors together instead of revealing the semantic ones only after the schema is fixed.
+ * @param data - Normalized AI output, valid or not.
+ * @returns The issues found, or none when the project is too malformed to walk.
+ */
+export const validateCanonicalSemanticsBestEffort = (data: unknown): readonly CanonicalSemanticIssue[] => {
+  try {
+    return validateCanonicalSemantics(data as CanonicalProject)
+  } catch {
+    return []
+  }
+}

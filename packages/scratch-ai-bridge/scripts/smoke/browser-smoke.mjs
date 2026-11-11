@@ -6,7 +6,7 @@ import { extname, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import JSZip from 'jszip'
 import { chromium, firefox, webkit } from 'playwright'
-import { sampleProcessTreePeakMemory } from './process-tree-memory.mjs'
+import { sampleProcessTreePeakMemory } from '../bench/process-tree-memory.mjs'
 
 const browserName = process.env.BROWSER ?? 'chromium'
 const browserImportAnalysisBudgetMs = Number(process.env.BROWSER_IMPORT_ANALYSIS_BUDGET_MS ?? 5_000)
@@ -1318,6 +1318,57 @@ try {
     throw new Error('Additional-property repair prompt omitted its issue code or path')
   }
   await page.locator('#repair-tools .technical-details summary').click()
+
+  // Schema and semantic mistakes in one reply are reported together, so one repair round fixes both.
+  const mixedFailureProject = structuredClone(schemaRecoveryProject)
+  mixedFailureProject.name = 17
+  mixedFailureProject.sprites[0].scripts[0].blocks.push({
+    opcode: 'event_broadcast',
+    inputs: { BROADCAST_INPUT: { type: 'broadcast', name: 'missing-broadcast' } },
+  })
+  await page.locator('#json-editor').fill(JSON.stringify(mixedFailureProject))
+  await page.locator('#student-build').click()
+  await page.locator('#generate-status[data-kind="error"]').waitFor()
+  await page.locator('#repair-tools .technical-details summary').click()
+  await page.locator('#copy-repair-report').click()
+  const mixedReport = JSON.parse(await page.evaluate(() => globalThis.__scratchAiBridgeClipboard))
+  const mixedPhases = new Set(mixedReport.repairReport.issues.map((issue) => issue.phase))
+  if (
+    mixedReport.checks.canonicalSchema !== 'failed' ||
+    mixedReport.checks.semanticValidation !== 'failed' ||
+    !mixedPhases.has('schema') ||
+    !mixedPhases.has('semantic')
+  ) {
+    throw new Error(`Schema and semantic issues were not reported together: ${JSON.stringify(mixedReport.checks)}`)
+  }
+  await page.locator('#copy-repair-prompt').click()
+  const mixedPrompt = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  if (
+    typeof mixedPrompt !== 'string' ||
+    !mixedPrompt.includes('"/name"') ||
+    !mixedPrompt.includes('unknown-broadcast')
+  ) {
+    throw new Error('Repair prompt did not carry both the schema and the semantic issue')
+  }
+  await page.locator('#repair-tools .technical-details summary').click()
+
+  // Warnings alone still build the project; they stay in the repair message for the next round.
+  const warningOnlyProject = structuredClone(schemaRecoveryProject)
+  warningOnlyProject.sprites[0].scripts[0].blocks.push({
+    opcode: 'control_if',
+    inputs: { CONDITION: { type: 'literal', value: 1 }, SUBSTACK: { type: 'stack', blocks: [] } },
+  })
+  await page.locator('#json-editor').fill(JSON.stringify(warningOnlyProject))
+  const warningOnlyDownload = page.waitForEvent('download')
+  await page.locator('#student-build').click()
+  await page.locator('#generate-status[data-kind="ok"]').waitFor()
+  await warningOnlyDownload
+  await page.locator('#repair-tools:not([hidden])').waitFor()
+  await page.locator('#copy-repair-prompt').click()
+  const warningPrompt = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  if (typeof warningPrompt !== 'string' || !warningPrompt.includes('condition-not-boolean')) {
+    throw new Error('A warning-only project did not keep its warning in the repair message')
+  }
   const correctedSchemaAdditionalProject = structuredClone(schemaAdditionalFailureProject)
   delete correctedSchemaAdditionalProject[schemaAdditionalProperty]
   await page.locator('#json-editor').fill(JSON.stringify(correctedSchemaAdditionalProject))

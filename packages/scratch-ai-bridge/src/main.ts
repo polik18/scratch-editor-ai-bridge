@@ -106,6 +106,7 @@ import {
 import {
   validateCanonicalProject,
   validateCanonicalSemantics,
+  validateCanonicalSemanticsBestEffort,
   type CanonicalIRValidationIssue,
   type CanonicalSemanticIssue,
 } from './core/validator'
@@ -1451,7 +1452,7 @@ const renderRepairTools = (): void => {
         : report.summary.errors > 0
           ? `AI 回覆還缺少 ${report.summary.errors} 個製作作品需要的資料。請複製修正訊息，貼回 AI 後再試一次。`
           : report.summary.warnings > 0
-            ? `有 ${report.summary.warnings} 個遊戲規則不夠清楚。Bridge 不會自行猜測，以免改變你的作品。`
+            ? `有 ${report.summary.warnings} 個遊戲規則不夠清楚，Bridge 不會自行猜測。作品已照目前內容做好；想讓 AI 一起修正，就複製修正訊息（試玩發現的問題也會一併放進去）。`
             : `已自動整理 ${report.summary.autoRepaired} 個格式問題；作品內容沒有需要確認的地方。`
       : '')
 }
@@ -4882,6 +4883,8 @@ const diagnoseEditor = (compileError?: unknown): RepairContext => {
           normalizationWarnings: normalized.warnings,
 
           schemaIssues: validation.errors,
+
+          semanticIssues: validateCanonicalSemanticsBestEffort(normalized.data),
         }),
 
         currentProject: normalized.data,
@@ -5282,6 +5285,8 @@ byId<HTMLButtonElement>('repair').addEventListener('click', () => {
           normalizationWarnings: normalized.warnings,
 
           schemaIssues: validation.errors,
+
+          semanticIssues: validateCanonicalSemanticsBestEffort(normalized.data),
         }),
 
         normalized.data,
@@ -5558,6 +5563,9 @@ const buildStudentProject = async (): Promise<void> => {
   const validation = validateCanonicalProject(normalized.data)
 
   if (!validation.valid) {
+    // Semantic issues go into the same report so the AI can fix everything in one round.
+    const semanticIssues = validateCanonicalSemanticsBestEffort(normalized.data)
+
     const report = createRepairReport({
       data: normalized.data,
 
@@ -5566,6 +5574,8 @@ const buildStudentProject = async (): Promise<void> => {
       normalizationWarnings: normalized.warnings,
 
       schemaIssues: validation.errors,
+
+      semanticIssues,
     })
 
     const validationReport = await createAiOutputValidationReport({
@@ -5582,7 +5592,7 @@ const buildStudentProject = async (): Promise<void> => {
 
         canonicalSchema: 'failed',
 
-        semanticValidation: 'skipped',
+        semanticValidation: semanticIssues.some((issue) => issue.severity === 'error') ? 'failed' : 'skipped',
 
         scratchVmCompile: 'skipped',
       },
@@ -5590,7 +5600,11 @@ const buildStudentProject = async (): Promise<void> => {
 
     publishRepairContext(report, normalized.data, validationReport)
 
-    setStatus(generateStatus, `AI 回覆還缺少 ${report.summary.errors} 個製作作品需要的資料。`, 'error')
+    setStatus(
+      generateStatus,
+      `AI 回覆還有 ${report.summary.errors} 個問題，已全部放進修正訊息，請一次交給 AI 修正。`,
+      'error',
+    )
 
     setProgress(3)
 
@@ -5609,7 +5623,9 @@ const buildStudentProject = async (): Promise<void> => {
     semanticIssues,
   })
 
-  if (report.summary.errors > 0 || report.summary.warnings > 0) {
+  // Warnings alone do not stop the build: the student gets a playable project, and the warnings travel with the
+  // playtest feedback in the next repair message instead of costing a round of their own.
+  if (report.summary.errors > 0) {
     const validationReport = await createAiOutputValidationReport({
       sourceResponse,
 
@@ -5624,7 +5640,7 @@ const buildStudentProject = async (): Promise<void> => {
 
         canonicalSchema: 'passed',
 
-        semanticValidation: report.summary.errors > 0 ? 'failed' : 'review',
+        semanticValidation: 'failed',
 
         scratchVmCompile: 'skipped',
       },
@@ -5632,12 +5648,7 @@ const buildStudentProject = async (): Promise<void> => {
 
     publishRepairContext(report, validation.data, validationReport)
 
-    const message =
-      report.summary.errors > 0
-        ? `還有 ${report.summary.errors} 個必要問題需要 AI 修正。`
-        : `有 ${report.summary.warnings} 個遊戲規則需要確認。`
-
-    setStatus(generateStatus, message, report.summary.errors > 0 ? 'error' : 'neutral')
+    setStatus(generateStatus, `還有 ${report.summary.errors} 個必要問題需要 AI 修正。`, 'error')
 
     setProgress(3)
 
@@ -5667,7 +5678,7 @@ const buildStudentProject = async (): Promise<void> => {
 
         canonicalSchema: 'passed',
 
-        semanticValidation: 'passed',
+        semanticValidation: report.summary.warnings > 0 ? 'review' : 'passed',
 
         scratchVmCompile: 'passed',
       },
@@ -5698,11 +5709,14 @@ const buildStudentProject = async (): Promise<void> => {
 
     repairUndoSnapshot = null
 
-    clearRepairContext()
+    if (report.summary.warnings > 0) publishRepairContext(report, validation.data)
+    else clearRepairContext()
 
     setStatus(
       generateStatus,
-      isCandidate ? '新版已準備好，請先試玩，再決定是否使用。' : '完成！Scratch 專案已開始下載。',
+      `${isCandidate ? '新版已準備好，請先試玩，再決定是否使用。' : '完成！Scratch 專案已開始下載。'}${
+        report.summary.warnings > 0 ? `有 ${report.summary.warnings} 個地方建議確認，已放進下方的修正訊息。` : ''
+      }`,
       'ok',
     )
 

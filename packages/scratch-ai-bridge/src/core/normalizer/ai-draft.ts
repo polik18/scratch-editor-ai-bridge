@@ -1,4 +1,5 @@
 import { CANONICAL_JSON_MAX_DEPTH, CANONICAL_JSON_MAX_NODES } from '../ir/types'
+import { repairJson } from './json-repair'
 
 export interface AiDraftRepair {
   readonly path: string
@@ -22,6 +23,8 @@ export interface AiResponseParseResult {
   readonly data: unknown
   readonly extracted: boolean
   readonly candidateCount: number
+  /** Punctuation the parser repaired (see {@link repairJson}); absent when the JSON was valid. */
+  readonly syntaxFixes?: readonly string[]
 }
 
 const MAX_AI_RESPONSE_LENGTH = 2_000_000
@@ -128,6 +131,35 @@ const canonicalCandidates = (segment: string): unknown[] => {
   return candidates
 }
 
+const RESPONSE_FORMATS = new Set(['scratch-ai-bridge/canonical-ir', 'scratch-ai-bridge/ai-response'])
+
+/**
+ * The project in a reply whose JSON has syntax mistakes, such as a missing comma or a comment.
+ * @param source - The whole reply.
+ * @returns The repaired project and what was fixed, or undefined when no segment repairs into a project.
+ */
+const repairedCandidate = (source: string): AiResponseParseResult | undefined => {
+  for (const segment of responseSegments(source)) {
+    const start = segment.indexOf('{')
+    if (start < 0 || !segment.includes('scratch-ai-bridge/')) continue
+    const end = segment.lastIndexOf('}')
+    // The whole rest first, in case the reply was cut off; then up to the last brace, in case prose follows it.
+    const attempts = [segment.slice(start), ...(end > start ? [segment.slice(start, end + 1)] : [])]
+    for (const text of attempts) {
+      const { text: json, fixes } = repairJson(text)
+      try {
+        const data: unknown = JSON.parse(json)
+        if (isRecord(data) && typeof data.format === 'string' && RESPONSE_FORMATS.has(data.format)) {
+          return { data, extracted: true, candidateCount: 1, syntaxFixes: fixes }
+        }
+      } catch {
+        // Not repairable this way; try the next form or segment.
+      }
+    }
+  }
+  return undefined
+}
+
 /**
  * Parse either exact JSON or a Canonical IR object embedded in an AI notebook/Markdown response.
  * @param source Text copied from an AI response.
@@ -151,6 +183,8 @@ export const parseAiResponse = (source: string): AiResponseParseResult => {
     if (selected !== undefined) {
       return { data: selected, extracted: true, candidateCount: candidates.length }
     }
+    const repaired = repairedCandidate(source)
+    if (repaired) return repaired
     const detail = parseError instanceof Error ? `：${parseError.message}` : ''
     throw new SyntaxError(`找不到完整的 Scratch AI Bridge Canonical IR JSON${detail}`)
   }
@@ -368,11 +402,13 @@ export const addExtractionRepair = (
   return {
     ...normalized,
     repairs: [
-      {
-        path: '/',
-        code: 'extract-json',
-        message: `從混合 AI 回覆的 ${parsed.candidateCount} 個 Canonical IR 候選中擷取最完整 JSON`,
-      },
+      parsed.syntaxFixes
+        ? { path: '/', code: 'repair-json-syntax', message: `已修正 JSON 語法：${parsed.syntaxFixes.join('、')}` }
+        : {
+            path: '/',
+            code: 'extract-json',
+            message: `從混合 AI 回覆的 ${parsed.candidateCount} 個 Canonical IR 候選中擷取最完整 JSON`,
+          },
       ...normalized.repairs,
     ],
   }

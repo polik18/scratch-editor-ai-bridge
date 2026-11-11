@@ -7,7 +7,7 @@ import platformer from '../../src/core/ir/examples/06-platformer-core.json'
 import type { CanonicalProject } from '../../src/core/ir/types'
 import { normalizeAiDraft } from '../../src/core/normalizer/ai-draft'
 import { validateCanonicalProject } from '../../src/core/validator/canonical-ir'
-import { validateCanonicalSemantics } from '../../src/core/validator/semantic'
+import { validateCanonicalSemantics, validateCanonicalSemanticsBestEffort } from '../../src/core/validator/semantic'
 
 const geminiFixture = fileURLToPath(new URL('../fixtures/gemini-platformer-shorthand.json', import.meta.url))
 
@@ -194,5 +194,25 @@ describe('Canonical IR semantic validator', () => {
     expect(codes).toEqual(
       new Set(['invalid-field-value', 'target-not-supported', 'unknown-field', 'unknown-input', 'unknown-sprite']),
     )
+  })
+})
+
+describe('semantic issues alongside schema errors', () => {
+  it('finds semantic errors in a project that also fails the schema, so one repair round covers both', () => {
+    const project = structuredClone(platformer) as unknown as {
+      sprites: { size: unknown; scripts: { blocks: unknown[] }[] }[]
+    }
+    project.sprites[0].size = '大'
+    project.sprites[0].scripts[0].blocks.push({
+      opcode: 'event_broadcast',
+      inputs: { BROADCAST_INPUT: { type: 'broadcast', name: '不存在的廣播' } },
+    })
+    expect(validateCanonicalProject(project).valid).toBe(false)
+    expect(validateCanonicalSemanticsBestEffort(project).map((issue) => issue.code)).toContain('unknown-broadcast')
+  })
+
+  it('returns no issues instead of throwing when the project is too broken to read', () => {
+    expect(validateCanonicalSemanticsBestEffort({ sprites: 'none' })).toEqual([])
+    expect(validateCanonicalSemanticsBestEffort(null)).toEqual([])
   })
 })
