@@ -141,6 +141,7 @@ import {
   summarizeAutomaticVisuals,
   type AutomaticVisualSummary,
 } from './core/visuals/presets'
+import { chooseProjectFile, friendlyOpenError, isFileDrag, projectFileProblem } from './open-project'
 import { SCRATCH_LINK_HARDWARE_EXTENSION_IDS } from './scratch/extensions'
 import {
   createVM,
@@ -248,6 +249,8 @@ interface ActiveStudentAnimation {
 }
 
 let activeStudentAnimation: ActiveStudentAnimation | null = null
+// Whether the work in the preview has changes the student has not downloaded; set by renderStudentPreview.
+let studentPreviewHasEdits = (): boolean => false
 
 let cancelActiveStudentPlaytest: (() => void) | null = null
 
@@ -629,11 +632,22 @@ app.innerHTML = `
 
 
 
+    <div id="drop-overlay" class="drop-overlay" hidden><div><strong id="drop-overlay-title">放開就打開這個作品</strong><span>Scratch 3 的 .sb3 檔</span></div></div>
     <div class="workspace" id="main-content" tabindex="-1">
 
 
 
       <section id="generate-panel" class="panel-grid" role="tabpanel" aria-labelledby="generate-tab">
+        <article class="card wide open-project-card" id="open-project">
+          <div class="open-project-text">
+            <h2>已經有作品了？</h2>
+            <p>打開自己的 Scratch 作品（.sb3），就能預覽、請 AI 幫忙修改。也可以直接把檔案拖進這個視窗。</p>
+            <p class="open-project-privacy">檔案只在你的電腦裡讀取，不會上傳。</p>
+          </div>
+          <button id="open-sb3-button" class="button primary" type="button">打開我的作品</button>
+          <input id="open-sb3-file" class="visually-hidden" type="file" accept=".sb3,application/zip" tabindex="-1" aria-hidden="true">
+          <div id="open-sb3-status" class="status-box" role="status" aria-live="polite"></div>
+        </article>
 
 
 
@@ -1846,6 +1860,8 @@ const renderStudentPreview = (
 
   const generation = ++studentPreviewGeneration
 
+  studentPreviewHasEdits = () => false
+
   studentPreview.replaceChildren()
 
   const previewCostume = (
@@ -2093,6 +2109,7 @@ const renderStudentPreview = (
     readonly summary: string
   }[] = []
   const liveRedoStack: typeof liveUndoStack = []
+  studentPreviewHasEdits = () => liveUndoStack.length > 0
   const pendingLivePatches = new Map<
     string,
     { readonly resolve: (message: Record<string, unknown>) => void; readonly timer: number }
@@ -3095,6 +3112,8 @@ const renderStudentPreview = (
     candidateDiff.className = 'live-patch-diff'
     candidateDiff.hidden = true
     let currentRaw = rawSource
+    let downloadedRaw = rawSource
+    studentPreviewHasEdits = () => currentRaw !== downloadedRaw
     const setCurrentRaw = (val: RawSb3Project): void => {
       currentRaw = val
     }
@@ -3543,8 +3562,12 @@ const renderStudentPreview = (
     redo.addEventListener('click', () => moveHistory(redoStack, undoStack, '已重做修改。'))
     save.addEventListener('click', () => {
       setBusy(true)
-      void exportLosslessSb3(currentRaw)
-        .then((archive) => download(archive, 'scratch-preserved-edit.sb3'))
+      const saving = currentRaw
+      void exportLosslessSb3(saving)
+        .then((archive) => {
+          download(archive, `${sourceArchiveFilename.replace(/\.sb3$/i, '')}-改過.sb3`)
+          downloadedRaw = saving
+        })
         .catch((error: unknown) => {
           status.textContent = error instanceof Error ? error.message : String(error)
         })
@@ -7066,7 +7089,7 @@ const renderAnalysis = () => {
   normalizeVmSb3.disabled = rawArchive === null
 }
 
-const analyzeFile = async (file: File) => {
+const analyzeFile = async (file: File): Promise<string | undefined> => {
   vmNormalizationGeneration += 1
 
   projectScore = null
@@ -7174,23 +7197,26 @@ const analyzeFile = async (file: File) => {
 
     applyPreservationPatch.disabled = true
 
-    setStatus(fileStatus, error instanceof Error ? error.message : String(error), 'error')
+    const message = friendlyOpenError(error instanceof Error ? error.message : String(error))
+    setStatus(fileStatus, message, 'error')
+    return message
   }
+  return undefined
 }
 
-const previewImported = async (): Promise<void> => {
+const previewImported = async (): Promise<string | undefined> => {
   const project = canonical
 
   const archive = rawArchive
 
-  if (!project || !archive) return
+  if (!project || !archive) return '還沒有打開作品。'
 
   previewImportedProject.disabled = true
 
   try {
     const sb3 = await exportLosslessSb3(archive)
 
-    if (canonical !== project || rawArchive !== archive) return
+    if (canonical !== project || rawArchive !== archive) return undefined
 
     const damagedCostumeCount = [project.stage, ...project.sprites].reduce(
       (count, target) => count + target.costumes.filter((costume) => !costume.data || costume.assetIssue).length,
@@ -7205,9 +7231,9 @@ const previewImported = async (): Promise<void> => {
     clearStudentResult()
 
     setStudentResult(
-      `匯入作品「${project.name}」的預覽`,
+      `打開了「${project.name}」`,
 
-      `預覽顯示作品儲存時的初始舞台狀態；積木尚未執行。${damagedCostumeCount > 0 ? `有 ${damagedCostumeCount} 個缺失或 checksum 不符的造型，畫面會以示意圖代替。` : ''}預覽不會改寫或下載原始作品。`,
+      `按綠旗就能玩，下面可以請 AI 幫忙修改。${damagedCostumeCount > 0 ? `有 ${damagedCostumeCount} 個造型的圖檔缺少或損壞，畫面上先用示意圖代替。` : ''}原本的檔案不會被改動。`,
 
       damagedCostumeCount > 0 ? 'attention' : 'success',
     )
@@ -7215,8 +7241,11 @@ const previewImported = async (): Promise<void> => {
     activateTab(byId<HTMLButtonElement>('generate-tab'))
 
     renderStudentPreview(project, sb3, archive)
+    return undefined
   } catch (error) {
-    setStatus(fileStatus, error instanceof Error ? error.message : String(error), 'error')
+    const message = friendlyOpenError(error instanceof Error ? error.message : String(error))
+    setStatus(fileStatus, message, 'error')
+    return message
   } finally {
     previewImportedProject.disabled = canonical === null || rawArchive === null
   }
@@ -7227,35 +7256,94 @@ previewImportedProject.addEventListener('click', () => {
 })
 
 const fileInput = byId<HTMLInputElement>('sb3-file')
+const openFileInput = byId<HTMLInputElement>('open-sb3-file')
+const openFileStatus = byId<HTMLDivElement>('open-sb3-status')
+const dropOverlay = byId<HTMLDivElement>('drop-overlay')
+const dropOverlayTitle = byId<HTMLElement>('drop-overlay-title')
+const generateTab = byId<HTMLButtonElement>('generate-tab')
+const onGenerateTab = (): boolean => generateTab.getAttribute('aria-selected') === 'true'
+
+/**
+ * Opens a student's own project. On the main tab it goes straight to the preview with the AI edit panel; on the
+ * analysis tab it only runs the analysis there.
+ * @param files - What was chosen or dropped; the first .sb3 is opened.
+ */
+const openProjectFiles = async (files: readonly File[]): Promise<void> => {
+  const forPreview = onGenerateTab()
+  const status = forPreview ? openFileStatus : fileStatus
+  const { file, note } = chooseProjectFile(files)
+  if (!file) return
+  const problem = projectFileProblem(file)
+  if (problem) {
+    setStatus(status, problem, 'error')
+    return
+  }
+  if (
+    forPreview &&
+    studentPreviewHasEdits() &&
+    !window.confirm('目前的作品有改過。換成新作品後，還沒下載的修改就不見了。要換嗎？')
+  )
+    return
+  setStatus(status, `正在打開「${file.name}」…`)
+  const analyzeError = await analyzeFile(file)
+  if (analyzeError) {
+    setStatus(status, analyzeError, 'error')
+    return
+  }
+  if (!forPreview) return
+  const previewError = await previewImported()
+  if (previewError) {
+    setStatus(openFileStatus, previewError, 'error')
+    return
+  }
+  const summary = analysis?.summary
+  const counts = summary ? `：${summary.sprites} 個角色、${summary.scripts} 段程式、${summary.blocks} 個積木` : ''
+  setStatus(openFileStatus, `已打開「${file.name}」${counts}。${note ?? ''}`, 'ok')
+  studentResult.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 fileInput.addEventListener('change', () => {
-  const file = fileInput.files?.[0]
-
-  if (file) void analyzeFile(file)
+  void openProjectFiles([...(fileInput.files ?? [])])
+  fileInput.value = ''
+})
+openFileInput.addEventListener('change', () => {
+  void openProjectFiles([...(openFileInput.files ?? [])])
+  openFileInput.value = ''
+})
+byId<HTMLButtonElement>('open-sb3-button').addEventListener('click', () => {
+  openFileInput.click()
 })
 
-const dropzone = byId<HTMLLabelElement>('dropzone')
-
-for (const eventName of ['dragenter', 'dragover']) {
-  dropzone.addEventListener(eventName, (event) => {
-    event.preventDefault()
-
-    dropzone.classList.add('drag')
-  })
+// Files can be dropped anywhere on the window. The overlay covers the page, including the cross-origin preview
+// iframe that would otherwise swallow the drop, and dragenter/dragleave are counted because they fire for every
+// child element crossed.
+let fileDragDepth = 0
+const hideDropOverlay = (): void => {
+  fileDragDepth = 0
+  dropOverlay.hidden = true
 }
-
-for (const eventName of ['dragleave', 'drop']) {
-  dropzone.addEventListener(eventName, (event) => {
-    event.preventDefault()
-
-    dropzone.classList.remove('drag')
-  })
-}
-
-dropzone.addEventListener('drop', (event) => {
-  const file = event.dataTransfer?.files[0]
-
-  if (file) void analyzeFile(file)
+window.addEventListener('dragenter', (event) => {
+  if (!isFileDrag([...(event.dataTransfer?.types ?? [])])) return
+  event.preventDefault()
+  fileDragDepth += 1
+  dropOverlayTitle.textContent = onGenerateTab() ? '放開就打開這個作品' : '放開就檢查這個作品'
+  dropOverlay.hidden = false
+})
+window.addEventListener('dragover', (event) => {
+  if (!isFileDrag([...(event.dataTransfer?.types ?? [])])) return
+  event.preventDefault()
+  if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy'
+})
+window.addEventListener('dragleave', (event) => {
+  if (!isFileDrag([...(event.dataTransfer?.types ?? [])])) return
+  fileDragDepth = Math.max(0, fileDragDepth - 1)
+  if (fileDragDepth === 0) dropOverlay.hidden = true
+})
+window.addEventListener('drop', (event) => {
+  if (!isFileDrag([...(event.dataTransfer?.types ?? [])])) return
+  event.preventDefault()
+  hideDropOverlay()
+  void openProjectFiles([...(event.dataTransfer?.files ?? [])])
 })
 
 copyPrompt.addEventListener('click', () => {

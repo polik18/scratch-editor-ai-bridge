@@ -35,6 +35,7 @@
     "test:browser:firefox": "BROWSER=firefox node scripts/smoke/browser-smoke.mjs",
     "test:browser:safari": "node scripts/smoke/safari-smoke.mjs",
     "test:browser:webkit": "BROWSER=webkit node scripts/smoke/browser-smoke.mjs",
+    "test:open-project-browser": "node scripts/smoke/open-project-browser-smoke.mjs",
     "test:asset-library-browser": "node scripts/smoke/asset-library-browser-smoke.mjs",
     "test:student-flow": "node scripts/smoke/student-flow-smoke.mjs"
   },

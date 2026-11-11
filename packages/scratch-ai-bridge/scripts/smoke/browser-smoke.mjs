@@ -846,7 +846,7 @@ try {
     image: element.querySelector('.student-preview-sprite')?.getAttribute('src') ?? '',
   }))
   if (
-    !missingAssetPreview.message.includes('1 個缺失或 checksum 不符的造型') ||
+    !missingAssetPreview.message.includes('1 個造型的圖檔缺少或損壞') ||
     !missingAssetPreview.captions.some((caption) => caption?.includes('素材示意')) ||
     !missingAssetPreview.image.startsWith('data:image/svg+xml')
   ) {
@@ -950,7 +950,7 @@ try {
     image: element.querySelector('.student-preview-sprite')?.getAttribute('src') ?? '',
   }))
   if (
-    !corruptAssetPreview.message.includes('1 個缺失或 checksum 不符的造型') ||
+    !corruptAssetPreview.message.includes('1 個造型的圖檔缺少或損壞') ||
     !corruptAssetPreview.captions.some((caption) => caption?.includes('素材示意')) ||
     !corruptAssetPreview.image.startsWith('data:image/svg+xml')
   ) {
