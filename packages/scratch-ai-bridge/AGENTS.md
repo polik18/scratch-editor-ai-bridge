@@ -6,8 +6,7 @@
 
 1. **不要自己寫 `project.json`、`.sb3` 或 Scratch 積木 JSON。** 一律交給下面的工具產生。
 2. **工具回報失敗時，照 `feedback` 每一行「→」後面的建議修改，再呼叫一次。** 不要換別的方法繞過。
-3. **不要讀 `docs/` 裡的計畫、狀態報告與歷史文件**（`*-plan*.md`、`*-status*.md`、`IMPROVEMENT-*`、`HANDOFF_*` 等）。
-   它們是開發紀錄，不是使用說明。
+3. **檔案只放在「檔案放哪裡」規定的位置。** 做出來的東西一律在 `output/`；不要在本目錄最上層新增檔案。
 4. **遇到權限錯誤（`Operation not permitted`、`EPERM`）就停下來，向使用者回報。** 不要用 `sudo`、改屬性或換路徑去繞過。
 
 ## 你想做什麼？
@@ -26,11 +25,11 @@
 ### 1. 用一句話做新遊戲：`make`
 
 ```sh
-npm run --silent cli -- make "做一個貓咪接蘋果的遊戲，用左右鍵移動貓咪，蘋果從天上掉下來，接到加分，漏接扣生命" \
-  --out ./scratch-games/apples.sb3 --playtest
+npm run --silent cli -- make "做一個貓咪接蘋果的遊戲，用左右鍵移動貓咪，蘋果從天上掉下來，接到加分，漏接扣生命" --playtest
 ```
 
 - 指令會自己呼叫本機模型寫作品描述、建置 `.sb3`、自動試玩。失敗時會把問題回饋給模型，再修一輪（`--rounds 0-3`，預設 1）。
+- 遊戲會放在 `output/games/<標題>/`，不會覆蓋舊的遊戲（同名會加 `-2`）。
 - **直接執行就好，不用先檢查環境變數或模型設定**；連不上模型時，報告的 `feedback` 會說明原因。
 - 模型設定（通常已設好）來自環境變數：
   - `SCRATCH_BRIDGE_MODEL_URL`：預設 `http://127.0.0.1:8000/v1`。
@@ -41,6 +40,7 @@ npm run --silent cli -- make "做一個貓咪接蘋果的遊戲，用左右鍵�
   - `playtestStatus`：試玩結果。
   - `output`：`.sb3` 的路徑。
   - `specFile`：模型寫的作品描述，可以手動修改後用 `spec` 重建。
+  - `processDirectory`：模型每一次的回覆和報告。
   - `unsupported`：模型說做不到的部分。
 
 需求要寫清楚：誰是玩家、用什麼鍵、其他東西怎麼動、怎麼得分或扣命、怎麼結束。
@@ -48,15 +48,17 @@ npm run --silent cli -- make "做一個貓咪接蘋果的遊戲，用左右鍵�
 ### 2. 你自己寫 Game Spec
 
 ```sh
-npm run --silent cli -- guide                                     # 印出完整格式（約 850 token）
-npm run --silent cli -- spec ./scratch-games/my-game.json --out ./scratch-games/my-game.sb3 --playtest
+npm run --silent cli -- guide                                   # 印出完整格式（約 850 token）
+# 把 Game Spec 存成 output/games/<名稱>/<名稱>.spec.json，然後：
+npm run --silent cli -- spec output/games/<名稱>/<名稱>.spec.json --playtest
 ```
 
-- 描述檔放在 `./scratch-games/`。
-- 先看報告最前面的 `status`、`playtestStatus` 和 `feedback`。照 `feedback` 修改描述後，**加 `--force`** 重建同一個 `.sb3`。
+- `.sb3` 會產生在描述檔旁邊，報告存在同一個資料夾的 `_過程/`。
+- 先看報告最前面的 `status`、`playtestStatus` 和 `feedback`。照 `feedback` 修改描述後，**加 `--force`** 重建。
 - 不需要刪檔，也不要用 `grep` 過濾報告，否則會漏掉建議。
 
-也可以用 MCP 的 `make_game` 工具做同一件事：參數 `spec` 放 JSON，工具說明裡已有完整格式。它的輸出會寫進 `--games-dir`，預設是 `./scratch-games`，不會覆蓋舊檔。
+也可以用 MCP 的 `make_game` 工具做同一件事：參數 `spec` 放 JSON，工具說明裡已有完整格式。每次呼叫都會在
+`output/games/` 開一個新資料夾（可用 `--games-dir` 改位置），不會覆蓋舊的遊戲。
 
 可以參考的完整範例在 `src/spec/examples/`：
 
@@ -95,12 +97,39 @@ node bin/scratch-ai-bridge-mcp.mjs [--games-dir <資料夾>]
 ```sh
 npm run --silent cli -- inspect ./作品.sb3 --format student-markdown   # 給學生看的提醒
 npm run --silent cli -- inspect ./作品.sb3 --format markdown           # 給老師的完整報告：分數、各面向、證據
-npm run --silent cli -- batch ./班級作品 --out ./班級分析結果
+npm run --silent cli -- batch ./班級作品                                # 結果在 output/reports/班級作品/
 ```
 
 **`inspect` 的輸出就是分析結果**：直接用它整理回覆，需要更多細節就改用 `--format markdown`。
 
 不要自己解壓 `.sb3`、讀 `project.json` 或翻原始碼。報告裡的「內容已隱去」是刻意的隱私保護，不是錯誤。
+
+## 檔案放哪裡
+
+```text
+packages/scratch-ai-bridge/       ← 唯一入口
+├── AGENTS.md  README.md          給 AI／給人看的入口（最上層只放入口文件和設定檔）
+├── bin/                          指令入口（scratch-ai-bridge、-mcp、scratch-session…）
+├── src/  tests/                  程式碼與測試，依功能分資料夾
+├── scripts/                      build/ smoke/ bench/ tools/
+├── docs/
+│   ├── guide/                    使用說明
+│   ├── design/                   設計規格
+│   └── history/                  計畫、狀態報告、交接紀錄
+├── examples/                     範例程式
+├── research/                     值得留下的研究資料與基準紀錄
+└── output/                       工具產生的一切（不進 git）
+    ├── games/<名稱>/             <名稱>.sb3、<名稱>.spec.json、_過程/（報告、模型回覆）
+    ├── reports/<名稱>/           batch 分析結果
+    ├── bench/<執行名稱>/         benchmark（npm run benchmark:games -- … --run output/bench/<名稱>）
+    └── tmp/                      暫存，隨時可刪
+```
+
+- **做遊戲的過程檔**在各遊戲的 `_過程/`。`npm run --silent cli -- clean` 會刪掉所有 `_過程/` 和 `output/tmp/`，
+  保留遊戲本身；`clean --all` 刪掉整個 `output/`。
+- **開發過程的文件**（計畫、狀態、交接）只寫在 `docs/history/`。一次性的實驗放 `output/tmp/`；值得保留的才放
+  `research/<主題>/`，並附一份 README。
+- `docs/history/` 是開發紀錄，不是使用說明；用工具時不需要讀。
 
 ## 只有出錯時才需要安裝
 

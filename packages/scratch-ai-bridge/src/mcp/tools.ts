@@ -12,7 +12,7 @@ export const BRIDGE_MCP_INSTRUCTIONS = `Scratch AI Bridge 有兩種用法：
    這些工具需要使用者先開啟 Bridge 網頁並連線。`
 
 export interface BridgeMcpOptions {
-  /** Where make_game writes new games; defaults to ./scratch-games under the working directory. */
+  /** Parent of the game folders make_game creates; defaults to the package's output/games. */
   readonly gamesDir?: string
 }
 
@@ -27,7 +27,7 @@ export const createBridgeMcpFactory = (
   options: BridgeMcpOptions = {},
 ): (() => McpServer) => {
   const requestTimes: number[] = []
-  const gamesDir = path.resolve(options.gamesDir ?? 'scratch-games')
+  const gamesDir = options.gamesDir ? path.resolve(options.gamesDir) : undefined
   return () => {
     const server = new McpServer(
       { name: 'scratch-ai-bridge', version: '0.3.0' },
@@ -69,7 +69,11 @@ ${createGameSpecGuide()}`,
           enforceToolLimit()
           const { makeGameFromSpec } = await import('./make-game.js')
           return result(
-            await makeGameFromSpec(spec, { gamesDir, ...(name ? { name } : {}), playtest: playtest ?? false }),
+            await makeGameFromSpec(spec, {
+              ...(gamesDir ? { gamesDir } : {}),
+              ...(name ? { name } : {}),
+              playtest: playtest ?? false,
+            }),
           )
         } catch (error) {
           return failure(error)

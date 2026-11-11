@@ -1,8 +1,9 @@
 import { constants } from 'node:fs'
-import { access, copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { createGameSpecInstruction, createGameSpecRepairInstruction } from '../spec/prompt'
+import { exists, gameFiles, gamesRoot, gameTarget, safeName, writeProcessFile } from './output-layout'
 import { buildSpecText, type SpecBuildReport } from './spec-command'
 
 export interface ModelConfig {
@@ -17,7 +18,10 @@ export interface ModelConfig {
 
 export interface MakeOptions {
   readonly request: string
-  readonly outputFile: string
+  /** Defaults to `output/games/<標題>/<標題>.sb3`, adding `-2`, `-3`… rather than reusing a folder. */
+  readonly outputFile?: string
+  /** Replaces `output/games` (tests). */
+  readonly gamesDirectory?: string
   /** Where the final spec JSON is written; defaults to the output path with `.spec.json`. */
   readonly specOut?: string
   /** Extra attempts that send the build feedback back to the model. */
@@ -46,6 +50,8 @@ export interface MakeReport {
   readonly model?: string
   readonly output?: string
   readonly specFile?: string
+  /** Every model reply and this report, kept for diagnosing or improving the game. */
+  readonly processDirectory?: string
   readonly title?: string
   readonly unsupported: readonly string[]
   readonly attempts: readonly MakeAttempt[]
@@ -119,24 +125,19 @@ const chat = async (config: ModelConfig, model: string, prompt: string): Promise
 const rank = (report: SpecBuildReport): number =>
   report.status !== 'success' ? 0 : report.playtestStatus === 'pass' ? 3 : report.playtestStatus === 'not-run' ? 2 : 1
 
-const exists = async (file: string): Promise<boolean> =>
-  access(file).then(
-    () => true,
-    () => false,
-  )
-
 /**
  * One sentence → Game Spec from a model → build (and optional playtest) → feedback to the model for repair rounds.
  * Keeps the best attempt; writes the SB3 and its spec only when at least one attempt built.
+ * Every model reply and the report go to the game's `_過程` folder, also when nothing built.
  * @param options - Request, output paths, model settings and how many repair rounds to allow.
  * @returns Report of every attempt and the kept result.
  */
 export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
-  const outputFile = path.resolve(options.outputFile)
-  const specFile = path.resolve(options.specOut ?? outputFile.replace(/\.sb3$/i, '') + '.spec.json')
   const base = { format: 'scratch-ai-bridge/make', version: 1 } as const
-  if (!options.force)
-    for (const file of [outputFile, specFile])
+  if (options.outputFile && !options.force)
+    for (const file of [options.outputFile, options.specOut ?? gameFiles(options.outputFile).spec].map((item) =>
+      path.resolve(item),
+    ))
       if (await exists(file))
         return {
           ...base,
@@ -153,6 +154,7 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
   const workDirectory = await mkdtemp(path.join(tmpdir(), 'scratch-make-'))
   try {
     const attempts: MakeAttempt[] = []
+    const replies: string[] = []
     let best: { report: SpecBuildReport; text: string; sb3: string } | undefined
     let text = ''
     let feedback = ''
@@ -162,6 +164,7 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
       progress(round === 0 ? `請模型 ${model ?? ''} 寫作品描述…` : `第 ${round} 輪修正：把問題回饋給模型…`)
       const started = Date.now()
       text = await complete(prompt)
+      replies.push(text)
       const sb3 = path.join(workDirectory, `attempt-${round}.sb3`)
       progress(options.playtest ? '建置並自動試玩…' : '建置…')
       const report = await buildSpecText(text, { outputFile: sb3, playtest: options.playtest, force: true })
@@ -183,34 +186,45 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
       if (rank(report) >= 2) break
     }
 
-    if (best?.report.status !== 'success') {
-      // Keep what the model actually said so a failed run can be diagnosed.
-      const replyFile = outputFile.replace(/\.sb3$/i, '') + '.failed-reply.txt'
-      await writeFile(replyFile, text, { flag: options.force ? 'w' : 'wx' }).catch(() => undefined)
-      return {
+    const succeeded = best?.report.status === 'success'
+    const files = options.outputFile
+      ? gameFiles(options.outputFile)
+      : await gameTarget(
+          options.gamesDirectory ?? gamesRoot(),
+          safeName(succeeded ? best?.report.title : undefined, safeName(options.request.slice(0, 20))),
+          true,
+        )
+    const specFile = path.resolve(options.specOut ?? files.spec)
+    for (const [round, reply] of replies.entries()) await writeProcessFile(files, `attempt-${round}.txt`, reply)
+    const kept = { ...(model ? { model } : {}), attempts, processDirectory: files.processDirectory }
+    let report: MakeReport
+    if (!best || !succeeded) {
+      report = {
         ...base,
         status: 'failed',
         playtestStatus: 'not-run',
-        ...(model ? { model } : {}),
+        ...kept,
         unsupported: [],
-        attempts,
-        feedback: `${feedback}\n模型最後一次的原始回覆存在 ${replyFile}。`,
+        feedback: `${feedback}\n模型每一次的原始回覆都存在 ${files.processDirectory}。`,
+      }
+    } else {
+      await mkdir(files.directory, { recursive: true })
+      await copyFile(best.sb3, files.sb3, options.force ? 0 : constants.COPYFILE_EXCL)
+      await writeFile(specFile, `${best.text.trim()}\n`, { flag: options.force ? 'w' : 'wx' })
+      report = {
+        ...base,
+        status: 'success',
+        playtestStatus: best.report.playtestStatus,
+        ...kept,
+        output: files.sb3,
+        specFile,
+        ...(best.report.title ? { title: best.report.title } : {}),
+        unsupported: best.report.unsupported ?? [],
+        feedback: best.report.feedback,
       }
     }
-    await copyFile(best.sb3, outputFile, options.force ? 0 : constants.COPYFILE_EXCL)
-    await writeFile(specFile, `${best.text.trim()}\n`, { flag: options.force ? 'w' : 'wx' })
-    return {
-      ...base,
-      status: 'success',
-      playtestStatus: best.report.playtestStatus,
-      ...(model ? { model } : {}),
-      output: outputFile,
-      specFile,
-      ...(best.report.title ? { title: best.report.title } : {}),
-      unsupported: best.report.unsupported ?? [],
-      attempts,
-      feedback: best.report.feedback,
-    }
+    await writeProcessFile(files, 'report.json', `${JSON.stringify(report, null, 2)}\n`)
+    return report
   } finally {
     await rm(workDirectory, { recursive: true, force: true })
   }

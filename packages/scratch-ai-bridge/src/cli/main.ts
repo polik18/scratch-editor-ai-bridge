@@ -1,4 +1,5 @@
-import { readFile } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
+import path from 'node:path'
 import { runBatch } from './batch'
 import { inspectSb3Bytes, inspectionToMarkdown, inspectionToStudentMarkdown } from './inspect'
 
@@ -7,24 +8,31 @@ const USAGE = `Scratch AI Bridge CLI ${VERSION}
 
 Which command?
   Make a new game from one sentence (a local model writes the spec):
-    scratch-ai-bridge make "做一個接蘋果遊戲，左右鍵移動，接到加分" --out game.sb3 [--playtest]
+    scratch-ai-bridge make "做一個接蘋果遊戲，左右鍵移動，接到加分" --playtest
   You are the AI and will write the Game Spec yourself:
     scratch-ai-bridge guide                       print the Game Spec format
-    scratch-ai-bridge spec game.json --out game.sb3 --playtest
-    Read "feedback" in the JSON report, fix the spec, run spec again.
+    save it as output/games/<name>/<name>.spec.json, then:
+    scratch-ai-bridge spec output/games/<name>/<name>.spec.json --playtest
+    Read "feedback" in the JSON report, fix the spec, run spec again with --force.
   Analyse existing .sb3 files:
     scratch-ai-bridge inspect work.sb3 --format student-markdown
-    scratch-ai-bridge batch ./class --out ./class-report
+    scratch-ai-bridge batch ./class
   Never hand-write project.json or .sb3 files.
 
+Where things go (all under the package's output/ folder, never committed):
+  output/games/<name>/<name>.sb3        the game          output/reports/<name>/   batch results
+  output/games/<name>/<name>.spec.json  its Game Spec     output/bench/<run>/      benchmark runs
+  output/games/<name>/_過程/            reports and model replies; "clean" removes these and output/tmp/
+
 Usage:
-  scratch-ai-bridge make <request> --out <new-file.sb3> [--spec-out <spec.json>] [--rounds <0-3>] [--playtest] [--force]
+  scratch-ai-bridge make <request> [--out <new-file.sb3>] [--spec-out <spec.json>] [--rounds <0-3>] [--playtest] [--force]
                          [--model <id>] [--base-url <url>] [--thinking]
   scratch-ai-bridge guide
-  scratch-ai-bridge spec <game-spec.json> --out <new-file.sb3> [--ir <canonical-ir.json>] [--report <report.json>] [--playtest] [--force]
+  scratch-ai-bridge spec <game-spec.json> [--out <file.sb3>] [--ir <canonical-ir.json>] [--report <report.json>] [--playtest] [--force]
   scratch-ai-bridge inspect <file.sb3> [--format json|markdown|student-markdown]
-  scratch-ai-bridge batch <directory> --out <new-directory> [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
+  scratch-ai-bridge batch <directory> [--out <new-directory>] [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
   scratch-ai-bridge generate <design.json> --out <new-file.sb3> [--report <report.json>] [--preview <stage.png>] [--force]
+  scratch-ai-bridge clean [--all]               remove _過程 folders and output/tmp/; --all removes output/ entirely
   scratch-ai-bridge --help
   scratch-ai-bridge --version
 
@@ -59,6 +67,22 @@ const withStdoutOnStderr = async <T>(task: () => Promise<T>): Promise<T> => {
   }
 }
 
+/**
+ * `output/reports/<input folder name>`, adding `-2`, `-3`… because batch never writes into an existing folder.
+ * @param inputDirectory - The folder of SB3 files being analysed.
+ * @returns A report folder that does not exist yet.
+ */
+const defaultReportDirectory = async (inputDirectory: string): Promise<string> => {
+  const { exists, outputRoot, safeName } = await import('./output-layout')
+  const parent = path.join(outputRoot(), 'reports')
+  const name = safeName(path.basename(path.resolve(inputDirectory)), 'reports')
+  let candidate = path.join(parent, name)
+  for (let index = 2; (await exists(candidate)) && index < 1000; index += 1)
+    candidate = path.join(parent, `${name}-${index}`)
+  await mkdir(parent, { recursive: true })
+  return candidate
+}
+
 const command = process.argv[2] ?? ''
 const args = process.argv.slice(3)
 
@@ -69,8 +93,10 @@ if (command === '--help' || command === '-h' || command === '') {
 } else if (command === 'guide') {
   const { createGameSpecGuide } = await import('../spec/prompt')
   process.stdout.write(
-    `把下面格式的 JSON 存成檔案，再執行：scratch-ai-bridge spec <檔案.json> --out <新遊戲.sb3> --playtest
-報告中的 feedback 每一行「→」後面就是修改建議；照著改完再執行一次。
+    `把下面格式的 JSON 存成 output/games/<名稱>/<名稱>.spec.json，再執行：
+  scratch-ai-bridge spec output/games/<名稱>/<名稱>.spec.json --playtest
+.sb3 會產生在同一個資料夾；報告存在旁邊的 _過程/。
+報告中的 feedback 每一行「→」後面就是修改建議；照著改完，加 --force 再執行一次。
 
 ${createGameSpecGuide()}
 `,
@@ -102,7 +128,7 @@ ${createGameSpecGuide()}
   }
   const rounds = Number(values['--rounds'] ?? '1')
   const request = positionals.join(' ').trim()
-  if (argumentError || !request || !values['--out'] || !Number.isInteger(rounds) || rounds < 0 || rounds > 3) {
+  if (argumentError || !request || !Number.isInteger(rounds) || rounds < 0 || rounds > 3) {
     process.stderr.write(`${USAGE}\n`)
     process.exitCode = 2
   } else {
@@ -113,7 +139,7 @@ ${createGameSpecGuide()}
     const report = await withStdoutOnStderr(() =>
       makeGame({
         request,
-        outputFile,
+        ...(outputFile ? { outputFile } : {}),
         ...(values['--spec-out'] ? { specOut: values['--spec-out'] } : {}),
         repairRounds: rounds,
         playtest,
@@ -212,14 +238,15 @@ ${createGameSpecGuide()}
     } else positionals.push(argument)
   }
 
-  if (argumentError || positionals.length !== 1 || !outputDirectory) {
+  if (argumentError || positionals.length !== 1) {
     process.stderr.write(`${USAGE}\n`)
     process.exitCode = 2
   } else {
     try {
+      const inputDirectory = positionals[0] ?? ''
       const summary = await runBatch({
-        inputDirectory: positionals[0] ?? '',
-        outputDirectory,
+        inputDirectory,
+        outputDirectory: outputDirectory ?? (await defaultReportDirectory(inputDirectory)),
         recursive,
         jobs,
         ...(manifestPath ? { manifestPath } : {}),
@@ -279,7 +306,7 @@ ${createGameSpecGuide()}
       break
     } else positionals.push(argument)
   }
-  if (argumentError || positionals.length !== 1 || !values['--out']) {
+  if (argumentError || positionals.length !== 1) {
     process.stderr.write(`${USAGE}\n`)
     process.exitCode = 2
   } else {
@@ -288,7 +315,7 @@ ${createGameSpecGuide()}
     const report = await withStdoutOnStderr(() =>
       runSpecBuild({
         specPath: positionals[0] ?? '',
-        outputFile,
+        ...(outputFile ? { outputFile } : {}),
         ...(values['--ir'] ? { irPath: values['--ir'] } : {}),
         ...(values['--report'] ? { reportPath: values['--report'] } : {}),
         playtest,
@@ -354,6 +381,10 @@ ${createGameSpecGuide()}
     writeJson(result)
     if (!result.success) process.exitCode = 1
   }
+} else if (command === 'clean' && args.every((argument) => argument === '--all')) {
+  const { cleanOutput, outputRoot } = await import('./output-layout')
+  const removed = await cleanOutput(outputRoot(), args.includes('--all'))
+  writeJson({ format: 'scratch-ai-bridge/clean', version: 1, status: 'success', removed })
 } else {
   process.stderr.write(`${USAGE}\n`)
   process.exitCode = 2

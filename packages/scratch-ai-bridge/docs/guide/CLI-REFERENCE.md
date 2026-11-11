@@ -8,6 +8,21 @@
 scratch-ai-bridge <command> [options]
 ```
 
+## 做遊戲與輸出位置
+
+最新、完整的指令說明以 `scratch-ai-bridge --help` 為準。做遊戲的指令：
+
+```sh
+scratch-ai-bridge make "<一句話需求>" [--playtest]                 # 本機模型寫描述 → 建置 → 試玩
+scratch-ai-bridge guide                                            # 印出 Game Spec 格式
+scratch-ai-bridge spec output/games/<名稱>/<名稱>.spec.json --playtest [--force]
+scratch-ai-bridge batch <資料夾>                                    # 結果在 output/reports/<資料夾名稱>/
+scratch-ai-bridge clean [--all]                                    # 刪掉 _過程/ 與 output/tmp/；--all 刪整個 output/
+```
+
+沒有 `--out` 時，所有產出都在套件的 `output/`（不進 git）；遊戲是 `output/games/<名稱>/` 裡的 `<名稱>.sb3`、
+`<名稱>.spec.json` 和 `_過程/`。設定 `SCRATCH_BRIDGE_OUTPUT_DIR` 可以把整個 `output/` 換到別處。
+
 ## 命令列表
 
 ### inspect

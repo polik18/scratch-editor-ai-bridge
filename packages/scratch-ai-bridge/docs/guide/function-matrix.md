@@ -5,7 +5,7 @@
 | 功能                        | 狀態     | 實際入口與限制                                                                                                 |
 | --------------------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
 | SB3 靜態分析                | 可用     | `scratch-ai-bridge inspect <file.sb3>`；不代表遊戲已執行                                                       |
-| 批次分析                    | 可用     | `scratch-ai-bridge batch <directory> --out <new-directory>`                                                    |
+| 批次分析                    | 可用     | `scratch-ai-bridge batch <directory> [--out <new-directory>]`（預設 `output/reports/<資料夾名稱>/`）           |
 | 產生作品                    | 可用     | `scratch-ai-bridge generate <design.json> --out <new-file.sb3>`；生成報告將未執行的遊戲行為標為 `not-run`      |
 | Scratch Session             | 部分可用 | `scratch-session --help` 列出入口；`plan`、`apply`、`undo` 和 `diff` 尚未實作。這不影響網頁的保留式 patch 流程 |
 | 獨立行為測試工具            | 未實作   | `src/test/behavior-test.ts` 明確拒絕執行，不回報假 PASS                                                        |
