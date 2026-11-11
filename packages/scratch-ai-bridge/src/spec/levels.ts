@@ -69,7 +69,7 @@ const describeTrigger = (rule: SpecRule): string | undefined => {
   const when = rule.when
   switch (when.kind) {
     case 'score-at-least':
-      return `分數達到 ${when.value}`
+      return `得到 ${when.value} 分`
     case 'compare':
       return `${when.variable} ${when.op} ${when.value}`
     case 'touch':
@@ -315,40 +315,11 @@ export const normalizeGameSpec = (raw: unknown): NormalizeResult => {
         suggestion: '在這一關加「過關」，例如 "過關": "分數 >= 50"，或在地圖上畫一個「終點」角色。',
       })
   })
-  diagnostics.push(...scoreThresholdErrors(levels))
   const variables = Object.assign({}, ...specs.map((spec) => spec.variables)) as Record<string, number>
   const base = { ...specs[0], entities, variables, levels }
   const instructions = instructionsOf(base, raw)
   diagnostics.push(...instructionWarnings(instructions))
   return { spec: { ...base, instructions }, diagnostics }
-}
-
-/**
- * Score keeps adding up across levels, so a later level that clears at a lower or equal score would end at once.
- * @param levels - Normalized levels.
- * @returns One error per level whose score target is not above the previous level's.
- */
-const scoreThresholdErrors = (levels: readonly SpecLevel[]): SpecDiagnostic[] => {
-  const target = (level: SpecLevel): number | undefined => {
-    for (const rule of level.rules)
-      if (rule.when.kind === 'score-at-least' && rule.actions.some((action) => action.kind === 'win'))
-        return rule.when.value
-    return undefined
-  }
-  const errors: SpecDiagnostic[] = []
-  for (let index = 1; index < levels.length; index += 1) {
-    const before = target(levels[index - 1])
-    const now = target(levels[index])
-    if (before !== undefined && now !== undefined && now <= before)
-      errors.push({
-        severity: 'error',
-        code: 'LEVEL_SCORE_NOT_HIGHER',
-        where: `第${ORDINALS[index]}關.過關`,
-        message: `分數會累積到下一關，這一關的過關分數 ${now} 沒有比上一關的 ${before} 高，一開始就會過關。`,
-        suggestion: `改成比 ${before} 大的分數，例如 ${before + now}。`,
-      })
-  }
-  return errors
 }
 
 const instructionWarnings = (lines: readonly string[]): SpecDiagnostic[] => {

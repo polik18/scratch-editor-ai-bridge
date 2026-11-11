@@ -108,6 +108,7 @@ export const SPEC_NAMES = {
   levelStart: '_level-start',
   levelDone: '_level-done',
   clear: '_clear',
+  levelStartScore: '_levelStartScore',
 } as const
 
 const N = SPEC_NAMES
@@ -389,7 +390,13 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
       case 'start':
         return atStart(...body)
       case 'score-at-least':
-        return atStart(waitUntil(gt(variable(N.score), rule.when.value - 1)), ...body)
+        // In a two-level game each level's target counts the points earned in that level.
+        return atStart(
+          waitUntil(
+            gt(multi ? sub(variable(N.score), variable(N.levelStartScore)) : variable(N.score), rule.when.value - 1),
+          ),
+          ...body,
+        )
       case 'time-up':
         return script(whenReceive(N.timeUp), ...inLevel(index, body))
       case 'every':
@@ -772,7 +779,7 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
     ],
   })
 
-  const internals = [N.hurt, N.bounce, N.playerVy, N.playerY, N.playing]
+  const internals = [N.hurt, N.bounce, N.playerVy, N.playerY, N.playing, N.levelStartScore]
   const shownCounters = [
     N.score,
     N.lives,
@@ -816,7 +823,7 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
         setVar(N.level, 1),
         broadcast(N.levelStart),
       ),
-      script(whenReceive(N.levelStart), setVar(N.playing, 1)),
+      script(whenReceive(N.levelStart), setVar(N.levelStartScore, variable(N.score)), setVar(N.playing, 1)),
       ...(spec.timeLimit === undefined
         ? []
         : [

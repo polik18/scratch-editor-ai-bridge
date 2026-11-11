@@ -328,6 +328,31 @@ const recognizedFields = (value: Json): number =>
  * @param text - Model or author output.
  * @returns The parsed JSON value and whether a repair was needed.
  */
+/**
+ * Moves text written after a closing quote back inside it: `"小魚 說「你好」" 5秒,` becomes `"小魚 說「你好」 5秒",`.
+ * Small models often put seconds or notes there, which is not JSON.
+ * @param body - JSON text.
+ * @returns The text with such tails moved inside their strings.
+ */
+const absorbTrailingText = (body: string): string =>
+  body.replace(
+    /"((?:[^"\\\n]|\\.)*)"[ \t]+([^",\]}\n:]+?)[ \t]*(?=[,\]}\n])/g,
+    (_, inside: string, tail: string) => `"${inside} ${tail.trim()}"`,
+  )
+
+/**
+ * The line a JSON parse error points at, so feedback can show the author what to change.
+ * @param body - JSON text.
+ * @param error - The parse error.
+ * @returns 「第 N 行：…」, or an empty string when the position is unknown.
+ */
+const errorLine = (body: string, error: unknown): string => {
+  const position = Number(/position (\d+)/.exec(error instanceof Error ? error.message : '')?.[1])
+  if (!Number.isFinite(position)) return ''
+  const line = body.slice(0, position).split('\n').length
+  return `第 ${line} 行：${(body.split('\n')[line - 1] ?? '').trim().slice(0, 80)}`
+}
+
 export const extractJson = (text: string): { readonly value: Json; readonly repaired: boolean } => {
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
@@ -336,14 +361,23 @@ export const extractJson = (text: string): { readonly value: Json; readonly repa
   try {
     return { value: JSON.parse(body), repaired: false }
   } catch (error) {
-    const candidates = (['close-open', 'swap'] as const).flatMap((strategy) => {
+    const absorbed = absorbTrailingText(body)
+    const candidates = [
+      absorbed,
+      ...(['close-open', 'swap'] as const).map((strategy) => rebalanceJson(absorbed, strategy)),
+    ].flatMap((candidate) => {
       try {
-        return [JSON.parse(rebalanceJson(body, strategy)) as Json]
+        return [JSON.parse(candidate) as Json]
       } catch {
         return []
       }
     })
-    if (candidates.length === 0) throw error
+    if (candidates.length === 0) {
+      const where = errorLine(body, error)
+      throw new Error(
+        `JSON 格式錯誤${where ? `，${where}` : ''}。常見原因：秒數或說明寫在引號外面（要寫成 "小魚 說「你好」 5秒"）、少了逗號、多了逗號。`,
+      )
+    }
     const best = candidates.reduce((left, right) => (recognizedFields(right) > recognizedFields(left) ? right : left))
     return { value: best, repaired: true }
   }
@@ -658,6 +692,20 @@ export const normalizeSingleLevel = (raw: Json, options: SingleLevelOptions = {}
     return name
   }
 
+  // Only one character can be steered. Requests with two controlled things (竹筏 and 擺渡人) keep the first as the
+  // player and the others as characters that stay put, so the game still builds.
+  const steered = entities.filter(isPlayer)
+  for (const extra of steered.slice(1)) {
+    const index = entities.indexOf(extra)
+    const remaining = extra.behaviors.filter((use) => use.name !== 'platformer' && use.name !== 'topdown')
+    entities[index] = { ...extra, behaviors: remaining }
+    warn(
+      'MULTIPLE_PLAYERS',
+      `角色.${extra.name}`,
+      `只能有一個玩家角色，「${extra.name}」改成不能操控（玩家是「${steered[0]?.name ?? ''}」）。`,
+      `要用滑鼠操作「${extra.name}」就加「點擊目標」；只是畫面上的角色就刪掉它的「平台移動」／「俯視移動」。`,
+    )
+  }
   const players = entities.filter(isPlayer)
   const hasBehavior = (name: BehaviorUse['name']): boolean =>
     entities.some((entity) => entity.behaviors.some((item) => item.name === name))
@@ -681,13 +729,6 @@ export const normalizeSingleLevel = (raw: Json, options: SingleLevelOptions = {}
       '角色',
       '有「可射中」的角色，但沒有「子彈」，射不到它。',
       '加一個有「子彈」行為的角色。',
-    )
-  if (players.length > 1)
-    error(
-      'MULTIPLE_PLAYERS',
-      '角色',
-      `有 ${players.length} 個玩家角色（${players.map((item) => item.name).join('、')}），目前只支援一個。`,
-      '只保留一個角色有「平台移動」或「俯視移動」。',
     )
 
   // ---------- map and legend ----------
@@ -759,17 +800,37 @@ export const normalizeSingleLevel = (raw: Json, options: SingleLevelOptions = {}
   }
   const width = Math.max(0, ...map.map((row) => [...row].length))
   if (width > MAP_MAX_COLUMNS) {
-    const removed = map.map((row) => [...row].slice(MAP_MAX_COLUMNS).join(''))
-    map = map.map((row) => [...row].slice(0, MAP_MAX_COLUMNS).join(''))
+    // Keep the 20 columns that hold the most characters (the player's column always), so a goal at the far end of
+    // a wide map is not the part that is lost.
+    const cellsAt = (column: number): number => map.filter((row) => !droppable([...row][column] ?? '.')).length
+    const playerColumns = map.flatMap((row) =>
+      [...row].flatMap((char, column) => (players.some((player) => legend[char] === player.name) ? [column] : [])),
+    )
+    let start = 0
+    let bestCount = -1
+    for (let candidate = 0; candidate + MAP_MAX_COLUMNS <= width; candidate += 1) {
+      if (playerColumns.some((column) => column < candidate || column >= candidate + MAP_MAX_COLUMNS)) continue
+      let count = 0
+      for (let column = candidate; column < candidate + MAP_MAX_COLUMNS; column += 1) count += cellsAt(column)
+      if (count > bestCount) {
+        bestCount = count
+        start = candidate
+      }
+    }
+    const removed = map.map((row) =>
+      [...row].filter((_, column) => column < start || column >= start + MAP_MAX_COLUMNS).join(''),
+    )
+    map = map.map((row) => [...row].slice(start, start + MAP_MAX_COLUMNS).join(''))
     const chars = lost(removed)
+    const kept = `第 ${start + 1}～${start + MAP_MAX_COLUMNS} 欄`
     if (chars.length === 0)
-      fixed('MAP_CROPPED', '地圖', `地圖超過 ${MAP_MAX_COLUMNS} 欄，已裁掉右邊只有空白或牆的部分。`)
+      fixed('MAP_CROPPED', '地圖', `地圖超過 ${MAP_MAX_COLUMNS} 欄，只保留${kept}（裁掉的只有空白或牆）。`)
     else
       warn(
         'MAP_CROPPED_CONTENT',
         '地圖',
-        `地圖最寬 ${width} 欄，已裁成 ${MAP_MAX_COLUMNS} 欄，右邊的「${chars.join('')}」被裁掉。`,
-        `每列最多 ${MAP_MAX_COLUMNS} 個字。`,
+        `地圖最寬 ${width} 欄，只保留角色最多的${kept}，「${chars.join('')}」被裁掉。`,
+        `每列最多 ${MAP_MAX_COLUMNS} 個字：把地圖改窄，或把角色放近一點。`,
       )
   }
   if (croppedRows > 0)

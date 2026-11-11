@@ -1,6 +1,6 @@
 import { entityCells, findPlayer, playerBehavior, SPEC_NAMES } from './compile'
 import { levelView } from './levels'
-import { CELL, cellCenter } from './physics'
+import { CELL, cellCenter, STAGE_COLUMNS, STAGE_ROWS } from './physics'
 import type { GameSpec } from './types'
 
 /**
@@ -237,10 +237,7 @@ const singleLevelScenarios = (spec: GameSpec): SpecScenario[] => {
   if (!movement) return scenarios
   const start = cells.get(player.name)?.[0]
   if (!start) return scenarios
-  const rows = spec.map.length
-  const columns = [...spec.map[0]].length
-  const wall = (row: number, column: number): boolean =>
-    row < 0 || row >= rows || column < 0 || column >= columns || spec.wallChars.includes([...spec.map[row]][column])
+  const wall = stageWall(spec)
   const p = player.name
   const x = { sprite: p, field: 'x' } as const
   const y = { sprite: p, field: 'y' } as const
@@ -451,13 +448,14 @@ const reachGoal = (spec: GameSpec): { readonly goal: string; readonly bot: BotSt
 /**
  * Steps that finish one level without playing it, when its win rule is a score or counter target the runner can set.
  * @param view - The level's view.
+ * @param scoreBefore - Score at the start of the level; a level's score target counts from it.
  * @returns Steps, or undefined when the level is won another way.
  */
-const finishBySetting = (view: GameSpec): ScenarioStep[] | undefined => {
+const finishBySetting = (view: GameSpec, scoreBefore = 0): ScenarioStep[] | undefined => {
   for (const rule of view.rules) {
     if (!rule.actions.some((action) => action.kind === 'win')) continue
     if (rule.when.kind === 'score-at-least')
-      return [{ kind: 'set', variable: SPEC_NAMES.score, value: rule.when.value }]
+      return [{ kind: 'set', variable: SPEC_NAMES.score, value: scoreBefore + rule.when.value }]
     if (rule.when.kind === 'compare') {
       const { op, value } = rule.when
       const wanted = op === '>' ? value + 1 : op === '<' ? value - 1 : value
@@ -517,9 +515,13 @@ const flowScenarios = (spec: GameSpec): SpecScenario[] => {
   ]
   if (spec.levels.length < 2) return scenarios
 
+  // Each level's score target counts from the score the level started with.
+  const firstTarget = finishBySetting(levelView(spec, 0))?.find((step) => step.kind === 'set')
+  const scoreAfterFirst =
+    firstTarget?.kind === 'set' && firstTarget.variable === SPEC_NAMES.score ? firstTarget.value : 0
   const finish = (index: number): ScenarioStep[] | undefined => {
     const view = levelView(spec, index)
-    const setting = finishBySetting(view)
+    const setting = finishBySetting(view, index === 0 ? 0 : scoreAfterFirst)
     if (setting) return setting
     const reach = reachGoal(view)
     return reach ? [reach.bot] : undefined
@@ -577,4 +579,22 @@ const flowScenarios = (spec: GameSpec): SpecScenario[] => {
     ],
   })
   return scenarios
+}
+
+/**
+ * Whether the player is stopped at a cell. The map sits against the bottom and left edges of the stage, so cells
+ * past those edges always stop the player; above or to the right of a map smaller than the stage is open stage,
+ * not wall.
+ * @param spec - A single-level view.
+ * @returns Wall test by map row and column.
+ */
+const stageWall = (spec: GameSpec): ((row: number, column: number) => boolean) => {
+  const rows = spec.map.length
+  const columns = [...spec.map[0]].length
+  return (row, column) =>
+    row >= rows ||
+    column < 0 ||
+    (row < 0 && rows >= STAGE_ROWS) ||
+    (column >= columns && columns >= STAGE_COLUMNS) ||
+    (row >= 0 && column < columns && spec.wallChars.includes([...spec.map[row]][column]))
 }

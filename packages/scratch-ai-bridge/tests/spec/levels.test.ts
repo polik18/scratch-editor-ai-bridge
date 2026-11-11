@@ -84,7 +84,7 @@ describe('two levels', () => {
     expect(result.project).toBeUndefined()
   })
 
-  it('needs a higher score target on the second level, because score carries over', () => {
+  it('counts each level score target from the score the level started with', () => {
     const result = buildFromSpecText(
       twoLevels({
         關卡: [
@@ -93,7 +93,14 @@ describe('two levels', () => {
         ],
       }),
     )
-    expect(codes(result.diagnostics)).toContain('LEVEL_SCORE_NOT_HIGHER')
+    expect(result.diagnostics.filter((item) => item.severity === 'error')).toEqual([])
+    expect(JSON.stringify(result.project)).toContain(SPEC_NAMES.levelStartScore)
+    if (!result.spec) throw new Error('expected a spec')
+    const change = createSpecScenarios(result.spec).find((scenario) => scenario.name === '換關')
+    expect(change?.steps.filter((step) => step.kind === 'set' && step.variable === SPEC_NAMES.score)).toEqual([
+      { kind: 'set', variable: SPEC_NAMES.score, value: 20 },
+      { kind: 'set', variable: SPEC_NAMES.score, value: 40 },
+    ])
   })
 
   it('applies outer rules on every level and level rules only on their own', () => {
