@@ -22,8 +22,11 @@ export interface NormalizeResult {
   readonly diagnostics: readonly SpecDiagnostic[]
 }
 
-/** Field names that hold the level list. `關卡` alone also means a single map, so only an array of objects counts. */
-const LEVEL_KEYS = ['levels', 'stages', '關卡', 'level']
+/**
+ * Field names that hold the level list. `關卡` and `地圖` also mean a single map, so only an array of objects counts;
+ * models put the level list under either name.
+ */
+const LEVEL_KEYS = ['levels', 'stages', ...KEY_ALIASES.map].map((key) => key.toLowerCase())
 const MAX_INSTRUCTION_LINES = 6
 /** Characters per line on the opening card before a line wraps. */
 export const INSTRUCTION_LINE_CHARS = 22
@@ -197,7 +200,36 @@ export const normalizeGameSpec = (raw: unknown): NormalizeResult => {
       suggestion: `把關卡合併成 ${MAX_LEVELS} 關以內。`,
     })
   const outerMaps = keysOf(raw, 'map').filter((key) => key !== found.key)
-  const shared = without(raw, [found.key, ...outerMaps])
+  // Characters and settings belong to the whole game. Models often write them inside each level instead; those
+  // are merged into the outer fields (outer values win), so every level sees the same characters.
+  const outerName = { entities: '角色', settings: '設定' } as const
+  const lifted: JsonObject = {}
+  for (const field of ['entities', 'settings'] as const) {
+    const merged: JsonObject = {}
+    for (const item of found.levels) {
+      const inner = isJsonObject(item) ? pickField(item, field) : undefined
+      if (isJsonObject(inner)) Object.assign(merged, inner)
+    }
+    if (Object.keys(merged).length === 0) continue
+    const outer = pickField(raw, field)
+    const key = outerName[field]
+    lifted[key] = { ...merged, ...(isJsonObject(outer) ? outer : {}) }
+    diagnostics.push({
+      severity: 'fixed',
+      code: 'LEVEL_FIELD_LIFTED',
+      where: found.key,
+      message: `各關裡的「${key}」已合併到最外層，每一關都用同一組。`,
+    })
+  }
+  const shared = {
+    ...without(raw, [found.key, ...outerMaps, ...keysOf(raw, 'entities'), ...keysOf(raw, 'settings')]),
+    ...lifted,
+  }
+  for (const field of ['entities', 'settings'] as const)
+    if (!(outerName[field] in lifted)) {
+      const outer = Object.entries(raw).find(([key]) => keysOf(raw, field).includes(key))
+      if (outer) shared[outer[0]] = outer[1]
+    }
   if (outerMaps.length > 0)
     diagnostics.push({
       severity: 'warning',
@@ -208,7 +240,7 @@ export const normalizeGameSpec = (raw: unknown): NormalizeResult => {
     })
   const sharedRules = asArray(pickField(raw, 'rules'))
   const sharedLegend = pickField(raw, 'legend')
-  const entitiesRaw = pickField(raw, 'entities')
+  const entitiesRaw = pickField(shared, 'entities')
   const entityNames = Object.keys(isJsonObject(entitiesRaw) ? entitiesRaw : {})
   // Which entities each level draws, read from its map characters and legend before normalizing.
   const drawn = found.levels.slice(0, MAX_LEVELS).map((item) => {

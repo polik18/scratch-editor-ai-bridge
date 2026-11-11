@@ -259,6 +259,7 @@ describe('animations through make and MCP', () => {
     expect(prompts[0]).toContain('動畫描述')
     expect(report.status).toBe('success')
     expect(path.basename(report.output ?? '')).toBe('小魚的回家路.sb3')
+    expect(report.seconds).toBeGreaterThanOrEqual(60)
   }, 60_000)
 
   it('make_story writes the spec into a new folder and reports the length', async () => {

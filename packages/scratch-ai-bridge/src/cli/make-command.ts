@@ -59,6 +59,8 @@ export interface MakeReport {
   /** Every model reply and this report, kept for diagnosing or improving the game. */
   readonly processDirectory?: string
   readonly title?: string
+  /** Animations only: running time in seconds. */
+  readonly seconds?: number
   readonly unsupported: readonly string[]
   readonly attempts: readonly MakeAttempt[]
   /** What is still wrong with the kept attempt, as plain lines. */
@@ -129,7 +131,10 @@ const chat = async (config: ModelConfig, model: string, prompt: string): Promise
  * @returns Rank from 0 (did not build) to 3 (playtest passed).
  */
 /** The parts of a build report that `make` compares and passes on; game and story builds both have them. */
-type AttemptReport = Pick<SpecBuildReport, 'status' | 'playtestStatus' | 'feedback' | 'title' | 'unsupported'>
+type AttemptReport = Pick<SpecBuildReport, 'status' | 'playtestStatus' | 'feedback' | 'title' | 'unsupported'> & {
+  /** Animations only: running time in seconds. */
+  readonly seconds?: number
+}
 
 /**
  * Builds one model reply as an animation into `outputFile`.
@@ -254,6 +259,7 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
         output: files.sb3,
         specFile,
         ...(best.report.title ? { title: best.report.title } : {}),
+        ...(best.report.seconds === undefined ? {} : { seconds: best.report.seconds }),
         unsupported: best.report.unsupported ?? [],
         feedback: best.report.feedback,
       }

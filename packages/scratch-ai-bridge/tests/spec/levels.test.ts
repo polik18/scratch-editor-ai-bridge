@@ -123,4 +123,28 @@ describe('two levels', () => {
     expect(change?.steps).toContainEqual({ kind: 'set', variable: SPEC_NAMES.score, value: 50 })
     expect(change?.steps.some((step) => step.kind === 'bot')).toBe(true)
   })
+
+  it('accepts characters written inside each level, as small models often do', () => {
+    const spec = JSON.parse(twoLevels()) as Record<string, unknown> & {
+      角色: unknown
+      關卡: Record<string, unknown>[]
+    }
+    const characters = spec.角色
+    delete (spec as Record<string, unknown>).角色
+    spec.關卡[0].角色 = characters
+    spec.關卡[1].角色 = { 出口: { 行為: ['終點'] } }
+    const result = buildFromSpecText(JSON.stringify(spec))
+    expect(codes(result.diagnostics)).toContain('LEVEL_FIELD_LIFTED')
+    expect(result.project).toBeDefined()
+    expect(result.spec?.entities.map((entity) => entity.name)).toEqual(['魚', '藻', '出口'])
+  })
+
+  it('reads a level list written under 地圖 instead of 關卡', () => {
+    const spec = JSON.parse(twoLevels()) as Record<string, unknown>
+    spec.地圖 = spec.關卡
+    delete spec.關卡
+    const result = buildFromSpecText(JSON.stringify(spec))
+    expect(result.spec?.levels).toHaveLength(2)
+    expect(result.project).toBeDefined()
+  })
 })
