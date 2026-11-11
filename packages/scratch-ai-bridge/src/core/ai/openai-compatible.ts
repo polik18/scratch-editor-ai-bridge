@@ -87,6 +87,21 @@ const readResponseText = async (response: Response, maxBytes: number): Promise<s
   return new TextDecoder().decode(bytes)
 }
 
+const MAX_LOOKUPS = 8
+
+// The page can only change what the project already has, and a small model otherwise keeps searching for a way to
+// add a picture until it runs out of lookups.
+const LOOP_RULES = `只能修改作品裡已經有的東西：數值、變數、角色屬性、積木，以及切換到作品裡已有的造型。不能新增圖片、造型、音效或角色。
+要求做不到時，不要再查詢，直接用一兩句中文說明做不到的原因，以及可以改成什麼。
+最多查詢 ${MAX_LOOKUPS} 次；查到足夠的資訊就提交修改。`
+
+const lookupLimitMessage = `AI 查了 ${MAX_LOOKUPS} 次作品，還是沒有提出修改，已停止。這個要求可能做不到（例如要換成作品裡沒有的圖片），或請說得更具體，例如指出要改哪個角色的什麼。`
+
+const httpError = (status: number, detail: string): Error =>
+  new Error(
+    `${status === 401 || status === 403 ? 'API key 不正確或沒有填。' : ''}模型 API 回應 HTTP ${status}${detail ? `：${detail}` : ''}`,
+  )
+
 export const requestOpenAiCompatiblePatch = async ({
   baseUrl,
   model,
@@ -104,11 +119,12 @@ export const requestOpenAiCompatiblePatch = async ({
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (apiKey?.trim()) headers.Authorization = `Bearer ${apiKey.trim()}`
   const messages: Record<string, unknown>[] = [
-    { role: 'system', content: instruction },
+    { role: 'system', content: `${instruction}\n\n${LOOP_RULES}` },
     { role: 'user', content: request.trim() },
   ]
   let toolCallCount = 0
-  for (let round = 0; round < 6; round += 1) {
+  // Every round uses at least one lookup, so the lookup limit also bounds the rounds.
+  for (let round = 0; round <= MAX_LOOKUPS; round += 1) {
     const endpoint = endpointFor(baseUrl)
     const payload = {
       model: model.trim(),
@@ -226,12 +242,12 @@ export const requestOpenAiCompatiblePatch = async ({
         })
       } else {
         const summary = detail.slice(0, 500)
-        throw new Error(`模型 API 回應 HTTP ${response.status}${summary ? `：${summary}` : ''}`)
+        throw httpError(response.status, summary)
       }
     }
     if (!response.ok) {
       const detail = (await readResponseText(response, 1024 * 1024)).slice(0, 500)
-      throw new Error(`模型 API 回應 HTTP ${response.status}${detail ? `：${detail}` : ''}`)
+      throw httpError(response.status, detail)
     }
     let body: unknown
     try {
@@ -240,14 +256,21 @@ export const requestOpenAiCompatiblePatch = async ({
       throw new Error('模型 API 回傳的內容不是有效 JSON。')
     }
     const text = extractPatchText(body)
-    const choice = (body as { choices?: { message?: { content?: unknown; tool_calls?: unknown } }[] }).choices?.[0]
+    const choice = (
+      body as { choices?: { finish_reason?: unknown; message?: { content?: unknown; tool_calls?: unknown } }[] }
+    ).choices?.[0]
     const message = choice?.message
     const calls = Array.isArray(message?.tool_calls) ? message.tool_calls : []
     if (calls.length === 0) {
+      if (text && !text.includes('{')) throw new Error(`AI 沒有提出修改：${text.slice(0, 400)}`)
       if (text) return text
+      if (choice?.finish_reason === 'length')
+        throw new Error(
+          '模型還沒寫出修改，回答就被截斷了（想太久，超過長度上限）。請把要求拆小，一次只改一件事，再試一次。',
+        )
       throw new Error('模型回應中找不到 patch JSON 或可用工具呼叫。')
     }
-    if (toolCallCount + calls.length > 8) throw new Error('模型工具呼叫超過 8 次上限。')
+    if (toolCallCount + calls.length > MAX_LOOKUPS) throw new Error(lookupLimitMessage)
     toolCallCount += calls.length
     messages.push({
       role: 'assistant',
@@ -268,6 +291,12 @@ export const requestOpenAiCompatiblePatch = async ({
       if (output.patchJson) return output.patchJson
       messages.push({ role: 'tool', tool_call_id: callId, content: output.output.slice(0, 12_000) })
     }
+    const left = MAX_LOOKUPS - toolCallCount
+    if (left <= 2)
+      messages.push({
+        role: 'user',
+        content: `只剩 ${left} 次查詢。現在就呼叫 propose_live_patch 提交修改；如果做不到，直接用一兩句話說明原因。`,
+      })
   }
-  throw new Error('模型超過 6 輪工具呼叫仍未提出可用 patch。')
+  throw new Error(lookupLimitMessage)
 }

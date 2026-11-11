@@ -40,6 +40,10 @@ export default defineConfig(({ mode }) => {
         events: fileURLToPath(new URL('../../node_modules/events/events.js', import.meta.url)),
       },
     },
+    // The stage preview runs in a sandboxed iframe whose origin is "null"; its module scripts load only with this
+    // header, which GitHub Pages also sends.
+    server: { headers: { 'Access-Control-Allow-Origin': '*' } },
+    preview: { headers: { 'Access-Control-Allow-Origin': '*' } },
     build: {
       rollupOptions: {
         input: {

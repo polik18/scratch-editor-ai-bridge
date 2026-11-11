@@ -10,7 +10,7 @@ Scratch AI Bridge 提供兩種 AI 接入方式。兩種方式都只會產生待�
 4. 輸入想做的調整，按「請本機 AI 提出修改」。回傳 patch 會先經格式、欄位、作品與 revision 驗證，再填入現有 patch 欄位。
 5. 檢查差異後確認套用；原始 SB3 的 AI 候選按「確認套用 AI 修改」。模型呼叫不會替使用者套用 patch。
 
-目前安全限制只允許 `localhost`、`127.0.0.1` 或 `::1`，因此不會將請求送到公開雲端 API。請在本機模型服務啟用允許 Bridge 網頁來源的 CORS。模型服務必須接受 OpenAI Chat Completions 相容格式；原生 tool calling 能力依模型而異。API 會最多執行 4 輪、8 次工具呼叫，單次請求最多 120 秒，傳送的 project prompt/request 合計最多 32 KB。
+目前安全限制只允許 `localhost`、`127.0.0.1` 或 `::1`，因此不會將請求送到公開雲端 API。請在本機模型服務啟用允許 Bridge 網頁來源的 CORS。模型服務必須接受 OpenAI Chat Completions 相容格式；原生 tool calling 能力依模型而異。API 最多讓模型查詢作品 8 次（剩 2 次時會提醒它提交或說明做不到），單次請求最多 120 秒，傳送的 project prompt/request 合計最多 32 KB。
 
 模型只會收到 Bridge 產生的精簡 Canonical 結構或原始 SB3 角色與變數摘要、允許修改的範圍和使用者本次輸入，不會收到 SB3 素材 bytes。Hosted 網頁可由瀏覽器直接連到 localhost，但瀏覽器、CSP/CORS 或模型 server 的設定可能拒絕連線；錯誤時仍可使用原本複製 prompt／貼回 patch 流程。
 

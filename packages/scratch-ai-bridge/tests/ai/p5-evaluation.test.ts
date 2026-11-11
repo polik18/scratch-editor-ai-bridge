@@ -166,7 +166,7 @@ describe('P5 end-to-end AI tool & runtime evaluation', () => {
         fetchImpl: excessiveToolFetch,
         onToolCall: () => ({ output: 'ok' }),
       }),
-    ).rejects.toThrow(/8 次上限/)
+    ).rejects.toThrow(/AI 查了 8 次作品/)
   })
 
   it('evaluates comprehension, feedback, repair-round proposal, and verified VM effect across 4 project archetypes', async () => {

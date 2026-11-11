@@ -2177,6 +2177,25 @@ const renderStudentPreview = (
   localAiCancelButton.textContent = '取消請求'
   localAiCancelButton.hidden = true
   localAiActions.append(localAiGenerateButton, localAiCancelButton)
+  const localAiStatus = document.createElement('p')
+  localAiStatus.className = 'inline-status'
+  localAiStatus.setAttribute('role', 'status')
+  localAiStatus.setAttribute('aria-live', 'polite')
+  // Shown right under the button: the panel's own status sits below other controls, out of view while waiting.
+  const watchLocalAi = (): ((message: string, kind: 'pending' | 'error') => void) => {
+    const started = Date.now()
+    const show = (): void => {
+      localAiStatus.dataset.kind = 'pending'
+      localAiStatus.textContent = `AI 正在讀作品、想修改…已等 ${Math.round((Date.now() - started) / 1000)} 秒（最多 120 秒，可按「取消請求」）`
+    }
+    show()
+    const timer = window.setInterval(show, 1000)
+    return (message, kind) => {
+      window.clearInterval(timer)
+      localAiStatus.dataset.kind = kind
+      localAiStatus.textContent = message
+    }
+  }
   localAiSettings.append(
     localAiSettingsSummary,
     localAiHelp,
@@ -2195,6 +2214,7 @@ const renderStudentPreview = (
     localAiRequestLabel,
     localAiRequest,
     localAiActions,
+    localAiStatus,
   )
   const localAiController: { current: AbortController | null } = { current: null }
   const stopGateway = (): void => {
@@ -2571,6 +2591,7 @@ const renderStudentPreview = (
         localAiGenerateButton.disabled = true
         localAiCancelButton.hidden = false
         adapter.report('正在請本機模型提出修改…')
+        const finish = watchLocalAi()
         try {
           const response = await requestOpenAiCompatiblePatch({
             baseUrl: localAiBaseUrl.value,
@@ -2607,14 +2628,16 @@ const renderStudentPreview = (
             },
           })
           adapter.present(response)
+          finish('AI 已提出修改，差異列在下方；請檢查後按「確認套用 AI 修改」。', 'pending')
         } catch (error) {
-          adapter.report(
+          const message =
             error instanceof Error && error.name === 'AbortError'
               ? '本機模型請求已取消或逾時。'
               : error instanceof Error
                 ? error.message
-                : String(error),
-          )
+                : String(error)
+          adapter.report(message)
+          finish(message, 'error')
         } finally {
           window.clearTimeout(timeout)
           if (localAiController.current === controller) localAiController.current = null
@@ -2640,6 +2663,7 @@ const renderStudentPreview = (
       localAiCancelButton.hidden = false
       livePatchStatus.dataset.kind = 'pending'
       livePatchStatus.textContent = '正在把目前作品的精簡結構與修改要求送到你設定的模型…'
+      const finish = watchLocalAi()
       try {
         const response = await requestOpenAiCompatiblePatch({
           baseUrl: localAiBaseUrl.value,
@@ -2684,6 +2708,7 @@ const renderStudentPreview = (
         inspectLivePatch()
         livePatchStatus.dataset.kind = 'pending'
         livePatchStatus.textContent = '本機模型已提出修改，差異已顯示；請檢查後自行確認套用。'
+        finish('AI 已提出修改，差異列在下方；請檢查後確認套用。', 'pending')
       } catch (error) {
         livePatchStatus.dataset.kind = 'error'
         livePatchStatus.textContent =
@@ -2692,6 +2717,7 @@ const renderStudentPreview = (
             : error instanceof Error
               ? error.message
               : String(error)
+        finish(livePatchStatus.textContent, 'error')
       } finally {
         window.clearTimeout(timeout)
         if (localAiController.current === controller) localAiController.current = null
