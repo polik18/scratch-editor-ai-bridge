@@ -7,7 +7,7 @@ import {
   VERIFIED_SCRATCH_EXTENSION_IDS,
 } from '../../scratch/extensions'
 import { CANONICAL_OPCODES, CORE_PROCEDURE_GRAPH_OPCODES, getBlockCapability } from '../capabilities'
-import type { ScratchTargetBlockGraph } from '../graph'
+import type { ScratchBlockGraphNode, ScratchTargetBlockGraph } from '../graph'
 import type { CanonicalBlock, CanonicalProject, CanonicalScript } from '../ir/types'
 
 export interface AnalysisDiagnostic {
@@ -92,6 +92,33 @@ export interface AnalysisIR {
 
 const isScriptEntryBlock = (opcode: string): boolean =>
   getBlockCapability(opcode)?.shape === 'hat' || opcode === 'procedures_definition'
+
+/**
+ * Identify a reporter in a complete, intentionally unconnected top-level fragment.
+ * @param graph Raw blocks in the current target.
+ * @param blockId Reporter to trace.
+ * @returns Whether the reporter belongs to a detached fragment.
+ */
+const isDetachedArgumentReporter = (graph: ScratchTargetBlockGraph['blocks'], blockId: string): boolean => {
+  const visited = new Set<string>()
+  let id: string | null | undefined = blockId
+  while (typeof id === 'string') {
+    if (visited.has(id)) return false
+    visited.add(id)
+    if (!Object.hasOwn(graph, id)) return false
+    const block: ScratchBlockGraphNode = graph[id]
+    if (block.parent === null || block.parent === undefined)
+      return (
+        block.topLevel === true &&
+        (CANONICAL_OPCODES.includes(block.opcode as (typeof CANONICAL_OPCODES)[number]) ||
+          block.opcode === 'argument_reporter_string_number' ||
+          block.opcode === 'argument_reporter_boolean') &&
+        !isScriptEntryBlock(block.opcode)
+      )
+    id = block.parent
+  }
+  return false
+}
 
 const visitBlock = (
   block: CanonicalBlock,
@@ -213,12 +240,12 @@ const analyzeScript = (
   if (first && !isScriptEntryBlock(first.opcode)) {
     const isKnown = CANONICAL_OPCODES.includes(first.opcode as (typeof CANONICAL_OPCODES)[number])
     diagnostics.push({
-      severity: isKnown ? 'warning' : 'info',
+      severity: 'info',
       code: isKnown ? 'detached-script' : 'unclassified-script-entry',
       target: targetName,
       script: index,
       message: isKnown
-        ? `腳本從「${first.opcode}」開始，前面沒有可辨認的事件積木；如果這段應自行開始，請確認是否少了開始事件。`
+        ? `這段程式從「${first.opcode}」開始，沒有接事件積木；可能是草稿或手動點擊執行的程式，不一定是錯誤。`
         : '這段程式從目前無法辨認的積木開始；Bridge 無法判斷它是不是擴充功能的事件積木。',
     })
   }
@@ -368,10 +395,10 @@ export const analyzeCanonicalProject = (
       })
       if (seenScripts.has(signature)) {
         diagnostics.push({
-          severity: 'warning',
+          severity: 'info',
           code: 'duplicate-script-in-target',
           relatedScripts: [seenScripts.get(signature) ?? index + 1],
-          message: '此角色有內容相同的事件腳本；請確認是否刻意重複執行。',
+          message: '此角色有內容相同的事件腳本；這可能是刻意安排的平行執行，不一定是錯誤。',
           ...location,
         })
       }
@@ -783,10 +810,10 @@ export const analyzeCanonicalProject = (
     const receiverCount = receivers.get(name)?.length ?? 0
     if (senderCount > 0 && receiverCount === 0) {
       diagnostics.push({
-        severity: 'warning',
+        severity: 'info',
         code: 'broadcast-no-receiver',
         broadcastName: name,
-        message: `廣播「${name}」有送出者，但沒有接收腳本。`,
+        message: `廣播「${name}」有送出者，但目前沒有找到接收腳本；這也可能是預留訊息，不一定是錯誤。`,
       })
     }
     if (receiverCount > 0 && senderCount === 0) {
@@ -826,12 +853,16 @@ export const analyzeCanonicalProject = (
 
     for (const target of rawBlockGraphs) {
       for (const issue of target.issues) {
+        const detachedReporter =
+          issue.code === 'invalid-argument-reporter' && isDetachedArgumentReporter(target.blocks, issue.blockId)
         diagnostics.push({
-          severity: 'warning',
+          severity: detachedReporter ? 'info' : 'warning',
           code: `block-graph-${issue.code}`,
           blockId: issue.blockId,
           target: target.targetName,
-          message: issue.message,
+          message: detachedReporter
+            ? '未接上的草稿中有自製積木參數；它不在自製積木定義內，不一定影響作品。'
+            : issue.message,
         })
       }
     }

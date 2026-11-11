@@ -23,6 +23,7 @@ import {
   type ProjectMap,
   type ProjectScore,
 } from './core/analyzer'
+import { groupDiagnosticsForDisplay } from './core/analyzer/diagnostic-groups'
 import {
   exportLosslessSb3,
   patchLosslessSb3BlockGraphs,
@@ -6216,7 +6217,7 @@ const renderAnalysis = () => {
 
   const summary = analysis.summary
 
-  projectScoreSummary.textContent = `${projectScore.total === null ? '目前沒有足夠的可讀證據換算參考分' : `SB3 結構參考分：${projectScore.total}/${projectScore.max}`}（分析覆蓋 ${projectScore.coverage}%）。這不是正式成績，也不代表作品已執行。`
+  projectScoreSummary.textContent = `${projectScore.total === null ? '目前不足以換算結構參考分，不代表作品不好' : `SB3 結構參考分：${projectScore.total}/${projectScore.max}`}（分析覆蓋 ${projectScore.coverage}%）。分數只反映部分程式結構，不代表作品品質、創意或正式成績；本次也沒有執行作品。`
 
   projectScoreCriteria.replaceChildren(
     ...projectScore.criteria.map((criterion) => {
@@ -6286,39 +6287,41 @@ const renderAnalysis = () => {
 
   if (analysis.diagnostics.length > 0) {
     diagnostics.replaceChildren(
-      ...analysis.diagnostics.map((item) => {
+      ...groupDiagnosticsForDisplay(analysis.diagnostics).map((group) => {
         const diagnostic = document.createElement('div')
-
-        diagnostic.className = `diagnostic ${item.severity}`
-
-        const code = document.createElement('b')
-
-        code.textContent = item.severity === 'warning' ? '需要注意' : '建議'
-
-        const message = document.createElement('span')
-
-        message.textContent = item.message
-
-        diagnostic.append(code, message)
-
+        diagnostic.className = `diagnostic ${group.severity}`
+        const label = document.createElement('b')
+        label.textContent = group.severity === 'warning' ? '建議確認' : '作品觀察'
+        const content = document.createElement('div')
+        const summary = document.createElement('span')
+        summary.textContent = group.summary
+        content.append(summary)
+        if (group.count > 1) {
+          const details = document.createElement('details')
+          const heading = document.createElement('summary')
+          heading.textContent = `查看 ${group.count} 項詳細位置`
+          const list = document.createElement('ul')
+          for (const entry of group.items) {
+            const item = document.createElement('li')
+            const message = group.code === 'detached-script' ? '未接事件積木，可能是草稿或手動執行。' : entry.message
+            item.textContent = `${entry.target ? `「${entry.target}」` : ''}${entry.script ? `第 ${entry.script} 段：` : ''}${message}`
+            list.append(item)
+          }
+          details.append(heading, list)
+          content.append(details)
+        }
+        diagnostic.append(label, content)
         return diagnostic
       }),
     )
   } else {
     const diagnostic = document.createElement('div')
-
     diagnostic.className = 'diagnostic ok'
-
-    const code = document.createElement('b')
-
-    code.textContent = '檢查完成'
-
+    const label = document.createElement('b')
+    label.textContent = '檢查完成'
     const message = document.createElement('span')
-
     message.textContent = '目前沒有偵測到規則型問題。'
-
-    diagnostic.append(code, message)
-
+    diagnostic.append(label, message)
     diagnostics.replaceChildren(diagnostic)
   }
 
@@ -6362,11 +6365,24 @@ const renderAnalysis = () => {
     }),
   )
 
+  const actionableFeedback = projectFeedback.items.filter(({ kind }) => kind !== 'confirmed-structure')
+  const detachedFeedback = actionableFeedback.filter(({ id }) => id.startsWith('diagnostic:detached-script:'))
+  const detachedCount = analysis.diagnostics.filter(({ code }) => code === 'detached-script').length
+  const otherFeedback = actionableFeedback.filter(({ id }) => !id.startsWith('diagnostic:detached-script:'))
+  const firstDetached = detachedFeedback.at(0)
+  const displayFeedback = firstDetached
+    ? [
+        ...otherFeedback,
+        {
+          ...firstDetached,
+          title: '未接上事件積木的程式',
+          message: `有 ${detachedCount} 段未接事件積木的程式；可能是草稿或手動執行，不一定是錯誤。`,
+          evidenceIds: [...new Set(detachedFeedback.flatMap(({ evidenceIds }) => evidenceIds))].slice(0, 6),
+        },
+      ]
+    : otherFeedback
   projectFeedbackItems.replaceChildren(
-    ...projectFeedback.items
-
-      .filter(({ kind }) => kind !== 'confirmed-structure')
-
+    ...displayFeedback
       .slice(0, 30)
 
       .map((feedback) => {
@@ -6374,10 +6390,7 @@ const renderAnalysis = () => {
 
         const title = document.createElement('strong')
 
-        title.textContent =
-          feedback.kind === 'confirmed-structure'
-            ? `${feedback.title}（有積木證據）`
-            : `${feedback.title}（供師生確認）`
+        title.textContent = `${feedback.title}（供師生確認）`
 
         const message = document.createElement('p')
 

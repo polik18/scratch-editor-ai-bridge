@@ -16,7 +16,7 @@ export interface CliInspection {
   readonly format: 'scratch-ai-bridge/inspection'
   readonly version: 1
   readonly analyzerVersion: 1
-  readonly rubricVersion: 'sb3-static-v2'
+  readonly rubricVersion: 'sb3-static-v3'
   readonly analysisMode: 'static-raw-sb3'
   readonly runtimeVerified: false
   readonly fileId: string
@@ -282,22 +282,25 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
       ...(item.script ? { script: item.script } : {}),
     }
   })
-  const partial =
-    archive.warnings.length > 0 ||
-    projectMap.coverage.opaqueBlocks > 0 ||
-    projectMap.coverage.malformedGraphIssues > 0
+  const graphDiagnostics = analysis.diagnostics.filter(({ code }) => code.startsWith('block-graph-'))
+  const unresolvedGraphIssues =
+    graphDiagnostics.filter(({ severity }) => severity === 'warning').length +
+    Math.max(0, projectMap.coverage.malformedGraphIssues - graphDiagnostics.length)
+  const draftGraphNotes = graphDiagnostics.filter(({ severity }) => severity === 'info').length
+  const partial = archive.warnings.length > 0 || projectMap.coverage.opaqueBlocks > 0 || unresolvedGraphIssues > 0
   const partialReasons = [
     ...(projectMap.coverage.opaqueBlocks > 0
       ? [`有 ${projectMap.coverage.opaqueBlocks} 個積木目前無法完整解讀`]
       : []),
-    ...(projectMap.coverage.malformedGraphIssues > 0
-      ? [`有 ${projectMap.coverage.malformedGraphIssues} 項積木結構資料需要確認`]
-      : []),
+    ...(unresolvedGraphIssues > 0 ? [`有 ${unresolvedGraphIssues} 項積木結構資料需要確認`] : []),
     ...(archive.warnings.length > 0 ? ['SB3 封裝有需要確認的資料'] : []),
   ]
   const limitations = [
     '這是從 SB3 結構產生的靜態分析；沒有執行作品，不能推論實際玩法、手感或 FPS。',
     'Scratch extensions 與硬體沒有在 CLI 中載入或執行。',
+    ...(draftGraphNotes > 0
+      ? [`有 ${draftGraphNotes} 項未接草稿的積木圖紀錄；原始資料已保留，修改時仍需經安全檢查。`]
+      : []),
     ...projectFeedback.limits.map((item) => redact(item)),
     ...archive.warnings.map((item) => redact(item)),
   ]
@@ -306,7 +309,7 @@ export const inspectSb3Bytes = async (bytes: Uint8Array): Promise<CliInspection>
     format: 'scratch-ai-bridge/inspection',
     version: 1,
     analyzerVersion: 1,
-    rubricVersion: 'sb3-static-v2',
+    rubricVersion: 'sb3-static-v3',
     analysisMode: 'static-raw-sb3',
     runtimeVerified: false,
     fileId: createHash('sha256').update(bytes).digest('hex'),
@@ -435,7 +438,7 @@ const studentIssueText = (
     'detached-script': {
       title: '檢查這段程式怎麼開始',
       message: '這一段沒有接著綠旗或按鍵等開始積木；也可能是你故意留下的草稿。',
-      nextStep: '如果希望它按綠旗就開始，接上「當綠旗被點擊」後再試一次。',
+      nextStep: '如果希望它自動開始，確認要用「當綠旗被點擊」、按鍵或其他事件；草稿可以保留。',
     },
     'block-graph-invalid-procedure-definition': {
       title: '請一起檢查自製積木',
@@ -487,21 +490,28 @@ const studentTargetLabel = (target: string | undefined): string | undefined => {
  */
 export const inspectionToStudentMarkdown = (inspection: CliInspection): string => {
   const seenIssues = new Set<string>()
-  const checks = inspection.diagnostics.flatMap((diagnostic) => {
-    const issue = studentIssueText(diagnostic.code, diagnostic.message)
-    if (!issue || diagnostic.severity !== 'warning' || seenIssues.has(diagnostic.code)) return []
-    seenIssues.add(diagnostic.code)
-    const source = inspection.evidence.find(
-      (item) => item.target === diagnostic.target && item.script === (diagnostic.script ?? null),
-    )
-    const location = [
-      studentTargetLabel(diagnostic.target),
-      diagnostic.script === undefined ? undefined : `第 ${diagnostic.script} 段程式`,
-    ]
-      .filter((item): item is string => Boolean(item))
-      .join('・')
-    return [{ ...issue, source, location }]
-  })
+  const checks = [...inspection.diagnostics]
+    .sort((a, b) => Number(b.severity === 'warning') - Number(a.severity === 'warning'))
+    .flatMap((diagnostic) => {
+      const issue = studentIssueText(diagnostic.code, diagnostic.message)
+      if (
+        !issue ||
+        (diagnostic.severity !== 'warning' && diagnostic.code !== 'detached-script') ||
+        seenIssues.has(diagnostic.code)
+      )
+        return []
+      seenIssues.add(diagnostic.code)
+      const source = inspection.evidence.find(
+        (item) => item.target === diagnostic.target && item.script === (diagnostic.script ?? null),
+      )
+      const location = [
+        studentTargetLabel(diagnostic.target),
+        diagnostic.script === undefined ? undefined : `第 ${diagnostic.script} 段程式`,
+      ]
+        .filter((item): item is string => Boolean(item))
+        .join('・')
+      return [{ ...issue, source, location }]
+    })
   const notes = checks.slice(0, 3).map(({ title, message, nextStep, source, location }) => {
     const sourceTarget = studentTargetLabel(source?.target)
     const where =

@@ -30,6 +30,32 @@ describe('static CLI inspection', () => {
     }
   }, 20_000)
 
+  it('does not mark an unattached parameter draft as a broken project', async () => {
+    const archive = await compileCanonicalProjectToSb3(structuredClone(example02) as CanonicalProject)
+    const zip = await JSZip.loadAsync(await archive.arrayBuffer())
+    const entry = zip.file('project.json') ?? expect.fail('missing project.json')
+    const project = JSON.parse(await entry.async('string')) as { targets: { blocks: Record<string, unknown> }[] }
+    project.targets[0].blocks['detached-parameter'] = {
+      opcode: 'argument_reporter_string_number',
+      parent: null,
+      next: null,
+      topLevel: true,
+      shadow: false,
+      x: 100,
+      y: 100,
+      fields: { VALUE: ['draft', null] },
+      inputs: {},
+    }
+    zip.file('project.json', JSON.stringify(project))
+    const result = await inspectSb3Bytes(await zip.generateAsync({ type: 'uint8array' }))
+    expect(result.coverage.malformedGraphIssues).toBe(1)
+    expect(result.diagnostics.find(({ code }) => code === 'block-graph-invalid-argument-reporter')?.severity).toBe(
+      'info',
+    )
+    expect(result.status).toBe('ok')
+    expect(result.partialReasons.join(' ')).not.toContain('積木結構資料需要確認')
+  })
+
   it('analyzes raw SB3 structure without exposing sprite names or block IDs', async () => {
     const project = structuredClone(example02) as CanonicalProject
     project.sprites[0].name = 'Private Student Name'

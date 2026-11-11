@@ -279,7 +279,7 @@ describe('analysis IR', () => {
     ).toBe(false)
   })
 
-  it('deducts organization points for more than four scripts for the same event', () => {
+  it('does not penalize multiple scripts for the same event', () => {
     const project = structuredClone(broadcastExample as CanonicalProject)
     project.stage.scripts = Array.from({ length: 5 }, (_, index) => ({
       blocks: [
@@ -290,8 +290,8 @@ describe('analysis IR', () => {
     const analysis = analyzeCanonicalProject(project)
     const map = createProjectMap(project, analysis)
     const criterion = createProjectScore(project, analysis, map).criteria.find(({ id }) => id === 'organization')
-    expect(criterion?.score).toBeLessThan(5)
-    expect(criterion?.explanation).toContain('同一事件')
+    expect(criterion?.score).toBe(5)
+    expect(criterion?.explanation).toContain('不自動扣分')
     project.stage.scripts.pop()
     const clean = analyzeCanonicalProject(project)
     const cleanMap = createProjectMap(project, clean)
@@ -392,26 +392,26 @@ describe('analysis IR', () => {
     project.stage.variables.push({ name: 'unused', value: 0 })
     const unused = score()
     expect(unused.criteria.find(({ id }) => id === 'state')?.score).toBe(
-      (clean.criteria.find(({ id }) => id === 'state')?.score ?? 0) - 2,
+      clean.criteria.find(({ id }) => id === 'state')?.score,
     )
     expect(unused.criteria.find(({ id }) => id === 'state')?.explanation).toContain('1 個宣告變數未見讀寫')
     project.stage.scripts.push(structuredClone(project.stage.scripts[0]))
     const duplicated = score()
-    expect(duplicated.criteria.find(({ id }) => id === 'integrity')?.score).toBeLessThan(
-      unused.criteria.find(({ id }) => id === 'integrity')?.score ?? 0,
+    expect(duplicated.criteria.find(({ id }) => id === 'integrity')?.score).toBe(
+      unused.criteria.find(({ id }) => id === 'integrity')?.score,
     )
-    expect(duplicated.criteria.find(({ id }) => id === 'organization')?.score).toBeLessThan(
-      unused.criteria.find(({ id }) => id === 'organization')?.score ?? 0,
+    expect(duplicated.criteria.find(({ id }) => id === 'organization')?.score).toBe(
+      unused.criteria.find(({ id }) => id === 'organization')?.score,
     )
   })
 
-  it('treats a declared but unused variable as state evidence even without data blocks', () => {
+  it('does not award or deduct state points for an unused variable', () => {
     const project = structuredClone(moveAndSayExample as CanonicalProject)
     project.stage.variables = [{ name: 'unused-private', value: 0 }]
     const analysis = analyzeCanonicalProject(project)
     const map = createProjectMap(project, analysis)
     const criterion = createProjectScore(project, analysis, map).criteria.find(({ id }) => id === 'state')
-    expect(criterion).toMatchObject({ applicability: 'applicable', score: 13 })
+    expect(criterion).toMatchObject({ applicability: 'not-applicable', score: null })
     expect(
       criterion?.evidenceIds.some((id) => map.evidence.find((item) => item.id === id)?.path === '/stage/variables/0'),
     ).toBe(true)
@@ -573,7 +573,7 @@ describe('analysis IR', () => {
     const map = createProjectMap(project, analysis)
     const score = createProjectScore(project, analysis, map)
 
-    expect(score.rubric).toBe('sb3-static-v2')
+    expect(score.rubric).toBe('sb3-static-v3')
     expect(score.criteria.find(({ id }) => id === 'state')).toMatchObject({
       score: null,
       applicability: 'not-applicable',
@@ -582,7 +582,7 @@ describe('analysis IR', () => {
       score: null,
       applicability: 'not-applicable',
     })
-    expect(score.total).toBe(90)
+    expect(score.total).toBeNull()
   })
 
   it('withholds a total when the SB3 has no readable evidence', () => {
@@ -625,10 +625,10 @@ describe('analysis IR', () => {
     )
 
     expect(analysis.diagnostics.some(({ code, script }) => code === 'detached-script' && script === 1)).toBe(false)
-    expect(detached).toMatchObject({ severity: 'warning', target: project.stage.name, script: 2 })
-    expect(actionable?.title).toBe('這段程式可能少了開始積木')
+    expect(detached).toMatchObject({ severity: 'info', target: project.stage.name, script: 2 })
+    expect(actionable?.title).toBe('未接上事件積木的程式')
     expect(actionable?.message).toContain('顯示對話')
-    expect(actionable?.nextStep).toContain('當綠旗被點擊')
+    expect(actionable?.nextStep).toContain('草稿或手動執行')
     expect(actionable?.evidenceIds).toEqual([firstBlock?.id])
   })
 

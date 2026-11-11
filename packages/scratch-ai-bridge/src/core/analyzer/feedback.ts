@@ -47,7 +47,17 @@ const kindForFact = (kind: ProjectMap['facts'][number]['kind']): FeedbackKind =>
 export const createProjectFeedback = (analysis: AnalysisIR, map: ProjectMap): ProjectFeedback => {
   const seenTargets = new Set<number>()
   const representativeFacts = map.facts.filter((fact) => {
-    if (fact.kind === 'limitation') return true
+    if (fact.kind === 'limitation') {
+      return !fact.evidence.some((source) =>
+        analysis.diagnostics.some(
+          (diagnostic) =>
+            diagnostic.code === 'block-graph-invalid-argument-reporter' &&
+            diagnostic.severity === 'info' &&
+            diagnostic.target === source.targetName &&
+            diagnostic.blockId === source.blockId,
+        ),
+      )
+    }
     if (fact.kind === 'trigger') return false
     const target = fact.evidence.at(0)?.targetIndex
     if (target === undefined || seenTargets.has(target)) return false
@@ -78,6 +88,7 @@ export const createProjectFeedback = (analysis: AnalysisIR, map: ProjectMap): Pr
         'single-costume-nextcostume-loop',
         'overlapping-comparison-chain',
         'concurrent-event-state-conflict',
+        'duplicate-script-in-target',
       ].includes(diagnostic.code)
     ) {
       const scripts = [diagnostic.script, ...(diagnostic.relatedScripts ?? [])].filter(
@@ -90,28 +101,30 @@ export const createProjectFeedback = (analysis: AnalysisIR, map: ProjectMap): Pr
           scripts.includes(item.scriptIndex + 1),
       )
       const selected =
-        diagnostic.code === 'concurrent-event-state-conflict'
-          ? scripts.flatMap((script) =>
-              related
-                .filter(
-                  (item) => item.scriptIndex === script - 1 && ['looks_show', 'looks_hide'].includes(item.opcode),
-                )
-                .slice(0, 1),
-            )
-          : diagnostic.code === 'overlapping-comparison-chain'
-            ? related.filter(({ path }) => diagnostic.evidencePaths?.includes(path))
-            : diagnostic.code === 'single-costume-nextcostume-loop'
-              ? [
-                  ...related.filter(({ opcode }) => opcode === 'looks_nextcostume').slice(0, 1),
-                  ...map.evidence
-                    .filter((item) => item.targetName === diagnostic.target && item.opcode === 'asset-costume')
-                    .slice(0, 1),
-                ]
-              : diagnostic.code === 'forever-reinitialize'
-                ? related
-                    .filter(({ opcode }) => opcode === 'control_forever' || opcode === 'data_setvariableto')
-                    .slice(0, 2)
-                : related.slice(0, 1)
+        diagnostic.code === 'duplicate-script-in-target'
+          ? scripts.flatMap((script) => related.filter((item) => item.scriptIndex === script - 1).slice(0, 1))
+          : diagnostic.code === 'concurrent-event-state-conflict'
+            ? scripts.flatMap((script) =>
+                related
+                  .filter(
+                    (item) => item.scriptIndex === script - 1 && ['looks_show', 'looks_hide'].includes(item.opcode),
+                  )
+                  .slice(0, 1),
+              )
+            : diagnostic.code === 'overlapping-comparison-chain'
+              ? related.filter(({ path }) => diagnostic.evidencePaths?.includes(path))
+              : diagnostic.code === 'single-costume-nextcostume-loop'
+                ? [
+                    ...related.filter(({ opcode }) => opcode === 'looks_nextcostume').slice(0, 1),
+                    ...map.evidence
+                      .filter((item) => item.targetName === diagnostic.target && item.opcode === 'asset-costume')
+                      .slice(0, 1),
+                  ]
+                : diagnostic.code === 'forever-reinitialize'
+                  ? related
+                      .filter(({ opcode }) => opcode === 'control_forever' || opcode === 'data_setvariableto')
+                      .slice(0, 2)
+                  : related.slice(0, 1)
       items.push({
         id: diagnosticFeedbackId(diagnostic),
         kind: 'design-question',
@@ -127,7 +140,8 @@ export const createProjectFeedback = (analysis: AnalysisIR, map: ProjectMap): Pr
       })
       continue
     }
-    if (diagnostic.severity !== 'warning') continue
+    if (diagnostic.severity !== 'warning' && !['detached-script', 'broadcast-no-receiver'].includes(diagnostic.code))
+      continue
     const related = map.evidence.filter((item) => {
       if (diagnostic.target && item.targetName !== diagnostic.target) return false
       if (diagnostic.script && item.scriptIndex !== diagnostic.script - 1) return false
@@ -195,8 +209,8 @@ export const createProjectFeedback = (analysis: AnalysisIR, map: ProjectMap): Pr
         items[existing.index] = {
           ...current,
           message: existing.firstLabel
-            ? `這段程式一開始是「${existing.firstLabel}」，同一角色共有 ${existing.count} 段沒有接上綠旗或按鍵等開始積木的程式（也可能是留下的草稿），按綠旗時可能不會自行啟動。`
-            : `同一角色共有 ${existing.count} 段程式沒有事件積木（例如綠旗或按鍵），一般情況下可能不會自動開始，也可能是留下的草稿。`,
+            ? `這段程式一開始是「${existing.firstLabel}」，同一角色共有 ${existing.count} 段沒有接上綠旗或按鍵等開始積木的程式，可能是草稿或手動執行，不一定是錯誤。`
+            : `同一角色共有 ${existing.count} 段程式沒有事件積木（例如綠旗或按鍵），可能是草稿或手動執行，不一定是錯誤。`,
           evidenceIds: mergedEvidenceIds,
         }
         continue
@@ -210,27 +224,31 @@ export const createProjectFeedback = (analysis: AnalysisIR, map: ProjectMap): Pr
     const isInvalidArgReporter = diagnostic.code === 'block-graph-invalid-argument-reporter'
     items.push({
       id: diagnosticFeedbackId(diagnostic),
-      kind: 'likely-behavior',
-      severity: 'warning',
+      kind: diagnostic.severity === 'info' ? 'design-question' : 'likely-behavior',
+      severity: diagnostic.severity,
       confidence: 'limited',
       title:
         diagnostic.code === 'detached-script'
-          ? '這段程式可能少了開始積木'
+          ? '未接上事件積木的程式'
           : isInvalidArgReporter
             ? '自製積木參數積木不在對應定義中'
-            : '建議確認',
+            : diagnostic.code === 'broadcast-no-receiver'
+              ? '訊息傳送線索'
+              : '建議確認',
       message:
         firstBlock && diagnostic.code === 'detached-script'
-          ? `這段程式一開始是「${firstBlock.studentLabel}」，前面沒有綠旗或按鍵等開始積木，所以按綠旗時可能不會自行啟動。`
+          ? `這段程式一開始是「${firstBlock.studentLabel}」，沒有接事件積木；可能是草稿或手動執行，不一定是錯誤。`
           : isInvalidArgReporter
             ? `${diagnostic.message} 這常發生於拆下或複製自製積木後留下的游離草稿積木，不一定代表正式程式有錯。`
             : diagnostic.message,
       nextStep:
         diagnostic.code === 'detached-script'
-          ? '如果你希望它按綠旗就開始，先接上「當綠旗被點擊」，再按綠旗測試；若這是自製積木或刻意保留的積木，先不要更動。'
+          ? '如果你希望這段程式自動執行，再確認應接哪個事件；草稿或手動執行的程式可以保留原樣。'
           : isInvalidArgReporter
             ? '在 Scratch 編輯器中檢查該角色是否有未接上的參數積木草稿，或確認「我的積木」定義中的參數名稱是否一致。'
-            : '在 Scratch 中執行作品，或檢查相關角色的事件與程式，再確認是否符合你的設計。',
+            : diagnostic.code === 'broadcast-no-receiver'
+              ? '如果預期其他程式收到這個訊息，可以檢查接收事件；預留或暫時未使用的訊息可保留。'
+              : '在 Scratch 中執行作品，或檢查相關角色的事件與程式，再確認是否符合你的設計。',
       evidenceIds: warningEvidence.map(({ id }) => id),
     })
   }

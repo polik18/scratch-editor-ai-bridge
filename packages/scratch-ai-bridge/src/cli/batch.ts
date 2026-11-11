@@ -128,7 +128,7 @@ const summarize = (records: readonly BatchRecord[]) => {
   return {
     format: 'scratch-ai-bridge/class-summary',
     version: 1,
-    rubricVersion: 'sb3-static-v2',
+    rubricVersion: 'sb3-static-v3',
     total: records.length,
     ok: records.filter(({ status }) => status === 'ok').length,
     partial: records.filter(({ status }) => status === 'partial').length,
