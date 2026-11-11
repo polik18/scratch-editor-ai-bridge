@@ -1615,3 +1615,181 @@ pre {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* AI editing beside the stage */
+.student-preview-side {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.student-preview-side > .student-live-patch {
+  margin: 0;
+}
+.ai-edit-panel {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-strong);
+}
+.ai-edit-panel h3 {
+  margin: 0;
+  color: var(--forest-dark);
+  font-size: 18px;
+}
+.ai-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.ai-edit {
+  display: grid;
+  gap: 12px;
+}
+.ai-connection {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.ai-connection[open] {
+  display: grid;
+  gap: 10px;
+  padding-bottom: 12px;
+}
+.ai-connection > summary {
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.ai-connection > summary::-webkit-details-marker {
+  display: none;
+}
+.ai-connection > summary::before {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: #b9c0bc;
+  content: '';
+}
+.ai-connection > summary[data-state='set']::before {
+  background: #d9a521;
+}
+.ai-connection > summary[data-state='ok']::before {
+  background: #2f9e5b;
+}
+.ai-connection > summary::after {
+  float: right;
+  color: var(--forest);
+  font-weight: 600;
+  content: '變更';
+}
+.ai-connection[open] > summary::after {
+  content: '收起';
+}
+.ai-connection > :not(summary) {
+  margin: 0 12px;
+}
+.ai-field {
+  display: grid;
+  gap: 4px;
+}
+.ai-field > label {
+  font-size: 13px;
+  font-weight: 700;
+}
+.ai-field-controls {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.ai-field-controls input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.ai-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+.button.small {
+  padding: 4px 10px;
+  font-size: 13px;
+  min-height: 0;
+}
+.ai-remember-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+.ai-remember {
+  font-size: 14px;
+  font-weight: 600;
+}
+.ai-request-block {
+  display: grid;
+  gap: 8px;
+}
+.ai-request-block > label {
+  font-weight: 700;
+}
+.ai-request {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  resize: vertical;
+}
+.ai-subsection {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.ai-subsection[open] {
+  display: grid;
+  gap: 8px;
+}
+.ai-subsection > summary {
+  color: var(--forest-dark);
+  font-weight: 600;
+  cursor: pointer;
+}
+.ai-subsection p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ai-subsection label {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+}
+@media (max-width: 900px) {
+  .student-preview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.ai-edit-panel .inline-status:empty,
+.ai-edit-panel .button-row:not(:has(> :not([hidden]))) {
+  display: none;
+}
+.ai-field-controls input {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}

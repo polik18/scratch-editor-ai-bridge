@@ -3118,7 +3118,8 @@ try {
     return gl.getParameter(gl.VIEWPORT).join('x')
   })
   const stagePreviewCanvas = page.locator('#student-preview .student-preview-canvas')
-  const stagePreviewRegion = await page.locator('#student-preview').boundingBox()
+  await page.locator('#student-preview .student-preview-stage').scrollIntoViewIfNeeded()
+  const stagePreviewRegion = await page.locator('#student-preview .student-preview-stage').boundingBox()
   if (!stagePreviewRegion) throw new Error('Scratch VM stage preview did not have a visible screenshot region')
   const captureStagePreview = () => page.screenshot({ clip: stagePreviewRegion, animations: 'disabled' })
   const visibleStage = await captureStagePreview()
@@ -3249,7 +3250,7 @@ try {
   await livePatchInput.fill(JSON.stringify(livePatch))
   await page.getByRole('button', { name: '檢查修改' }).click()
   await page.getByText(/修改內容合法/).waitFor()
-  await page.getByRole('button', { name: '套用到執行中的遊戲' }).click()
+  await page.getByRole('button', { name: '套用修改', exact: true }).click()
   await page.getByText(/已即時套用「browser smoke live edit」/).waitFor()
   const patchedCanonical = JSON.parse(await page.locator('#json-editor').inputValue())
   const patchedTarget = [patchedCanonical.stage, ...patchedCanonical.sprites].find(
@@ -3270,7 +3271,7 @@ try {
   if (nextBackdrop !== null && patchedCanonical.stage.currentCostume !== nextBackdrop) {
     throw new Error('Live backdrop patch did not synchronize the Canonical editor')
   }
-  await page.getByRole('button', { name: '復原上次修改' }).click()
+  await page.getByRole('button', { name: '復原', exact: true }).click()
   await page.getByText(/已復原「browser smoke live edit」/).waitFor()
   const undoneCanonical = JSON.parse(await page.locator('#json-editor').inputValue())
   const undoneTarget = [undoneCanonical.stage, ...undoneCanonical.sprites].find(
@@ -3293,7 +3294,7 @@ try {
   ) {
     throw new Error('Live Stage-property undo did not restore the Canonical editor')
   }
-  await page.getByRole('button', { name: '重做已復原修改' }).click()
+  await page.getByRole('button', { name: '重做', exact: true }).click()
   await page.getByText(/已重做「browser smoke live edit」/).waitFor()
   const redoneCanonical = JSON.parse(await page.locator('#json-editor').inputValue())
   if (
@@ -3302,7 +3303,7 @@ try {
   ) {
     throw new Error('Live runtime redo did not reapply target and Stage values')
   }
-  await page.getByRole('button', { name: '復原上次修改' }).click()
+  await page.getByRole('button', { name: '復原', exact: true }).click()
   await page.getByText(/已復原「browser smoke live edit」/).waitFor()
   const structuralProject = JSON.parse(await page.locator('#json-editor').inputValue())
   const structuralTarget = structuralProject.sprites.find((sprite) => sprite.name === adjustableSprite.name)
@@ -3324,7 +3325,7 @@ try {
   await page.getByRole('button', { name: '檢查修改' }).click()
   await page.getByText(/修改內容合法/).waitFor()
   if (!structuralSelector) throw new Error('Could not create a stable structural script selector')
-  await page.getByRole('button', { name: '套用到執行中的遊戲' }).click()
+  await page.getByRole('button', { name: '套用修改', exact: true }).click()
   await page.waitForFunction(
     () => {
       const status = document.querySelector('#live-patch-status')
@@ -3346,7 +3347,7 @@ try {
   ) {
     throw new Error('Structural script patch did not update the Canonical editor')
   }
-  await page.getByRole('button', { name: '復原上次修改' }).click()
+  await page.getByRole('button', { name: '復原', exact: true }).click()
   await page.getByText(/已復原「browser smoke script reload」/).waitFor({ timeout: 60_000 })
   const structureUndoneProject = JSON.parse(await page.locator('#json-editor').inputValue())
   if (
@@ -3355,7 +3356,7 @@ try {
   ) {
     throw new Error('Structural script undo did not restore the previous project')
   }
-  await page.getByRole('button', { name: '重做已復原修改' }).click()
+  await page.getByRole('button', { name: '重做', exact: true }).click()
   await page.getByText(/已重做「browser smoke script reload」/).waitFor({ timeout: 60_000 })
   const structureRedoneProject = JSON.parse(await page.locator('#json-editor').inputValue())
   if (
@@ -3364,7 +3365,7 @@ try {
   ) {
     throw new Error('Structural script redo did not restore the patched project')
   }
-  await page.getByRole('button', { name: '復原上次修改' }).click()
+  await page.getByRole('button', { name: '復原', exact: true }).click()
   await page.getByText(/已復原「browser smoke script reload」/).waitFor({ timeout: 60_000 })
   const sameAnimationFrame = await page
     .locator('#student-preview iframe.student-preview-animation')
@@ -3386,7 +3387,7 @@ try {
   await livePatchInput.fill(JSON.stringify(invalidStructurePatch))
   await page.getByRole('button', { name: '檢查修改' }).click()
   await page.getByText(/修改內容合法/).waitFor()
-  await page.getByRole('button', { name: '套用到執行中的遊戲' }).click()
+  await page.getByRole('button', { name: '套用修改', exact: true }).click()
   await page.locator('#live-patch-status[data-kind="error"]').waitFor()
   if ((await page.locator('#student-preview iframe.student-preview-animation').count()) !== 1) {
     throw new Error('A rejected structural patch stopped or replaced the current preview')

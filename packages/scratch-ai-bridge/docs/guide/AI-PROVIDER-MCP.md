@@ -4,10 +4,13 @@ Scratch AI Bridge 提供兩種 AI 接入方式。兩種方式都只會產生待�
 
 ## Bridge 內使用本機模型 API
 
-1. 在 Bridge 開啟作品；Canonical 作品展開「邊玩邊調整」，匯入的 SB3 展開「調整匯入作品的角色、舞台與變數」。
-2. 展開「設定本機模型 API」，填入本機服務 URL 和 model ID。常見 URL 形式為 `http://localhost:1234/v1` 或 `http://127.0.0.1:11434/v1`，實際值依模型服務設定為準。
-3. 本機服務若要求 API key 才填；不需要時留空。key 只存在目前頁面的記憶體，重整頁面即清除。
-4. 輸入想做的調整，按「請本機 AI 提出修改」。回傳 patch 會先經格式、欄位、作品與 revision 驗證，再填入現有 patch 欄位。
+1. 在 Bridge 開啟作品。舞台右邊是「用 AI 修改這個作品」。
+2. 第一次使用時，連線設定會自動展開：填「服務位址」（或按 oMLX、LM Studio、Ollama 快速填入），服務要求時填 API key，
+   按「測試連線」。連得上會列出模型，從「模型」欄選一個。設定好之後收合成一行「已連線：模型（位址）」，按一下可以變更。
+3. 勾選「記住在這台電腦（包含 API key）」才會把位址、模型和 key 存在這個瀏覽器（`localStorage`）；不勾選時只留在頁面記憶體，
+   重新整理就清除。「清除記住的設定」會刪掉存的資料並清空欄位。
+4. 在「想怎麼改？」寫下要求（可按例子快速加入），按「請 AI 提出修改」。按鈕下方會顯示已等幾秒與結果；回傳 patch 會先經格式、
+   欄位、作品與 revision 驗證。
 5. 檢查差異後確認套用；原始 SB3 的 AI 候選按「確認套用 AI 修改」。模型呼叫不會替使用者套用 patch。
 
 目前安全限制只允許 `localhost`、`127.0.0.1` 或 `::1`，因此不會將請求送到公開雲端 API。請在本機模型服務啟用允許 Bridge 網頁來源的 CORS。模型服務必須接受 OpenAI Chat Completions 相容格式；原生 tool calling 能力依模型而異。API 最多讓模型查詢作品 8 次（剩 2 次時會提醒它提交或說明做不到），單次請求最多 120 秒，傳送的 project prompt/request 合計最多 32 KB。
@@ -44,7 +47,7 @@ args = [
 ]
 ```
 
-2. 在 Bridge 開啟作品，展開修改面板 →「連接外部 AI（MCP）」，按「連接 MCP」。Bridge 會向 localhost relay 配對 30 分鐘，無需複製或保存 token。瀏覽器若詢問是否允許本機連線，允許 Bridge 網頁連到自己的 localhost。
+2. 在 Bridge 開啟作品，在「用 AI 修改這個作品」最下面展開「讓 Claude／Codex 直接修改（MCP）」，按「連接 MCP」。Bridge 會向 localhost relay 配對 30 分鐘，無需複製或保存 token。瀏覽器若詢問是否允許本機連線，允許 Bridge 網頁連到自己的 localhost。
 3. 回到 Codex 或其他 MCP host 對話。工具呼叫會直接檢查目前 Bridge 頁面的作品，並把候選 patch 與差異送回畫面。Bridge 必須保持開啟；關閉網頁、按「中斷 MCP」或 30 分鐘到期後，host 工具不能再操作該作品。
 
 Server 提供以下工具：

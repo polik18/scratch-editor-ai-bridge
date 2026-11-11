@@ -61,27 +61,26 @@ try {
     timeout: 30000,
   })
   await page.locator('#preview-imported-project').click()
-  const panel = page.locator('#student-preview details').filter({ hasText: '調整匯入作品的角色、舞台與變數' })
-  await panel.locator(':scope > summary').click()
-  await panel.getByText('設定本機模型 API（不需要 OpenAI key）').click()
+  const panel = page.locator('#student-preview .ai-edit-panel:visible')
+  await panel.getByText('模型在另一台電腦（區網）').click()
   await panel.locator('#local-ai-gateway').fill(`http://127.0.0.1:${port}`)
-  await panel.getByRole('button', { name: '配對區網模型 gateway' }).click()
+  await panel.getByRole('button', { name: '配對', exact: true }).click()
   await panel
     .getByText(`已配對 http://${ip}:${model.address().port}`, { exact: false })
     .waitFor({ timeout: 5000 })
     .catch(async (error) => {
       throw new Error(
-        `Gateway pairing failed: ${await panel.locator('#local-ai-gateway + button + button + p').textContent()}`,
+        `Gateway pairing failed: ${await panel.locator('.ai-subsection .inline-status').first().textContent()}`,
         { cause: error },
       )
     })
   await panel.locator('#local-ai-model').fill('mock')
   await panel.locator('#local-ai-request').fill('調整位置')
-  await panel.getByRole('button', { name: '請本機 AI 提出修改' }).click()
+  await panel.getByRole('button', { name: '請 AI 提出修改' }).click()
   await panel.locator(':scope > p[role=status]').filter({ hasText: 'AI 修改已通過檢查' }).waitFor({ timeout: 30000 })
   if (requests !== 1) throw new Error('mock model did not receive exactly one request')
-  await panel.getByRole('button', { name: '捨棄 AI 修改' }).click()
-  await panel.getByRole('button', { name: '中斷區網模型 gateway' }).click()
+  await panel.getByRole('button', { name: '不要這個修改' }).click()
+  await panel.getByRole('button', { name: '中斷配對' }).click()
   console.log('Private-interface gateway browser smoke passed')
 } finally {
   await browser.close()

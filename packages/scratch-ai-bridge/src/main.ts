@@ -3,7 +3,8 @@ import { md5 } from '@noble/hashes/legacy.js'
 import { sha256 } from '@noble/hashes/sha256'
 import { bytesToHex } from '@noble/hashes/utils.js'
 import { initializeScratchVM } from './bootstrap/vm-bootstrap'
-import { requestOpenAiCompatiblePatch } from './core/ai/openai-compatible'
+import { clearAiConnection, loadAiConnection, saveAiConnection } from './core/ai/connection-store'
+import { listOpenAiCompatibleModels, requestOpenAiCompatiblePatch } from './core/ai/openai-compatible'
 import {
   inspectRawBlocks,
   inspectRawTargets,
@@ -1900,6 +1901,11 @@ const renderStudentPreview = (
 
   previewColumn.append(stageFrame)
 
+  // AI editing and progress sit beside the stage, where the student is looking while playing.
+  const sideColumn = document.createElement('div')
+
+  sideColumn.className = 'student-preview-side'
+
   const previewActions = document.createElement('div')
 
   previewActions.className = 'student-preview-actions'
@@ -2074,39 +2080,50 @@ const renderStudentPreview = (
     string,
     { readonly resolve: (message: Record<string, unknown>) => void; readonly timer: number }
   >()
+  const aiPanel = document.createElement('section')
+  aiPanel.className = 'ai-edit-panel'
+  const aiPanelTitle = document.createElement('h3')
+  aiPanelTitle.textContent = '用 AI 修改這個作品'
+  const aiPanelIntro = document.createElement('p')
+  aiPanelIntro.className = 'ai-note'
+  aiPanelIntro.textContent =
+    '先按綠旗讓作品跑起來，再說想怎麼改。AI 只會提出修改，你看過、按「套用」才會改；最多可以復原 20 次。'
   const livePatchPanel = document.createElement('details')
-  livePatchPanel.className = 'student-live-patch'
+  livePatchPanel.className = 'ai-subsection'
   livePatchPanel.id = 'live-patch-panel'
   const livePatchSummary = document.createElement('summary')
-  livePatchSummary.textContent = '邊玩邊調整（變數、角色與舞台）'
+  livePatchSummary.textContent = '沒有本機 AI？用 Gemini／ChatGPT 複製貼上'
   const livePatchHelp = document.createElement('p')
   livePatchHelp.textContent =
-    '複製修改指令給 AI，貼回它產生的 live-patch JSON。差異舊值以作品欄為準；復原會回到套用當下的執行狀態。執行中修改角色位置等欄位可能被遊戲腳本再次改寫。最多可復原最近 20 次修改。'
+    '按「複製修改指令」，貼給 AI 並寫上想怎麼改，再把它回覆的 JSON 貼到下面，按「檢查修改」。遊戲執行中改角色位置，可能會被遊戲自己的程式再改回去。'
   const livePatchPromptButton = document.createElement('button')
   livePatchPromptButton.type = 'button'
   livePatchPromptButton.className = 'button secondary'
-  livePatchPromptButton.textContent = '複製 AI 即時修改指令'
+  livePatchPromptButton.textContent = '複製修改指令'
   const livePatchInputLabel = document.createElement('label')
   livePatchInputLabel.htmlFor = 'live-patch-editor'
-  livePatchInputLabel.textContent = 'AI 回傳的 patch JSON'
+  livePatchInputLabel.textContent = 'AI 回覆的 JSON'
   const livePatchInput = document.createElement('textarea')
   livePatchInput.id = 'live-patch-editor'
   livePatchInput.className = 'mono editor live-patch-editor'
   livePatchInput.setAttribute('aria-label', 'AI 回傳的即時修改 patch JSON')
-  livePatchInput.placeholder = '貼上 scratch-ai-bridge/live-patch v1 JSON'
-  const localAiSettings = document.createElement('details')
-  localAiSettings.className = 'live-ai-settings'
-  const localAiSettingsSummary = document.createElement('summary')
-  localAiSettingsSummary.textContent = '設定本機模型 API（不需要 OpenAI key）'
-  const localAiHelp = document.createElement('p')
-  localAiHelp.textContent =
-    '填入這台電腦上的 OpenAI-compatible 模型 API 網址（localhost 或 127.0.0.1）與模型 ID。API key 可留空；若需要，僅保留在目前頁面記憶體，不會存檔。模型服務需允許本網站跨來源連線（CORS）。目前不連外部付費 API。'
+  livePatchInput.placeholder = '把 AI 的回覆貼在這裡'
+  // The AI editing area: a one-time connection setup that folds into one line, then what to change.
+  const localAiSettings = document.createElement('div')
+  localAiSettings.className = 'ai-edit'
+  const aiConnection = document.createElement('details')
+  aiConnection.className = 'ai-connection'
+  const aiConnectionSummary = document.createElement('summary')
+  const gatewaySettings = document.createElement('details')
+  gatewaySettings.className = 'ai-subsection'
+  const gatewaySummary = document.createElement('summary')
+  gatewaySummary.textContent = '模型在另一台電腦（區網）'
   const gatewayHelp = document.createElement('p')
   gatewayHelp.textContent =
-    '若模型在另一台區網電腦，先啟動本機 model gateway 指向該電腦，再於此配對。使用 HTTP 時作品文字和憑證會在區網明文傳輸。'
+    '先在這台電腦啟動 model gateway，指向那台電腦，再按「配對」。用 HTTP 時，作品內容和 API key 會以明文在區網傳送。'
   const gatewayLabel = document.createElement('label')
   gatewayLabel.htmlFor = 'local-ai-gateway'
-  gatewayLabel.textContent = '本機 model gateway 網址'
+  gatewayLabel.textContent = 'gateway 網址'
   const gatewayUrl = document.createElement('input')
   gatewayUrl.id = 'local-ai-gateway'
   gatewayUrl.type = 'url'
@@ -2114,15 +2131,16 @@ const renderStudentPreview = (
   const gatewayConnect = document.createElement('button')
   gatewayConnect.type = 'button'
   gatewayConnect.className = 'button secondary'
-  gatewayConnect.textContent = '配對區網模型 gateway'
+  gatewayConnect.textContent = '配對'
   const gatewayDisconnect = document.createElement('button')
   gatewayDisconnect.type = 'button'
   gatewayDisconnect.className = 'button secondary'
-  gatewayDisconnect.textContent = '中斷區網模型 gateway'
+  gatewayDisconnect.textContent = '中斷配對'
   gatewayDisconnect.hidden = true
   const gatewayStatus = document.createElement('p')
   gatewayStatus.setAttribute('role', 'status')
-  gatewayStatus.textContent = '區網 gateway 未連線。'
+  gatewayStatus.className = 'inline-status'
+  gatewayStatus.textContent = '尚未配對。'
   let gatewayToken = ''
   let gatewayOrigin = ''
   const gatewayFetch: typeof fetch = (input, init) => {
@@ -2135,41 +2153,44 @@ const renderStudentPreview = (
   }
   const localAiBaseUrlLabel = document.createElement('label')
   localAiBaseUrlLabel.htmlFor = 'local-ai-base-url'
-  localAiBaseUrlLabel.textContent = 'API 網址'
+  localAiBaseUrlLabel.textContent = '服務位址'
   const localAiBaseUrl = document.createElement('input')
   localAiBaseUrl.id = 'local-ai-base-url'
   localAiBaseUrl.type = 'url'
   localAiBaseUrl.autocomplete = 'off'
-  localAiBaseUrl.placeholder = '例如 http://localhost:1234/v1'
+  localAiBaseUrl.placeholder = 'http://127.0.0.1:8000/v1'
   const localAiModelLabel = document.createElement('label')
   localAiModelLabel.htmlFor = 'local-ai-model'
-  localAiModelLabel.textContent = '模型 ID'
+  localAiModelLabel.textContent = '模型'
   const localAiModel = document.createElement('input')
   localAiModel.id = 'local-ai-model'
   localAiModel.autocomplete = 'off'
-  localAiModel.placeholder = '填入模型服務回報的 model ID'
+  localAiModel.placeholder = '按「測試連線」後從清單選，或直接輸入'
+  const localAiModelList = document.createElement('datalist')
+  localAiModelList.id = 'local-ai-models'
+  localAiModel.setAttribute('list', localAiModelList.id)
   const localAiKeyLabel = document.createElement('label')
   localAiKeyLabel.htmlFor = 'local-ai-key'
-  localAiKeyLabel.textContent = 'API key（本機服務需要時才填）'
+  localAiKeyLabel.textContent = 'API key（服務要求才填）'
   const localAiKey = document.createElement('input')
   localAiKey.id = 'local-ai-key'
   localAiKey.type = 'password'
   localAiKey.autocomplete = 'off'
-  localAiKey.placeholder = '可留空；不會保存到瀏覽器'
+  localAiKey.placeholder = '沒有就留空'
   const localAiRequestLabel = document.createElement('label')
   localAiRequestLabel.htmlFor = 'local-ai-request'
-  localAiRequestLabel.textContent = '想怎麼調整遊戲？'
+  localAiRequestLabel.textContent = '想怎麼改？'
   const localAiRequest = document.createElement('textarea')
   localAiRequest.id = 'local-ai-request'
-  localAiRequest.className = 'mono editor'
-  localAiRequest.placeholder = '例如：讓玩家跳得更高，並把移動速度稍微降低。'
+  localAiRequest.className = 'ai-request'
+  localAiRequest.placeholder = '例如：讓主角跳高一點，一開始多給 2 條命。'
   localAiRequest.rows = 3
   const localAiActions = document.createElement('div')
   localAiActions.className = 'button-row'
   const localAiGenerateButton = document.createElement('button')
   localAiGenerateButton.type = 'button'
   localAiGenerateButton.className = 'button primary'
-  localAiGenerateButton.textContent = '請本機 AI 提出修改'
+  localAiGenerateButton.textContent = '請 AI 提出修改'
   localAiGenerateButton.disabled = Boolean(rawSource)
   const localAiCancelButton = document.createElement('button')
   localAiCancelButton.type = 'button'
@@ -2196,26 +2217,199 @@ const renderStudentPreview = (
       localAiStatus.textContent = message
     }
   }
-  localAiSettings.append(
-    localAiSettingsSummary,
-    localAiHelp,
+  const field = (label: HTMLLabelElement, ...controls: HTMLElement[]): HTMLDivElement => {
+    const row = document.createElement('div')
+    row.className = 'ai-field'
+    const controlBox = document.createElement('div')
+    controlBox.className = 'ai-field-controls'
+    controlBox.append(...controls)
+    row.append(label, controlBox)
+    return row
+  }
+  const smallButton = (text: string): HTMLButtonElement => {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'button secondary small'
+    button.textContent = text
+    return button
+  }
+  const presets = document.createElement('div')
+  presets.className = 'ai-chips'
+  const presetLabel = document.createElement('span')
+  presetLabel.textContent = '常用：'
+  presets.append(presetLabel)
+  for (const [name, url] of [
+    ['oMLX', 'http://127.0.0.1:8000/v1'],
+    ['LM Studio', 'http://127.0.0.1:1234/v1'],
+    ['Ollama', 'http://127.0.0.1:11434/v1'],
+  ] as const) {
+    const chip = smallButton(name)
+    chip.title = url
+    chip.addEventListener('click', () => {
+      localAiBaseUrl.value = url
+      localAiBaseUrl.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    presets.append(chip)
+  }
+  const showKey = smallButton('顯示')
+  showKey.addEventListener('click', () => {
+    const hidden = localAiKey.type === 'password'
+    localAiKey.type = hidden ? 'text' : 'password'
+    showKey.textContent = hidden ? '隱藏' : '顯示'
+  })
+  const testConnection = document.createElement('button')
+  testConnection.type = 'button'
+  testConnection.className = 'button secondary'
+  testConnection.textContent = '測試連線'
+  const connectionStatus = document.createElement('p')
+  connectionStatus.className = 'inline-status'
+  connectionStatus.setAttribute('role', 'status')
+  connectionStatus.textContent = '填好位址（和 API key）後按「測試連線」，會檢查能不能連上，並列出可用的模型。'
+  const rememberLabel = document.createElement('label')
+  rememberLabel.className = 'ai-remember'
+  const remember = document.createElement('input')
+  remember.type = 'checkbox'
+  remember.id = 'local-ai-remember'
+  rememberLabel.append(remember, ' 記住在這台電腦（包含 API key）')
+  const forget = smallButton('清除記住的設定')
+  const rememberRow = document.createElement('div')
+  rememberRow.className = 'ai-remember-row'
+  rememberRow.append(rememberLabel, forget)
+  const rememberNote = document.createElement('p')
+  rememberNote.className = 'ai-note'
+  rememberNote.textContent = '不勾選時，關掉或重新整理頁面就會忘記。勾選後存在這個瀏覽器，用同一台電腦的人都看得到。'
+  gatewaySettings.append(
+    gatewaySummary,
     gatewayHelp,
-    gatewayLabel,
-    gatewayUrl,
-    gatewayConnect,
-    gatewayDisconnect,
+    field(gatewayLabel, gatewayUrl, gatewayConnect, gatewayDisconnect),
     gatewayStatus,
-    localAiBaseUrlLabel,
-    localAiBaseUrl,
-    localAiModelLabel,
-    localAiModel,
-    localAiKeyLabel,
-    localAiKey,
-    localAiRequestLabel,
-    localAiRequest,
-    localAiActions,
-    localAiStatus,
   )
+  aiConnection.append(
+    aiConnectionSummary,
+    field(localAiBaseUrlLabel, localAiBaseUrl),
+    presets,
+    field(localAiKeyLabel, localAiKey, showKey),
+    field(localAiModelLabel, localAiModel, localAiModelList),
+    testConnection,
+    connectionStatus,
+    rememberRow,
+    rememberNote,
+    gatewaySettings,
+  )
+  const examples = document.createElement('div')
+  examples.className = 'ai-chips'
+  const examplesLabel = document.createElement('span')
+  examplesLabel.textContent = '例如：'
+  examples.append(examplesLabel)
+  for (const example of ['主角跳高一點', '一開始多 2 條命', '時間多 30 秒', '移動快一點']) {
+    const chip = smallButton(example)
+    chip.addEventListener('click', () => {
+      localAiRequest.value = localAiRequest.value.trim() ? `${localAiRequest.value.trim()}，${example}` : example
+      localAiRequest.focus()
+    })
+    examples.append(chip)
+  }
+  const requestBlock = document.createElement('div')
+  requestBlock.className = 'ai-request-block'
+  requestBlock.append(localAiRequestLabel, localAiRequest, examples, localAiActions, localAiStatus)
+  localAiSettings.append(aiConnection, requestBlock)
+
+  const browserStorage = ((): Storage | undefined => {
+    try {
+      return window.localStorage
+    } catch {
+      return undefined
+    }
+  })()
+  let connectionTested = false
+  const connectionValues = () => ({
+    baseUrl: localAiBaseUrl.value.trim(),
+    model: localAiModel.value.trim(),
+    apiKey: localAiKey.value,
+  })
+  const describeConnection = (): void => {
+    const { baseUrl, model } = connectionValues()
+    let host = baseUrl
+    try {
+      host = new URL(baseUrl).host
+    } catch {
+      // Shown as typed until it is a valid address.
+    }
+    aiConnectionSummary.dataset.state = baseUrl && model ? (connectionTested ? 'ok' : 'set') : 'none'
+    aiConnectionSummary.textContent =
+      baseUrl && model
+        ? `${connectionTested ? '已連線' : '已設定'}：${model}（${host}）`
+        : '還沒設定 AI 連線，按這裡設定'
+  }
+  const rememberIfAsked = (): void => {
+    if (remember.checked && !saveAiConnection(browserStorage, connectionValues()))
+      connectionStatus.textContent = '這個瀏覽器不允許存資料，設定只會保留到關閉頁面。'
+  }
+  const remembered = loadAiConnection(browserStorage)
+  if (remembered) {
+    localAiBaseUrl.value = remembered.baseUrl
+    localAiModel.value = remembered.model
+    localAiKey.value = remembered.apiKey
+    remember.checked = true
+  }
+  for (const input of [localAiBaseUrl, localAiModel, localAiKey])
+    input.addEventListener('input', () => {
+      connectionTested = false
+      describeConnection()
+      rememberIfAsked()
+    })
+  remember.addEventListener('change', () => {
+    if (remember.checked) rememberIfAsked()
+    else clearAiConnection(browserStorage)
+    connectionStatus.textContent = remember.checked ? '已記住在這台電腦。' : '已不再記住；關掉頁面就會忘記。'
+  })
+  forget.addEventListener('click', () => {
+    clearAiConnection(browserStorage)
+    remember.checked = false
+    localAiBaseUrl.value = ''
+    localAiModel.value = ''
+    localAiKey.value = ''
+    localAiModelList.replaceChildren()
+    connectionTested = false
+    describeConnection()
+    aiConnection.open = true
+    connectionStatus.textContent = '已清除這台電腦記住的設定，畫面上的欄位也清空了。'
+  })
+  testConnection.addEventListener('click', () => {
+    void (async () => {
+      testConnection.disabled = true
+      connectionStatus.dataset.kind = 'pending'
+      connectionStatus.textContent = '正在連線…'
+      try {
+        const models = await listOpenAiCompatibleModels({
+          baseUrl: localAiBaseUrl.value,
+          apiKey: localAiKey.value,
+          ...(gatewayToken ? { fetchImpl: gatewayFetch } : {}),
+        })
+        localAiModelList.replaceChildren(
+          ...models.map((id) => Object.assign(document.createElement('option'), { value: id })),
+        )
+        if (models.length > 0 && !models.includes(localAiModel.value.trim())) localAiModel.value = models[0] ?? ''
+        connectionTested = true
+        connectionStatus.dataset.kind = 'ok'
+        connectionStatus.textContent =
+          models.length > 0
+            ? `連上了，找到 ${models.length} 個模型${models.length > 1 ? '，可以在「模型」欄換一個' : ''}。`
+            : '連上了，但服務沒有列出模型；請自己輸入模型名稱。'
+        describeConnection()
+        rememberIfAsked()
+      } catch (error) {
+        connectionTested = false
+        connectionStatus.dataset.kind = 'error'
+        connectionStatus.textContent = error instanceof Error ? error.message : String(error)
+        describeConnection()
+      } finally {
+        testConnection.disabled = false
+      }
+    })()
+  })
+  describeConnection()
+  aiConnection.open = aiConnectionSummary.dataset.state === 'none'
   const localAiController: { current: AbortController | null } = { current: null }
   const stopGateway = (): void => {
     const token = gatewayToken
@@ -2254,6 +2448,7 @@ const renderStudentPreview = (
         gatewayToken = result.token
         gatewayOrigin = url.origin
         localAiBaseUrl.value = `${url.origin}/v1`
+        localAiBaseUrl.dispatchEvent(new Event('input', { bubbles: true }))
         gatewayDisconnect.hidden = false
         gatewayStatus.textContent = `已配對 ${result.endpoint}，配對最長 30 分鐘。`
       } catch (error) {
@@ -2269,9 +2464,9 @@ const renderStudentPreview = (
   })
   gatewayDisconnect.addEventListener('click', stopGateway)
   const mcpSettings = document.createElement('details')
-  mcpSettings.className = 'live-ai-settings'
+  mcpSettings.className = 'ai-subsection'
   const mcpSettingsSummary = document.createElement('summary')
-  mcpSettingsSummary.textContent = '連接外部 AI（MCP）'
+  mcpSettingsSummary.textContent = '讓 Claude／Codex 直接修改（MCP）'
   const mcpHelp = document.createElement('p')
   mcpHelp.textContent =
     '先在 MCP host 啟動 scratch-ai-bridge-mcp，再按連接。Bridge 會向本機 relay 取得 30 分鐘配對權；外部 AI 可讀取目前作品並提出待審修改，不能自行套用。'
@@ -2333,17 +2528,17 @@ const renderStudentPreview = (
   const applyPatchButton = document.createElement('button')
   applyPatchButton.type = 'button'
   applyPatchButton.className = 'button primary'
-  applyPatchButton.textContent = '套用到執行中的遊戲'
+  applyPatchButton.textContent = '套用修改'
   applyPatchButton.disabled = true
   const undoPatchButton = document.createElement('button')
   undoPatchButton.type = 'button'
   undoPatchButton.className = 'button secondary'
-  undoPatchButton.textContent = '復原上次修改'
+  undoPatchButton.textContent = '復原'
   undoPatchButton.disabled = true
   const redoPatchButton = document.createElement('button')
   redoPatchButton.type = 'button'
   redoPatchButton.className = 'button secondary'
-  redoPatchButton.textContent = '重做已復原修改'
+  redoPatchButton.textContent = '重做'
   redoPatchButton.disabled = true
   livePatchActions.append(previewPatchButton, applyPatchButton, undoPatchButton, redoPatchButton)
   const livePatchStatus = document.createElement('p')
@@ -2358,7 +2553,7 @@ const renderStudentPreview = (
     localAiSettings.hidden = true
     mcpSettings.hidden = true
   } else {
-    livePatchStatus.textContent = '開始執行作品後可調整既有變數、角色與舞台屬性；積木/腳本及雲端變數不支援。'
+    livePatchStatus.textContent = '作品執行後可以修改變數、角色和舞台；積木和雲端變數不能在這裡改。'
   }
   const setLivePatchReady = (ready: boolean): void => {
     const enabled = ready && canPatchLiveProject && !livePatchBusy
@@ -2770,14 +2965,19 @@ const renderStudentPreview = (
     await waitForAnimationReady()
   }
   if (rawSource) {
-    livePatchPanel.hidden = true
-    const panel = document.createElement('details')
-    panel.className = 'student-live-patch'
-    const title = document.createElement('summary')
-    title.textContent = '調整匯入作品的角色、舞台與變數'
+    aiPanel.hidden = true
+    const panel = document.createElement('section')
+    panel.className = 'ai-edit-panel'
+    const title = document.createElement('h3')
+    title.textContent = '用 AI 修改這個作品'
     const help = document.createElement('p')
+    help.className = 'ai-note'
     help.textContent =
-      '修改作品中的初始屬性及非雲端變數。支援的修改會同步到執行中的遊戲；其他修改會重載遊戲並重置進度。下載會另存新的 SB3。'
+      'AI 會讀這個作品，提出修改；你看過、按「套用」才會改，遊戲會重新開始。原本的檔案不會變，改好按「下載修改後的 SB3」另存一份。'
+    const manual = document.createElement('details')
+    manual.className = 'ai-subsection'
+    const manualSummary = document.createElement('summary')
+    manualSummary.textContent = '不用 AI，自己改數值'
     const targetLabel = document.createElement('label')
     targetLabel.textContent = '角色或舞台'
     const targetSelect = document.createElement('select')
@@ -2787,28 +2987,33 @@ const renderStudentPreview = (
     const propertySelect = document.createElement('select')
     propertyLabel.append(propertySelect)
     const valueLabel = document.createElement('label')
-    valueLabel.textContent = '新值（可見填 true 或 false；造型使用從 0 開始的編號）'
+    valueLabel.textContent = '新的值（顯示：true 或 false；造型：從 0 開始的編號）'
     const valueInput = document.createElement('input')
     valueInput.type = 'text'
     valueLabel.append(valueInput)
     const status = document.createElement('p')
+    status.className = 'inline-status'
     status.setAttribute('role', 'status')
-    const actions = document.createElement('div')
-    actions.className = 'button-row'
-    const makeButton = (label: string): HTMLButtonElement => {
+    const candidateActions = document.createElement('div')
+    candidateActions.className = 'button-row'
+    const historyActions = document.createElement('div')
+    historyActions.className = 'button-row'
+    const manualActions = document.createElement('div')
+    manualActions.className = 'button-row'
+    const makeButton = (label: string, row: HTMLDivElement, kind = 'secondary'): HTMLButtonElement => {
       const button = document.createElement('button')
       button.type = 'button'
-      button.className = 'button secondary'
+      button.className = `button ${kind}`
       button.textContent = label
-      actions.append(button)
+      row.append(button)
       return button
     }
-    const apply = makeButton('套用屬性')
-    const undo = makeButton('復原')
-    const redo = makeButton('重做')
-    const save = makeButton('下載修改後的 SB3')
-    const acceptCandidate = makeButton('確認套用 AI 修改')
-    const discardCandidate = makeButton('捨棄 AI 修改')
+    const apply = makeButton('套用屬性', manualActions)
+    const undo = makeButton('復原', historyActions)
+    const redo = makeButton('重做', historyActions)
+    const save = makeButton('下載修改後的 SB3', historyActions)
+    const acceptCandidate = makeButton('確認套用 AI 修改', candidateActions, 'primary')
+    const discardCandidate = makeButton('不要這個修改', candidateActions)
     acceptCandidate.hidden = true
     discardCandidate.hidden = true
     const candidateDiff = document.createElement('pre')
@@ -3203,19 +3408,19 @@ const renderStudentPreview = (
     localAiSettings.hidden = false
     localAiGenerateButton.disabled = false
     mcpSettings.hidden = false
+    manual.append(manualSummary, targetLabel, propertyLabel, valueLabel, manualActions)
     panel.append(
       title,
       help,
       localAiSettings,
-      mcpSettings,
-      targetLabel,
-      propertyLabel,
-      valueLabel,
       candidateDiff,
-      actions,
+      candidateActions,
       status,
+      historyActions,
+      manual,
+      mcpSettings,
     )
-    previewColumn.append(panel)
+    sideColumn.append(panel)
   }
   applyPatchButton.addEventListener('click', () => {
     void (async () => {
@@ -3477,18 +3682,18 @@ const renderStudentPreview = (
     livePatchDiff.hidden = true
     if (mcpCandidate && livePatchInput.value !== mcpCandidate.patchJson) mcpCandidate = null
   })
-  livePatchPanel.append(
-    livePatchSummary,
-    livePatchHelp,
-    ...(rawSource ? [] : [localAiSettings, mcpSettings]),
-    livePatchPromptButton,
-    livePatchInputLabel,
-    livePatchInput,
+  livePatchPanel.append(livePatchSummary, livePatchHelp, livePatchPromptButton, livePatchInputLabel, livePatchInput)
+  aiPanel.append(
+    aiPanelTitle,
+    aiPanelIntro,
+    ...(rawSource ? [] : [localAiSettings]),
     livePatchDiff,
     livePatchActions,
     livePatchStatus,
+    livePatchPanel,
+    ...(rawSource ? [] : [mcpSettings]),
   )
-  previewColumn.append(livePatchPanel)
+  sideColumn.append(aiPanel)
 
   const progressPanel = document.createElement('details')
   progressPanel.className = 'student-live-patch'
@@ -4279,9 +4484,9 @@ const renderStudentPreview = (
     progressStatus,
     syncPanel,
   )
-  previewColumn.append(progressPanel)
+  sideColumn.append(progressPanel)
 
-  studentPreview.append(previewColumn)
+  studentPreview.append(previewColumn, sideColumn)
 
   const animationArchivePromise: Promise<{ archive: Blob | null; fallbackCount: number; error?: Error }> =
     createAnimationPreviewArchive(project, rawSource).catch((error: unknown) => ({
@@ -4849,7 +5054,7 @@ const renderStudentPreview = (
     spriteList.append(tile)
   }
 
-  if (spriteList.childElementCount > 0) studentPreview.append(spriteList)
+  if (spriteList.childElementCount > 0) previewColumn.append(spriteList)
 
   studentPreview.hidden = false
 

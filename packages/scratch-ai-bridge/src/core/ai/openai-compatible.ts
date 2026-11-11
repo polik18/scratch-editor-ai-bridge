@@ -34,6 +34,54 @@ const endpointFor = (input: string): URL => {
   return url
 }
 
+/**
+ * Lists the models a local service offers, which also checks the address and API key before the first request.
+ * @param options - Connection.
+ * @param options.baseUrl - Service address, for example http://127.0.0.1:8000/v1.
+ * @param options.apiKey - Sent as a bearer token when not empty.
+ * @param options.signal - Cancels the request.
+ * @param options.fetchImpl - Replaces fetch (tests, the LAN gateway).
+ * @returns Model IDs in the order the service lists them.
+ */
+export const listOpenAiCompatibleModels = async ({
+  baseUrl,
+  apiKey,
+  signal,
+  fetchImpl = fetch,
+}: {
+  readonly baseUrl: string
+  readonly apiKey?: string
+  readonly signal?: AbortSignal
+  readonly fetchImpl?: typeof fetch
+}): Promise<string[]> => {
+  const url = endpointFor(baseUrl)
+  url.pathname = url.pathname.replace(/\/chat\/completions$/, '/models')
+  let response: Response
+  try {
+    response = await fetchImpl(url, {
+      method: 'GET',
+      headers: apiKey?.trim() ? { Authorization: `Bearer ${apiKey.trim()}` } : {},
+      ...(signal ? { signal } : {}),
+    })
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error
+    throw new Error(`連不上 ${url.origin}。請確認 AI 服務已經開啟，而且網址和埠號正確。`)
+  }
+  if (!response.ok) throw httpError(response.status, (await readResponseText(response, 1024 * 1024)).slice(0, 300))
+  let body: unknown
+  try {
+    body = JSON.parse(await readResponseText(response, 1024 * 1024))
+  } catch {
+    throw new Error('這個網址回傳的不是 AI 服務的資料；請確認網址結尾是 /v1。')
+  }
+  const data = (body as { data?: unknown }).data
+  return Array.isArray(data)
+    ? data
+        .map((item) => (typeof item === 'object' && item !== null ? (item as { id?: unknown }).id : undefined))
+        .filter((id): id is string => typeof id === 'string' && id.length > 0)
+    : []
+}
+
 const extractPatchText = (value: unknown): string | null => {
   if (typeof value !== 'object' || value === null) throw new Error('模型回應格式不正確。')
   const choices = (value as { choices?: unknown }).choices
@@ -113,7 +161,7 @@ export const requestOpenAiCompatiblePatch = async ({
   enableRawBlockInspection = false,
   fetchImpl = fetch,
 }: OpenAiCompatiblePatchRequest): Promise<string> => {
-  if (!model.trim()) throw new Error('請輸入模型 ID。')
+  if (!model.trim()) throw new Error('還沒選模型：打開上面的 AI 連線設定，按「測試連線」後選一個模型。')
   if (new TextEncoder().encode(instruction).byteLength + new TextEncoder().encode(request).byteLength > 32_000)
     throw new Error('送給模型的文字超過 32 KB 限制。')
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
