@@ -68,7 +68,7 @@ import {
   whenClicked,
 } from './blocks'
 import { INSTRUCTION_LINE_CHARS, levelView } from './levels'
-import { backdropCostume, bannerCostumes, introCostume, lookCostumes, narratorCostume, wallCostume } from './looks'
+import { backdropCostume, bannerCostumes, entityLook, introCostume, narratorCostume, wallCostume } from './looks'
 import {
   CELL,
   FALL_SPEED,
@@ -429,7 +429,8 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
   const host: CanonicalSprite =
     player && movement
       ? sprite(player.name, {
-          costumes: lookCostumes(player.look, player.color),
+          // A little smaller than the other characters so it fits one-cell corridors.
+          ...entityLook(player, 20),
           x: spawn.x,
           y: spawn.y,
           rotationStyle: 'left-right',
@@ -680,7 +681,7 @@ export const compileGameSpec = (spec: GameSpec): CanonicalProject => {
       }
       const showsOnClone = !popsUp && !has('projectile')(entity)
       return sprite(entity.name, {
-        costumes: lookCostumes(entity.look, entity.color),
+        ...entityLook(entity, 22),
         visible: false,
         variables: localVariables,
         lists: [

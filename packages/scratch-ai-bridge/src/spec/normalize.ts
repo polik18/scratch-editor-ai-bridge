@@ -1,3 +1,4 @@
+import { type AssetPick, pickSprite } from '../core/visuals/assets'
 import type {
   BehaviorUse,
   Direction,
@@ -177,6 +178,19 @@ const guessLook = (name: string, behaviors: readonly BehaviorUse[]): Look =>
     : behaviors[0]
       ? 'hero'
       : 'box')
+
+/**
+ * Whether a character's own name is enough to pick official artwork: the matched word must be the head noun at the
+ * end of the name, so 「香魚」 becomes a fish but 「魚道」 (a fish ladder) and 「電魚網」 (a net) do not.
+ * @param name - Character name.
+ * @param pick - From {@link pickSprite}.
+ * @returns Whether to use the pick.
+ */
+const namesArtwork = (name: string, pick: AssetPick): boolean =>
+  pick.match === 'exact' ||
+  (pick.word !== undefined &&
+    name.endsWith(pick.word) &&
+    (pick.match === 'approximate' || [...pick.word].length >= 2))
 
 type Json = unknown
 type JsonObject = Record<string, Json>
@@ -604,6 +618,19 @@ export const normalizeSingleLevel = (raw: Json, options: SingleLevelOptions = {}
   if (entityEntries.length === 0)
     error('NO_ENTITIES', '角色', '沒有任何角色。', '加上 "角色": { "主角": { "行為": ["平台移動"] } }。')
 
+  const officialFor = (name: string): string | undefined => {
+    const chosen = pickSprite(name)
+    return chosen.name && namesArtwork(name, chosen) ? chosen.name : undefined
+  }
+  const noteOfficial = (name: string, where: string, official: string, lookWord: string): void => {
+    const chosen = pickSprite(lookWord || name)
+    fixed(
+      'OFFICIAL_LOOK',
+      where,
+      `「${name}」用 Scratch 官方角色 ${official}${chosen.match === 'approximate' && chosen.note ? `（${chosen.note}）` : ''}。`,
+    )
+  }
+
   const entities: SpecEntity[] = []
   for (const [name, definition] of entityEntries) {
     const where = `角色.${name}`
@@ -611,18 +638,31 @@ export const normalizeSingleLevel = (raw: Json, options: SingleLevelOptions = {}
     if (rawBehaviors === undefined) rawBehaviors = []
     const list = Array.isArray(rawBehaviors) ? rawBehaviors : [rawBehaviors]
     const uses = list.flatMap((entry, index) => behaviors(entry, `${where}.行為[${index}]`))
-    const lookWord = isObject(definition) ? pick(definition, 'look') : undefined
-    const look =
-      typeof lookWord === 'string' && LOOKS.includes(lookWord as Look) ? (lookWord as Look) : guessLook(name, uses)
-    if (typeof lookWord === 'string' && lookWord.trim() && look !== lookWord)
-      warn(
-        'UNKNOWN_LOOK',
-        `${where}.外觀`,
-        `遊戲角色的外觀目前只能用內建造型，「${lookWord}」不認得，改用「${look}」。`,
-        `把外觀改成 ${LOOKS.join('、')} 之一，或刪掉「外觀」讓工具依名稱挑選。`,
-      )
+    const rawLook = isObject(definition) ? pick(definition, 'look') : undefined
+    const lookWord = typeof rawLook === 'string' ? rawLook.trim() : ''
+    const preset = LOOKS.includes(lookWord as Look)
+    const look = preset ? (lookWord as Look) : guessLook(name, uses)
+    let official: string | undefined
+    if (lookWord && !preset) {
+      const chosen = pickSprite(lookWord)
+      if (chosen.name && chosen.match !== 'category') official = chosen.name
+      else
+        warn(
+          'UNKNOWN_LOOK',
+          `${where}.外觀`,
+          `找不到叫「${lookWord}」的 Scratch 官方角色，改用內建造型「${look}」。`,
+          `外觀寫官方角色的英文名稱（例如 Fish、Crab、Dove）或常見的中文（例如 魚、螃蟹、鴿子），也可以寫內建造型 ${LOOKS.join('、')}。`,
+        )
+    } else if (!lookWord) official = officialFor(name)
+    if (official) noteOfficial(name, where, official, lookWord)
     const color = isObject(definition) ? pick(definition, 'color') : undefined
-    entities.push({ name, behaviors: uses, look, ...(typeof color === 'string' ? { color } : {}) })
+    entities.push({
+      name,
+      behaviors: uses,
+      look,
+      ...(typeof color === 'string' ? { color } : {}),
+      ...(official ? { official } : {}),
+    })
   }
   /**
    * Adds a behavior to an entity, keeping entity order.
@@ -677,7 +717,9 @@ export const normalizeSingleLevel = (raw: Json, options: SingleLevelOptions = {}
             ? [{ name: guess, params: {} }]
             : []
     const look = guessLook(name, behaviors)
-    entities.push({ name, behaviors, look })
+    const official = officialFor(name)
+    if (official) noteOfficial(name, where, official, '')
+    entities.push({ name, behaviors, look, ...(official ? { official } : {}) })
     entityNames.push(name)
     if (guess) {
       const label = BEHAVIOR_ALIASES[guess].find((alias) => /[\u4e00-\u9fff]/.test(alias)) ?? guess

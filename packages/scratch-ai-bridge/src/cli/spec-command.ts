@@ -1,8 +1,10 @@
 import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { describeLibraryResolution, resolveLibraryAssets } from '../core/visuals/library'
 import { buildFromSpecText, createSpecScenarios, formatSpecDiagnostics } from '../spec'
 import type { SpecDiagnostic } from '../spec'
+import { createCachedAssetFetcher } from './asset-fetcher'
 import { generateGame, type GeneratorResult } from './generator'
 import {
   backupGame,
@@ -40,6 +42,8 @@ export interface SpecBuildOptions {
   readonly reportPath?: string
   readonly playtest: boolean
   readonly force: boolean
+  /** Skip downloading official library artwork (tests, offline); those characters get a placeholder. */
+  readonly offline?: boolean
 }
 
 export interface SpecBuildReport {
@@ -65,6 +69,8 @@ export interface SpecBuildReport {
   readonly requirements?: readonly RequirementCheck[]
   /** Requests the spec author listed under 做不到; the game was built without them. */
   readonly unsupported?: readonly string[]
+  /** Which official Scratch artwork the characters use, and what could not be downloaded. */
+  readonly assets?: string
   readonly diagnostics: readonly SpecDiagnostic[]
   readonly generation?: Pick<GeneratorResult, 'status' | 'gates' | 'diagnostics'>
   readonly playtest?: readonly ScenarioResult[]
@@ -157,10 +163,22 @@ export const buildSpecText = async (
       diagnostics: built.diagnostics,
     }
 
+  const lines = [formatSpecDiagnostics(built.diagnostics.filter((item) => item.severity === 'warning'))]
+  let project = built.project
+  let assets: string | undefined
+  if (!options.offline && built.spec.entities.some((entity) => entity.official)) {
+    const resolved = await resolveLibraryAssets(project, createCachedAssetFetcher())
+    project = resolved.project
+    assets = describeLibraryResolution(resolved.report)
+    if (resolved.report.placeholderCostumes.length > 0)
+      lines.push(
+        `[注意] 素材：${resolved.report.placeholderCostumes.join('、')} 的 Scratch 官方素材無法下載，先用簡單圖形代替 → 連上網路後加 --force 重建。`,
+      )
+  }
   const workDirectory = await mkdtemp(path.join(tmpdir(), 'scratch-spec-'))
   try {
     const irPath = options.irPath ? path.resolve(options.irPath) : path.join(workDirectory, 'project.ir.json')
-    await writeFile(irPath, `${JSON.stringify(built.project, null, 1)}\n`, {
+    await writeFile(irPath, `${JSON.stringify(project, null, 1)}\n`, {
       flag: options.force || !options.irPath ? 'w' : 'wx',
     })
     const generation = await generateGame(irPath, {
@@ -173,7 +191,6 @@ export const buildSpecText = async (
       gates: generation.gates,
       diagnostics: generation.diagnostics,
     }
-    const lines = [formatSpecDiagnostics(built.diagnostics.filter((item) => item.severity === 'warning'))]
     if (!generation.success) {
       lines.push(
         ...generation.diagnostics.map((item) =>
@@ -226,6 +243,7 @@ export const buildSpecText = async (
       title: built.spec.title,
       unsupported: built.spec.unsupported,
       feedback: lines.filter(Boolean).join('\n'),
+      ...(assets ? { assets } : {}),
       diagnostics: built.diagnostics,
       generation: generationSummary,
       ...(playtest ? { playtest } : {}),

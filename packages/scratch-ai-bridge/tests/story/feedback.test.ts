@@ -71,10 +71,12 @@ describe('feedback a small model can act on', () => {
     expect(animation.story?.unsupported).toEqual(['換成現代裝扮'])
   })
 
-  it('warns when a game look is not one of the built-in shapes', () => {
+  it('warns with examples when a game look names no official sprite', () => {
     const result = buildFromSpecText(
-      JSON.stringify({ 地圖: ['P..G'], 角色: { P: { 行為: ['俯視移動'], 外觀: 'Fish' }, G: ['終點'] } }),
+      JSON.stringify({ 地圖: ['P..G'], 角色: { P: { 行為: ['俯視移動'], 外觀: 'Zzqx' }, G: ['終點'] } }),
     )
-    expect(result.diagnostics.find((item) => item.code === 'UNKNOWN_LOOK')?.severity).toBe('warning')
+    const warning = result.diagnostics.find((item) => item.code === 'UNKNOWN_LOOK')
+    expect(warning?.severity).toBe('warning')
+    expect(warning?.suggestion).toContain('Fish')
   })
 })

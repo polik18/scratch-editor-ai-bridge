@@ -47,6 +47,8 @@ export interface AssetPick {
   readonly note?: string
   /** Other assets of the same category, best first. */
   readonly alternatives: readonly string[]
+  /** The word in the text that matched, for `keyword` and `approximate`. */
+  readonly word?: string
 }
 
 const simplify = (text: string): string => text.trim().toLowerCase()
@@ -55,6 +57,7 @@ type Stand = Readonly<Record<string, { readonly name: string; readonly note: str
 
 interface Candidate {
   readonly name: string
+  readonly word: string
   readonly match: 'keyword' | 'approximate'
   readonly note?: string
   readonly score: number
@@ -89,21 +92,22 @@ const bestMatch = (
       .replace(/[^a-z0-9]+/g, ' ')
       .trim()
     if (words.length >= 3 && lower.includes(` ${words} `))
-      candidates.push({ name, match: 'keyword', score: 20 + words.length })
+      candidates.push({ name, word: words, match: 'keyword', score: 20 + words.length })
   }
   for (const [word, names] of Object.entries(tables.keywords))
-    if (names[0] && text.includes(word)) candidates.push({ name: names[0], match: 'keyword', score: weight(word) })
+    if (names[0] && text.includes(word))
+      candidates.push({ name: names[0], word, match: 'keyword', score: weight(word) })
   for (const [word, stand] of Object.entries(tables.stand))
     if (text.includes(word))
-      candidates.push({ name: stand.name, match: 'approximate', note: stand.note, score: weight(word) })
+      candidates.push({ name: stand.name, word, match: 'approximate', note: stand.note, score: weight(word) })
   for (const [word, stand] of Object.entries(tables.suffixes ?? {}))
     if (text.endsWith(word))
-      candidates.push({ name: stand.name, match: 'approximate', note: stand.note, score: weight(word) + 2 })
+      candidates.push({ name: stand.name, word, match: 'approximate', note: stand.note, score: weight(word) + 2 })
   const best = candidates.sort((a, b) => b.score - a.score || (a.match === 'keyword' ? -1 : 1)).at(0)
   if (!best || best.match === 'approximate') return best
   // The word matched an asset that is itself only a stand-in for something more specific in the text (苦花魚 → Fish).
   const stand = Object.entries(tables.stand).find(([word, entry]) => entry.name === best.name && text.includes(word))
-  return stand ? { ...best, match: 'approximate', note: stand[1].note } : best
+  return stand ? { ...best, word: stand[0], match: 'approximate', note: stand[1].note } : best
 }
 
 const categoryOfSprite = (name: string): SpriteCategory | undefined => SPRITE_CATALOG[name]?.category
@@ -126,11 +130,12 @@ const alternativesOf = <C extends string>(
  */
 export const pickSprite = (text: string, options: { readonly category?: SpriteCategory } = {}): AssetPick => {
   const names = LIBRARY_SPRITES.map((sprite) => sprite.name)
-  const done = (name: string | undefined, match: MatchKind, note?: string): AssetPick => ({
+  const done = (name: string | undefined, match: MatchKind, note?: string, word?: string): AssetPick => ({
     kind: 'sprite',
     ...(name ? { name } : {}),
     match,
     ...(note ? { note } : {}),
+    ...(word ? { word } : {}),
     alternatives: alternativesOf(name, name ? categoryOfSprite(name) : options.category, names, categoryOfSprite),
   })
   const exact = findLibrarySprite(text)
@@ -141,7 +146,7 @@ export const pickSprite = (text: string, options: { readonly category?: SpriteCa
     stand: APPROXIMATIONS.sprite,
     suffixes: PERSON_SUFFIXES,
   })
-  if (best) return done(best.name, best.match, best.note)
+  if (best) return done(best.name, best.match, best.note, best.word)
   if (options.category) {
     const first = names.find((name) => categoryOfSprite(name) === options.category)
     if (first) return done(first, 'category', `找不到「${text}」，用同類的 ${first} 代替`)

@@ -1,6 +1,8 @@
 import type { CanonicalCostume } from '../core/ir/types'
+import { costumeSize } from '../core/visuals/assets'
+import { findLibrarySprite } from '../core/visuals/library'
 import { CELL, cellCenter } from './physics'
-import type { Look } from './types'
+import type { Look, SpecEntity } from './types'
 
 const svg = (
   name: string,
@@ -322,4 +324,22 @@ export const introCostume = (title: string, lines: readonly string[], width: num
       `<rect x="${INTRO_WIDTH / 2 - 130}" y="${INTRO_HEIGHT - 52}" width="260" height="36" rx="18" fill="#3cb371"/>` +
       `<text x="${INTRO_WIDTH / 2}" y="${INTRO_HEIGHT - 28}" font-size="17" font-family="sans-serif" font-weight="bold" text-anchor="middle" fill="#fff">按空白鍵或點一下開始</text>`,
   )
+}
+
+/**
+ * Costumes and size for a character. Official artwork is named here and downloaded when the game is built (see
+ * `resolveLibraryAssets`), then scaled so its longer side is `fit` pixels and it fits a map cell like the built-in
+ * looks do.
+ * @param entity - The character.
+ * @param fit - Longest side in stage pixels.
+ * @returns Costumes and sprite size in percent.
+ */
+export const entityLook = (entity: SpecEntity, fit: number): { costumes: CanonicalCostume[]; size: number } => {
+  const library = entity.official ? findLibrarySprite(entity.official) : undefined
+  if (!library) return { costumes: lookCostumes(entity.look, entity.color), size: 100 }
+  const { width, height } = costumeSize(library)
+  return {
+    costumes: [{ name: library.name, dataFormat: 'svg' }],
+    size: Math.round((fit / Math.max(width, height, 1)) * 100),
+  }
 }

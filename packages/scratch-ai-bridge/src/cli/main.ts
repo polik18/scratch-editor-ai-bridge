@@ -35,7 +35,7 @@ Usage:
                          [--model <id>] [--base-url <url>] [--thinking]
   scratch-ai-bridge guide [game|story]
   scratch-ai-bridge story <story.json> [--out <file.sb3>] [--request <file-or-text>] [--playtest] [--force] [--offline]
-  scratch-ai-bridge spec <game-spec.json> [--out <file.sb3>] [--ir <canonical-ir.json>] [--report <report.json>] [--request <file-or-text>] [--playtest] [--force]
+  scratch-ai-bridge spec <game-spec.json> [--out <file.sb3>] [--ir <canonical-ir.json>] [--report <report.json>] [--request <file-or-text>] [--playtest] [--force] [--offline]
   scratch-ai-bridge inspect <file.sb3> [--format json|markdown|student-markdown]
   scratch-ai-bridge batch <directory> [--out <new-directory>] [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
   scratch-ai-bridge generate <design.json> --out <new-file.sb3> [--report <report.json>] [--preview <stage.png>] [--force]
@@ -331,6 +331,7 @@ ${createGameSpecGuide()}
   const values: Record<string, string> = {}
   let playtest = false
   let force = false
+  let offline = false
   let argumentError = false
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index]
@@ -344,6 +345,7 @@ ${createGameSpecGuide()}
       index += 1
     } else if (argument === '--playtest') playtest = true
     else if (argument === '--force') force = true
+    else if (argument === '--offline') offline = true
     else if (argument.startsWith('-')) {
       argumentError = true
       break
@@ -365,6 +367,7 @@ ${createGameSpecGuide()}
         ...(request ? { request } : {}),
         playtest,
         force,
+        offline,
       }),
     )
     writeJson(report)

@@ -31,7 +31,7 @@ export interface MakeOptions {
   readonly request: string
   /** `story` asks the model for an animation (Story Spec) instead of a game. */
   readonly kind?: 'game' | 'story'
-  /** Story only: skip downloading official library artwork (tests, offline). */
+  /** Skip downloading official library artwork (tests, offline). */
   readonly offline?: boolean
   /** Defaults to `output/games/<標題>/<標題>.sb3`, adding `-2`, `-3`… rather than reusing a folder. */
   readonly outputFile?: string
@@ -313,7 +313,12 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
       progress(options.playtest ? '建置並自動試玩…' : '建置…')
       const report = story
         ? await buildStoryText(text, sb3, options.playtest, options.offline ?? false)
-        : await buildSpecText(text, { outputFile: sb3, playtest: options.playtest, force: true })
+        : await buildSpecText(text, {
+            outputFile: sb3,
+            playtest: options.playtest,
+            force: true,
+            offline: options.offline ?? false,
+          })
       const checks = report.status === 'success' ? checkRequirements(text, requirements) : []
       const unmet = checks.filter((check) => !check.pass).length
       feedback = [report.feedback, requirementFeedback(checks)].filter(Boolean).join('\n')

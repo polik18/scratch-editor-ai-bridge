@@ -95,8 +95,11 @@ export type Look =
 export interface SpecEntity {
   readonly name: string
   readonly behaviors: readonly BehaviorUse[]
+  /** Built-in look; also the stand-in when the official artwork cannot be downloaded. */
   readonly look: Look
   readonly color?: string
+  /** Official Scratch library sprite shown instead of the built-in look. */
+  readonly official?: string
 }
 
 export type RuleTrigger =

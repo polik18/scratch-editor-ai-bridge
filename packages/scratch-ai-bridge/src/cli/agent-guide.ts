@@ -52,7 +52,6 @@ export const KNOWN_GAPS: readonly string[] = [
   '每關各自計時（時間是整場共用）',
   '換成指定造型、圖像特效、字卡',
   '跟著滑鼠移動的玩家、搬運物品、問答',
-  '遊戲角色使用官方素材（遊戲目前用內建造型；動畫可以用官方素材）',
 ]
 
 const chineseName = (aliases: readonly string[]): string =>
@@ -93,7 +92,7 @@ ${commands}
 - 遊戲行為：${behaviors}。
 - 遊戲結構：開場說明頁、最多 ${MAX_LEVELS} 關（每關的「分數 >= N」算這一關得到的分數）、一個玩家、地圖最多 ${MAP_MAX_COLUMNS} 欄 × ${MAP_MAX_ROWS} 列、說明每行約 ${INSTRUCTION_LINE_CHARS} 字。
 - 動畫動作：${actions}。動畫長度 ${STORY_LENGTH.min}～${STORY_LENGTH.max} 秒，寫「目標秒數」時工具會自動調整節奏；字幕每句最多 ${SUBTITLE_MAX_CHARS} 字。
-- 動畫的角色、背景、音效可以用 Scratch 官方素材，寫中文描述也會找最接近的，近似的會在報告註明。
+- 遊戲角色和動畫的角色、背景、音效會用 Scratch 官方素材，寫中文描述也會找最接近的，近似的會在報告註明。遊戲角色名稱看不出是什麼時，寫「外觀」。
 
 ## 還做不到（寫進「做不到」）
 ${KNOWN_GAPS.map((gap) => `- ${gap}`).join('\n')}
