@@ -131,6 +131,40 @@ const validateRasterCostumeData = async (project: CanonicalProject, deadline: nu
   }
 }
 
+const WAVE_FORMAT_IMA_ADPCM = 0x11
+
+/**
+ * Whether a sound is an IMA ADPCM WAV with a sound header. Many official Scratch library sounds use this encoding;
+ * browsers cannot decode it, but Scratch decodes it itself, so the browser decode check would wrongly reject them.
+ * @param base64 - The sound's base64 payload.
+ * @returns True for a well-formed ADPCM WAV header (RIFF/WAVE, fmt chunk with format 0x11, channels, sample rate).
+ */
+export const isAdpcmWav = (base64: string): boolean => {
+  let bytes: Uint8Array
+  try {
+    bytes = Uint8Array.from(atob(base64.replace(/\s/g, '').slice(0, 256)), (char) => char.charCodeAt(0))
+  } catch {
+    return false
+  }
+  const text = (start: number, length: number): string =>
+    String.fromCharCode(...bytes.subarray(start, start + length))
+  if (bytes.length < 36 || text(0, 4) !== 'RIFF' || text(8, 4) !== 'WAVE') return false
+  const view = new DataView(bytes.buffer)
+  for (let offset = 12; offset + 8 <= bytes.length;) {
+    const size = view.getUint32(offset + 4, true)
+    if (text(offset, 4) === 'fmt ') {
+      if (offset + 24 > bytes.length) return false
+      const format = view.getUint16(offset + 8, true)
+      const channels = view.getUint16(offset + 10, true)
+      const sampleRate = view.getUint32(offset + 12, true)
+      const blockAlign = view.getUint16(offset + 20, true)
+      return format === WAVE_FORMAT_IMA_ADPCM && channels >= 1 && channels <= 2 && sampleRate > 0 && blockAlign > 0
+    }
+    offset += 8 + size + (size % 2)
+  }
+  return false
+}
+
 const validateSoundData = async (project: CanonicalProject, deadline: number): Promise<void> => {
   if (typeof Audio === 'undefined') return
   const mimeTypes: Readonly<Record<string, string>> = { mp3: 'audio/mpeg', wav: 'audio/wav' }
@@ -143,6 +177,7 @@ const validateSoundData = async (project: CanonicalProject, deadline: number): P
       const targetPath = target.kind === 'stage' ? '/stage' : `/sprites/${targetIndex - 1}`
       const comma = sound.data.startsWith('data:') ? sound.data.indexOf(',') : -1
       const payload = comma < 0 ? sound.data : sound.data.slice(comma + 1)
+      if (sound.dataFormat === 'wav' && isAdpcmWav(payload)) continue
       const source = `data:${mimeType};base64,${payload.replace(/\s/g, '')}`
       const audio = new Audio()
       audio.preload = 'metadata'

@@ -131,6 +131,15 @@ import {
   type ScratchRuntimePatchChange,
   type ScratchRuntimePatchUpdate,
 } from './scratch/vm'
+import {
+  buildDescription,
+  createDescriptionInstruction,
+  createDescriptionRepairPrompt,
+  createDescriptionRevisionPrompt,
+  descriptionKind,
+  playtestFeedbackLines,
+  type DescriptionKind,
+} from './student-description'
 import './style.css'
 
 globalThis.Buffer = Buffer
@@ -676,6 +685,13 @@ app.innerHTML = `
           </details>
 
 
+
+          <label for="authoring-mode" class="field-label">製作方式</label>
+          <select id="authoring-mode" class="request-input genre-select">
+            <option value="game">遊戲（建議）：AI 寫簡短的遊戲描述，Bridge 產生積木</option>
+            <option value="story">動畫：AI 寫劇本（角色、場景、對白），Bridge 產生積木</option>
+            <option value="blocks">進階：AI 直接寫所有積木（節奏、繪圖、模擬等其他類型）</option>
+          </select>
 
           <div class="button-row"><button id="copy-direct-instruction" class="button primary" disabled>複製製作訊息給 AI</button></div>
           <p>不要在想法中填入姓名、班級等個人資料。複製後，打開老師允許的 AI 網頁貼上訊息並送出。</p>
@@ -1234,6 +1250,10 @@ const copyDesignInstruction = byId<HTMLButtonElement>('copy-design-instruction')
 const copyBuildInstruction = byId<HTMLButtonElement>('copy-build-instruction')
 
 const copyDirectInstruction = byId<HTMLButtonElement>('copy-direct-instruction')
+const authoringMode = byId<HTMLSelectElement>('authoring-mode')
+/** @returns The description kind the student chose, or undefined when the AI writes blocks directly. */
+const chosenDescriptionKind = (): DescriptionKind | undefined =>
+  authoringMode.value === 'game' || authoringMode.value === 'story' ? authoringMode.value : undefined
 
 const iterationRequest = byId<HTMLTextAreaElement>('iteration-request')
 
@@ -1399,6 +1419,9 @@ let latestRequirementCoverage: readonly RequirementCoverageEntry[] | null = null
 
 let latestFeatures: readonly string[] | null = null
 
+/** The description behind the current project, when the AI wrote a game or animation description. */
+let latestDescription: { readonly text: string; readonly feedback: string; readonly built: boolean } | null = null
+
 const renderRepairTools = (): void => {
   const report = latestRepairContext?.report
 
@@ -1406,9 +1429,12 @@ const renderRepairTools = (): void => {
 
   const actionable = (report?.summary.errors ?? 0) + (report?.summary.warnings ?? 0)
 
-  repairTools.hidden = !hasIssues && repairUndoSnapshot === null && latestPlaytestPrompt === null
+  const descriptionFeedback = latestDescription?.feedback ?? ''
 
-  copyRepairPrompt.disabled = actionable === 0 && latestPlaytestPrompt === null
+  repairTools.hidden =
+    !hasIssues && repairUndoSnapshot === null && latestPlaytestPrompt === null && !descriptionFeedback
+
+  copyRepairPrompt.disabled = actionable === 0 && latestPlaytestPrompt === null && !descriptionFeedback
 
   copyRepairReport.disabled = !hasIssues
 
@@ -1433,6 +1459,13 @@ const renderRepairTools = (): void => {
   repairSummary.textContent = report
     ? `自動修復 ${report.summary.autoRepaired} · 必須修正 ${report.summary.errors} · 需要確認 ${report.summary.warnings}${phaseSummary ? ` · ${phaseSummary}` : ''}`
     : '沒有目前診斷'
+
+  if (!latestPlaytestSummary && !report && latestDescription && descriptionFeedback) {
+    const problems = descriptionFeedback.split('\n').length
+    repairTitle.textContent = latestDescription.built ? '作品做好了，有幾個地方建議確認' : '作品描述還要修改'
+    repairExplanation.textContent = `${latestDescription.built ? `有 ${problems} 個地方建議確認` : `共 ${problems} 個問題`}，都已經放進修正訊息。按「複製修正訊息給 AI」，一次交給 AI 全部修正：\n${descriptionFeedback}`
+    return
+  }
 
   repairTitle.textContent = latestPlaytestSummary
     ? '自動試玩發現需要修正的地方'
@@ -4351,6 +4384,12 @@ const renderStudentPreview = (
       if (feedback.passed) {
         latestPlaytestPrompt = null
         latestPlaytestSummary = null
+      } else if (latestDescription) {
+        latestPlaytestPrompt = createDescriptionRepairPrompt(
+          latestDescription.text,
+          [latestDescription.feedback, playtestFeedbackLines(feedback.issues)].filter(Boolean).join('\n'),
+        )
+        latestPlaytestSummary = feedback.summary
       } else if (feedback.repairPrompt) {
         const capabilityGuide = projectRequest.value.trim()
           ? createStudentProjectInstruction(projectRequest.value)
@@ -5099,11 +5138,14 @@ copyDesignInstruction.addEventListener('click', () => {
 copyBuildInstruction.addEventListener('click', () => {
   const request = projectRequest.value.trim()
   if (!request || !gameBrief.value.trim()) return
+  const kind = chosenDescriptionKind()
   copyStudentPrompt(
-    createStudentProjectInstruction(request, {
-      genre: gameGenre.value as GameGenreProfile,
-      confirmedBrief: gameBrief.value,
-    }),
+    kind
+      ? createDescriptionInstruction(kind, request, gameBrief.value)
+      : createStudentProjectInstruction(request, {
+          genre: gameGenre.value as GameGenreProfile,
+          confirmedBrief: gameBrief.value,
+        }),
     buildPromptStatus,
     '已複製製作指令。建議用新的 AI 對話，只貼原始需求與已確認 brief',
   )
@@ -5115,8 +5157,11 @@ copyDirectInstruction.addEventListener('click', () => {
   studentRevisionRequested = false
   byId<HTMLElement>('student-ai-guide').hidden = false
   saveStudentDraft()
+  const kind = chosenDescriptionKind()
   copyStudentPrompt(
-    createStudentProjectInstruction(request, { genre: gameGenre.value as GameGenreProfile }),
+    kind
+      ? createDescriptionInstruction(kind, request)
+      : createStudentProjectInstruction(request, { genre: gameGenre.value as GameGenreProfile }),
     copyStatus,
     '複製好了！打開 AI 網頁貼上並送出，等回答完成後複製回這個網頁。',
   )
@@ -5137,11 +5182,10 @@ iterationGenerate.addEventListener('click', () => {
     iterationStatus.dataset.kind = 'error'
     return
   }
-  const prompt = createStudentIterationInstruction(
-    JSON.stringify(latestStudentProject),
-    request,
-    projectRequest.value.trim(),
-  )
+  const source = latestStudentSnapshot?.source ?? ''
+  const prompt = descriptionKind(source)
+    ? createDescriptionRevisionPrompt(source, request)
+    : createStudentIterationInstruction(JSON.stringify(latestStudentProject), request, projectRequest.value.trim())
   void copyTextWithFallback(prompt, '已複製修改訊息。請貼到原本的 AI 對話，再把新回答貼回上方檢查。')
   studentRevisionRequested = true
   byId<HTMLElement>('student-ai-guide').hidden = false
@@ -5480,10 +5524,32 @@ const buildStudentProject = async (): Promise<void> => {
     return
   }
 
+  // A game or animation description is built into blocks here; the blocks then go through the same checks,
+  // compile, preview and playtest as block-level replies.
+  const kind = descriptionKind(source)
+  latestDescription = null
+  let described: CanonicalProject | undefined
+  if (kind) {
+    const built = buildDescription(source, kind)
+    clearRepairContext()
+    latestDescription = { text: source, feedback: built.feedback, built: built.project !== undefined }
+    renderRepairTools()
+    if (!built.project) {
+      setStatus(
+        generateStatus,
+        `作品描述還有 ${built.errors} 個問題，已全部放進修正訊息，請一次交給 AI 修正。`,
+        'error',
+      )
+      setProgress(3)
+      return
+    }
+    described = built.project
+  }
+
   let parsed: ReturnType<typeof parseAiResponse>
 
   try {
-    parsed = parseAiResponse(source)
+    parsed = described ? { data: described, extracted: false, candidateCount: 1 } : parseAiResponse(source)
   } catch (parseError) {
     const report = createRepairReport({ parseError })
 
@@ -5554,7 +5620,8 @@ const buildStudentProject = async (): Promise<void> => {
     return
   }
 
-  if (normalized.repairs.length > 0) {
+  // The editor keeps a description as written; it is what later revisions start from.
+  if (normalized.repairs.length > 0 && !described) {
     repairUndoSnapshot = source
 
     editor.value = JSON.stringify(normalized.data, null, 2)
@@ -5709,7 +5776,7 @@ const buildStudentProject = async (): Promise<void> => {
 
     repairUndoSnapshot = null
 
-    if (report.summary.warnings > 0) publishRepairContext(report, validation.data)
+    if (report.summary.warnings > 0 && !described) publishRepairContext(report, validation.data)
     else clearRepairContext()
 
     setStatus(
@@ -5896,6 +5963,13 @@ downloadStudentValidationReport.addEventListener('click', () => {
 copyRepairPrompt.addEventListener('click', () => {
   if (latestPlaytestPrompt) {
     void copyTextWithFallback(latestPlaytestPrompt, '已複製試玩修正訊息；請貼回 AI 對話。')
+    return
+  }
+  if (latestDescription?.feedback) {
+    void copyTextWithFallback(
+      createDescriptionRepairPrompt(latestDescription.text, latestDescription.feedback),
+      '已複製修正訊息（所有問題都在裡面）；請貼回 AI 對話。',
+    )
     return
   }
   if (!latestRepairContext) return

@@ -1057,6 +1057,8 @@ try {
   }
   await page.locator('#game-brief').fill('玩家控制小英雄跳過障礙收集金幣；每過一關障礙加快，碰撞後可立即重玩。')
   await page.locator('#game-genre').selectOption('platformer')
+  // This checks the block-level route; the default writes a description instead.
+  await page.locator('#authoring-mode').selectOption('blocks')
   await page.locator('#copy-build-instruction').click()
   const productionInstruction = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
   if (
@@ -1369,6 +1371,64 @@ try {
   if (typeof warningPrompt !== 'string' || !warningPrompt.includes('condition-not-boolean')) {
     throw new Error('A warning-only project did not keep its warning in the repair message')
   }
+
+  // Description route: the AI writes a short game or animation description and Bridge makes the blocks.
+  const readExample = (file) => readFile(fileURLToPath(new URL(`../../src/${file}`, import.meta.url)), 'utf8')
+  await page.locator('#project-request').fill('做一個貓咪接蘋果的遊戲')
+  await page.locator('#authoring-mode').selectOption('game')
+  await page.locator('#copy-direct-instruction').click()
+  await page.locator('#copy-status[data-kind="ok"]').waitFor()
+  const descriptionInstruction = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  if (typeof descriptionInstruction !== 'string' || !descriptionInstruction.includes('作品描述')) {
+    throw new Error('The game mode did not copy the description instruction')
+  }
+  await page
+    .locator('#json-editor')
+    .fill(`好的，以下是作品描述：\n\`\`\`json\n${await readExample('spec/examples/catch.json')}\n\`\`\``)
+  const descriptionDownload = page.waitForEvent('download')
+  await page.locator('#student-build').click()
+  await page.locator('#generate-status[data-kind="ok"]').waitFor()
+  await descriptionDownload
+
+  const brokenDescription = JSON.stringify({
+    標題: '壞掉的遊戲',
+    地圖: ['P..x..G'],
+    圖例: { P: '貓', G: '門' },
+    角色: { 貓: ['飛天'], 門: ['終點'] },
+    規則: ['碰到 狗 → 分數 +1'],
+  })
+  await page.locator('#json-editor').fill(brokenDescription)
+  await page.locator('#student-build').click()
+  await page.locator('#generate-status[data-kind="error"]').waitFor()
+  await page.locator('#repair-tools:not([hidden])').waitFor()
+  await page.locator('#copy-repair-prompt').click()
+  const descriptionRepair = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  if (
+    typeof descriptionRepair !== 'string' ||
+    !descriptionRepair.includes('壞掉的遊戲') ||
+    descriptionRepair.split('\n').filter((line) => line.includes('→')).length < 2
+  ) {
+    throw new Error(`The description repair message did not list every problem: ${descriptionRepair}`)
+  }
+
+  await page.locator('#json-editor').fill(await readExample('story/examples/river-story.json'))
+  const storyDownload = page.waitForEvent('download', { timeout: 120_000 })
+  storyDownload.catch(() => {})
+  await page.locator('#student-build').click()
+  await page.waitForFunction(
+    () => ['ok', 'error'].includes(document.querySelector('#generate-status')?.dataset.kind ?? ''),
+    undefined,
+    { timeout: 120_000 },
+  )
+  if ((await page.locator('#generate-status').getAttribute('data-kind')) !== 'ok') {
+    await page.locator('#repair-tools .technical-details summary').click()
+    await page.locator('#copy-repair-report').click()
+    const detail = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+    throw new Error(
+      `The animation description did not build: ${await page.locator('#generate-status').textContent()}\n${String(detail).slice(0, 1500)}`,
+    )
+  }
+  await storyDownload
   const correctedSchemaAdditionalProject = structuredClone(schemaAdditionalFailureProject)
   delete correctedSchemaAdditionalProject[schemaAdditionalProperty]
   await page.locator('#json-editor').fill(JSON.stringify(correctedSchemaAdditionalProject))
