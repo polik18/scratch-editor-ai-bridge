@@ -1813,7 +1813,7 @@ pre {
   color: #8a5a00;
 }
 .ai-subsection select,
-.ai-subsection > label > input {
+.ai-subsection > label > input:not([type='checkbox']) {
   box-sizing: border-box;
   width: 100%;
   padding: 7px 10px;
