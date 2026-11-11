@@ -3,7 +3,12 @@ import { md5 } from '@noble/hashes/legacy.js'
 import { sha256 } from '@noble/hashes/sha256'
 import { bytesToHex } from '@noble/hashes/utils.js'
 import { initializeScratchVM } from './bootstrap/vm-bootstrap'
-import { clearAiConnection, loadAiConnection, saveAiConnection } from './core/ai/connection-store'
+import {
+  apiKeyStorageWarning,
+  clearAiConnection,
+  loadAiConnection,
+  saveAiConnection,
+} from './core/ai/connection-store'
 import { listOpenAiCompatibleModels, requestOpenAiCompatiblePatch } from './core/ai/openai-compatible'
 import {
   inspectRawBlocks,
@@ -2270,14 +2275,21 @@ const renderStudentPreview = (
   const remember = document.createElement('input')
   remember.type = 'checkbox'
   remember.id = 'local-ai-remember'
-  rememberLabel.append(remember, ' 記住在這台電腦（包含 API key）')
+  rememberLabel.append(remember, ' 記住服務位址和模型')
+  const rememberKeyLabel = document.createElement('label')
+  rememberKeyLabel.className = 'ai-remember'
+  const rememberKey = document.createElement('input')
+  rememberKey.type = 'checkbox'
+  rememberKey.id = 'local-ai-remember-key'
+  rememberKey.disabled = true
+  rememberKeyLabel.append(rememberKey, ' 也記住 API key')
   const forget = smallButton('清除記住的設定')
   const rememberRow = document.createElement('div')
   rememberRow.className = 'ai-remember-row'
   rememberRow.append(rememberLabel, forget)
   const rememberNote = document.createElement('p')
   rememberNote.className = 'ai-note'
-  rememberNote.textContent = '不勾選時，關掉或重新整理頁面就會忘記。勾選後存在這個瀏覽器，用同一台電腦的人都看得到。'
+  rememberNote.textContent = `不勾選時，關掉或重新整理頁面就會忘記。${apiKeyStorageWarning(location.hostname)}`
   gatewaySettings.append(
     gatewaySummary,
     gatewayHelp,
@@ -2293,6 +2305,7 @@ const renderStudentPreview = (
     testConnection,
     connectionStatus,
     rememberRow,
+    rememberKeyLabel,
     rememberNote,
     gatewaySettings,
   )
@@ -2342,7 +2355,13 @@ const renderStudentPreview = (
         : '還沒設定 AI 連線，按這裡設定'
   }
   const rememberIfAsked = (): void => {
-    if (remember.checked && !saveAiConnection(browserStorage, connectionValues()))
+    if (
+      remember.checked &&
+      !saveAiConnection(browserStorage, {
+        ...connectionValues(),
+        apiKey: rememberKey.checked ? localAiKey.value : '',
+      })
+    )
       connectionStatus.textContent = '這個瀏覽器不允許存資料，設定只會保留到關閉頁面。'
   }
   const remembered = loadAiConnection(browserStorage)
@@ -2351,6 +2370,8 @@ const renderStudentPreview = (
     localAiModel.value = remembered.model
     localAiKey.value = remembered.apiKey
     remember.checked = true
+    rememberKey.disabled = false
+    rememberKey.checked = remembered.apiKey !== ''
   }
   for (const input of [localAiBaseUrl, localAiModel, localAiKey])
     input.addEventListener('input', () => {
@@ -2359,13 +2380,23 @@ const renderStudentPreview = (
       rememberIfAsked()
     })
   remember.addEventListener('change', () => {
+    rememberKey.disabled = !remember.checked
+    if (!remember.checked) rememberKey.checked = false
     if (remember.checked) rememberIfAsked()
     else clearAiConnection(browserStorage)
-    connectionStatus.textContent = remember.checked ? '已記住在這台電腦。' : '已不再記住；關掉頁面就會忘記。'
+    connectionStatus.textContent = remember.checked
+      ? '已記住服務位址和模型；API key 沒有記。'
+      : '已不再記住；關掉頁面就會忘記。'
+  })
+  rememberKey.addEventListener('change', () => {
+    rememberIfAsked()
+    connectionStatus.textContent = rememberKey.checked ? '已連 API key 一起記住。' : '已刪掉記住的 API key。'
   })
   forget.addEventListener('click', () => {
     clearAiConnection(browserStorage)
     remember.checked = false
+    rememberKey.checked = false
+    rememberKey.disabled = true
     localAiBaseUrl.value = ''
     localAiModel.value = ''
     localAiKey.value = ''

@@ -55,3 +55,14 @@ export const clearAiConnection = (storage: ConnectionStorage | undefined): void 
     // Nothing was stored, or the browser blocks site data; either way nothing is remembered.
   }
 }
+
+/**
+ * Who else can read a remembered API key on this site, in plain words. Every project on a GitHub Pages user site
+ * shares one origin, so their pages (and any analytics they load) can read this page's storage.
+ * @param hostname - `location.hostname` of the page.
+ * @returns The warning shown next to 「也記住 API key」.
+ */
+export const apiKeyStorageWarning = (hostname: string): string =>
+  hostname.endsWith('.github.io')
+    ? `${hostname} 底下的其他網頁（包含它們載入的 Google 統計等程式）也讀得到存起來的 key，所以預設不記。公用電腦不要勾。`
+    : '存起來的 key，用這台電腦、這個瀏覽器的人都看得到。公用電腦不要勾。'

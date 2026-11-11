@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { clearAiConnection, loadAiConnection, saveAiConnection } from '../../src/core/ai/connection-store'
+import {
+  apiKeyStorageWarning,
+  clearAiConnection,
+  loadAiConnection,
+  saveAiConnection,
+} from '../../src/core/ai/connection-store'
 import { listOpenAiCompatibleModels } from '../../src/core/ai/openai-compatible'
 
 const memory = () => {
@@ -40,6 +45,13 @@ describe('remembered local model connection', () => {
     const broken = memory()
     broken.setItem('scratch-ai-bridge:local-ai-connection', '{not json')
     expect(loadAiConnection(broken)).toBeUndefined()
+  })
+})
+
+describe('apiKeyStorageWarning', () => {
+  it('warns that other pages on a shared GitHub Pages site can read the key', () => {
+    expect(apiKeyStorageWarning('polik18.github.io')).toMatch(/polik18\.github\.io 底下的其他網頁.*Google 統計/)
+    expect(apiKeyStorageWarning('localhost')).toMatch(/這台電腦/)
   })
 })
 
