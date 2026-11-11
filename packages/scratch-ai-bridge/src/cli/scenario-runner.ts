@@ -29,12 +29,15 @@ interface State {
   readonly variables: readonly { targetName: string; name: string; value: unknown }[]
   /** Index of the stage's current backdrop. */
   readonly backdrop: number
+  /** Seconds since the scenario started. */
+  readonly seconds: number
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
 const read = (state: State, subject: Subject): number => {
   if ('stage' in subject) return state.backdrop
+  if ('clock' in subject) return state.seconds
   if ('sprite' in subject) {
     const sprite = state.sprites[subject.sprite]
     if (!sprite) return Number.NaN
@@ -97,6 +100,7 @@ export const runSpecScenario = async (
     }
     // Runtime patches and state captures name the preview's current revision, which starts at 0.
     let revision = 0
+    const scenarioStarted = Date.now()
     const state = async (): Promise<State> => {
       const requestId = randomUUID()
       await post({ type: 'capture-game-progress', requestId, baseRevision: revision })
@@ -106,7 +110,12 @@ export const runSpecScenario = async (
         (reply.targets ?? []).filter((target) => !target.isStage).map((target) => [target.name, target]),
       )
       const stage = (reply.targets ?? []).find((target) => target.isStage)
-      return { sprites, variables: reply.snapshot ?? [], backdrop: stage?.currentCostume ?? Number.NaN }
+      return {
+        sprites,
+        variables: reply.snapshot ?? [],
+        backdrop: stage?.currentCostume ?? Number.NaN,
+        seconds: (Date.now() - scenarioStarted) / 1000,
+      }
     }
     const clones = async (): Promise<readonly { name: string; x: number; y: number }[]> => {
       const requestId = randomUUID()
@@ -243,6 +252,16 @@ export const runSpecScenario = async (
         case 'wait':
           await sleep(step.ms)
           break
+        case 'until': {
+          const deadline = Date.now() + step.ms
+          while (Date.now() < deadline) {
+            const value = read(await state(), step.subject)
+            if (step.op === '==' ? value === step.value : step.op === '>' ? value > step.value : value < step.value)
+              break
+            await sleep(50)
+          }
+          break
+        }
         case 'hold':
           for (const name of step.keys) await key(name, true)
           await sleep(step.ms)

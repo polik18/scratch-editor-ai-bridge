@@ -12,6 +12,8 @@ import type { GameSpec } from './types'
 export type Subject =
   | { readonly sprite: string; readonly field: 'x' | 'y' | 'visible' | 'costume' }
   | { readonly stage: 'backdrop' }
+  /** Seconds since the scenario started. */
+  | { readonly clock: 'seconds' }
   | { readonly variable: string; readonly target?: string }
 
 export interface Expectation {
@@ -64,6 +66,14 @@ export type ScenarioStep =
   /** Set a stage variable in the running game, to isolate the behavior under test (for example keep lives up). */
   | { readonly kind: 'set'; readonly variable: string; readonly value: number }
   | { readonly kind: 'mark'; readonly name: string }
+  /** Wait until the subject reaches a value, for at most `ms`; the expectation that follows reports a miss. */
+  | {
+      readonly kind: 'until'
+      readonly subject: Subject
+      readonly op: '>' | '<' | '=='
+      readonly value: number
+      readonly ms: number
+    }
   | Expectation
   | BotStep
 

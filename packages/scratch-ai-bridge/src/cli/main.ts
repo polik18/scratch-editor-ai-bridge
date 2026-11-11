@@ -14,6 +14,9 @@ Which command?
     save it as output/games/<name>/<name>.spec.json, then:
     scratch-ai-bridge spec output/games/<name>/<name>.spec.json --playtest
     Read "feedback" in the JSON report, fix the spec, run spec again with --force.
+  Make an animation (60–180 s, scenes and backdrops):
+    scratch-ai-bridge guide story                 print the Story Spec format
+    scratch-ai-bridge story output/games/<name>/<name>.spec.json --playtest
   Analyse existing .sb3 files:
     scratch-ai-bridge inspect work.sb3 --format student-markdown
     scratch-ai-bridge batch ./class
@@ -27,7 +30,8 @@ Where things go (all under the package's output/ folder, never committed):
 Usage:
   scratch-ai-bridge make <request> [--out <new-file.sb3>] [--spec-out <spec.json>] [--rounds <0-3>] [--playtest] [--force]
                          [--model <id>] [--base-url <url>] [--thinking]
-  scratch-ai-bridge guide
+  scratch-ai-bridge guide [game|story]
+  scratch-ai-bridge story <story.json> [--out <file.sb3>] [--playtest] [--force] [--offline]
   scratch-ai-bridge spec <game-spec.json> [--out <file.sb3>] [--ir <canonical-ir.json>] [--report <report.json>] [--playtest] [--force]
   scratch-ai-bridge inspect <file.sb3> [--format json|markdown|student-markdown]
   scratch-ai-bridge batch <directory> [--out <new-directory>] [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
@@ -90,7 +94,18 @@ if (command === '--help' || command === '-h' || command === '') {
   process.stdout.write(`${USAGE}\n`)
 } else if (command === '--version' || command === '-v') {
   process.stdout.write(`${VERSION}\n`)
-} else if (command === 'guide') {
+} else if (command === 'guide' && args[0] === 'story') {
+  const { createStoryGuide } = await import('../story/prompt')
+  process.stdout.write(
+    `把下面格式的 JSON 存成 output/games/<名稱>/<名稱>.spec.json（新動畫要用還不存在的資料夾名稱），再執行：
+  scratch-ai-bridge story output/games/<名稱>/<名稱>.spec.json --playtest
+.sb3 會產生在同一個資料夾；報告存在旁邊的 _過程/。
+報告中的 feedback 每一行「→」後面就是修改建議；照著改完，加 --force 再執行一次。
+
+${createStoryGuide()}
+`,
+  )
+} else if (command === 'guide' && (args.length === 0 || args[0] === 'game')) {
   const { createGameSpecGuide } = await import('../spec/prompt')
   process.stdout.write(
     `把下面格式的 JSON 存成 output/games/<名稱>/<名稱>.spec.json（新遊戲要用還不存在的資料夾名稱），再執行：
@@ -380,6 +395,48 @@ ${createGameSpecGuide()}
     }
     writeJson(result)
     if (!result.success) process.exitCode = 1
+  }
+} else if (command === 'story') {
+  const positionals: string[] = []
+  let outputFile: string | undefined
+  let playtest = false
+  let force = false
+  let offline = false
+  let argumentError = false
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index]
+    if (argument === '--out') {
+      const value = args[index + 1]
+      if (!value || value.startsWith('-')) {
+        argumentError = true
+        break
+      }
+      outputFile = value
+      index += 1
+    } else if (argument === '--playtest') playtest = true
+    else if (argument === '--force') force = true
+    else if (argument === '--offline') offline = true
+    else if (argument.startsWith('-')) {
+      argumentError = true
+      break
+    } else positionals.push(argument)
+  }
+  if (argumentError || positionals.length !== 1) {
+    process.stderr.write(`${USAGE}\n`)
+    process.exitCode = 2
+  } else {
+    const { runStoryBuild } = await import('./story-command')
+    const report = await withStdoutOnStderr(() =>
+      runStoryBuild({
+        specPath: positionals[0] ?? '',
+        ...(outputFile ? { outputFile } : {}),
+        playtest,
+        force,
+        offline,
+      }),
+    )
+    writeJson(report)
+    if (report.status !== 'success' || report.playtestStatus === 'fail') process.exitCode = 1
   }
 } else if (command === 'clean' && args.every((argument) => argument === '--all')) {
   const { cleanOutput, outputRoot } = await import('./output-layout')

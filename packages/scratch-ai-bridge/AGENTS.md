@@ -15,6 +15,7 @@
 | ------------------------------------ | --------------------------------------------------- | ------------------------------- |
 | 用一句話做新遊戲，讓本機模型寫       | `make` 指令                                         | 不用                            |
 | 你自己就是寫遊戲的 AI                | `guide` → 寫 Game Spec → `spec`，或 MCP `make_game` | 不用，`guide` 已經包含全部格式  |
+| 做一部動畫（60～180 秒、換場）       | `guide story` → 寫 Story Spec → `story`             | 不用，`guide story` 已包含格式  |
 | 修改使用者在 Bridge 網頁中開著的作品 | MCP `inspect_project` → `propose_live_patch`        | `docs/guide/AI-PROVIDER-MCP.md` |
 | 分析學生交的 `.sb3`                  | `inspect`／`batch` 指令                             | `docs/guide/CLI-REFERENCE.md`   |
 | 修改 Bridge 本身的程式碼             | 開發流程                                            | `README.md`、根目錄 `AGENTS.md` |
@@ -80,6 +81,20 @@ npm run --silent cli -- spec output/games/<名稱>/<名稱>.spec.json --playtest
 - **流程**：每個遊戲都有開場說明卡；`關卡` 最多 2 關，每關要有過關條件。
 
 需求裡做不到的部分（例如雙人、反彈球）寫進 `做不到`，不要假裝做到。
+
+### 2b. 做動畫：`story`
+
+```sh
+npm run --silent cli -- guide story                                            # 印出動畫描述的格式
+# 把描述存成 output/games/<名稱>/<名稱>.spec.json，然後：
+npm run --silent cli -- story output/games/<名稱>/<名稱>.spec.json --playtest
+```
+
+- 一部動畫由「角色」和「場景」組成，每一幕有背景和一行一行的動作（出現、移到、說、旁白、等…）。
+- 工具會自動加上片頭、換場淡出淡入和片尾，並檢查主角有出場、至少換一次背景、全長 60～180 秒；不符合就建置失敗，
+  `feedback` 會說要改什麼。報告的 `seconds` 是全長。
+- `--playtest` 會用十倍速播完整部動畫，檢查每一幕的背景和片長。
+- 範例：`src/story/examples/river-story.json`。完整說明：`docs/guide/story-spec.md`。
 
 ### 3. 修改網頁中開著的作品（MCP）
 

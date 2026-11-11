@@ -16,6 +16,8 @@ scratch-ai-bridge <command> [options]
 scratch-ai-bridge make "<一句話需求>" [--playtest]                 # 本機模型寫描述 → 建置 → 試玩
 scratch-ai-bridge guide                                            # 印出 Game Spec 格式
 scratch-ai-bridge spec output/games/<名稱>/<名稱>.spec.json --playtest [--force]
+scratch-ai-bridge guide story                                      # 印出動畫描述格式
+scratch-ai-bridge story output/games/<名稱>/<名稱>.spec.json --playtest  # 動畫：60～180 秒、換場
 scratch-ai-bridge batch <資料夾>                                    # 結果在 output/reports/<資料夾名稱>/
 scratch-ai-bridge clean [--all]                                    # 刪掉 _過程/ 與 output/tmp/；--all 刪整個 output/
 ```

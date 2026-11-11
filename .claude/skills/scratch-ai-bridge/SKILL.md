@@ -29,6 +29,13 @@ npm run --silent cli -- make "<一句話需求>" --playtest
 
 有連上 MCP 的話，也可以直接呼叫 `make_game` 工具，參數 `spec` 放 Game Spec JSON。
 
+## 做動畫
+
+1. `npm run --silent cli -- guide story`：讀格式。
+2. 寫成 `output/games/<名稱>/<名稱>.spec.json`。
+3. `npm run --silent cli -- story output/games/<名稱>/<名稱>.spec.json --playtest`
+4. 全長要 60～180 秒、至少兩幕不同背景、主角要出場；不符合時照 `feedback` 修改，加 `--force` 重建。
+
 ## 其他用途
 
 - **修改網頁中開著的作品**：MCP `inspect_project` → `propose_live_patch`，由使用者在網頁上確認。
