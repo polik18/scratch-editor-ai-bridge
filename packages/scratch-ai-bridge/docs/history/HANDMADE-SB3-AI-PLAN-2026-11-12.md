@@ -235,3 +235,23 @@ L8        廣播訊息 [遊戲結束]
   - 預覽中有沒下載的修改時，換作品前先問；下載檔名改為「原檔名-改過.sb3」。
   - 分頁 2 共用同一套打開流程（拖曳時顯示「放開就檢查這個作品」，只做分析）。
   - 測試：`tests/open-project.test.ts`、`npm run test:open-project-browser`（按鈕、整窗拖曳、錯誤、換作品前詢問）。
+- 2026-11-12 **階段 0 開始：樣本與現況**（樣本在 `output/handmade-corpus/`，不進 git；量測腳本 `output/tmp/baseline.mts`）。
+
+  | 作品 | 誰做的 | 角色 | 積木 | 程式 | 擴充 | 官方造型 | 原始積木 JSON | 10 個一頁要幾頁 | 積木圖問題 |
+  | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+  | Untitled-20（含改善版） | 學生手做 | 32 | 918 | 201 | 文字轉語音 1 | 0／84 | 202 KB | 92 | 0 |
+  | [METRO] • [mania] | 手做（社群） | 1 | 1055 | 59 | 畫筆 62 | 0／53 | 197 KB | 106 | **39** |
+  | acorn | Bridge 做的（`meta.agent`） | 7 | 224 | 14 | — | 0／11 | 46 KB | 23 | 0 |
+  | 狂暴大猩星（3 版） | Bridge 做的、在 Scratch 存過 | 4 | 51～54 | 5 | — | 0／5 | 10 KB | 6 | 0 |
+
+  發現：
+  1. **大作品現在幾乎讀不到。** 8 次查詢 × 10 個積木＝最多 80 個，Untitled-20 只看得到 9%，METRO 不到 8%。
+  2. **名字沒有意義。** Untitled-20 的角色是 Sprite1～Sprite32，造型是 costume1～5，而且全部是自己畫或匯入的（官方造型 0／84）。
+     AI 只靠名字完全不知道誰是誰，C1（顏色、大小、位置）和 C2（點選）是必要的，不是加分。
+  3. **Bridge 比 Scratch 嚴格，整個角色被鎖住。** METRO 有一個自製積木的「預設值數量」多一個（3 個預設值、2 個參數），
+     Scratch 照常執行，但 Bridge 判成 `invalid-procedure-definition`，連帶 36 個呼叫變成 `unresolved-procedure-call`，
+     整個角色 `graphEditable: false`，AI 什麼都不能改。→ 新增 **B0**：這類 Scratch 能容忍的不一致改成警告，不鎖整個角色。
+  4. 樣本只有 2 件真正手做的作品，離 20～30 件還差很多；需要更多學生作品（小作品、有註解的、用官方素材的）。
+- 2026-11-12 **B0 完成**：`validateScratchBlockGraph` 不再要求自製積木的預設值數量等於參數數量（Scratch 只在積木區建立新呼叫時用預設值）。
+  METRO 的積木圖問題 39 → 0，角色可以讓 AI 修改。Canonical IR 的轉換仍會略過這種定義（`invalid-procedure-metadata`），
+  只影響分析與 Canonical 路徑，不影響原始 SB3 修改。

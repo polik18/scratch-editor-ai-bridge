@@ -474,6 +474,8 @@ export const validateScratchBlockGraph = (graph: ScratchBlockGraph): BlockGraphI
       const argumentIds = isRecord(mutation) ? parseMutationArray(mutation.argumentids) : undefined
       const argumentNames = isRecord(mutation) ? parseMutationArray(mutation.argumentnames) : undefined
       const argumentDefaults = isRecord(mutation) ? parseMutationArray(mutation.argumentdefaults) : undefined
+      // Defaults may number differently from the arguments: Scratch only uses them to fill new call blocks in the
+      // palette, and such projects still run.
       const validArguments =
         argumentIds !== undefined &&
         argumentNames !== undefined &&
@@ -481,7 +483,6 @@ export const validateScratchBlockGraph = (graph: ScratchBlockGraph): BlockGraphI
         argumentIds.every((value) => typeof value === 'string' && value.length > 0) &&
         argumentNames.every((value) => typeof value === 'string') &&
         argumentIds.length === argumentNames.length &&
-        argumentIds.length === argumentDefaults.length &&
         new Set(argumentIds).size === argumentIds.length &&
         new Set(argumentNames).size === argumentNames.length
       if (
@@ -493,7 +494,7 @@ export const validateScratchBlockGraph = (graph: ScratchBlockGraph): BlockGraphI
       ) {
         const countMismatch =
           argumentIds && argumentNames && argumentDefaults
-            ? `目前有 ${argumentIds.length} 個參數 ID、${argumentNames.length} 個參數名稱、${argumentDefaults.length} 個預設值。`
+            ? `目前有 ${argumentIds.length} 個參數 ID、${argumentNames.length} 個參數名稱。`
             : undefined
         issues.push({
           code: 'invalid-procedure-definition',

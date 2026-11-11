@@ -738,6 +738,40 @@ describe('generic Scratch block graph', () => {
     expect(validateScratchBlockGraph(graph).map(({ code }) => code)).toContain('invalid-procedure-definition')
   })
 
+  it('accepts a definition whose argument defaults do not match its arguments, as Scratch does', () => {
+    // Scratch only uses defaults to fill new call blocks in the palette, so a project with an extra or missing
+    // default still runs; treating it as invalid would lock every call to the procedure.
+    const graph = copyScratchBlockGraph({
+      definition: {
+        opcode: 'procedures_definition',
+        next: null,
+        parent: null,
+        inputs: { custom_block: [2, 'prototype'] },
+      },
+      prototype: {
+        opcode: 'procedures_prototype',
+        next: null,
+        parent: 'definition',
+        inputs: {},
+        mutation: {
+          proccode: 'move %s %s',
+          argumentids: '["arg1","arg2"]',
+          argumentnames: '["x","y"]',
+          argumentdefaults: '["","",""]',
+        },
+      },
+      call: {
+        opcode: 'procedures_call',
+        next: null,
+        parent: null,
+        inputs: {},
+        mutation: { proccode: 'move %s %s', argumentids: '["arg1","arg2"]' },
+      },
+    })
+
+    expect(validateScratchBlockGraph(graph)).toEqual([])
+  })
+
   it('reports unresolved calls and inconsistent definition argument metadata', () => {
     const graph = copyScratchBlockGraph({
       definition: {
