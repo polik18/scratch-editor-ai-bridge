@@ -9,7 +9,11 @@ import {
   loadAiConnection,
   saveAiConnection,
 } from './core/ai/connection-store'
-import { listOpenAiCompatibleModels, requestOpenAiCompatiblePatch } from './core/ai/openai-compatible'
+import {
+  listOpenAiCompatibleModels,
+  requestOpenAiCompatiblePatch,
+  requestOpenAiCompatibleText,
+} from './core/ai/openai-compatible'
 import {
   inspectRawBlocks,
   inspectRawTargets,
@@ -18,6 +22,14 @@ import {
   proposeRawLivePatch,
 } from './core/ai/raw-tool-core'
 import { inspectProjectForAi, proposeLivePatch } from './core/ai/tool-core'
+import {
+  createValueExplanationPrompt,
+  isInternalTarget,
+  resetNote,
+  usageLines,
+  valueItems,
+  type ValueItem,
+} from './core/ai/value-guide'
 import {
   analyzeCanonicalProject,
   createProjectFeedback,
@@ -3010,18 +3022,50 @@ const renderStudentPreview = (
     const manualSummary = document.createElement('summary')
     manualSummary.textContent = '不用 AI，自己改數值'
     const targetLabel = document.createElement('label')
-    targetLabel.textContent = '角色或舞台'
+    targetLabel.textContent = '要改誰'
     const targetSelect = document.createElement('select')
     targetLabel.append(targetSelect)
     const propertyLabel = document.createElement('label')
-    propertyLabel.textContent = '屬性或變數'
+    propertyLabel.textContent = '要改什麼'
     const propertySelect = document.createElement('select')
     propertyLabel.append(propertySelect)
+    const showAllLabel = document.createElement('label')
+    showAllLabel.className = 'ai-remember'
+    const showAll = document.createElement('input')
+    showAll.type = 'checkbox'
+    showAllLabel.append(showAll, ' 也列出程式內部用的角色和變數')
+    // What the value is, whether the game sets it again, and the AI's explanation.
+    const valueGuide = document.createElement('div')
+    valueGuide.className = 'value-guide'
+    const valueHint = document.createElement('p')
+    const valueReset = document.createElement('p')
+    valueReset.className = 'value-reset'
+    const valueExplanation = document.createElement('p')
+    valueExplanation.className = 'value-explanation'
+    valueExplanation.setAttribute('aria-live', 'polite')
+    const explainActions = document.createElement('div')
+    explainActions.className = 'ai-chips'
+    const explainButton = document.createElement('button')
+    explainButton.type = 'button'
+    explainButton.className = 'button secondary small'
+    explainButton.textContent = '請 AI 說明這是什麼'
+    const copyQuestion = document.createElement('button')
+    copyQuestion.type = 'button'
+    copyQuestion.className = 'button secondary small'
+    copyQuestion.textContent = '複製問題（貼給 Gemini 問）'
+    explainActions.append(explainButton, copyQuestion)
+    valueGuide.append(valueHint, valueReset, valueExplanation, explainActions)
     const valueLabel = document.createElement('label')
-    valueLabel.textContent = '新的值（顯示：true 或 false；造型：從 0 開始的編號）'
+    valueLabel.textContent = '新的值'
     const valueInput = document.createElement('input')
     valueInput.type = 'text'
-    valueLabel.append(valueInput)
+    const valueChoice = document.createElement('select')
+    valueChoice.hidden = true
+    valueChoice.addEventListener('change', () => {
+      valueInput.value = valueChoice.value
+    })
+    valueLabel.append(valueInput, valueChoice)
+    const explanations = new Map<string, string>()
     const status = document.createElement('p')
     status.className = 'inline-status'
     status.setAttribute('role', 'status')
@@ -3079,6 +3123,85 @@ const renderStudentPreview = (
         ? (variables as Record<string, unknown>)
         : {}
     }
+    const shownValue = (item: ValueItem): string =>
+      item.kind === 'costume'
+        ? (item.options?.[Number(item.value)] ?? String(item.value))
+        : item.key === 'visible'
+          ? item.value
+            ? '顯示'
+            : '隱藏'
+          : String(item.value)
+    const explanationPrompt = (item: ValueItem): string =>
+      createValueExplanationPrompt(
+        item,
+        targetSelect.selectedOptions.item(0)?.textContent ?? targetSelect.value,
+        usageLines(currentRaw.projectJson, targetSelect.value, item.key),
+        resetNote(currentRaw.projectJson, targetSelect.value, item.key),
+      )
+    let guidedItem: ValueItem | undefined
+    const showValueGuide = (item: ValueItem | undefined): void => {
+      guidedItem = item
+      valueGuide.hidden = !item
+      if (!item) return
+      valueHint.textContent = item.hint ?? ''
+      valueReset.textContent = resetNote(currentRaw.projectJson, targetSelect.value, item.key) ?? ''
+      valueExplanation.textContent = explanations.get(`${targetSelect.value}|${item.key}`) ?? ''
+      const choices: [string, string][] =
+        item.kind === 'costume'
+          ? (item.options ?? []).map((name, index) => [String(index), name])
+          : item.kind === 'boolean'
+            ? [
+                ['true', item.key === 'visible' ? '顯示' : '是（true）'],
+                ['false', item.key === 'visible' ? '隱藏' : '否（false）'],
+              ]
+            : []
+      valueChoice.hidden = choices.length === 0
+      valueInput.hidden = choices.length > 0
+      valueInput.inputMode = item.kind === 'text' ? 'text' : 'decimal'
+      valueChoice.replaceChildren(
+        ...choices.map(([value, label]) =>
+          Object.assign(document.createElement('option'), { value, textContent: label }),
+        ),
+      )
+      if (choices.length > 0) valueChoice.value = valueInput.value
+    }
+    showAll.addEventListener('change', () => refresh())
+    explainButton.addEventListener('click', () => {
+      const item = guidedItem
+      if (!item) return
+      const cacheKey = `${targetSelect.value}|${item.key}`
+      void (async () => {
+        explainButton.disabled = true
+        valueExplanation.textContent = 'AI 正在看用到它的程式…'
+        try {
+          const text = await requestOpenAiCompatibleText({
+            baseUrl: localAiBaseUrl.value,
+            model: localAiModel.value,
+            apiKey: localAiKey.value,
+            prompt: explanationPrompt(item),
+            ...(gatewayToken ? { fetchImpl: gatewayFetch } : {}),
+          })
+          explanations.set(cacheKey, `AI 說明：${text}`)
+          if (guidedItem === item) valueExplanation.textContent = `AI 說明：${text}`
+        } catch (error) {
+          if (guidedItem === item)
+            valueExplanation.textContent = `${error instanceof Error ? error.message : String(error)}（也可以按「複製問題」貼給 Gemini 問。）`
+        } finally {
+          explainButton.disabled = false
+        }
+      })()
+    })
+    copyQuestion.addEventListener('click', () => {
+      if (!guidedItem) return
+      void navigator.clipboard.writeText(explanationPrompt(guidedItem)).then(
+        () => {
+          valueExplanation.textContent = '已複製問題，貼到 Gemini 或 ChatGPT 就能問。'
+        },
+        () => {
+          valueExplanation.textContent = '瀏覽器不允許複製；請改用「請 AI 說明」。'
+        },
+      )
+    })
     const refresh = (): void => {
       const targets = getTargets()
       const chosen = targetSelect.value
@@ -3086,32 +3209,22 @@ const renderStudentPreview = (
       for (const target of targets) {
         if (typeof target.name !== 'string' || targets.filter((item) => item.name === target.name).length !== 1)
           continue
+        if (!showAll.checked && target.isStage !== true && isInternalTarget(target.name)) continue
         const option = document.createElement('option')
         option.value = target.name
-        option.textContent = target.isStage === true ? `${target.name}（舞台）` : target.name
+        option.textContent = target.isStage === true ? '舞台（背景、全部角色共用的變數）' : target.name
         targetSelect.append(option)
       }
       if (Array.from(targetSelect.options).some((option) => option.value === chosen)) targetSelect.value = chosen
       const target = targets.find((item) => item.name === targetSelect.value)
       const previousProperty = propertySelect.value
       propertySelect.replaceChildren()
-      const fields =
-        target?.isStage === true
-          ? ['currentCostume', 'volume', 'tempo']
-          : ['x', 'y', 'direction', 'size', 'visible', 'currentCostume', 'volume']
-      for (const field of fields) {
-        if (typeof target?.[field] !== (field === 'visible' ? 'boolean' : 'number')) continue
+      const items = target ? valueItems(currentRaw.projectJson, targetSelect.value) : []
+      for (const item of items) {
+        if (item.internal && !showAll.checked) continue
         const option = document.createElement('option')
-        option.value = field
-        option.textContent = field
-        propertySelect.append(option)
-      }
-      for (const [id, variable] of Object.entries(getVariables(target))) {
-        if (!Array.isArray(variable) || typeof variable[0] !== 'string' || variable[2] === true) continue
-        if (!['string', 'number', 'boolean'].includes(typeof variable[1])) continue
-        const option = document.createElement('option')
-        option.value = `variable:${id}`
-        option.textContent = `變數：${variable[0]}`
+        option.value = item.key
+        option.textContent = `${item.label}（目前 ${shownValue(item)}）`
         propertySelect.append(option)
       }
       if (Array.from(propertySelect.options).some((option) => option.value === previousProperty))
@@ -3123,6 +3236,7 @@ const renderStudentPreview = (
         typeof oldValue === 'string' || typeof oldValue === 'number' || typeof oldValue === 'boolean'
           ? String(oldValue)
           : ''
+      showValueGuide(items.find((item) => item.key === selected))
       apply.disabled = !target || !propertySelect.value
       undo.disabled = undoStack.length === 0
       redo.disabled = redoStack.length === 0
@@ -3133,6 +3247,7 @@ const renderStudentPreview = (
         targetSelect,
         propertySelect,
         valueInput,
+        valueChoice,
         apply,
         undo,
         redo,
@@ -3322,7 +3437,7 @@ const renderStudentPreview = (
         try {
           const target = getTargets().find((item) => item.name === targetSelect.value)
           const selection = propertySelect.value
-          const fieldLabel = propertySelect.selectedOptions.item(0)?.textContent ?? selection
+          const fieldLabel = guidedItem?.label ?? selection
           const variableId = selection.startsWith('variable:') ? selection.slice(9) : null
           const variable = variableId !== null ? getVariables(target)[variableId] : undefined
           const expected: unknown = Array.isArray(variable) ? variable[1] : target?.[selection]
@@ -3439,7 +3554,7 @@ const renderStudentPreview = (
     localAiSettings.hidden = false
     localAiGenerateButton.disabled = false
     mcpSettings.hidden = false
-    manual.append(manualSummary, targetLabel, propertyLabel, valueLabel, manualActions)
+    manual.append(manualSummary, targetLabel, propertyLabel, showAllLabel, valueGuide, valueLabel, manualActions)
     panel.append(
       title,
       help,

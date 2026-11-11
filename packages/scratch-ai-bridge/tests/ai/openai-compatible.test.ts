@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { requestOpenAiCompatiblePatch } from '../../src/core/ai/openai-compatible'
+import { requestOpenAiCompatiblePatch, requestOpenAiCompatibleText } from '../../src/core/ai/openai-compatible'
 
 const reply =
   (choice: unknown): typeof fetch =>
@@ -94,5 +94,30 @@ describe('requestOpenAiCompatiblePatch when the request cannot be done', () => {
     ])
     await expect(ask(fetchImpl)).rejects.toThrow(/AI 查了 8 次作品，還是沒有提出修改/)
     expect(bodies.at(-1)?.messages.at(-1)?.content).toMatch(/只剩 \d 次查詢/)
+  })
+})
+
+describe('requestOpenAiCompatibleText', () => {
+  it('returns the plain answer and explains a cut-off reply', async () => {
+    const answer =
+      (choice: unknown): typeof fetch =>
+      () =>
+        Promise.resolve(new Response(JSON.stringify({ choices: [choice] })))
+    await expect(
+      requestOpenAiCompatibleText({
+        baseUrl: 'http://127.0.0.1:1234/v1',
+        model: 'm',
+        prompt: '生命是什麼？',
+        fetchImpl: answer({ finish_reason: 'stop', message: { content: ' 香魚還能被撞幾次。 ' } }),
+      }),
+    ).resolves.toBe('香魚還能被撞幾次。')
+    await expect(
+      requestOpenAiCompatibleText({
+        baseUrl: 'http://127.0.0.1:1234/v1',
+        model: 'm',
+        prompt: '生命是什麼？',
+        fetchImpl: answer({ finish_reason: 'length', message: { content: '' } }),
+      }),
+    ).rejects.toThrow(/截斷/)
   })
 })

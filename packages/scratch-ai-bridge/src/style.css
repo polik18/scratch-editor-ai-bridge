@@ -1793,3 +1793,38 @@ pre {
   border-radius: 8px;
   font: inherit;
 }
+.value-guide {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #eef7f1;
+}
+.value-guide p {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.value-guide p:empty {
+  display: none;
+}
+.value-guide .value-reset {
+  color: #8a5a00;
+}
+.ai-subsection select,
+.ai-subsection > label > input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  font-weight: 400;
+}
+.ai-subsection label.ai-remember {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-weight: 600;
+}

@@ -150,6 +150,58 @@ const httpError = (status: number, detail: string): Error =>
     `${status === 401 || status === 403 ? 'API key 不正確或沒有填。' : ''}模型 API 回應 HTTP ${status}${detail ? `：${detail}` : ''}`,
   )
 
+/**
+ * One question, one plain-text answer (no tools), for explanations shown to the student.
+ * @param options - Connection and the question.
+ * @param options.baseUrl - Service address.
+ * @param options.model - Model ID.
+ * @param options.apiKey - Sent as a bearer token when not empty.
+ * @param options.prompt - The question.
+ * @param options.signal - Cancels the request.
+ * @param options.fetchImpl - Replaces fetch (tests, the LAN gateway).
+ * @returns The answer text.
+ */
+export const requestOpenAiCompatibleText = async ({
+  baseUrl,
+  model,
+  apiKey,
+  prompt,
+  signal,
+  fetchImpl = fetch,
+}: {
+  readonly baseUrl: string
+  readonly model: string
+  readonly apiKey?: string
+  readonly prompt: string
+  readonly signal?: AbortSignal
+  readonly fetchImpl?: typeof fetch
+}): Promise<string> => {
+  if (!model.trim()) throw new Error('還沒選模型：打開上面的 AI 連線設定，按「測試連線」後選一個模型。')
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (apiKey?.trim()) headers.Authorization = `Bearer ${apiKey.trim()}`
+  const response = await fetchImpl(endpointFor(baseUrl), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: model.trim(),
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.2,
+      max_tokens: 2048,
+    }),
+    ...(signal ? { signal } : {}),
+  })
+  if (!response.ok) throw httpError(response.status, (await readResponseText(response, 1024 * 1024)).slice(0, 300))
+  const body = JSON.parse(await readResponseText(response, 1024 * 1024)) as {
+    choices?: { finish_reason?: unknown; message?: { content?: unknown } }[]
+  }
+  const choice = body.choices?.[0]
+  const text = typeof choice?.message?.content === 'string' ? choice.message.content.trim() : ''
+  if (text) return text
+  throw new Error(
+    choice?.finish_reason === 'length' ? 'AI 想太久，還沒寫出說明就被截斷了；請再按一次。' : 'AI 沒有回覆說明。',
+  )
+}
+
 export const requestOpenAiCompatiblePatch = async ({
   baseUrl,
   model,
