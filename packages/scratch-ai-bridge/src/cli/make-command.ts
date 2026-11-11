@@ -2,6 +2,7 @@ import { constants } from 'node:fs'
 import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { extractJson } from '../spec/normalize'
 import { createGameSpecInstruction, createGameSpecRepairInstruction } from '../spec/prompt'
 import { createStoryInstruction } from '../story/prompt'
 import { exists, gameFiles, gamesRoot, gameTarget, safeName, writeProcessFile } from './output-layout'
@@ -190,6 +191,24 @@ export const resolvePlaceholders = (text: string, names: ReadonlyMap<string, str
   return result
 }
 
+/**
+ * Writes the requested length into an animation reply that does not state one, so the build's length message aims
+ * at the request instead of only at the 60-second minimum.
+ * @param text - The model's reply.
+ * @param seconds - Length the request asked for.
+ * @returns The reply, with 目標秒數 added when it could be read and had none.
+ */
+const withTargetSeconds = (text: string, seconds: number | undefined): string => {
+  if (seconds === undefined || /目標秒數|targetseconds/i.test(text)) return text
+  try {
+    const { value } = extractJson(text)
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return text
+    return JSON.stringify({ ...(value as Record<string, unknown>), 目標秒數: seconds }, null, 1)
+  } catch {
+    return text
+  }
+}
+
 const rank = (report: AttemptReport): number =>
   report.status !== 'success' ? 0 : report.playtestStatus === 'pass' ? 3 : report.playtestStatus === 'not-run' ? 2 : 1
 
@@ -242,6 +261,7 @@ export const makeGame = async (options: MakeOptions): Promise<MakeReport> => {
       progress(round === 0 ? `請模型 ${model ?? ''} 寫作品描述…` : `第 ${round} 輪修正：把問題回饋給模型…`)
       const started = Date.now()
       text = resolvePlaceholders(await complete(prompt), placeholders)
+      if (story) text = withTargetSeconds(text, requirements.seconds)
       replies.push(text)
       const sb3 = path.join(workDirectory, `attempt-${round}.sb3`)
       progress(options.playtest ? '建置並自動試玩…' : '建置…')

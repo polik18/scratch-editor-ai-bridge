@@ -150,7 +150,7 @@ export const checkRequirements = (text: string, requirements: Requirements): Req
         pass: Math.abs(difference) <= requirements.seconds * LENGTH_TOLERANCE,
         fix:
           difference < 0
-            ? `再加約 ${-difference} 秒：多寫幾句對白或旁白，或在各幕加「等 N秒」。`
+            ? `再加約 ${-difference} 秒，大約再寫 ${Math.max(1, Math.round(-difference / 3))} 句對白或旁白（每句約 3 秒）；並寫上 "目標秒數": ${requirements.seconds}。`
             : `減少約 ${difference} 秒：刪掉一些對白，或把「等 N秒」改短。`,
       })
     }

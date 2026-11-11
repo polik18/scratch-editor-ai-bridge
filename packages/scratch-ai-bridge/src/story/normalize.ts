@@ -502,26 +502,33 @@ export const normalizeStory = (raw: unknown): StoryResult => {
   }
 
   const total = storySeconds(story)
-  const target = Number(pick(raw, 'target'))
-  if (Number.isFinite(target) && target > 0 && Math.abs(total - target) > target * 0.1)
+  const written = Number(pick(raw, 'target'))
+  const target = Number.isFinite(written) && written > 0 ? written : undefined
+  // One message with one number: aim for the target when there is one, otherwise just into 60–180 s. Saying both
+  // (再加 21 秒 to reach 60, 再加 81 秒 to reach 120) made models take the smaller step.
+  const goal =
+    target ?? (total < STORY_LENGTH.min ? STORY_LENGTH.min : total > STORY_LENGTH.max ? STORY_LENGTH.max : total)
+  const change = Math.ceil(Math.abs(goal - total))
+  const howMuch =
+    total < goal
+      ? `再加約 ${change} 秒，大約再寫 ${Math.max(1, Math.round(change / 3))} 句對白或旁白（每句約 3 秒），或在各幕加「等 N秒」。`
+      : `減少約 ${change} 秒：刪掉一些對白，或把「N秒」改短。`
+  const outsideRule = total < STORY_LENGTH.min || total > STORY_LENGTH.max
+  if (outsideRule)
+    report(
+      'error',
+      'STORY_LENGTH',
+      '場景',
+      `動畫全長約 ${Math.round(total)} 秒，規定是 ${STORY_LENGTH.min}～${STORY_LENGTH.max} 秒${target ? `，目標是 ${target} 秒` : ''}。`,
+      howMuch,
+    )
+  else if (target !== undefined && Math.abs(total - target) > target * 0.1)
     report(
       'warning',
       'TARGET_LENGTH',
       '目標秒數',
       `動畫全長約 ${Math.round(total)} 秒，目標是 ${target} 秒。`,
-      total < target
-        ? `再加約 ${Math.ceil(target - total)} 秒：多寫幾句對白或旁白，或加「等 N秒」。`
-        : `減少約 ${Math.ceil(total - target)} 秒：刪掉一些對白，或把秒數改短。`,
-    )
-  if (total < STORY_LENGTH.min || total > STORY_LENGTH.max)
-    report(
-      'error',
-      'STORY_LENGTH',
-      '場景',
-      `動畫全長約 ${Math.round(total)} 秒，規定是 ${STORY_LENGTH.min}～${STORY_LENGTH.max} 秒。`,
-      total < STORY_LENGTH.min
-        ? `再加約 ${Math.ceil(STORY_LENGTH.min - total)} 秒：多幾句對白或旁白，或加「等 N秒」。`
-        : `減少約 ${Math.ceil(total - STORY_LENGTH.max)} 秒：刪掉一些對白，或把「N秒」改短。`,
+      howMuch,
     )
   return { story, diagnostics }
 }
