@@ -145,7 +145,7 @@ import {
 } from './core/visuals/presets'
 import { chooseProjectFile, friendlyOpenError, isFileDrag, projectFileProblem } from './open-project'
 import { SCRATCH_LINK_HARDWARE_EXTENSION_IDS } from './scratch/extensions'
-import { fetchPublicScratchProject } from './scratch/public-project'
+import { fetchPublicScratchProject, parseScratchProjectId } from './scratch/public-project'
 import {
   createVM,
   loadSb3,
@@ -652,7 +652,8 @@ app.innerHTML = `
           <input id="open-sb3-file" class="visually-hidden" type="file" accept=".sb3,application/zip" tabindex="-1" aria-hidden="true">
           <label class="scratch-url-field" for="scratch-project-url">或貼上 Scratch 公開作品網址</label>
           <div class="scratch-url-row"><input id="scratch-project-url" type="url" inputmode="url" placeholder="https://scratch.mit.edu/projects/作品編號/" autocomplete="url"><button id="open-scratch-url" class="button secondary" type="button">從網址讀取</button></div>
-          <p class="open-project-privacy">只讀公開作品；若瀏覽器的 CORS 政策不允許直接下載，請用 CLI fetch 或 skill-scratch-site 先下載，再把 .sb3 拖進來。</p>
+          <p class="open-project-privacy">如果你已經有 .sb3，請用上面的「打開我的作品」；這個檔案只在本機讀取，不會上傳。也可以貼公開作品網址，若網址讀取被 Scratch 擋下，頁面會提供下載回本機的步驟。</p>
+          <a id="scratch-open-page-link" class="button secondary scratch-open-page-link" href="#" target="_blank" rel="noopener noreferrer" hidden>開啟 Scratch 作品頁</a>
           <div id="open-sb3-status" class="status-box" role="status" aria-live="polite"></div>
         </article>
 
@@ -7600,6 +7601,7 @@ const openFileInput = byId<HTMLInputElement>('open-sb3-file')
 const openFileStatus = byId<HTMLDivElement>('open-sb3-status')
 const scratchProjectUrl = byId<HTMLInputElement>('scratch-project-url')
 const openScratchUrlButton = byId<HTMLButtonElement>('open-scratch-url')
+const scratchOpenPageLink = byId<HTMLAnchorElement>('scratch-open-page-link')
 const dropOverlay = byId<HTMLDivElement>('drop-overlay')
 const dropOverlayTitle = byId<HTMLElement>('drop-overlay-title')
 const generateTab = byId<HTMLButtonElement>('generate-tab')
@@ -7663,10 +7665,11 @@ openScratchUrlButton.addEventListener('click', () => {
   )
     return
   openScratchUrlButton.disabled = true
+  scratchOpenPageLink.hidden = true
   setStatus(openFileStatus, '正在從 Scratch 公開伺服器下載作品與素材…')
+  const requestedUrl = scratchProjectUrl.value
   void (async () => {
     try {
-      const requestedUrl = scratchProjectUrl.value
       const downloaded = await fetchPublicScratchProject(requestedUrl)
       const file = new File([downloaded.blob], downloaded.fileName, { type: 'application/zip' })
       await openProjectFiles([file], {
@@ -7679,12 +7682,18 @@ openScratchUrlButton.addEventListener('click', () => {
       })
       setStatus(openFileStatus, `已從 Scratch 讀取「${downloaded.title}」。原作品仍只保存在這個瀏覽器。`, 'ok')
     } catch (error) {
-      const message =
-        error instanceof TypeError
-          ? 'Scratch 公開伺服器不允許這個網站直接讀取（CORS）。請用 CLI fetch 或 skill-scratch-site 下載後拖入 .sb3。'
-          : error instanceof Error
-            ? error.message
-            : String(error)
+      let message = error instanceof Error ? error.message : String(error)
+      if (error instanceof TypeError) {
+        try {
+          const id = parseScratchProjectId(requestedUrl)
+          scratchOpenPageLink.href = `https://scratch.mit.edu/projects/${id}/`
+          scratchOpenPageLink.hidden = false
+          message =
+            '這個公開網址目前不能由本頁直接讀取。請開啟 Scratch 作品頁，選「檔案 → 下載到你的電腦」，再回來點上方「打開我的作品」選擇 .sb3。'
+        } catch {
+          message = '這個公開網址目前不能由本頁直接讀取。請回到上方改用「打開我的作品」選擇 .sb3。'
+        }
+      }
       setStatus(openFileStatus, message, 'error')
     } finally {
       openScratchUrlButton.disabled = false
