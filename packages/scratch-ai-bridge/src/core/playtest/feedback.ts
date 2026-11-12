@@ -6,6 +6,8 @@ export interface PlaytestControl {
   readonly axis: 'x' | 'y'
   readonly sign: 1 | -1
   readonly label?: string
+  /** Action keys such as fire/start do not promise positional movement. */
+  readonly expectsMovement?: boolean
 }
 
 export interface PlaytestPlan {
@@ -62,10 +64,10 @@ export interface PlaytestFeedback {
 }
 
 const directionControls: readonly PlaytestControl[] = [
-  { key: 'ArrowLeft', axis: 'x', sign: -1, label: '左鍵' },
-  { key: 'ArrowRight', axis: 'x', sign: 1, label: '右鍵' },
-  { key: 'ArrowUp', axis: 'y', sign: 1, label: '上鍵' },
-  { key: 'ArrowDown', axis: 'y', sign: -1, label: '下鍵' },
+  { key: 'ArrowLeft', axis: 'x', sign: -1, label: '左鍵', expectsMovement: true },
+  { key: 'ArrowRight', axis: 'x', sign: 1, label: '右鍵', expectsMovement: true },
+  { key: 'ArrowUp', axis: 'y', sign: 1, label: '上鍵', expectsMovement: true },
+  { key: 'ArrowDown', axis: 'y', sign: -1, label: '下鍵', expectsMovement: true },
 ]
 
 const motionOpcodes = new Set([
@@ -140,7 +142,17 @@ export const inferPlaytestPlan = (request: string): PlaytestPlan => {
     if (hasText(text, /上鍵|上方向鍵|跳躍|向上/u)) add(directionControls[2])
     if (hasText(text, /下鍵|下方向鍵|向下/u)) add(directionControls[3])
   }
-  if (hasText(text, /空白鍵|空格|space/u)) add({ key: ' ', axis: 'y', sign: 1, label: '空白鍵' })
+  if (hasText(text, /空白鍵|空格|space/u))
+    add({
+      key: ' ',
+      axis: 'y',
+      sign: 1,
+      label: '空白鍵',
+      // Space is commonly fire/start. Only require a position change when the
+      // request explicitly describes a jump; otherwise validate the key wiring
+      // without reporting a false movement failure.
+      expectsMovement: hasText(text, /跳躍|跳一下|跳起/u),
+    })
   if (hasText(text, /按下\s*[wasd]|\b[wasd]鍵\b/u)) {
     if (hasText(text, /a鍵|左/u)) add({ key: 'a', axis: 'x', sign: -1, label: 'A 鍵' })
     if (hasText(text, /d鍵|右/u)) add({ key: 'd', axis: 'x', sign: 1, label: 'D 鍵' })
@@ -171,8 +183,9 @@ const projectHasKeyBinding = (project: CanonicalProject, key: string): boolean =
   const names = new Set(scratchKeyNames(key))
   let found = false
   walkBlocks(allProjectBlocks(project), (block) => {
-    if (found || block.opcode !== 'event_whenkeypressed') return
-    const option = normalize(block.fields?.KEY_OPTION)
+    if (found || !['event_whenkeypressed', 'sensing_keypressed'].includes(block.opcode)) return
+    const keyInput = block.inputs?.KEY_OPTION
+    const option = normalize(block.fields?.KEY_OPTION ?? (keyInput?.type === 'literal' ? keyInput.value : undefined))
     found = names.has(option)
   })
   return found
@@ -228,7 +241,7 @@ export const createPlaytestFeedback = (
 
   for (const control of plan.controls) {
     const result = observation.controls.find(({ key }) => key === control.key)
-    if (!result?.moved)
+    if (control.expectsMovement !== false && !result?.moved)
       issues.push(
         `按${control.label ?? control.key}沒有偵測到角色往正確方向移動；請檢查按鍵事件與 motion_changexby／motion_changeyby 的方向。`,
       )

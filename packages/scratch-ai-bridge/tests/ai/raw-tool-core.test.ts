@@ -143,6 +143,14 @@ describe('raw SB3 AI proposal', () => {
     expect(insertedBlocks.hat.next).toBe('move')
     expect(insertedBlocks.move.next).toMatch(/^sab_line_move/)
     expect(Object.values(insertedBlocks).some((block: any) => block.opcode === 'sound_play')).toBe(true)
+    const insertedStop = proposeRawLivePatch(
+      project,
+      patch([{ op: 'insert_after', line: 'L1', text: '停止 [這個角色的其他程式]' }]),
+    )
+    const insertedStopBlocks = (insertedStop.project.projectJson as any).targets[0].blocks
+    expect(Object.values(insertedStopBlocks).some((block: any) => block.opcode === 'control_stop')).toBe(true)
+    const stopBlock = Object.values<any>(insertedStopBlocks).find((block) => block.opcode === 'control_stop')
+    expect(stopBlock.fields.STOP_OPTION).toEqual(['other scripts in sprite'])
     const deleted = proposeRawLivePatch(project, patch([{ op: 'delete', line: 'L2' }]))
     expect((deleted.project.projectJson as any).targets[0].blocks).toEqual({
       hat: expect.objectContaining({ next: null }),

@@ -255,6 +255,11 @@ interface ActiveStudentAnimation {
 let activeStudentAnimation: ActiveStudentAnimation | null = null
 // Whether the work in the preview has changes the student has not downloaded; set by renderStudentPreview.
 let studentPreviewHasEdits = (): boolean => false
+let rawExternalPatchPanel: HTMLDetailsElement | null = null
+let rawExternalPatchInput: HTMLTextAreaElement | null = null
+let rawExternalPatchStatus: HTMLParagraphElement | null = null
+let rawExternalPatchFallback: HTMLDivElement | null = null
+let rawExternalPatchFallbackText: HTMLTextAreaElement | null = null
 
 let cancelActiveStudentPlaytest: (() => void) | null = null
 
@@ -1977,6 +1982,14 @@ const renderStudentPreview = (
   cancelActiveStudentPlaytest = null
   stopStudentAnimation('動畫預覽已停止；舞台靜態畫面已恢復。')
 
+  // A new imported project gets a fresh AI edit panel. Clear these references first so a
+  // previous web-AI response cannot leak into the next project's textarea or candidate state.
+  rawExternalPatchPanel = null
+  rawExternalPatchInput = null
+  rawExternalPatchStatus = null
+  rawExternalPatchFallback = null
+  rawExternalPatchFallbackText = null
+
   latestPlaytestPrompt = null
 
   latestPlaytestSummary = null
@@ -2867,11 +2880,6 @@ const renderStudentPreview = (
     }
   }
   const canPatchLiveProject = !rawSource
-  let rawExternalPatchPanel: HTMLDetailsElement | null = null
-  let rawExternalPatchInput: HTMLTextAreaElement | null = null
-  let rawExternalPatchStatus: HTMLParagraphElement | null = null
-  let rawExternalPatchFallback: HTMLDivElement | null = null
-  let rawExternalPatchFallbackText: HTMLTextAreaElement | null = null
   if (rawSource) {
     livePatchStatus.textContent =
       '為保留匯入作品的原始積木與素材，這裡不直接編輯積木；可用 MCP 讀取讀本並提出待審修改。'
@@ -3481,6 +3489,7 @@ const renderStudentPreview = (
     externalPatchInput.id = 'raw-external-patch-editor'
     externalPatchInput.className = 'mono editor live-patch-editor'
     externalPatchInput.placeholder = '把 AI 回覆的 raw-patch JSON 貼在這裡'
+    externalPatchInput.value = ''
     const externalPatchCheckButton = document.createElement('button')
     externalPatchCheckButton.type = 'button'
     externalPatchCheckButton.className = 'button primary'

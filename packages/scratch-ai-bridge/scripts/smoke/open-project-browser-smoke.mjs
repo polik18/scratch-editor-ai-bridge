@@ -79,12 +79,18 @@ try {
   if (asked !== 1) throw new Error('replacing an edited work did not ask first')
   await panel.locator(':scope > p[role=status]').filter({ hasText: '已套用' }).waitFor()
 
+  // A response from the previous project must not survive the next project import.
+  await panel.getByText('沒有 API／MCP？用網頁 AI 修改').click()
+  await panel.locator('#raw-external-patch-editor').fill('old-web-ai-response')
+
   // The button opens the same flow through the file chooser.
   page.once('dialog', (dialog) => void dialog.accept())
   const chooser = page.waitForEvent('filechooser')
   await page.locator('#open-sb3-button').click()
   await (await chooser).setFiles(fixture)
   await expectStatus('ok', '已打開「draggable.sb3」')
+  if ((await page.locator('#student-preview #raw-external-patch-editor').inputValue()) !== '')
+    throw new Error('web AI response survived replacing the project')
   console.log('Open-project browser smoke passed: button, window drop, errors and replace question.')
 } finally {
   await browser.close()

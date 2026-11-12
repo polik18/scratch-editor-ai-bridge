@@ -79,4 +79,29 @@ describe('in-browser playtest feedback', () => {
     expect(feedback).toMatchObject({ passed: true, issues: [] })
     expect(feedback.repairPrompt).toBeUndefined()
   })
+
+  it('treats space as an action key when the request says fire instead of move', () => {
+    const shooter = structuredClone(keyboardProject as CanonicalProject)
+    shooter.sprites[0].scripts[0].blocks.push({
+      opcode: 'control_wait_until',
+      inputs: {
+        CONDITION: {
+          type: 'block',
+          block: { opcode: 'sensing_keypressed', inputs: { KEY_OPTION: { type: 'literal', value: 'space' } } },
+        },
+      },
+    })
+    const plan = inferPlaytestPlan('按空白鍵發射雷射')
+    expect(plan.controls).toEqual([expect.objectContaining({ key: ' ', expectsMovement: false })])
+    const feedback = createPlaytestFeedback(
+      '玩家按空白鍵發射雷射',
+      shooter,
+      readyObservation({
+        controls: [{ key: ' ', expected: 'y+', moved: false, delta: 0 }],
+        autonomousMotion: false,
+        changedVariables: ['Stage/score'],
+      }),
+    )
+    expect(feedback).toMatchObject({ passed: true, issues: [] })
+  })
 })
