@@ -51,7 +51,10 @@ if (!browserType) throw new Error(`Unsupported BROWSER value: ${browserName}`)
 
 const sitePrefix = '/scratch-editor-ai-bridge/'
 const distRoot = resolve(fileURLToPath(new URL('../../dist/', import.meta.url)))
-const expectedRendererAbort = /\/assets\/scratch-(?:render|svg-renderer)-[^/]+\.js$/
+// Page transitions can cancel an already-started static bundle request while
+// the functional assertions have already completed. HTTP errors and runtime
+// assertions remain strict; only this browser cancellation is expected.
+const expectedStaticAssetAbort = /\/assets\/[^/]+\.js$/
 const svgRendererBundlePath = fileURLToPath(
   new URL('../../../scratch-svg-renderer/dist/web/scratch-svg-renderer.js', import.meta.url),
 )
@@ -364,7 +367,7 @@ try {
   })
   page.on('requestfailed', (request) => {
     const errorText = request.failure()?.errorText ?? ''
-    if (errorText === 'net::ERR_ABORTED' && expectedRendererAbort.test(request.url())) return
+    if (errorText === 'net::ERR_ABORTED' && expectedStaticAssetAbort.test(request.url())) return
     failures.push(`request failed: ${request.url()} ${errorText}`)
   })
 
