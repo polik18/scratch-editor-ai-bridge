@@ -11,6 +11,7 @@ import {
   rawProjectInventory,
 } from '../../src/core/ai/raw-tool-core'
 import { exportLosslessSb3, importLosslessSb3, rawSb3Revision } from '../../src/core/archive'
+import { readProjectForAi } from '../../src/core/reader'
 
 describe('raw SB3 AI proposal', () => {
   it('validates candidate and rejects stale, cloud and unknown operations', async () => {
@@ -248,6 +249,8 @@ describe('raw SB3 AI proposal', () => {
     )
     const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
     const revision = rawSb3Revision(project)
+    const readerScript = readProjectForAi(project.projectJson).sections.find((section) => section.id === 'script:hat')
+    if (!readerScript) throw new Error('reader script fixture missing')
     const proposal = {
       format: 'scratch-ai-bridge/raw-patch',
       version: 1,
@@ -257,7 +260,7 @@ describe('raw SB3 AI proposal', () => {
         kind: 'script',
         targetName: 'Cat',
         scriptId: 'script:hat',
-        text: '### 程式 script:hat\nL1 當綠旗被點擊\nL2 重複無限次\nL3   移動 20 點',
+        text: readerScript.text.replace('移動 10 點', '移動 20 點'),
       },
     }
     const candidate = proposeRawLivePatch(project, JSON.stringify(proposal))
