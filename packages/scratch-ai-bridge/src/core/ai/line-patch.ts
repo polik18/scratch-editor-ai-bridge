@@ -114,7 +114,12 @@ const toParserSource = (source: string): string =>
       const body = raw.trim()
       if (!body || body.startsWith('###') || body === '```' || body.startsWith('//') || body.startsWith('#'))
         return ''
-      return `${' '.repeat(indent)}${toParserText(body)}`
+      // Consume only the separator after the line number; the remaining spaces are
+      // the reader's structural indentation and must reach parseScratchblocks.
+      const numbered = /^L\d+[ \t](.*)$/.exec(body)
+      const numberedBody = numbered?.[1] ?? body
+      const nestedIndent = numberedBody.length - numberedBody.trimStart().length
+      return `${' '.repeat(indent + nestedIndent)}${toParserText(numberedBody.trim())}`
     })
     .filter(Boolean)
     .join('\n')
@@ -124,6 +129,7 @@ const referencedBlockIds = (node: RawNode, graph: Record<string, RawNode>): stri
   const visit = (value: unknown): void => {
     if (typeof value === 'string' && graph[value]) references.push(value)
     else if (Array.isArray(value)) value.forEach(visit)
+    else if (isRecord(value)) Object.values(value).forEach(visit)
   }
   visit(node.next)
   visit(node.inputs)

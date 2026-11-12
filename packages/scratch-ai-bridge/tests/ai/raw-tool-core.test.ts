@@ -207,6 +207,68 @@ describe('raw SB3 AI proposal', () => {
     expect(candidate.requiresVmValidation).toBe(true)
   })
 
+  it('preserves reader indentation when replacing a nested complete script', async () => {
+    const zip = new JSZip()
+    zip.file(
+      'project.json',
+      JSON.stringify({
+        targets: [
+          {
+            name: 'Cat',
+            isStage: false,
+            blocks: {
+              hat: {
+                opcode: 'event_whenflagclicked',
+                next: 'forever',
+                parent: null,
+                inputs: {},
+                fields: {},
+                topLevel: true,
+              },
+              forever: {
+                opcode: 'control_forever',
+                next: null,
+                parent: 'hat',
+                inputs: { SUBSTACK: [2, 'move'] },
+                fields: {},
+                topLevel: false,
+              },
+              move: {
+                opcode: 'motion_movesteps',
+                next: null,
+                parent: 'forever',
+                inputs: { STEPS: [1, [4, 10]] },
+                fields: {},
+                topLevel: false,
+              },
+            },
+          },
+        ],
+      }),
+    )
+    const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
+    const revision = rawSb3Revision(project)
+    const proposal = {
+      format: 'scratch-ai-bridge/raw-patch',
+      version: 1,
+      baseRevision: revision,
+      summary: '保留巢狀循環並調整移動距離',
+      change: {
+        kind: 'script',
+        targetName: 'Cat',
+        scriptId: 'script:hat',
+        text: '### 程式 script:hat\nL1 當綠旗被點擊\nL2 重複無限次\nL3   移動 20 點',
+      },
+    }
+    const candidate = proposeRawLivePatch(project, JSON.stringify(proposal))
+    const blocks = (candidate.project.projectJson as any).targets[0].blocks
+    expect(blocks.hat.next).toBe('forever')
+    expect(blocks.forever.inputs.SUBSTACK).toEqual([2, 'move'])
+    expect(blocks.move).toEqual(
+      expect.objectContaining({ opcode: 'motion_movesteps', parent: 'forever', inputs: { STEPS: [1, [4, 20]] } }),
+    )
+  })
+
   it('edits targets with leftover issues Scratch tolerates, but rejects edits that add new issues', async () => {
     // A parameter reporter left behind after its parameter was removed is common in real projects and still runs.
     const zip = new JSZip()
