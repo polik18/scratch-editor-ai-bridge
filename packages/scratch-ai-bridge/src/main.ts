@@ -2832,7 +2832,7 @@ const renderStudentPreview = (
   livePatchStatus.setAttribute('aria-live', 'polite')
   const createExternalPatchPrompt = (instruction: string, request: string): string =>
     [
-      '請依照以下 Scratch Bridge 作品摘要，幫我提出修改。這個 Bridge 沒有連接 API 或 MCP；請直接回傳可貼回 Bridge 的 JSON。',
+      '請依照以下 Scratch 作品摘要，幫我提出修改；請直接回傳可貼回作品編輯器的 JSON。',
       `使用者想怎麼改：${request.trim() || '（使用者尚未說明，請先詢問具體要改的角色、變數或程式。）'}`,
       instruction,
       '只輸出一個有效 JSON 物件，不要 Markdown code fence、不要解說、不要補充其他文字。若資料不足，請先用一般文字指出需要確認的地方，不要猜測或輸出不合法 patch。',

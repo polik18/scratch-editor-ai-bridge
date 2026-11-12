@@ -115,6 +115,8 @@ try {
   const copiedExternalPrompt = await page.evaluate(() => globalThis.__rawCopied)
   if (!copiedExternalPrompt.includes('向右移動') || !copiedExternalPrompt.includes('scratch-ai-bridge/raw-patch'))
     throw new Error('external raw AI prompt did not include the request and patch format')
+  if (/API|MCP/i.test(copiedExternalPrompt))
+    throw new Error('external raw AI prompt leaked provider implementation details')
   const externalPanel = panel.getByText('沒有 API／MCP？用網頁 AI 修改').locator('..')
   await externalPanel.locator('#raw-external-patch-editor').fill(
     JSON.stringify({
