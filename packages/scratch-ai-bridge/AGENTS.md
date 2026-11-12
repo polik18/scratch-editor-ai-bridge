@@ -34,6 +34,8 @@ scratch-editor-ai-bridge/             ← repo 第一層：指令都在這裡執
 ```
 
 - 開發過程的文件（計畫、交接）只寫在 `docs/history/`；一次性實驗放 `output/tmp/`。
+- **進行中的開發計畫**：讓 AI 看懂並修改真人做的作品，見 `docs/history/HANDMADE-SB3-AI-PLAN-2026-11-12.md`。
+  第 0 節是交接點，包含任務表、怎麼開始和規則。
 - 修改 Bridge 本身的程式碼：讀 `README.md` 和根目錄 `AGENTS.md`。新增或改變指令、行為、限制時，更新
   `src/cli/agent-guide.ts`（`start` 的內容），`tests/cli/agent-guide.test.ts` 會檢查它和程式一致。
 
