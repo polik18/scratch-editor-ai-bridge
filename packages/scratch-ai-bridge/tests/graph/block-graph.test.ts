@@ -146,6 +146,36 @@ describe('generic Scratch block graph', () => {
     }
   })
 
+  it('accepts upper-case current date menu values, which Scratch lower-cases before use', () => {
+    const graph = copyScratchBlockGraph({
+      now: {
+        opcode: 'sensing_current',
+        next: null,
+        parent: null,
+        fields: { CURRENTMENU: ['HOUR', null] },
+        topLevel: true,
+      },
+    })
+    expect(validateScratchBlockGraph(graph)).toEqual([])
+  })
+
+  it('keeps issues that were already in the graph but refuses to add new ones', () => {
+    const graph = copyScratchBlockGraph({
+      orphan: {
+        opcode: 'argument_reporter_string_number',
+        next: null,
+        parent: null,
+        fields: { VALUE: ['gone'] },
+        topLevel: true,
+      },
+      hat: { opcode: 'event_whenflagclicked', next: null, parent: null, topLevel: true },
+    })
+    expect(validateScratchBlockGraph(graph).map(({ code }) => code)).toEqual(['invalid-argument-reporter'])
+
+    expect(mergeScratchBlockGraph(graph, { hat: { x: 5 } }).hat.x).toBe(5)
+    expect(() => mergeScratchBlockGraph(graph, { hat: { next: 'nowhere' } })).toThrow(/missing-block/)
+  })
+
   it('detects deterministic generated dangling references, parent errors, and cycles', () => {
     let state = 0x0badc0de
     const nextRandom = () => {

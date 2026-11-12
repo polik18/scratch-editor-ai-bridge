@@ -67,7 +67,8 @@ describe('raw SB3 AI proposal', () => {
     expect(summary).not.toContain('do-not-disclose')
   })
 
-  it('allows read-only inspection of problematic targets while rejecting block edits', async () => {
+  it('edits targets with leftover issues Scratch tolerates, but rejects edits that add new issues', async () => {
+    // A parameter reporter left behind after its parameter was removed is common in real projects and still runs.
     const zip = new JSZip()
     zip.file(
       'project.json',
@@ -85,6 +86,16 @@ describe('raw SB3 AI proposal', () => {
                 inputs: {},
                 topLevel: true,
               },
+              hat: {
+                opcode: 'event_whenflagclicked',
+                parent: null,
+                next: null,
+                fields: {},
+                inputs: {},
+                topLevel: true,
+                x: 0,
+                y: 0,
+              },
             },
           },
         ],
@@ -95,21 +106,24 @@ describe('raw SB3 AI proposal', () => {
     const page = inspectRawBlocks(project, revision, 0)
     expect(page.blocks).toHaveProperty('orphan')
     expect(page.graphIssueCount).toBeGreaterThan(0)
-    const patch = {
-      format: 'scratch-ai-bridge/raw-patch',
-      version: 1,
-      baseRevision: revision,
-      summary: 'attempt edit',
-      change: {
-        kind: 'blocks',
-        graphPatch: {
-          format: 'scratch-ai-bridge/block-graph-patch',
-          version: 1,
-          patches: [{ targetIndex: 0, targetName: 'Cat', isStage: false, blocks: { orphan: { x: 1 } } }],
+    expect(page.graphEditable).toBe(true)
+    const patchWith = (blocks: Record<string, unknown>) =>
+      JSON.stringify({
+        format: 'scratch-ai-bridge/raw-patch',
+        version: 1,
+        baseRevision: revision,
+        summary: 'edit',
+        change: {
+          kind: 'blocks',
+          graphPatch: {
+            format: 'scratch-ai-bridge/block-graph-patch',
+            version: 1,
+            patches: [{ targetIndex: 0, targetName: 'Cat', isStage: false, blocks }],
+          },
         },
-      },
-    }
-    expect(() => proposeRawLivePatch(project, JSON.stringify(patch))).toThrow(/existing issues/)
+      })
+    expect(proposeRawLivePatch(project, patchWith({ hat: { x: 40 } })).changes[0]).toContain('"x":40')
+    expect(() => proposeRawLivePatch(project, patchWith({ hat: { next: 'missing' } }))).toThrow(/missing/)
   })
 
   it('pages raw blocks and preserves assets and unrelated graph nodes when proposing edits', async () => {

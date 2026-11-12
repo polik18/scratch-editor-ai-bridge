@@ -1,6 +1,10 @@
 import { getBlockCapability } from '../capabilities'
 
-const caseInsensitiveRawEnumFields = new Set(['looks_changeeffectby:EFFECT', 'looks_seteffectto:EFFECT'])
+const caseInsensitiveRawEnumFields = new Set([
+  'looks_changeeffectby:EFFECT',
+  'looks_seteffectto:EFFECT',
+  'sensing_current:CURRENTMENU',
+])
 
 const isAllowedRawFieldValue = (
   opcode: string,
@@ -216,6 +220,28 @@ export const copyScratchBlockGraph = (value: unknown): ScratchBlockGraph => {
   return graph
 }
 
+const issueKey = ({ code, blockId, relatedId }: BlockGraphIssue): string =>
+  JSON.stringify([code, blockId, relatedId ?? null])
+
+// Leftovers that real projects carry and Scratch still runs: a parameter reporter whose parameter was removed, a
+// shadow whose parent pointer was not updated, a call to a procedure whose parameters changed. Cycles, missing
+// blocks, shared children and wrong parents on stacked blocks stay fatal because they break or hang the project.
+const TOLERATED_ISSUES = new Set<BlockGraphIssue['code']>([
+  'missing-parent',
+  'invalid-argument-reporter',
+  'invalid-procedure-call-arguments',
+  'unresolved-procedure-call',
+])
+
+/**
+ * @param issue - A structural issue from {@link validateScratchBlockGraph}.
+ * @param graph - The graph the issue was found in.
+ * @returns Whether Scratch runs a project with this issue, so an edit elsewhere may keep it.
+ */
+export const isToleratedGraphIssue = (issue: BlockGraphIssue, graph: ScratchBlockGraph): boolean =>
+  TOLERATED_ISSUES.has(issue.code) ||
+  (issue.code === 'parent-mismatch' && Object.hasOwn(graph, issue.blockId) && graph[issue.blockId].shadow === true)
+
 /**
  * Apply node-level edits to a raw graph while retaining unmentioned opaque fields.
  * A `null` patch value deletes a block; a node patch replaces only its supplied
@@ -229,6 +255,12 @@ export const mergeScratchBlockGraph = (
   patch: Record<string, ScratchBlockNodePatch | null>,
 ): ScratchBlockGraph => {
   const graph = copyScratchBlockGraph(base)
+  // An edit may keep the leftovers Scratch tolerates, but must not add any issue of its own.
+  const existingIssues = new Set(
+    validateScratchBlockGraph(base)
+      .filter((issue) => isToleratedGraphIssue(issue, base))
+      .map(issueKey),
+  )
   for (const [id, nodePatch] of Object.entries(patch)) {
     if (nodePatch === null) {
       if (!Object.hasOwn(graph, id)) throw new Error(`Scratch block patch ${id} cannot delete a missing block`)
@@ -270,7 +302,7 @@ export const mergeScratchBlockGraph = (
       writable: true,
     })
   }
-  const issues = validateScratchBlockGraph(graph)
+  const issues = validateScratchBlockGraph(graph).filter((issue) => !existingIssues.has(issueKey(issue)))
   if (issues.length > 0) {
     throw new Error(`Merged block graph is invalid: ${issues.map(({ code }) => code).join(', ')}`)
   }

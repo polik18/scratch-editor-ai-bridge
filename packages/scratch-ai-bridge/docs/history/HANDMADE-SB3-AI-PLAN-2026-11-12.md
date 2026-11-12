@@ -19,7 +19,7 @@
 現在的瓶頸有三個：
 - AI 一次只能讀 10 個原始積木 JSON，最多查 8 次。
 - AI 看不到畫面。
-- Bridge 的積木圖檢查比 Scratch 嚴格，會把整個角色鎖住，不讓 AI 改。
+- ~~Bridge 的積木圖檢查比 Scratch 嚴格，會把整個角色鎖住，不讓 AI 改。~~ 已解決（B0a、B0b）：樣本 73 件現在全部可以改。
 
 ### 0.2 任務表
 
@@ -29,8 +29,8 @@
 | --- | --- | --- | --- | --- | --- |
 | A | 主頁打開作品、整窗拖曳、白話錯誤 | ✅ | claude | `npm run test:open-project-browser` | `src/open-project.ts`、`src/main.ts` |
 | B0a | 自製積木預設值數量不符不再鎖角色 | ✅ | claude | `tests/graph/block-graph.test.ts` | `src/core/graph/block-graph.ts` |
-| B0b | 其他「Scratch 能跑、Bridge 判錯」的積木圖問題（見 0.4） | ⬜ | | 樣本的 `graphIssues` 只剩真的壞掉的 | `src/core/graph/block-graph.ts` |
-| 0 | 樣本＋現況量測（含理解測試題目） | 🟡 | claude | 第 10 節有完整數字；理解測試題目寫好 | `scripts/tools/`、`output/handmade-corpus/` |
+| B0b | 其他「Scratch 能跑、Bridge 判錯」的積木圖問題（見 0.4） | ✅ | claude | 16 件被鎖的全部解鎖；循環、缺積木仍擋 | `src/core/graph/block-graph.ts`、`src/core/ai/raw-tool-core.ts` |
+| 0 | 樣本＋現況量測（含理解測試題目） | 🟡 | （待接手） | 樣本和數字 ✅；**理解測試題目還沒寫**（見 0.6） | `scripts/tools/`、`output/handmade-corpus/` |
 | B1–B2 | 作品讀本（只讀）＋E3 作者說明，取代網頁 raw 路徑的原始 JSON | ⬜ | | 第 7 節指標：一次放得進 ≥ 90%、內建積木可讀 100% | 新增 `src/core/reader/` |
 | C1 | 造型、位置翻成文字 | ⬜ | | 讀本寫出每個角色的顏色、大小、九宮格位置 | `src/core/reader/` |
 | C2 | 點舞台指定角色、AI 不確定時先問 | ⬜ | | 瀏覽器測試 | `src/main.ts`、預覽 iframe |
@@ -60,18 +60,45 @@ node scripts/tools/fetch-scratch.mjs ../../output/handmade-corpus/<名稱> --use
 - **樣本**：
   - `output/handmade-corpus/leejoneshane/`：73 件。每件都有 `.json`，裡面是 Instructions、Notes、作者和授權。
   - `output/handmade-corpus/` 第一層：使用者給的 7 件。真正手做的只有 Untitled-20 和 METRO；acorn 和狂暴大猩星是 Bridge 做的。
-- **B0b 要處理的積木圖問題**（73 件中有 16 件出現）：
-  - `parent-mismatch` 32
-  - `invalid-argument-reporter` 13
-  - `invalid-field-value` 11
-  - `invalid-procedure-call-arguments` 5
-  - `missing-parent` 2
-
-  其中最多的是「光的反射」16、「時鐘＋鬧鈴」12、「函式庫」8。每一種都要先確認 Scratch 能不能正常執行：
-  - 能執行：照 B0a 的做法，先寫一個會失敗的測試，再放寬檢查。
-  - 不能執行：保留這個錯誤。
+- **積木圖檢查（B0 的結果）**：
+  - 規則：AI 的修改**不可以增加新問題**，作品原本就有、Scratch 能執行的殘留可以保留。
+  - 可容忍的問題：`missing-parent`、`invalid-argument-reporter`、`invalid-procedure-call-arguments`、`unresolved-procedure-call`，
+    以及只發生在 shadow 積木上的 `parent-mismatch`。
+  - 判斷函式：`isToleratedGraphIssue`（`src/core/graph/block-graph.ts`）。
+  - 循環、缺積木、子積木被共用，以及一般積木的 `parent-mismatch`，仍然會鎖住角色。
+  - `sensing_current` 的選項（例如 HOUR）不分大小寫，因為 Scratch 讀取時會先轉成小寫。
+  - 檢查哪些作品被鎖：`npx tsx ../../output/tmp/editable.mts <資料夾>`。這是一次性腳本，需要時可以搬進 `scripts/tools/`。
 - **本機模型**：oMLX `http://127.0.0.1:8000/v1`，模型 `Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e`。API key 只由使用者在網頁輸入，agent 不讀、不存、不印。
 - **畫圖政策**：本機模型只從候選清單挑素材，不畫圖。
+
+### 0.6 下一步從這裡開始
+
+**下一步 1：寫理解測試題目（任務 0 的最後一步，小）。**
+- 從 `output/handmade-corpus/leejoneshane/*.json` 挑出有 `instructions` 的作品（約 20 件）。
+- 每件寫一個標準答案檔：放在同一個資料夾，命名為 `<同名>.answer.json`，內容是 `{ "controls": [...], "goal": "...", "sprites": [...] }`。
+  依據是作者寫的 Instructions。看不出來的欄位留空，不要猜。
+- 寫一個評分腳本，放在 `scripts/tools/`：輸入 AI 的回答，輸出每件的得分。
+- 用目前的 raw 路徑（`inspectRawProjectForAi`＋`inspect_raw_blocks`）跑一次本機模型，記下「現在」的分數。
+  本機模型需要 API key，要請使用者在網頁上操作，或請使用者提供能讀到 key 的設定方式。agent 不讀、不存、不印 key。
+  做不到的話，先只寫好題目和評分腳本，量分數這一步之後補。
+
+**下一步 2：B1 作品讀本（主要工作，中）。**
+- 新增 `src/core/reader/`，主函式是 `readProjectForAi`，規格見第 4 節。
+- **積木的中文文字**：用 `node_modules/scratch-l10n/locales/blocks-msgs.js` 的 `zh-tw`，共 290 條，例如 `MOTION_MOVESTEPS` 是「移動 %1 點」。
+- **opcode 怎麼對到文字、參數順序**：`node_modules/scratch-blocks/dist/main.mjs` 裡每個積木都有 `jsonInit({ message0: Ie.<訊息鍵>, args0: [{ name: 'STEPS' }…] })`。
+  寫一個建置腳本（放 `scripts/build/`），抽出「opcode → 訊息鍵、參數名稱」，產生一個 JSON 檔放進 `src/core/reader/`。
+  不要在網頁執行時載入 scratch-blocks。
+- **擴充積木**（畫筆、音樂）的文字在 `scratch-l10n/locales/extensions-msgs.js`。
+- **已有的零件**：
+  - `extractProjectBlockGraphs`：積木圖
+  - `src/core/capabilities/registry.ts`：每個 opcode 的欄位和輸入
+  - `src/core/scratchblocks/parser.ts`：文字轉積木，B3 會用到
+- **驗收**：
+  - 用 `measure-corpus.ts` 量讀本的字數，一次放得進的比例要 ≥ 90%。
+  - 內建積木 100% 有文字，沒有出現 `⟦未知⟧`。
+  - 為 `src/core/reader/` 寫單元測試。
+- **做完後**：網頁 raw 路徑（`src/core/ai/raw-tool-core.ts` 的 `inspectRawProjectForAi`）的第一則訊息改成讀本；
+  `inspect_raw_blocks` 保留，給大作品分段時用。
 
 ### 0.5 規則
 
@@ -382,3 +409,8 @@ L8        廣播訊息 [遊戲結束]
   - 16 件有積木圖問題（種類見 0.4），這些角色現在 AI 不能改。
   - 官方造型 181／2986，31 件至少用了一個官方造型。擴充只有畫筆和音樂。註解共 21 則，分布在 7 件。
   - 約 20 件有 Instructions，可以當理解測試的標準答案。
+- 2026-11-12 **B0b 完成**。規則改成「修改不能增加新問題；原本就有、Scratch 能執行的殘留可以保留」，並修正 `sensing_current` 選項大小寫。
+  - 73 件樣本中原本被鎖的 16 件全部可以改（問題最多的「光的反射」實際改過一次，也能存成 .sb3）。
+  - 真的壞掉的情況仍會擋下：循環、缺積木、共用子積木、一般積木的 parent 不一致。
+  - 驗證：800 個單元測試、lint、原始 SB3 修改和打開作品的瀏覽器測試都通過。
+- 2026-11-12 **交接**：claude 停在這裡。下一步見 0.6。
