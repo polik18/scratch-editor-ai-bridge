@@ -8,6 +8,79 @@
    AI 要知道「藍色的魚」是哪個角色，改的時候也不能弄壞作品裡 AI 看不懂的部分。
 3. **和 Scratch 網站接起來。** 從網站找到作品、連同作者寫的操作說明一起讀懂，改好後（經使用者同意）放回網站。
 
+## 0. 接手須知（任何 agent 先讀這節）
+
+**這份文件是這個工作的唯一交接點。** 做完一項就更新本節的任務表和第 10 節的紀錄，再 commit。
+不要另外開新的計畫檔；細節寫在對應的章節。
+
+### 0.1 一句話
+
+讓 AI 看懂並修改**真人做的** Scratch 作品。這類作品名字常常沒有意義（Sprite1、costume2），而且做的人是靠畫面在做。
+現在的瓶頸有三個：
+- AI 一次只能讀 10 個原始積木 JSON，最多查 8 次。
+- AI 看不到畫面。
+- Bridge 的積木圖檢查比 Scratch 嚴格，會把整個角色鎖住，不讓 AI 改。
+
+### 0.2 任務表
+
+狀態：✅ 完成、🟡 進行中、⬜ 未開始。開工前把狀態改成 🟡，並在「誰」寫上自己（例如 `claude`、`codex`）。
+
+| ID | 任務 | 狀態 | 誰 | 驗收 | 主要檔案 |
+| --- | --- | --- | --- | --- | --- |
+| A | 主頁打開作品、整窗拖曳、白話錯誤 | ✅ | claude | `npm run test:open-project-browser` | `src/open-project.ts`、`src/main.ts` |
+| B0a | 自製積木預設值數量不符不再鎖角色 | ✅ | claude | `tests/graph/block-graph.test.ts` | `src/core/graph/block-graph.ts` |
+| B0b | 其他「Scratch 能跑、Bridge 判錯」的積木圖問題（見 0.4） | ⬜ | | 樣本的 `graphIssues` 只剩真的壞掉的 | `src/core/graph/block-graph.ts` |
+| 0 | 樣本＋現況量測（含理解測試題目） | 🟡 | claude | 第 10 節有完整數字；理解測試題目寫好 | `scripts/corpus/`、`output/handmade-corpus/` |
+| B1–B2 | 作品讀本（只讀）＋E3 作者說明，取代網頁 raw 路徑的原始 JSON | ⬜ | | 第 7 節指標：一次放得進 ≥ 90%、內建積木可讀 100% | 新增 `src/core/reader/` |
+| C1 | 造型、位置翻成文字 | ⬜ | | 讀本寫出每個角色的顏色、大小、九宮格位置 | `src/core/reader/` |
+| C2 | 點舞台指定角色、AI 不確定時先問 | ⬜ | | 瀏覽器測試 | `src/main.ts`、預覽 iframe |
+| B3a | 行號操作修改 | ⬜ | | 來回測試 100%；本機模型一次可套用 ≥ 70% | `src/core/ai/raw-tool-core.ts` |
+| D＋E4 | CLI `fetch`／MCP／文件、`skill-scratch-site` | ⬜ | | `start` 列出新指令；skill 可用 | `src/cli/`、`~/ObsidianVault/skills/` |
+| C3、E2、B3b、C4、E5 | 見第 8 節 | ⬜ | | | |
+
+### 0.3 怎麼開始
+
+```sh
+cd ~/Git/scratch-editor-ai-bridge
+npm run --silent bridge -- start                      # Bridge 目前能做什麼
+cd packages/scratch-ai-bridge
+npx vitest run && npm run --silent lint               # 單元測試、lint（應全過）
+npm run build && npx vite preview --port 5178 --strictPort --host 127.0.0.1   # 另開一個終端機
+npm run --silent test:open-project-browser            # 瀏覽器測試都需要上面的 preview
+node scripts/smoke/raw-property-browser-smoke.mjs     # 原始 SB3 修改流程
+npx tsx scripts/corpus/measure-corpus.ts ../../output/handmade-corpus/leejoneshane   # 量樣本
+node scripts/corpus/fetch-scratch.mjs ../../output/handmade-corpus/<名稱> --user <Scratch 使用者>   # 下載更多樣本
+```
+
+- `npm run dev` 目前是壞的：scratch-vm 是 CJS，dev 模式沒有 default export。測網頁一律用 build＋preview。
+- 預覽 iframe 的 origin 是 null，`vite.config.ts` 已經加上 `Access-Control-Allow-Origin`。
+
+### 0.4 已知狀況（接手前要知道）
+
+- **樣本**：
+  - `output/handmade-corpus/leejoneshane/`：73 件。每件都有 `.json`，裡面是 Instructions、Notes、作者和授權。
+  - `output/handmade-corpus/` 第一層：使用者給的 7 件。真正手做的只有 Untitled-20 和 METRO；acorn 和狂暴大猩星是 Bridge 做的。
+- **B0b 要處理的積木圖問題**（73 件中有 16 件出現）：
+  - `parent-mismatch` 32
+  - `invalid-argument-reporter` 13
+  - `invalid-field-value` 11
+  - `invalid-procedure-call-arguments` 5
+  - `missing-parent` 2
+
+  其中最多的是「光的反射」16、「時鐘＋鬧鈴」12、「函式庫」8。每一種都要先確認 Scratch 能不能正常執行：
+  - 能執行：照 B0a 的做法，先寫一個會失敗的測試，再放寬檢查。
+  - 不能執行：保留這個錯誤。
+- **本機模型**：oMLX `http://127.0.0.1:8000/v1`，模型 `Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e`。API key 只由使用者在網頁輸入，agent 不讀、不存、不印。
+- **畫圖政策**：本機模型只從候選清單挑素材，不畫圖。
+
+### 0.5 規則
+
+- 和使用者一律用繁體中文溝通。
+- Commit 要符合 Conventional Commits，結尾加 `Co-Authored-By`。修 bug 先寫會失敗的測試。
+- **推送前**：先跑 `~/ObsidianVault/skills/skill-git-github-operations/scripts/pre_push_check.py`，並取得使用者明確同意。
+- **樣本和學生作品不進 git**：只放在 `output/`，那裡本來就被 git 忽略（Air-Gap）。
+- 對 Scratch 網站：放慢下載速度；要登入的動作每次都先問使用者（見 E5）。
+
 ## 1. 原則
 
 1. **跟 Scratch 編輯器說同一種話。** 積木文字直接用 Scratch 官方的繁體中文（`scratch-l10n` 的 `zh-tw`，共 290 條，
@@ -303,3 +376,9 @@ L8        廣播訊息 [遊戲結束]
 - 2026-11-12 **B0 完成**：`validateScratchBlockGraph` 不再要求自製積木的預設值數量等於參數數量（Scratch 只在積木區建立新呼叫時用預設值）。
   METRO 的積木圖問題 39 → 0，角色可以讓 AI 修改。Canonical IR 的轉換仍會略過這種定義（`invalid-procedure-metadata`），
   只影響分析與 Canonical 路徑，不影響原始 SB3 修改。
+- 2026-11-12 **改用 leejoneshane 的 73 件作品當主要樣本**（使用者指定；75 件中 2 件是 Scratch 2 格式）。
+  量測工具搬進 repo：`scripts/corpus/fetch-scratch.mjs`、`scripts/corpus/measure-corpus.ts`。現況：
+  - 積木數中位數 191（最少 19、最多 2609）。現在的 8 次 × 10 個只能完整讀完 12 件（≤ 80 個積木）；超過 500 個積木的有 16 件。
+  - 16 件有積木圖問題（種類見 0.4），這些角色現在 AI 不能改。
+  - 官方造型 181／2986，31 件至少用了一個官方造型。擴充只有畫筆和音樂。註解共 21 則，分布在 7 件。
+  - 約 20 件有 Instructions，可以當理解測試的標準答案。
