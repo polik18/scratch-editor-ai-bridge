@@ -44,6 +44,7 @@ try {
   await page.goto(`http://127.0.0.1:${address.port}/`, { waitUntil: 'networkidle' })
   assert.deepEqual(await page.locator('#generate-panel button:visible').allTextContents(), [
     '打開我的作品',
+    '從網址讀取',
     '複製製作訊息給 AI',
     '檢查並製作 Scratch',
   ])

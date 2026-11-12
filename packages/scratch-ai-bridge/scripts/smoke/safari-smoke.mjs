@@ -122,27 +122,45 @@ try {
   // input/change events used by the browser's file picker instead.
   const fixtureBytes = await readFile(fixturePath)
   if (fixtureBytes.byteLength === 0) throw new Error(`Safari SB3 fixture is empty: ${fixturePath}`)
-  await command('POST', '/execute/sync', {
-    script: `
-      const input = document.querySelector('#sb3-file');
-      if (!input) throw new Error('SB3 file input is missing');
-      const binary = atob(arguments[0]);
-      const bytes = new Uint8Array(binary.length);
-      for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-      const file = new File([bytes], 'default.sb3', { type: 'application/zip' });
-      const transfer = new DataTransfer();
-      transfer.items.add(file);
-      input.files = transfer.files;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      return { name: input.files[0]?.name, size: input.files[0]?.size };
-    `,
-    args: [fixtureBytes.toString('base64')],
-  }).then((result) => {
-    if (result?.name !== 'default.sb3' || result.size !== fixtureBytes.byteLength) {
-      throw new Error(`Safari did not receive the SB3 fixture (${JSON.stringify(result)})`)
+  const fileInput = await command('POST', '/element', { using: 'css selector', value: '#sb3-file' })
+  const fileInputId = fileInput.ELEMENT ?? fileInput['element-6066-11e4-a52e-4f735466cecf']
+  let uploaded = false
+  if (fileInputId) {
+    try {
+      await command('POST', `/element/${fileInputId}/value`, { text: fixturePath })
+      uploaded = await command('POST', '/execute/sync', {
+        script: `
+          const input = document.querySelector('#sb3-file');
+          return { name: input?.files?.[0]?.name, size: input?.files?.[0]?.size };
+        `,
+        args: [],
+      }).then((result) => result?.name === 'default.sb3' && result.size === fixtureBytes.byteLength)
+    } catch {
+      uploaded = false
     }
-  })
+  }
+  if (!uploaded) {
+    // Some hosted Safari runners reject both WebDriver upload and DataTransfer;
+    // retain this fallback for engines that permit synthetic File assignment.
+    uploaded = await command('POST', '/execute/sync', {
+      script: `
+        const input = document.querySelector('#sb3-file');
+        if (!input) throw new Error('SB3 file input is missing');
+        const binary = atob(arguments[0]);
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+        const file = new File([bytes], 'default.sb3', { type: 'application/zip' });
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        return { name: input.files[0]?.name, size: input.files[0]?.size };
+      `,
+      args: [fixtureBytes.toString('base64')],
+    }).then((result) => result?.name === 'default.sb3' && result.size === fixtureBytes.byteLength)
+  }
+  if (!uploaded) throw new Error('Safari did not receive the SB3 fixture')
 
   const result = await waitFor(
     'SB3 import and analysis',
