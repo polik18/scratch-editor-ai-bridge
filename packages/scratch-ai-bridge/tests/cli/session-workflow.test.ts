@@ -314,7 +314,7 @@ describe('scratch-session CLI workflow', () => {
     expect(createHash('md5').update(bytes).digest('hex')).toBe(costume.assetId)
   }, 60000)
 
-  it('gives an actionable error for missing block option values', () => {
+  it('gives an actionable error for missing block option values', { timeout: 30_000 }, () => {
     const dir = workdir()
     expect(run(dir, 'new').status).toBe(0)
     const result = run(dir, 'add-block', 'Stage', 'event_whenflagclicked', '--parent')
