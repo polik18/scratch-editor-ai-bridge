@@ -1,8 +1,8 @@
 // Downloads public Scratch 3 projects into a local folder for evaluation: each project as .sb3 plus a .json with the
 // title, Instructions, Notes and Credits, author and license. Downloads stay under output/ and never enter git.
 // Usage (from the repo root):
-//   node packages/scratch-ai-bridge/scripts/corpus/fetch-scratch.mjs <outDir> --user <username>
-//   node packages/scratch-ai-bridge/scripts/corpus/fetch-scratch.mjs <outDir> <projectId> [projectId...]
+//   node packages/scratch-ai-bridge/scripts/tools/fetch-scratch.mjs <outDir> --user <username>
+//   node packages/scratch-ai-bridge/scripts/tools/fetch-scratch.mjs <outDir> <projectId> [projectId...]
 import { access, mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import JSZip from 'jszip'

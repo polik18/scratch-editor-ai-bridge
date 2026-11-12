@@ -1,5 +1,5 @@
 // Measures how readable a folder of .sb3 files is for the AI today; the numbers go in the hand-made sb3 plan.
-// Usage (from packages/scratch-ai-bridge): npx tsx scripts/corpus/measure-corpus.ts <folder> [--json]
+// Usage (from packages/scratch-ai-bridge): npx tsx scripts/tools/measure-corpus.ts <folder> [--json]
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { inspectRawProjectForAi } from '../../src/core/ai/raw-tool-core'

@@ -30,7 +30,7 @@
 | A | 主頁打開作品、整窗拖曳、白話錯誤 | ✅ | claude | `npm run test:open-project-browser` | `src/open-project.ts`、`src/main.ts` |
 | B0a | 自製積木預設值數量不符不再鎖角色 | ✅ | claude | `tests/graph/block-graph.test.ts` | `src/core/graph/block-graph.ts` |
 | B0b | 其他「Scratch 能跑、Bridge 判錯」的積木圖問題（見 0.4） | ⬜ | | 樣本的 `graphIssues` 只剩真的壞掉的 | `src/core/graph/block-graph.ts` |
-| 0 | 樣本＋現況量測（含理解測試題目） | 🟡 | claude | 第 10 節有完整數字；理解測試題目寫好 | `scripts/corpus/`、`output/handmade-corpus/` |
+| 0 | 樣本＋現況量測（含理解測試題目） | 🟡 | claude | 第 10 節有完整數字；理解測試題目寫好 | `scripts/tools/`、`output/handmade-corpus/` |
 | B1–B2 | 作品讀本（只讀）＋E3 作者說明，取代網頁 raw 路徑的原始 JSON | ⬜ | | 第 7 節指標：一次放得進 ≥ 90%、內建積木可讀 100% | 新增 `src/core/reader/` |
 | C1 | 造型、位置翻成文字 | ⬜ | | 讀本寫出每個角色的顏色、大小、九宮格位置 | `src/core/reader/` |
 | C2 | 點舞台指定角色、AI 不確定時先問 | ⬜ | | 瀏覽器測試 | `src/main.ts`、預覽 iframe |
@@ -48,8 +48,8 @@ npx vitest run && npm run --silent lint               # 單元測試、lint（�
 npm run build && npx vite preview --port 5178 --strictPort --host 127.0.0.1   # 另開一個終端機
 npm run --silent test:open-project-browser            # 瀏覽器測試都需要上面的 preview
 node scripts/smoke/raw-property-browser-smoke.mjs     # 原始 SB3 修改流程
-npx tsx scripts/corpus/measure-corpus.ts ../../output/handmade-corpus/leejoneshane   # 量樣本
-node scripts/corpus/fetch-scratch.mjs ../../output/handmade-corpus/<名稱> --user <Scratch 使用者>   # 下載更多樣本
+npx tsx scripts/tools/measure-corpus.ts ../../output/handmade-corpus/leejoneshane   # 量樣本
+node scripts/tools/fetch-scratch.mjs ../../output/handmade-corpus/<名稱> --user <Scratch 使用者>   # 下載更多樣本
 ```
 
 - `npm run dev` 目前是壞的：scratch-vm 是 CJS，dev 模式沒有 default export。測網頁一律用 build＋preview。
@@ -377,7 +377,7 @@ L8        廣播訊息 [遊戲結束]
   METRO 的積木圖問題 39 → 0，角色可以讓 AI 修改。Canonical IR 的轉換仍會略過這種定義（`invalid-procedure-metadata`），
   只影響分析與 Canonical 路徑，不影響原始 SB3 修改。
 - 2026-11-12 **改用 leejoneshane 的 73 件作品當主要樣本**（使用者指定；75 件中 2 件是 Scratch 2 格式）。
-  量測工具搬進 repo：`scripts/corpus/fetch-scratch.mjs`、`scripts/corpus/measure-corpus.ts`。現況：
+  量測工具搬進 repo：`scripts/tools/fetch-scratch.mjs`、`scripts/tools/measure-corpus.ts`。現況：
   - 積木數中位數 191（最少 19、最多 2609）。現在的 8 次 × 10 個只能完整讀完 12 件（≤ 80 個積木）；超過 500 個積木的有 16 件。
   - 16 件有積木圖問題（種類見 0.4），這些角色現在 AI 不能改。
   - 官方造型 181／2986，31 件至少用了一個官方造型。擴充只有畫筆和音樂。註解共 21 則，分布在 7 件。
