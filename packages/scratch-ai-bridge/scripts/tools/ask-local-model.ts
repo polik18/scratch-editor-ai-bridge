@@ -11,6 +11,7 @@ import { importLosslessSb3, rawSb3Revision } from '../../src/core/archive'
 import type { RawSb3Project } from '../../src/core/archive/sb3-archive'
 
 const MAX_LOOKUPS = 8
+const REQUEST_TIMEOUT_MS = 120_000
 
 const toolDefinitions = [
   {
@@ -109,10 +110,11 @@ const requestUnderstanding = async (
         model,
         messages,
         temperature: 0.2,
-        max_tokens: 1024,
+        max_tokens: 2048,
         tools: toolDefinitions,
         tool_choice: 'auto',
       }),
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
     if (!response.ok) throw new Error(`模型 API 回應 HTTP ${response.status}`)
     const body = (await response.json()) as {
@@ -130,6 +132,9 @@ const requestUnderstanding = async (
       role: 'assistant',
       content: typeof message.content === 'string' ? message.content : null,
       tool_calls: calls,
+      ...(typeof (message as { reasoning_content?: unknown }).reasoning_content === 'string'
+        ? { reasoning_content: (message as { reasoning_content: string }).reasoning_content }
+        : {}),
     })
     for (const rawCall of calls) {
       const call = rawCall as { id?: unknown; function?: { name?: unknown; arguments?: unknown } }
@@ -195,19 +200,32 @@ const main = async (): Promise<void> => {
   )
   const files = (await readdir(resolve(inputDirectory))).filter((file) => file.endsWith('.answer.json')).sort()
   await mkdir(outputDirectory, { recursive: true })
+  let failures = 0
   for (const answerFile of files) {
     const name = basename(answerFile, '.answer.json')
     const sb3 = join(resolve(inputDirectory), `${name}.sb3`)
-    const project = await importLosslessSb3(await readFile(sb3))
-    const reply = await requestUnderstanding(
-      project,
-      baseUrl,
-      model,
-      process.env.OMLX_API_KEY ?? process.env.SCRATCH_BRIDGE_API_KEY,
-    )
-    await writeFile(join(outputDirectory, `${name}.reply.json`), `${JSON.stringify(reply, null, 2)}\n`, 'utf8')
-    process.stdout.write(`${name}\n`)
+    try {
+      const project = await importLosslessSb3(await readFile(sb3))
+      const reply = await requestUnderstanding(
+        project,
+        baseUrl,
+        model,
+        process.env.OMLX_API_KEY ?? process.env.SCRATCH_BRIDGE_API_KEY,
+      )
+      await writeFile(join(outputDirectory, `${name}.reply.json`), `${JSON.stringify(reply, null, 2)}\n`, 'utf8')
+      process.stdout.write(`${name}\n`)
+    } catch (error) {
+      failures += 1
+      const message = error instanceof Error ? error.message : String(error)
+      await writeFile(
+        join(outputDirectory, `${name}.reply.json`),
+        `${JSON.stringify({ error: message }, null, 2)}\n`,
+        'utf8',
+      )
+      process.stderr.write(`${name}: ${message}\n`)
+    }
   }
+  if (failures > 0) process.exitCode = 1
 }
 
 void main().catch((error: unknown) => {

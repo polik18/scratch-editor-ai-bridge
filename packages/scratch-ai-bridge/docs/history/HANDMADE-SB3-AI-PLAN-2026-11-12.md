@@ -23,14 +23,14 @@
 
 ### 0.2 任務表
 
-狀態：✅ 完成、🟡 進行中、⬜ 未開始。開工前把狀態改成 🟡，並在「誰」寫上自己（例如 `claude`、`codex`）。
+狀態：✅ 完成、🟡 進行中、⬜ 未開始、— 不納入本次範圍。開工前把狀態改成 🟡，並在「誰」寫上自己（例如 `claude`、`codex`）。
 
 | ID | 任務 | 狀態 | 誰 | 驗收 | 主要檔案 |
 | --- | --- | --- | --- | --- | --- |
 | A | 主頁打開作品、整窗拖曳、白話錯誤 | ✅ | claude | `npm run test:open-project-browser` | `src/open-project.ts`、`src/main.ts` |
 | B0a | 自製積木預設值數量不符不再鎖角色 | ✅ | claude | `tests/graph/block-graph.test.ts`（argument defaults 那一則） | `src/core/graph/block-graph.ts` |
 | B0b | 其他「Scratch 能跑、Bridge 判錯」的積木圖問題（見 0.4） | ✅ | claude | `tests/graph/block-graph.test.ts`、`tests/ai/raw-tool-core.test.ts`；樣本 `lockedSprites` 全空 | `src/core/graph/block-graph.ts`、`src/core/ai/raw-tool-core.ts` |
-| 0 | 樣本＋現況量測（含理解測試題目） | 🟡 | codex | 16 份標準答案、評分器和本機模型腳本已完成；等待使用者在本機模型執行理解測試 | `scripts/tools/`、`output/handmade-corpus/` |
+| 0 | 樣本＋現況量測（含理解測試題目） | ✅ | codex | 16/16 件基線結果檔；2 件合法回答、14 件模型／工具協定錯誤；合法回答操作分 2/2 通過（100% of measured） | `scripts/tools/`、`output/handmade-corpus/`、`output/tmp/understanding/2026-11-12/` |
 | B1–B2 | 作品讀本（只讀）＋E3 作者說明，取代網頁 raw 路徑的原始 JSON | ✅ | codex | 73/73 讀本 ≤ 24,000 字、內建積木可讀 100%，作者說明可由 CLI fetch 帶入 | 新增 `src/core/reader/` |
 | C1 | 造型、位置翻成文字 | ✅ | codex | 官方素材、尺寸、九宮格、SVG 顏色與瀏覽器 PNG 主要顏色取樣已加入；reader 可接收 visual hints | `src/core/reader/`、`src/main.ts` |
 | C2 | 點舞台指定角色、AI 不確定時先問 | ✅ | codex | 靜態預覽可點選角色；Canonical、raw 與 MCP 都能轉送 `ask_student`，並有選項對話框 | `src/main.ts`、`src/mcp/tools.ts` |
@@ -41,7 +41,7 @@
 | E2 | 網址讀取公開作品 | 🟡 | codex | URL 欄位、metadata／SB3 下載與作者說明已完成；已驗證 GitHub Pages 來源被 Scratch metadata API CORS 擋住，畫面會引導 CLI／skill fallback | `src/scratch/public-project.ts`、`src/main.ts` |
 | B3b | 整段程式文字修改 | ✅ | codex | `script` change 會依 `script:<rootId>` 解析完整 zh-tw 文字、保留圖節點 ID、產生 raw graph patch 並要求 VM 驗證 | `src/core/ai/line-patch.ts`、`raw-tool-core.ts` |
 | C4 | 自動跑動觀察 | ✅ | codex | 學生預覽已可自動執行、擷取角色位置／造型／變數與測試回饋 | `src/main.ts` |
-| E5 | 放回 Scratch 網站 | ⬜ | | 尚未在沒有使用者明確同意下登入或執行外部上傳；待獨立授權後用 Camoufox 實作 | 共用 Camoufox |
+| E5 | 放回 Scratch 網站 | — | | 使用者確認本次目標不需要登入／上傳；Bridge 以本地讀取、修改與下載 `.sb3` 為邊界 | — |
 
 ### 0.3 怎麼開始
 
@@ -159,6 +159,7 @@ node scripts/tools/fetch-scratch.mjs ../../output/handmade-corpus/<名稱> --use
      ```
      agent 寫好腳本後，把這段指令交給使用者，等使用者說跑完，再執行評分腳本。
 8. **樣本數**：任務 0 用這 16 件就夠了。第 7 節「20～30 件」是長期目標，之後可以用 `fetch-scratch.mjs` 補充，但不擋任務 0。
+9. **本次範圍**：不做 E5 的 Scratch 登入／上傳；Bridge 產生可下載的修改後 `.sb3` 即完成交付，不把帳號 mutation 當作驗收門檻。
 
 **下一步 2：B1 作品讀本（主要工作，中）。**
 - 新增 `src/core/reader/`，主函式是 `readProjectForAi`，規格見第 4 節。
@@ -499,3 +500,5 @@ L8        廣播訊息 [遊戲結束]
 - 2026-11-12 **B3b 稽核修正**：完整程式轉譯現在保留讀本行號後的巢狀縮排，並遞迴收集 `inputs` 內的可達積木 ID；新增 `forever → move` 回歸測試，確認 SUBSTACK、parent、next 與原始 ID 均正確。全套測試更新為 811 項全過；Bridge 修正 commit `7b1e0d8c3b`。
 - 2026-11-12 **B4 全量驗收完成**：新增唯讀稽核工具 `scripts/tools/check-reader-roundtrip.ts`，逐件使用 `readProjectForAi` 的真實 script section 再送入完整程式 patch。73/73 作品、2,397/2,397 段程式通過、0 失敗；同時新增未知積木保留與重複 script ID target 消歧回歸測試。完整測試套件為 100 個檔案、813 個測試全過。
 - 2026-11-12 **任務 0 本機模型 preflight**：`http://127.0.0.1:8000/v1/models` 可連線但回 `401 API key required`；目前環境未提供 `OMLX_API_KEY` 或替代變數，因此未送出理解測試請求。等待使用者在自己的終端設定金鑰並執行既定 `ask-local-model.ts` 指令。
+- 2026-11-12 **任務 0 基線完成**：使用者提供本機模型金鑰後，16/16 件理解測試均產生結果檔並完成評分。2 件回覆為合法 JSON 且操作分 2/2 通過；14 件因查詢超過 8 次、錯誤 revision／頁面參數或空回覆而記 0 分。未人工補答、未重試單件錯誤。
+- 2026-11-12 **範圍澄清**：使用者確認不需要把作品上傳回 Scratch；E5 改列為不納入本次範圍，Bridge 交付以本地修改與下載 `.sb3` 為準。
