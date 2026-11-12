@@ -38,7 +38,7 @@
 | B4 | 讀本→解析→積木圖來回 | ✅ | codex | 73/73 作品、2,397/2,397 段程式全量通過；未知積木原樣保留、可辨識葉積木可修改，0 失敗 | `src/core/reader/`、`src/core/ai/line-patch.ts`、`scripts/tools/check-reader-roundtrip.ts` |
 | D＋E4 | CLI `fetch`／MCP／文件、`skill-scratch-site` | ✅ | codex | `start` 列出 fetch/ai-reader；MCP 有 read_script/find；skill validator 因環境缺 PyYAML 尚未執行 | `src/cli/`、`~/ObsidianVault/skills/` |
 | C3 | 看得懂圖的模型附截圖 | ✅ | codex | Vision 勾選會送舞台截圖與造型拼貼；複製路線可下載兩張 PNG | `src/main.ts`、`src/core/ai/openai-compatible.ts` |
-| E2 | 網址讀取公開作品 | 🟡 | codex | URL 欄位、metadata／SB3 下載與作者說明已完成；已驗證 GitHub Pages 來源被 Scratch metadata API CORS 擋住，畫面會引導 CLI／skill fallback | `src/scratch/public-project.ts`、`src/main.ts` |
+| E2 | 網址讀取公開作品 | ✅ | codex | 已依 CORS 驗收規格完成：瀏覽器受限時清楚引導下載後拖入，CLI／skill 可由網址下載 metadata、SB3 與作者說明 | `src/scratch/public-project.ts`、`src/main.ts`、`scripts/tools/fetch-scratch.mjs` |
 | B3b | 整段程式文字修改 | ✅ | codex | `script` change 會依 `script:<rootId>` 解析完整 zh-tw 文字、保留圖節點 ID、產生 raw graph patch 並要求 VM 驗證 | `src/core/ai/line-patch.ts`、`raw-tool-core.ts` |
 | C4 | 自動跑動觀察 | ✅ | codex | 學生預覽已可自動執行、擷取角色位置／造型／變數與測試回饋 | `src/main.ts` |
 | E5 | 放回 Scratch 網站 | — | | 使用者確認本次目標不需要登入／上傳；Bridge 以本地讀取、修改與下載 `.sb3` 為邊界 | — |
