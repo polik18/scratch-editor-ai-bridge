@@ -28,6 +28,13 @@ if (
 const browserTypes = { chromium, firefox, webkit }
 const browserType = browserTypes[browserName]
 
+const readCanvasPng = async (canvasLocator) => {
+  const dataUrl = await canvasLocator.evaluate((canvas) => canvas.toDataURL('image/png'))
+  const separator = dataUrl.indexOf(',')
+  if (separator < 0) throw new Error('Canvas did not return a PNG data URL')
+  return Buffer.from(dataUrl.slice(separator + 1), 'base64')
+}
+
 const clickStudentPreviewStart = async (page) => {
   await page
     .locator('#student-preview .student-preview-actions button')
@@ -755,10 +762,13 @@ try {
     )
     const status = await damagedSvgPage.locator('.student-preview-stage-status').textContent()
     if (status?.includes('動畫預覽載入失敗')) throw new Error(`${fixtureName} animation failed: ${status}`)
-    const png = await damagedSvgPage
+    const animationCanvas = damagedSvgPage
       .frameLocator('#student-preview iframe.student-preview-animation')
       .locator('canvas')
-      .screenshot()
+    // The VM redraws this canvas continuously. Read the same-origin canvas
+    // bitmap directly so Playwright does not wait for a moving canvas to
+    // become stable before taking a screenshot or translate iframe bounds.
+    const png = await readCanvasPng(animationCanvas)
     const pixels = await damagedSvgPage.evaluate(
       async (pngBytes) => {
         const bitmap = await createImageBitmap(new Blob([new Uint8Array(pngBytes)], { type: 'image/png' }))
@@ -870,10 +880,9 @@ try {
   if (!(await firstImportPage.locator('#student-preview iframe.student-preview-animation').count())) {
     throw new Error('Missing-costume animation preview did not start with its fallback asset')
   }
-  const missingFallbackPng = await firstImportPage
-    .frameLocator('#student-preview iframe.student-preview-animation')
-    .locator('canvas')
-    .screenshot()
+  const missingFallbackPng = await readCanvasPng(
+    firstImportPage.frameLocator('#student-preview iframe.student-preview-animation').locator('canvas'),
+  )
   const missingFallbackPixels = await firstImportPage.evaluate(
     async (pngBytes) => {
       const bitmap = await createImageBitmap(new Blob([new Uint8Array(pngBytes)], { type: 'image/png' }))
@@ -974,10 +983,9 @@ try {
   if (!(await corruptImportPage.locator('#student-preview iframe.student-preview-animation').count())) {
     throw new Error('Checksum-mismatch animation preview did not start with its fallback asset')
   }
-  const corruptFallbackPng = await corruptImportPage
-    .frameLocator('#student-preview iframe.student-preview-animation')
-    .locator('canvas')
-    .screenshot()
+  const corruptFallbackPng = await readCanvasPng(
+    corruptImportPage.frameLocator('#student-preview iframe.student-preview-animation').locator('canvas'),
+  )
   const corruptFallbackPixels = await corruptImportPage.evaluate(
     async (pngBytes) => {
       const bitmap = await createImageBitmap(new Blob([new Uint8Array(pngBytes)], { type: 'image/png' }))
