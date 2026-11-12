@@ -8,6 +8,12 @@ const fixture = fileURLToPath(new URL('../../../scratch-vm/test/fixtures/draggab
 const browser = await chromium.launch({ headless: true })
 try {
   const page = await browser.newPage({ acceptDownloads: true })
+  await page.addInitScript(() =>
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async (text) => (globalThis.__rawCopied = text) },
+    }),
+  )
   await page.route('http://127.0.0.1:5178/**', async (route) => {
     const response = await route.fetch()
     await route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': '*' } })
@@ -102,6 +108,27 @@ try {
   await panel.locator(':scope > p[role=status]').filter({ hasText: '已重做' }).waitFor()
   if ((await frame.locator('#stage').evaluate(() => globalThis.__rawPatchMarker)) !== 'still-running')
     throw new Error('runtime apply or history reloaded the game')
+  await panel.locator('#local-ai-base-url').fill('')
+  await panel.locator('#local-ai-model').fill('')
+  await panel.locator('#local-ai-request').fill('向右移動')
+  await panel.getByRole('button', { name: '複製指令給網頁 AI' }).click()
+  const copiedExternalPrompt = await page.evaluate(() => globalThis.__rawCopied)
+  if (!copiedExternalPrompt.includes('向右移動') || !copiedExternalPrompt.includes('scratch-ai-bridge/raw-patch'))
+    throw new Error('external raw AI prompt did not include the request and patch format')
+  const externalPanel = panel.getByText('沒有 API／MCP？用網頁 AI 修改').locator('..')
+  await externalPanel.locator('#raw-external-patch-editor').fill(
+    JSON.stringify({
+      format: 'scratch-ai-bridge/raw-patch',
+      version: 1,
+      baseRevision: /revision: (sha256:[a-f0-9]+)/.exec(copiedExternalPrompt)?.[1],
+      summary: '網頁 AI 修改',
+      change: { kind: 'property', targetName: 'Sprite1', property: 'x', expected: 40, value: 42 },
+    }),
+  )
+  await externalPanel.getByRole('button', { name: '檢查 AI 回覆' }).click()
+  await externalPanel.getByText('AI 回覆已通過檢查', { exact: false }).waitFor()
+  await panel.getByRole('button', { name: '確認套用 AI 修改' }).click()
+  await panel.locator(':scope > p[role=status]').filter({ hasText: '已套用 AI 修改' }).waitFor({ timeout: 30000 })
   await page.route('http://127.0.0.1:1234/**', async (route) => {
     const headers = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type' }
     if (route.request().method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
@@ -113,7 +140,7 @@ try {
       version: 1,
       baseRevision: revision,
       summary: '移動角色',
-      change: { kind: 'property', targetName: 'Sprite1', property: 'x', expected: 40, value: 44 },
+      change: { kind: 'property', targetName: 'Sprite1', property: 'x', expected: 42, value: 44 },
     }
     await route.fulfill({
       status: 200,

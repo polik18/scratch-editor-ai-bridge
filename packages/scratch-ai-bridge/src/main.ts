@@ -2335,11 +2335,20 @@ const renderStudentPreview = (
   livePatchSummary.textContent = '沒有本機 AI？用 Gemini／ChatGPT 複製貼上'
   const livePatchHelp = document.createElement('p')
   livePatchHelp.textContent =
-    '按「複製修改指令」，貼給 AI 並寫上想怎麼改，再把它回覆的 JSON 貼到下面，按「檢查修改」。遊戲執行中改角色位置，可能會被遊戲自己的程式再改回去。'
+    '沒有 API 或 MCP 時，按「複製修改指令」把含目前作品與要求的提示詞貼給網頁 AI，再把它回覆的 JSON 貼到下面，按「檢查修改」。遊戲執行中改角色位置，可能會被遊戲自己的程式再改回去。'
   const livePatchPromptButton = document.createElement('button')
   livePatchPromptButton.type = 'button'
   livePatchPromptButton.className = 'button secondary'
-  livePatchPromptButton.textContent = '複製修改指令'
+  livePatchPromptButton.textContent = '複製修改指令（含我的要求）'
+  const livePatchPromptFallback = document.createElement('div')
+  livePatchPromptFallback.className = 'clipboard-fallback'
+  livePatchPromptFallback.hidden = true
+  const livePatchPromptFallbackLabel = document.createElement('label')
+  livePatchPromptFallbackLabel.textContent = '瀏覽器不允許自動複製，請從這裡全選提示詞：'
+  const livePatchPromptFallbackText = document.createElement('textarea')
+  livePatchPromptFallbackText.className = 'mono compact'
+  livePatchPromptFallbackText.readOnly = true
+  livePatchPromptFallback.append(livePatchPromptFallbackLabel, livePatchPromptFallbackText)
   const livePatchInputLabel = document.createElement('label')
   livePatchInputLabel.htmlFor = 'live-patch-editor'
   livePatchInputLabel.textContent = 'AI 回覆的 JSON'
@@ -2593,6 +2602,7 @@ const renderStudentPreview = (
       baseUrl && model
         ? `${connectionTested ? '已連線' : '已設定'}：${model}（${host}）`
         : '還沒設定 AI 連線，按這裡設定'
+    localAiGenerateButton.textContent = baseUrl && model ? '請 AI 提出修改' : '複製指令給網頁 AI'
   }
   const rememberIfAsked = (): void => {
     if (
@@ -2820,7 +2830,48 @@ const renderStudentPreview = (
   livePatchStatus.id = 'live-patch-status'
   livePatchStatus.setAttribute('role', 'status')
   livePatchStatus.setAttribute('aria-live', 'polite')
+  const createExternalPatchPrompt = (instruction: string, request: string): string =>
+    [
+      '請依照以下 Scratch Bridge 作品摘要，幫我提出修改。這個 Bridge 沒有連接 API 或 MCP；請直接回傳可貼回 Bridge 的 JSON。',
+      `使用者想怎麼改：${request.trim() || '（使用者尚未說明，請先詢問具體要改的角色、變數或程式。）'}`,
+      instruction,
+      '只輸出一個有效 JSON 物件，不要 Markdown code fence、不要解說、不要補充其他文字。若資料不足，請先用一般文字指出需要確認的地方，不要猜測或輸出不合法 patch。',
+    ].join('\n\n')
+  const cleanExternalPatchResponse = (source: string): string =>
+    source
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim()
+  const copyExternalPatchPrompt = async (
+    prompt: string,
+    status: HTMLParagraphElement,
+    fallback: HTMLDivElement,
+    fallbackText: HTMLTextAreaElement,
+    success: string,
+  ): Promise<boolean> => {
+    try {
+      await navigator.clipboard.writeText(prompt)
+      fallback.hidden = true
+      status.dataset.kind = 'ok'
+      status.textContent = success
+      return true
+    } catch {
+      fallbackText.value = prompt
+      fallback.hidden = false
+      fallbackText.focus()
+      fallbackText.select()
+      status.dataset.kind = 'error'
+      status.textContent = '瀏覽器拒絕剪貼簿存取；已在下方提供可全選複製的完整提示詞。'
+      return false
+    }
+  }
   const canPatchLiveProject = !rawSource
+  let rawExternalPatchPanel: HTMLDetailsElement | null = null
+  let rawExternalPatchInput: HTMLTextAreaElement | null = null
+  let rawExternalPatchStatus: HTMLParagraphElement | null = null
+  let rawExternalPatchFallback: HTMLDivElement | null = null
+  let rawExternalPatchFallbackText: HTMLTextAreaElement | null = null
   if (rawSource) {
     livePatchStatus.textContent =
       '為保留匯入作品的原始積木與素材，這裡不直接編輯積木；可用 MCP 讀取讀本並提出待審修改。'
@@ -2864,6 +2915,8 @@ const renderStudentPreview = (
     preparedLivePatch = val
   }
   const inspectLivePatch = (): void => {
+    const cleaned = cleanExternalPatchResponse(livePatchInput.value)
+    if (cleaned !== livePatchInput.value) livePatchInput.value = cleaned
     preparedLivePatch = parseLiveVariablePatch(livePatchInput.value, liveProject, liveRevision)
     showLivePatchDiff(preparedLivePatch.summary, preparedLivePatch.operations)
     livePatchStatus.dataset.kind = 'ok'
@@ -3060,11 +3113,14 @@ const renderStudentPreview = (
     if (gatewayToken) stopGateway()
   })
   livePatchPromptButton.addEventListener('click', () => {
-    copyStudentPrompt(
-      createLiveVariablePatchInstruction(liveProject, liveRevision),
+    void copyExternalPatchPrompt(
+      createExternalPatchPrompt(createLiveVariablePatchInstruction(liveProject, liveRevision), localAiRequest.value),
       livePatchStatus,
-      '已複製目前作品的即時修改指令',
+      livePatchPromptFallback,
+      livePatchPromptFallbackText,
+      '已複製目前作品與修改要求的提示詞；請貼到 Gemini、ChatGPT 或其他網頁 AI。',
     )
+    livePatchPanel.open = true
   })
   const askStudent = async (question: string, choices: readonly string[]): Promise<string | null> => {
     const dialog = document.createElement('dialog')
@@ -3117,6 +3173,33 @@ const renderStudentPreview = (
       if (localAiController.current) return
       if (rawAi) {
         const adapter = rawAi
+        if (!localAiBaseUrl.value.trim() || !localAiModel.value.trim()) {
+          if (!localAiRequest.value.trim()) {
+            localAiStatus.dataset.kind = 'error'
+            localAiStatus.textContent = '請先在「想怎麼改？」寫下修改要求。'
+            localAiRequest.focus()
+            return
+          }
+          const externalPanel = rawExternalPatchPanel
+          const externalInput = rawExternalPatchInput
+          const externalStatus = rawExternalPatchStatus
+          const externalFallback = rawExternalPatchFallback
+          const externalFallbackText = rawExternalPatchFallbackText
+          if (externalPanel && externalInput && externalStatus && externalFallback && externalFallbackText) {
+            const copied = await copyExternalPatchPrompt(
+              createExternalPatchPrompt(adapter.inspect(), localAiRequest.value),
+              externalStatus,
+              externalFallback,
+              externalFallbackText,
+              '已複製完整提示詞；請貼到 Gemini、ChatGPT 或其他網頁 AI。回覆後貼回下方欄位。',
+            )
+            externalPanel.open = true
+            if (copied) externalInput.focus()
+          }
+          localAiStatus.dataset.kind = 'ok'
+          localAiStatus.textContent = '沒有 API／MCP，已準備網頁 AI 提示詞；請貼回 AI 的 JSON。'
+          return
+        }
         const controller = new AbortController()
         localAiController.current = controller
         const timeout = window.setTimeout(() => controller.abort(), 120_000)
@@ -3189,6 +3272,29 @@ const renderStudentPreview = (
           localAiGenerateButton.disabled = false
           localAiCancelButton.hidden = true
         }
+        return
+      }
+      if (!localAiBaseUrl.value.trim() || !localAiModel.value.trim()) {
+        if (!localAiRequest.value.trim()) {
+          localAiStatus.dataset.kind = 'error'
+          localAiStatus.textContent = '請先在「想怎麼改？」寫下修改要求。'
+          localAiRequest.focus()
+          return
+        }
+        livePatchPanel.open = true
+        const copied = await copyExternalPatchPrompt(
+          createExternalPatchPrompt(
+            inspectProjectForAi(liveProject, liveRevision),
+            `${pickedTargetName ? `我指的是角色「${pickedTargetName}」。` : ''}${localAiRequest.value}`,
+          ),
+          livePatchStatus,
+          livePatchPromptFallback,
+          livePatchPromptFallbackText,
+          '已複製完整提示詞；請貼到 Gemini、ChatGPT 或其他網頁 AI。回覆後貼回下方欄位。',
+        )
+        localAiStatus.dataset.kind = 'ok'
+        localAiStatus.textContent = '沒有 API／MCP，已準備網頁 AI 提示詞；請貼回 AI 的 JSON。'
+        if (copied) livePatchInput.focus()
         return
       }
       if (preparedLivePatch?.baseRevision === liveRevision) {
@@ -3349,6 +3455,55 @@ const renderStudentPreview = (
     help.className = 'ai-note'
     help.textContent =
       'AI 會讀這個作品，提出修改；你看過、按「套用」才會改，遊戲會重新開始。原本的檔案不會變，改好按「下載修改後的 SB3」另存一份。'
+    const externalPatchPanel = document.createElement('details')
+    externalPatchPanel.className = 'ai-subsection'
+    const externalPatchSummary = document.createElement('summary')
+    externalPatchSummary.textContent = '沒有 API／MCP？用網頁 AI 修改'
+    const externalPatchHelp = document.createElement('p')
+    externalPatchHelp.textContent =
+      '沒有設定本機模型時，按下方按鈕複製完整提示詞，貼給 Gemini、ChatGPT 或其他網頁 AI；再把 AI 回覆的 JSON 貼回來檢查。'
+    const externalPatchButton = document.createElement('button')
+    externalPatchButton.type = 'button'
+    externalPatchButton.className = 'button secondary'
+    externalPatchButton.textContent = '複製指令給網頁 AI'
+    const externalPatchFallback = document.createElement('div')
+    externalPatchFallback.className = 'clipboard-fallback'
+    externalPatchFallback.hidden = true
+    const externalPatchFallbackLabel = document.createElement('label')
+    externalPatchFallbackLabel.textContent = '瀏覽器不允許自動複製，請從這裡全選提示詞：'
+    const externalPatchFallbackText = document.createElement('textarea')
+    externalPatchFallbackText.className = 'mono compact'
+    externalPatchFallbackText.readOnly = true
+    externalPatchFallback.append(externalPatchFallbackLabel, externalPatchFallbackText)
+    const externalPatchInputLabel = document.createElement('label')
+    externalPatchInputLabel.textContent = '貼上網頁 AI 回覆的 JSON'
+    const externalPatchInput = document.createElement('textarea')
+    externalPatchInput.id = 'raw-external-patch-editor'
+    externalPatchInput.className = 'mono editor live-patch-editor'
+    externalPatchInput.placeholder = '把 AI 回覆的 raw-patch JSON 貼在這裡'
+    const externalPatchCheckButton = document.createElement('button')
+    externalPatchCheckButton.type = 'button'
+    externalPatchCheckButton.className = 'button primary'
+    externalPatchCheckButton.textContent = '檢查 AI 回覆'
+    const externalPatchStatus = document.createElement('p')
+    externalPatchStatus.className = 'inline-status'
+    externalPatchStatus.setAttribute('role', 'status')
+    externalPatchStatus.setAttribute('aria-live', 'polite')
+    externalPatchPanel.append(
+      externalPatchSummary,
+      externalPatchHelp,
+      externalPatchButton,
+      externalPatchFallback,
+      externalPatchInputLabel,
+      externalPatchInput,
+      externalPatchCheckButton,
+      externalPatchStatus,
+    )
+    rawExternalPatchPanel = externalPatchPanel
+    rawExternalPatchInput = externalPatchInput
+    rawExternalPatchStatus = externalPatchStatus
+    rawExternalPatchFallback = externalPatchFallback
+    rawExternalPatchFallbackText = externalPatchFallbackText
     const manual = document.createElement('details')
     manual.className = 'ai-subsection'
     const manualSummary = document.createElement('summary')
@@ -3767,6 +3922,30 @@ const renderStudentPreview = (
         status.textContent = message
       },
     }
+    externalPatchButton.addEventListener('click', () => {
+      const prompt = createExternalPatchPrompt(rawAi?.inspect() ?? '', localAiRequest.value)
+      void copyExternalPatchPrompt(
+        prompt,
+        externalPatchStatus,
+        externalPatchFallback,
+        externalPatchFallbackText,
+        '已複製完整提示詞；請貼到 Gemini、ChatGPT 或其他網頁 AI。回覆後貼回下方欄位。',
+      ).then((copied) => {
+        externalPatchPanel.open = true
+        if (copied) externalPatchInput.focus()
+      })
+    })
+    externalPatchCheckButton.addEventListener('click', () => {
+      if (!rawAi) return
+      try {
+        rawAi.present(cleanExternalPatchResponse(externalPatchInput.value))
+        externalPatchStatus.dataset.kind = 'ok'
+        externalPatchStatus.textContent = 'AI 回覆已通過檢查；請檢視下方差異後確認套用。'
+      } catch (error) {
+        externalPatchStatus.dataset.kind = 'error'
+        externalPatchStatus.textContent = error instanceof Error ? error.message : String(error)
+      }
+    })
     discardCandidate.addEventListener('click', () => {
       rawCandidate = null
       candidateDiff.hidden = true
@@ -3931,6 +4110,7 @@ const renderStudentPreview = (
       title,
       help,
       localAiSettings,
+      externalPatchPanel,
       candidateDiff,
       candidateActions,
       status,
@@ -4200,7 +4380,14 @@ const renderStudentPreview = (
     livePatchDiff.hidden = true
     if (mcpCandidate && livePatchInput.value !== mcpCandidate.patchJson) mcpCandidate = null
   })
-  livePatchPanel.append(livePatchSummary, livePatchHelp, livePatchPromptButton, livePatchInputLabel, livePatchInput)
+  livePatchPanel.append(
+    livePatchSummary,
+    livePatchHelp,
+    livePatchPromptButton,
+    livePatchPromptFallback,
+    livePatchInputLabel,
+    livePatchInput,
+  )
   aiPanel.append(
     aiPanelTitle,
     aiPanelIntro,
@@ -4209,7 +4396,7 @@ const renderStudentPreview = (
     livePatchActions,
     livePatchStatus,
     livePatchPanel,
-    mcpSettings,
+    ...(rawSource ? [] : [mcpSettings]),
   )
   sideColumn.append(aiPanel)
 
