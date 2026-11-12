@@ -107,15 +107,53 @@ node scripts/tools/fetch-scratch.mjs ../../output/handmade-corpus/<名稱> --use
    - `keywords` 寫 2～5 個，玩法裡一定會提到的詞。
 3. **問 AI 的方式**：只給 AI 作品內容，不給 Instructions 和 Notes，請它用同樣的 JSON 格式回答：
    「這個作品要怎麼操作（`controls`）、目標是什麼（`goal`）」。
-4. **評分腳本**：放在 `scripts/tools/score-understanding.ts`，輸入是標準答案資料夾和 AI 回答資料夾（每件一個同名 JSON），每件給兩個分數：
-   - **操作分**：標準答案裡的每個 `input`，AI 有沒有說到同一種輸入。`input` 要先正規化成上面那幾種寫法再比較。分數是說到的比例。
+4. **檔名規則**：一件作品的「名稱」是 `.sb3` 去掉副檔名後的字串，照原樣比對，全形字也一樣，例如 `1027475006-brickbreaker（進階版）`。
+   - 作品資訊（下載時產生）：`<名稱>.json`
+   - 標準答案：`<名稱>.answer.json`（和作品放同一個資料夾）
+   - AI 回答：`output/tmp/understanding/<YYYY-MM-DD>/<名稱>.reply.json`
+5. **輸入的正規化**：標準答案和 AI 回答**兩邊都要**先正規化，再比較。對照表寫在評分腳本裡，下面沒列到的寫法照這個邏輯補，並在評分腳本的註解寫明：
+
+   | 原文例子 | 正規化成 |
+   | --- | --- |
+   | ←→、左右鍵、左/右方向鍵、A/D 鍵 | `左右方向鍵` |
+   | ↑↓、上下鍵、W/S 鍵 | `上下方向鍵` |
+   | 方向鍵、上下左右、WASD | `方向鍵` |
+   | space、空白、空白鍵 | `空白鍵` |
+   | 滑鼠移動、移動滑鼠、跟著滑鼠 | `滑鼠移動` |
+   | 點擊、點選、按滑鼠、滑鼠左鍵、滑鼠拖曳 | `滑鼠點擊` |
+   | 單一字母或數字鍵，例如「R 鍵」「r」「數字 1」 | `R鍵`、`1鍵`（大寫、不留空白） |
+   | Enter、回車 | `Enter鍵` |
+   | 綠旗、按綠旗開始 | `綠旗` |
+
+   比較時，`方向鍵` 涵蓋 `左右方向鍵` 和 `上下方向鍵`：標準答案是 `方向鍵`，AI 說了其中任一個就算對；反過來也算對。
+6. **評分腳本**：`scripts/tools/score-understanding.ts`。
+   - 執行方式：`npx tsx scripts/tools/score-understanding.ts <標準答案資料夾> <AI 回答資料夾>`
+   - **操作分**：標準答案裡的每個 `input`，AI 有沒有說到（正規化後比較）。分數是說到的比例。
    - **目標分**：AI 的 `goal` 含有幾成 `keywords`。
-   - **通過**：操作分 ≥ 0.8。第 7 節「說對操作方式 ≥ 80%」的意思是 **16 件中至少 80% 通過**。
-5. **量「現在」的分數**：需要跑本機模型，而 API key 只有使用者知道。做法：
-   - 寫 `scripts/tools/ask-local-model.ts`：從環境變數 `OMLX_API_KEY` 讀 key，用目前的 raw 路徑（`inspectRawProjectForAi`＋`inspect_raw_blocks` 工具迴圈，
-     可以重用 `requestOpenAiCompatiblePatch` 的做法）問每件作品，把回答存進 `output/tmp/understanding/<日期>/`。
-   - **由使用者自己在另一個終端機執行**（不要用 Claude Code 的 `!`，否則 key 會出現在對話紀錄裡）。agent 只讀結果檔。
-   - 使用者還沒跑之前，先完成第 1～4 步，在任務表註明「基準分數待使用者執行」。
+   - **通過**：操作分 ≥ 0.8。
+   - **特殊情況**：
+     - 標準答案的 `controls` 是空的（作者沒寫怎麼操作）：這件不列入「操作」統計，只算目標分。
+     - AI 回答不是合法 JSON，或缺少欄位：這件記 0 分，不重試；在輸出中列出來。
+   - 輸出每件的分數，以及整體通過率。第 7 節「說對操作方式 ≥ 80%」指列入統計的作品中，至少 80% 通過。
+7. **量「現在」的分數（決定：重現目前的 raw 路徑，只把最後的要求換成「說明作品」）**：
+   - **為什麼不直接重用 `requestOpenAiCompatiblePatch`**：它和 `inspectRawProjectForAi` 的指示都要求模型「提交修改」，不適合拿來問「這個作品怎麼玩」。
+   - **先拆函式（小改動，要有單元測試）**：把 `src/core/ai/raw-tool-core.ts` 的 `inspectRawProjectForAi` 拆成兩個。
+     - `rawProjectInventory(project)`：只回傳清單，最多 30 個角色、每個最多 30 個變數。
+     - 原本的修改指示：照舊組合清單和指示，網頁行為不變。
+   - **評量腳本** `scripts/tools/ask-local-model.ts`：
+     - 系統訊息 = 「說明作品」指示（照第 3 點，要求回傳 `{controls, goal}`）＋ `rawProjectInventory`。
+     - 工具 = `inspect_raw_blocks`、`inspect_raw_targets`、`inspect_raw_variables`，直接呼叫 core 的 `inspectRawBlocks`、`inspectRawTargets`、`inspectRawVariables`。
+       網頁的工具接線在 `src/main.ts`（約 2682、2864 行），可以參考，但不用搬到 core。
+     - 限制和網頁一樣：一頁 10 個積木、最多查 8 次。這樣量到的才是「現在」的程度。
+     - 只對有標準答案的作品執行，把回答寫進第 4 點的檔名。
+   - **使用者怎麼執行**：在自己的終端機（不是 Claude Code 的 `!`）執行
+     ```sh
+     cd ~/Git/scratch-editor-ai-bridge/packages/scratch-ai-bridge
+     OMLX_API_KEY=<你的 key> npx tsx scripts/tools/ask-local-model.ts ../../output/handmade-corpus/leejoneshane \
+       --base-url http://127.0.0.1:8000/v1 --model Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e
+     ```
+     agent 寫好腳本後，把這段指令交給使用者，等使用者說跑完，再執行評分腳本。
+8. **樣本數**：任務 0 用這 16 件就夠了。第 7 節「20～30 件」是長期目標，之後可以用 `fetch-scratch.mjs` 補充，但不擋任務 0。
 
 **下一步 2：B1 作品讀本（主要工作，中）。**
 - 新增 `src/core/reader/`，主函式是 `readProjectForAi`，規格見第 4 節。
