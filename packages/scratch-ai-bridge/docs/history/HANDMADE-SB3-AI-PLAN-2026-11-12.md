@@ -498,3 +498,4 @@ L8        廣播訊息 [遊戲結束]
   - 尚待：使用者執行本機理解測試；E5 登入／上傳必須等使用者明確授權，不能由本次本地開發驗證代替。
 - 2026-11-12 **B3b 稽核修正**：完整程式轉譯現在保留讀本行號後的巢狀縮排，並遞迴收集 `inputs` 內的可達積木 ID；新增 `forever → move` 回歸測試，確認 SUBSTACK、parent、next 與原始 ID 均正確。全套測試更新為 811 項全過；Bridge 修正 commit `7b1e0d8c3b`。
 - 2026-11-12 **B4 全量驗收完成**：新增唯讀稽核工具 `scripts/tools/check-reader-roundtrip.ts`，逐件使用 `readProjectForAi` 的真實 script section 再送入完整程式 patch。73/73 作品、2,397/2,397 段程式通過、0 失敗；同時新增未知積木保留與重複 script ID target 消歧回歸測試。完整測試套件為 100 個檔案、813 個測試全過。
+- 2026-11-12 **任務 0 本機模型 preflight**：`http://127.0.0.1:8000/v1/models` 可連線但回 `401 API key required`；目前環境未提供 `OMLX_API_KEY` 或替代變數，因此未送出理解測試請求。等待使用者在自己的終端設定金鑰並執行既定 `ask-local-model.ts` 指令。
