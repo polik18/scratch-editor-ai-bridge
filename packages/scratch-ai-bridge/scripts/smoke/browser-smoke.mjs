@@ -3129,7 +3129,12 @@ try {
     return gl.getParameter(gl.VIEWPORT).join('x')
   })
   const stagePreviewCanvas = page.locator('#student-preview .student-preview-canvas')
-  await page.locator('#student-preview .student-preview-stage').scrollIntoViewIfNeeded()
+  // Firefox can keep the VM canvas in a redraw loop, so Playwright's
+  // stability precheck may never finish. The following bounding-box and pixel
+  // assertions still verify the visible stage after a direct DOM scroll.
+  await page.locator('#student-preview .student-preview-stage').evaluate((element) => {
+    element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' })
+  })
   const stagePreviewRegion = await page.locator('#student-preview .student-preview-stage').boundingBox()
   if (!stagePreviewRegion) throw new Error('Scratch VM stage preview did not have a visible screenshot region')
   const captureStagePreview = () => page.screenshot({ clip: stagePreviewRegion, animations: 'disabled' })
