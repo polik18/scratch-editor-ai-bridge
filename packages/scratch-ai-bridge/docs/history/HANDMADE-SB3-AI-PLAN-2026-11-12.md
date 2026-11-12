@@ -495,3 +495,4 @@ L8        廣播訊息 [遊戲結束]
   - `runAutoPlaytest` 已擷取執行後角色位置、造型、變數與測試鍵；完整 `script` patch 已加入 ID 保留、解析拒絕與 VM 驗證測試。
   - 驗證：100 個測試檔、810 個測試全過；`eslint src tests`、`tsc --noEmit`、production build、bundle budget、Chromium browser smoke 全過。
   - 尚待：使用者執行本機理解測試；E5 登入／上傳必須等使用者明確授權，不能由本次本地開發驗證代替。
+- 2026-11-12 **B3b 稽核修正**：完整程式轉譯現在保留讀本行號後的巢狀縮排，並遞迴收集 `inputs` 內的可達積木 ID；新增 `forever → move` 回歸測試，確認 SUBSTACK、parent、next 與原始 ID 均正確。全套測試更新為 811 項全過；Bridge 修正 commit `7b1e0d8c3b`。
