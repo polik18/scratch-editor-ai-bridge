@@ -67,7 +67,7 @@ node scripts/tools/fetch-scratch.mjs ../../output/handmade-corpus/<名稱> --use
   - 判斷函式：`isToleratedGraphIssue`（`src/core/graph/block-graph.ts`）。
   - 循環、缺積木、子積木被共用，以及一般積木的 `parent-mismatch`，仍然會鎖住角色。
   - `sensing_current` 的選項（例如 HOUR）不分大小寫，因為 Scratch 讀取時會先轉成小寫。
-  - 檢查哪些作品被鎖：`npx tsx ../../output/tmp/editable.mts <資料夾>`。這是一次性腳本，需要時可以搬進 `scripts/tools/`。
+  - 檢查哪些角色仍被鎖：`npx tsx scripts/tools/measure-corpus.ts <資料夾>` 的 `lockedSprites` 欄（空白表示可以改）。
 - **本機模型**：oMLX `http://127.0.0.1:8000/v1`，模型 `Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e`。API key 只由使用者在網頁輸入，agent 不讀、不存、不印。
 - **畫圖政策**：本機模型只從候選清單挑素材，不畫圖。
 

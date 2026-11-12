@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { inspectRawProjectForAi } from '../../src/core/ai/raw-tool-core'
 import { importLosslessSb3 } from '../../src/core/archive/sb3-archive'
-import { extractProjectBlockGraphs } from '../../src/core/graph/block-graph'
+import { extractProjectBlockGraphs, isToleratedGraphIssue } from '../../src/core/graph/block-graph'
 import library from '../../src/core/visuals/library-index.json'
 
 interface RawBlock {
@@ -57,7 +57,11 @@ const main = async (): Promise<void> => {
         if (official.has(costume.assetId)) officialCostumes += 1
       }
     }
-    const issues = extractProjectBlockGraphs(project.projectJson).flatMap((graph) => graph.issues)
+    const graphs = extractProjectBlockGraphs(project.projectJson)
+    const issues = graphs.flatMap((graph) => graph.issues)
+    const lockedSprites = graphs
+      .filter((graph) => !graph.issues.every((issue) => isToleratedGraphIssue(issue, graph.blocks)))
+      .map((graph) => graph.targetName)
     const issueCodes: Record<string, number> = {}
     for (const issue of issues) issueCodes[issue.code] = (issueCodes[issue.code] ?? 0) + 1
     rows.push({
@@ -74,6 +78,7 @@ const main = async (): Promise<void> => {
       firstPromptChars: inspectRawProjectForAi(project).length,
       pagesOf10: Math.ceil(blocks / 10),
       graphIssues: issues.length,
+      lockedSprites: lockedSprites.join(','),
       issueCodes,
     })
   }
