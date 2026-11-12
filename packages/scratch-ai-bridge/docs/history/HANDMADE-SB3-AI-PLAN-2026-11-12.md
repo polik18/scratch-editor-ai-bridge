@@ -28,8 +28,8 @@
 | ID | 任務 | 狀態 | 誰 | 驗收 | 主要檔案 |
 | --- | --- | --- | --- | --- | --- |
 | A | 主頁打開作品、整窗拖曳、白話錯誤 | ✅ | claude | `npm run test:open-project-browser` | `src/open-project.ts`、`src/main.ts` |
-| B0a | 自製積木預設值數量不符不再鎖角色 | ✅ | claude | `tests/graph/block-graph.test.ts` | `src/core/graph/block-graph.ts` |
-| B0b | 其他「Scratch 能跑、Bridge 判錯」的積木圖問題（見 0.4） | ✅ | claude | 16 件被鎖的全部解鎖；循環、缺積木仍擋 | `src/core/graph/block-graph.ts`、`src/core/ai/raw-tool-core.ts` |
+| B0a | 自製積木預設值數量不符不再鎖角色 | ✅ | claude | `tests/graph/block-graph.test.ts`（argument defaults 那一則） | `src/core/graph/block-graph.ts` |
+| B0b | 其他「Scratch 能跑、Bridge 判錯」的積木圖問題（見 0.4） | ✅ | claude | `tests/graph/block-graph.test.ts`、`tests/ai/raw-tool-core.test.ts`；樣本 `lockedSprites` 全空 | `src/core/graph/block-graph.ts`、`src/core/ai/raw-tool-core.ts` |
 | 0 | 樣本＋現況量測（含理解測試題目） | 🟡 | （待接手） | 樣本和數字 ✅；**理解測試題目還沒寫**（見 0.6） | `scripts/tools/`、`output/handmade-corpus/` |
 | B1–B2 | 作品讀本（只讀）＋E3 作者說明，取代網頁 raw 路徑的原始 JSON | ⬜ | | 第 7 節指標：一次放得進 ≥ 90%、內建積木可讀 100% | 新增 `src/core/reader/` |
 | C1 | 造型、位置翻成文字 | ⬜ | | 讀本寫出每個角色的顏色、大小、九宮格位置 | `src/core/reader/` |
@@ -71,16 +71,51 @@ node scripts/tools/fetch-scratch.mjs ../../output/handmade-corpus/<名稱> --use
 - **本機模型**：oMLX `http://127.0.0.1:8000/v1`，模型 `Cyber-Tiel-Coder-35B-A3B-MLX-oQ4e`。API key 只由使用者在網頁輸入，agent 不讀、不存、不印。
 - **畫圖政策**：本機模型只從候選清單挑素材，不畫圖。
 
+### 0.5 規則
+
+- 和使用者一律用繁體中文溝通。
+- Commit 要符合 Conventional Commits，結尾加 `Co-Authored-By`。修 bug 先寫會失敗的測試。
+- **推送前**：先跑 `~/ObsidianVault/skills/skill-git-github-operations/scripts/pre_push_check.py`，並取得使用者明確同意。
+- **樣本和學生作品不進 git**：只放在 `output/`，那裡本來就被 git 忽略（Air-Gap）。
+- 對 Scratch 網站：放慢下載速度；要登入的動作每次都先問使用者（見 E5）。
+- **開發 Bridge 和使用 Bridge 是兩回事。** `packages/scratch-ai-bridge/AGENTS.md` 有兩條規則：「不要在套件資料夾裡新增檔案」「不要主動重新 build」。
+  這兩條是給**使用** Bridge 做作品的 agent 看的。照這份計畫**開發** Bridge 時，可以在 `src/`、`tests/`、`scripts/` 新增檔案；
+  瀏覽器測試前也要先 `npm run build`。
+- 一次性實驗放 `output/tmp/`。`output/tmp/b1/` 是 2026-11-11 官方素材實驗留下的遊戲，和本計畫的 B1 無關。
+- **身分**：任務表「誰」欄寫的是 agent 名稱（`claude`、`codex`…）。commit 的作者是這台電腦的 git 設定（Hermes Agent），
+  這是正常的，看 `Co-Authored-By` 就知道是哪個 agent。
+- **推送**：本機 commit 是否推上 GitHub，由使用者決定；推之前照上面的規則先檢查。
+- 根目錄 `AGENTS.md` 的表格說只有 task-herder 用 Prettier，這已經過時：本套件的 `npm run lint` 也會跑 `prettier --check`。
+
 ### 0.6 下一步從這裡開始
 
 **下一步 1：寫理解測試題目（任務 0 的最後一步，小）。**
-- 從 `output/handmade-corpus/leejoneshane/*.json` 挑出有 `instructions` 的作品（約 20 件）。
-- 每件寫一個標準答案檔：放在同一個資料夾，命名為 `<同名>.answer.json`，內容是 `{ "controls": [...], "goal": "...", "sprites": [...] }`。
-  依據是作者寫的 Instructions。看不出來的欄位留空，不要猜。
-- 寫一個評分腳本，放在 `scripts/tools/`：輸入 AI 的回答，輸出每件的得分。
-- 用目前的 raw 路徑（`inspectRawProjectForAi`＋`inspect_raw_blocks`）跑一次本機模型，記下「現在」的分數。
-  本機模型需要 API key，要請使用者在網頁上操作，或請使用者提供能讀到 key 的設定方式。agent 不讀、不存、不印 key。
-  做不到的話，先只寫好題目和評分腳本，量分數這一步之後補。
+
+1. **題目**：`output/handmade-corpus/leejoneshane/*.json` 裡 `instructions` 不是空的作品有 **16 件**。這 16 件就是理解測試的題目。
+2. **標準答案檔**：放在同一個資料夾，命名為 `<同名>.answer.json`。只根據作者寫的 Instructions 和 Notes，看不出來的不要猜：
+   ```json
+   {
+     "controls": [
+       { "input": "左右方向鍵", "action": "移動平板" },
+       { "input": "滑鼠點擊", "action": "發射" }
+     ],
+     "goal": "用平板反彈球把磚塊打完，共三關",
+     "keywords": ["磚塊", "反彈", "三關"]
+   }
+   ```
+   - `input` 統一寫成這幾種：`左右方向鍵`、`上下方向鍵`、`方向鍵`、`空白鍵`、`滑鼠移動`、`滑鼠點擊`、`<字母>鍵`、`綠旗`。
+   - `keywords` 寫 2～5 個，玩法裡一定會提到的詞。
+3. **問 AI 的方式**：只給 AI 作品內容，不給 Instructions 和 Notes，請它用同樣的 JSON 格式回答：
+   「這個作品要怎麼操作（`controls`）、目標是什麼（`goal`）」。
+4. **評分腳本**：放在 `scripts/tools/score-understanding.ts`，輸入是標準答案資料夾和 AI 回答資料夾（每件一個同名 JSON），每件給兩個分數：
+   - **操作分**：標準答案裡的每個 `input`，AI 有沒有說到同一種輸入。`input` 要先正規化成上面那幾種寫法再比較。分數是說到的比例。
+   - **目標分**：AI 的 `goal` 含有幾成 `keywords`。
+   - **通過**：操作分 ≥ 0.8。第 7 節「說對操作方式 ≥ 80%」的意思是 **16 件中至少 80% 通過**。
+5. **量「現在」的分數**：需要跑本機模型，而 API key 只有使用者知道。做法：
+   - 寫 `scripts/tools/ask-local-model.ts`：從環境變數 `OMLX_API_KEY` 讀 key，用目前的 raw 路徑（`inspectRawProjectForAi`＋`inspect_raw_blocks` 工具迴圈，
+     可以重用 `requestOpenAiCompatiblePatch` 的做法）問每件作品，把回答存進 `output/tmp/understanding/<日期>/`。
+   - **由使用者自己在另一個終端機執行**（不要用 Claude Code 的 `!`，否則 key 會出現在對話紀錄裡）。agent 只讀結果檔。
+   - 使用者還沒跑之前，先完成第 1～4 步，在任務表註明「基準分數待使用者執行」。
 
 **下一步 2：B1 作品讀本（主要工作，中）。**
 - 新增 `src/core/reader/`，主函式是 `readProjectForAi`，規格見第 4 節。
@@ -94,19 +129,11 @@ node scripts/tools/fetch-scratch.mjs ../../output/handmade-corpus/<名稱> --use
   - `src/core/capabilities/registry.ts`：每個 opcode 的欄位和輸入
   - `src/core/scratchblocks/parser.ts`：文字轉積木，B3 會用到
 - **驗收**：
-  - 用 `measure-corpus.ts` 量讀本的字數，一次放得進的比例要 ≥ 90%。
+  - 在 `measure-corpus.ts` 加一欄 `readerChars`（讀本的字數）。讀本 ≤ **24,000 字**的作品要 ≥ 90%。
   - 內建積木 100% 有文字，沒有出現 `⟦未知⟧`。
   - 為 `src/core/reader/` 寫單元測試。
 - **做完後**：網頁 raw 路徑（`src/core/ai/raw-tool-core.ts` 的 `inspectRawProjectForAi`）的第一則訊息改成讀本；
   `inspect_raw_blocks` 保留，給大作品分段時用。
-
-### 0.5 規則
-
-- 和使用者一律用繁體中文溝通。
-- Commit 要符合 Conventional Commits，結尾加 `Co-Authored-By`。修 bug 先寫會失敗的測試。
-- **推送前**：先跑 `~/ObsidianVault/skills/skill-git-github-operations/scripts/pre_push_check.py`，並取得使用者明確同意。
-- **樣本和學生作品不進 git**：只放在 `output/`，那裡本來就被 git 忽略（Air-Gap）。
-- 對 Scratch 網站：放慢下載速度；要登入的動作每次都先問使用者（見 E5）。
 
 ## 1. 原則
 
@@ -219,7 +246,7 @@ L8        廣播訊息 [遊戲結束]
 
 ### B2. 長度控制
 
-- 一般作品（約 500 個積木以下）整份給 AI。文字預算沿用 `EVIDENCE_PACKET_MAX_CHARS` 的量級，約 24,000 字。
+- 一般作品（約 500 個積木以下）整份給 AI。上限是 **24,000 字**，和 `EVIDENCE_PACKET_MAX_CHARS` 一樣。
 - 大作品先給「概覽＋每段程式的開頭事件和前 5 行」，AI 再用工具讀需要的段落：
   - `read_sprite(名稱)`
   - `read_script(S3)`
@@ -300,7 +327,7 @@ L8        廣播訊息 [遊戲結束]
   - 標明作者和授權。
   - 下載的作品只存本機（`output/`），不進 git。
   - 對外請求不帶使用者的個人資料。
-- 原型：`output/tmp/fetch-scratch.mjs`（2026-11-12 用來下載 leejoneshane 的 75 件作品）。
+- 工具：`scripts/tools/fetch-scratch.mjs`（2026-11-12 用它下載了 leejoneshane 的作品）。
 
 ### E2. Bridge 用網址打開作品
 
@@ -316,6 +343,8 @@ L8        廣播訊息 [遊戲結束]
 ### E4. 給 Claude／Codex 的 skill（`skill-scratch-site`）
 
 - 放在 `~/ObsidianVault/skills/skill-scratch-site/`，內容是 `SKILL.md`、`scripts/` 和 `references/`。
+  ObsidianVault 是另一個 git repo，照共同大腦的維護流程修改和 commit（`skills/skill-shared-brain-maintenance/`）。
+  `scripts/` 直接呼叫本 repo 的 `scripts/tools/fetch-scratch.mjs`，不要另外複製一份。
 - 內容只寫「怎麼取得作品」。取得之後的讀懂、修改，交給 Bridge 的 `start` 指引，和 `skill-scratch-ai-bridge` 一樣不重複寫細節。
 - Bridge CLI 加上 `fetch <Scratch 網址或編號>`：下載到 `output/`，並接著做 `inspect`。
 
@@ -383,7 +412,7 @@ L8        廣播訊息 [遊戲結束]
   - 預覽中有沒下載的修改時，換作品前先問；下載檔名改為「原檔名-改過.sb3」。
   - 分頁 2 共用同一套打開流程（拖曳時顯示「放開就檢查這個作品」，只做分析）。
   - 測試：`tests/open-project.test.ts`、`npm run test:open-project-browser`（按鈕、整窗拖曳、錯誤、換作品前詢問）。
-- 2026-11-12 **階段 0 開始：樣本與現況**（樣本在 `output/handmade-corpus/`，不進 git；量測腳本 `output/tmp/baseline.mts`）。
+- 2026-11-12 **階段 0 開始：樣本與現況**（樣本在 `output/handmade-corpus/`，不進 git；量測工具後來搬到 `scripts/tools/measure-corpus.ts`）。
 
   | 作品 | 誰做的 | 角色 | 積木 | 程式 | 擴充 | 官方造型 | 原始積木 JSON | 10 個一頁要幾頁 | 積木圖問題 |
   | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -408,7 +437,7 @@ L8        廣播訊息 [遊戲結束]
   - 積木數中位數 191（最少 19、最多 2609）。現在的 8 次 × 10 個只能完整讀完 12 件（≤ 80 個積木）；超過 500 個積木的有 16 件。
   - 16 件有積木圖問題（種類見 0.4），這些角色現在 AI 不能改。
   - 官方造型 181／2986，31 件至少用了一個官方造型。擴充只有畫筆和音樂。註解共 21 則，分布在 7 件。
-  - 約 20 件有 Instructions，可以當理解測試的標準答案。
+  - 16 件有 Instructions，可以當理解測試的標準答案。
 - 2026-11-12 **B0b 完成**。規則改成「修改不能增加新問題；原本就有、Scratch 能執行的殘留可以保留」，並修正 `sensing_current` 選項大小寫。
   - 73 件樣本中原本被鎖的 16 件全部可以改（問題最多的「光的反射」實際改過一次，也能存成 .sb3）。
   - 真的壞掉的情況仍會擋下：循環、缺積木、共用子積木、一般積木的 parent 不一致。
