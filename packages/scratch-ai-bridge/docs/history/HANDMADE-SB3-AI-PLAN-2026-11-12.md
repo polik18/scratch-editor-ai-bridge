@@ -35,7 +35,7 @@
 | C1 | 造型、位置翻成文字 | ✅ | codex | 官方素材、尺寸、九宮格、SVG 顏色與瀏覽器 PNG 主要顏色取樣已加入；reader 可接收 visual hints | `src/core/reader/`、`src/main.ts` |
 | C2 | 點舞台指定角色、AI 不確定時先問 | ✅ | codex | 靜態預覽可點選角色；Canonical、raw 與 MCP 都能轉送 `ask_student`，並有選項對話框 | `src/main.ts`、`src/mcp/tools.ts` |
 | B3a | 行號操作修改 | ✅ | codex | `set/replace/insert_after/delete` 已接到 raw patch，保留 ID、revision 和 VM 驗證；單元測試通過 | `src/core/ai/line-patch.ts`、`raw-tool-core.ts` |
-| B4 | 讀本→解析→積木圖來回 | 🟡 | codex | 已用 `readProjectForAi` 真實 script section 驗證巢狀 fixture；73 件樣本全量來回仍待執行 | `src/core/reader/`、`src/core/ai/line-patch.ts` |
+| B4 | 讀本→解析→積木圖來回 | ✅ | codex | 73/73 作品、2,397/2,397 段程式全量通過；未知積木原樣保留、可辨識葉積木可修改，0 失敗 | `src/core/reader/`、`src/core/ai/line-patch.ts`、`scripts/tools/check-reader-roundtrip.ts` |
 | D＋E4 | CLI `fetch`／MCP／文件、`skill-scratch-site` | ✅ | codex | `start` 列出 fetch/ai-reader；MCP 有 read_script/find；skill validator 因環境缺 PyYAML 尚未執行 | `src/cli/`、`~/ObsidianVault/skills/` |
 | C3 | 看得懂圖的模型附截圖 | ✅ | codex | Vision 勾選會送舞台截圖與造型拼貼；複製路線可下載兩張 PNG | `src/main.ts`、`src/core/ai/openai-compatible.ts` |
 | E2 | 網址讀取公開作品 | 🟡 | codex | URL 欄位、metadata／SB3 下載與作者說明已完成；已驗證 GitHub Pages 來源被 Scratch metadata API CORS 擋住，畫面會引導 CLI／skill fallback | `src/scratch/public-project.ts`、`src/main.ts` |
@@ -314,7 +314,7 @@ L8        廣播訊息 [遊戲結束]
 
 ### B4. 讓它可靠
 
-- **來回測試。** 每個作品的每段程式都做一次：讀本 → 解析 → 積木圖，結果要和原本的積木圖完全相同（只比對看得懂的積木）。
+- **來回測試。** `npx tsx scripts/tools/check-reader-roundtrip.ts ../../output/handmade-corpus/leejoneshane --json` 已逐段執行；73 件作品、2,397 段程式全部可安全接受。完全可辨識的程式走 canonical 解析；含未知積木的程式保留 opaque raw nodes，只對可辨識葉積木套用修改，結構性改動會拒絕。
 - **涵蓋率。** 報告寫出看得懂的積木佔幾 %。Scratch 內建積木的目標是 100%；常見擴充（畫筆、音樂、文字轉語音、翻譯、影像偵測）也要涵蓋。
 
 ## 5. 階段 C：畫面翻成文字
@@ -497,4 +497,4 @@ L8        廣播訊息 [遊戲結束]
   - 驗證：100 個測試檔、810 個測試全過；`eslint src tests`、`tsc --noEmit`、production build、bundle budget、Chromium browser smoke 全過。
   - 尚待：使用者執行本機理解測試；E5 登入／上傳必須等使用者明確授權，不能由本次本地開發驗證代替。
 - 2026-11-12 **B3b 稽核修正**：完整程式轉譯現在保留讀本行號後的巢狀縮排，並遞迴收集 `inputs` 內的可達積木 ID；新增 `forever → move` 回歸測試，確認 SUBSTACK、parent、next 與原始 ID 均正確。全套測試更新為 811 項全過；Bridge 修正 commit `7b1e0d8c3b`。
-- 2026-11-12 **B4 驗收補強**：巢狀完整程式測試改用 `readProjectForAi` 實際輸出的 `script:hat` section，修改後再轉回 graph patch；目前證明代表性 fixture 可來回，尚未把 73 件樣本的所有可讀 script 全量跑完。
+- 2026-11-12 **B4 全量驗收完成**：新增唯讀稽核工具 `scripts/tools/check-reader-roundtrip.ts`，逐件使用 `readProjectForAi` 的真實 script section 再送入完整程式 patch。73/73 作品、2,397/2,397 段程式通過、0 失敗；同時新增未知積木保留與重複 script ID target 消歧回歸測試。完整測試套件為 100 個檔案、813 個測試全過。

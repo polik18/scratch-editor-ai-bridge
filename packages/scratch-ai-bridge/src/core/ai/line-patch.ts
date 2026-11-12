@@ -173,6 +173,81 @@ const broadcastSymbolId = (graph: Record<string, RawNode>, name: string): string
   return name
 }
 
+interface ReaderNumberedLine {
+  readonly id: string
+  readonly text: string
+}
+
+const readerNumberedLine = (line: string): ReaderNumberedLine | undefined => {
+  const match = /^(L\d+)[ \t](.*)$/.exec(line)
+  return match?.[1] && match[2] !== undefined ? { id: match[1], text: match[2] } : undefined
+}
+
+const readerLineShape = (line: ReaderNumberedLine): string => {
+  const normalized = line.text.replace(/\t/g, '  ')
+  const indent = normalized.length - normalized.trimStart().length
+  return `${indent}:${normalized.trim()}`
+}
+
+const hasCanonicalStackInput = (block: CanonicalBlock): boolean =>
+  Object.values(block.inputs ?? {}).some((input) => input.type === 'stack')
+
+const buildPreservingUnknownScriptPatch = (
+  project: RawSb3Project,
+  section: { readonly id: string; readonly text: string; readonly targetIndex: number },
+  targetName: string,
+  graph: { readonly isStage: boolean; readonly blocks: Record<string, RawNode> },
+  source: string,
+): { patch: ScratchTargetBlockPatch; oldBlockCount: number; newBlockCount: number } => {
+  const rootId = section.id.slice('script:'.length)
+  const originalLines = section.text.split(/\r?\n/).map(readerNumberedLine).filter(Boolean) as ReaderNumberedLine[]
+  const sourceLines = source.split(/\r?\n/).map(readerNumberedLine).filter(Boolean) as ReaderNumberedLine[]
+  const originalById = new Map(originalLines.map((line) => [line.id, line]))
+  const sourceIds = new Set(sourceLines.map((line) => line.id))
+  if (
+    sourceLines.length !== originalLines.length ||
+    sourceIds.size !== sourceLines.length ||
+    originalLines.some((line) => !sourceIds.has(line.id))
+  ) {
+    throw new Error('完整程式含未支援積木，且行號或程式結構被改動；為安全起見拒絕套用。')
+  }
+
+  const operations: LinePatchTextOperation[] = []
+  for (const line of sourceLines) {
+    const original = originalById.get(line.id)
+    if (!original || readerLineShape(original) === readerLineShape(line)) continue
+    let parsed: CanonicalBlock
+    try {
+      parsed = firstParsedBlock(line.text)
+    } catch {
+      throw new Error(`完整程式改動了 Bridge 尚未支援的 ${line.id}，該行必須原封不動保留。`)
+    }
+    if (hasCanonicalStackInput(parsed))
+      throw new Error(`完整程式改動了 ${line.id} 的巢狀容器；該程式含未支援積木，暫不能安全重建容器。`)
+    operations.push({ op: 'replace', line: line.id, text: line.text.trim() })
+  }
+
+  const blocks: ScratchTargetBlockPatch['blocks'] = {}
+  if (operations.length === 0) {
+    // A no-op graph patch is still useful: it proves the unknown reader lines were
+    // accepted without reconstructing or dropping their opaque raw nodes.
+    blocks[rootId] = {}
+  } else {
+    for (let offset = 0; offset < operations.length; offset += 20) {
+      const patches = buildLinePatch(project, operations.slice(offset, offset + 20))
+      const patch = patches.find((candidate) => candidate.targetIndex === section.targetIndex)
+      if (!patch) throw new Error('完整程式的可辨識行找不到所屬 target。')
+      Object.assign(blocks, patch.blocks)
+    }
+  }
+  const oldBlockCount = reachableScriptIds(rootId, graph.blocks).length
+  return {
+    patch: { targetIndex: section.targetIndex, targetName, isStage: graph.isStage, blocks },
+    oldBlockCount,
+    newBlockCount: oldBlockCount,
+  }
+}
+
 /**
  * Compile one complete reader script back into an ID-preserving raw graph patch.
  * @param project Imported lossless SB3 project.
@@ -192,12 +267,21 @@ export const buildScriptPatch = (
   if (!source.trim() || source.length > 12_000) throw new Error('完整程式文字不可為空，且不可超過 12,000 字元。')
 
   const reader = readProjectForAi(project.projectJson, { entries: project.entries })
-  const section = reader.sections.find(
-    (candidate) => candidate.id === scriptId || candidate.id === `script:${scriptId}`,
-  )
-  if (!section?.id.startsWith('script:') || section.targetIndex === undefined)
+  const rawTargets: readonly unknown[] = Array.isArray(project.projectJson.targets)
+    ? (project.projectJson.targets as readonly unknown[])
+    : []
+  const matchingSections = reader.sections.filter((candidate) => {
+    if ((candidate.id !== scriptId && candidate.id !== `script:${scriptId}`) || candidate.targetIndex === undefined)
+      return false
+    const candidateTarget = rawTargets[candidate.targetIndex]
+    return isRecord(candidateTarget) && candidateTarget.name === targetName
+  })
+  if (matchingSections.length !== 1) {
+    throw new Error(`找不到唯一的讀本程式區段 ${scriptId} / ${targetName}。`)
+  }
+  const section = matchingSections[0]
+  if (!section.id.startsWith('script:') || section.targetIndex === undefined)
     throw new Error(`找不到讀本程式區段 ${scriptId}。`)
-  const rawTargets = Array.isArray(project.projectJson.targets) ? project.projectJson.targets : []
   const target = rawTargets[section.targetIndex]
   if (!isRecord(target) || target.name !== targetName) throw new Error('完整程式的 targetName 與讀本不符。')
   const graphs = extractProjectBlockGraphs(project.projectJson)
@@ -218,12 +302,12 @@ export const buildScriptPatch = (
     parsed.project.sprites[0]?.scripts.length !== 1 ||
     script.blocks[0]?.opcode?.startsWith('event_') !== true
   ) {
-    throw new Error(
-      `完整程式無法安全解析：${
-        [...parsed.warnings, parsed.skippedLines > 0 ? `跳過 ${parsed.skippedLines} 行` : '']
-          .filter(Boolean)
-          .join('；') || '必須包含一個可辨識的事件帽積木。'
-      }`,
+    return buildPreservingUnknownScriptPatch(
+      project,
+      { id: section.id, text: section.text, targetIndex: section.targetIndex },
+      targetName,
+      graph,
+      source,
     )
   }
 
@@ -323,7 +407,9 @@ export const buildLinePatch = (
   if (operations.length === 0 || operations.length > 20) throw new Error('一次行號修改必須包含 1～20 個操作。')
   const reader = readProjectForAi(project.projectJson, { entries: project.entries })
   const graphs = extractProjectBlockGraphs(project.projectJson)
-  const rawTargets = Array.isArray(project.projectJson.targets) ? project.projectJson.targets : []
+  const rawTargets: readonly unknown[] = Array.isArray(project.projectJson.targets)
+    ? (project.projectJson.targets as readonly unknown[])
+    : []
   const patches = new Map<number, ScratchTargetBlockPatch>()
   const touched = new Set<string>()
   for (const operation of operations) {

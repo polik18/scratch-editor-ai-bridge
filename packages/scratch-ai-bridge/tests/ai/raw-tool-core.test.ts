@@ -272,6 +272,121 @@ describe('raw SB3 AI proposal', () => {
     )
   })
 
+  it('preserves opaque reader lines while patching a recognizable leaf', async () => {
+    const zip = new JSZip()
+    zip.file(
+      'project.json',
+      JSON.stringify({
+        targets: [
+          {
+            name: 'Cat',
+            isStage: false,
+            blocks: {
+              hat: {
+                opcode: 'event_whenflagclicked',
+                next: 'opaque',
+                parent: null,
+                inputs: {},
+                fields: {},
+                topLevel: true,
+              },
+              opaque: {
+                opcode: 'vendor_unknown_block',
+                next: 'move',
+                parent: 'hat',
+                inputs: {},
+                fields: {},
+                topLevel: false,
+              },
+              move: {
+                opcode: 'motion_movesteps',
+                next: null,
+                parent: 'opaque',
+                inputs: { STEPS: [1, [4, 10]] },
+                fields: {},
+                topLevel: false,
+              },
+            },
+          },
+        ],
+      }),
+    )
+    const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
+    const readerScript = readProjectForAi(project.projectJson).sections.find((section) => section.id === 'script:hat')
+    if (!readerScript) throw new Error('reader script fixture missing')
+    expect(readerScript.text).toContain('⟦未知：vendor_unknown_block')
+    const revision = rawSb3Revision(project)
+    const proposal = {
+      format: 'scratch-ai-bridge/raw-patch',
+      version: 1,
+      baseRevision: revision,
+      summary: '保留未知積木並調整移動距離',
+      change: {
+        kind: 'script',
+        targetName: 'Cat',
+        scriptId: 'script:hat',
+        text: readerScript.text.replace('移動 10 點', '移動 20 點'),
+      },
+    }
+    const candidate = proposeRawLivePatch(project, JSON.stringify(proposal))
+    const blocks = (candidate.project.projectJson as any).targets[0].blocks
+    expect(blocks.opaque).toEqual(expect.objectContaining({ opcode: 'vendor_unknown_block', next: 'move' }))
+    expect(blocks.move).toEqual(expect.objectContaining({ parent: 'opaque', inputs: { STEPS: [1, [4, 20]] } }))
+  })
+
+  it('uses targetName to disambiguate duplicate script IDs across targets', async () => {
+    const blockGraph = {
+      same: {
+        opcode: 'event_whenflagclicked',
+        next: 'move',
+        parent: null,
+        inputs: {},
+        fields: {},
+        topLevel: true,
+      },
+      move: {
+        opcode: 'motion_movesteps',
+        next: null,
+        parent: 'same',
+        inputs: { STEPS: [1, [4, 10]] },
+        fields: {},
+        topLevel: false,
+      },
+    }
+    const zip = new JSZip()
+    zip.file(
+      'project.json',
+      JSON.stringify({
+        targets: [
+          { name: 'Cat', isStage: false, blocks: blockGraph },
+          { name: 'Dog', isStage: false, blocks: structuredClone(blockGraph) },
+        ],
+      }),
+    )
+    const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
+    const readerScript = readProjectForAi(project.projectJson).sections.find(
+      (section) => section.id === 'script:same' && section.targetIndex === 1,
+    )
+    if (!readerScript) throw new Error('duplicate target reader script fixture missing')
+    const revision = rawSb3Revision(project)
+    const proposal = {
+      format: 'scratch-ai-bridge/raw-patch',
+      version: 1,
+      baseRevision: revision,
+      summary: '只調整 Dog',
+      change: {
+        kind: 'script',
+        targetName: 'Dog',
+        scriptId: 'script:same',
+        text: readerScript.text.replace('移動 10 點', '移動 30 點'),
+      },
+    }
+    const candidate = proposeRawLivePatch(project, JSON.stringify(proposal))
+    const targets = (candidate.project.projectJson as any).targets
+    expect(targets[0].blocks.move.inputs.STEPS).toEqual([1, [4, 10]])
+    expect(targets[1].blocks.move.inputs.STEPS).toEqual([1, [4, 30]])
+  })
+
   it('edits targets with leftover issues Scratch tolerates, but rejects edits that add new issues', async () => {
     // A parameter reporter left behind after its parameter was removed is common in real projects and still runs.
     const zip = new JSZip()
