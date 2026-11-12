@@ -89,6 +89,20 @@ try {
   await page.reload({ waitUntil: 'networkidle' })
   await page.locator('#accept-student-candidate').waitFor({ state: 'visible', timeout: 30000 })
   assert.equal(JSON.parse(await page.locator('#json-editor').inputValue()).name, candidate.name)
+  const stage = page.locator('#student-preview .student-preview-stage')
+  const previewControls = page.locator('#student-preview .student-preview-controls')
+  const controlsAboveStage = await previewControls.evaluate(
+    (controls, stageElement) => {
+      const controlsBox = controls.getBoundingClientRect()
+      const stageBox = stageElement.getBoundingClientRect()
+      return controlsBox.bottom <= stageBox.top
+    },
+    await stage.elementHandle(),
+  )
+  assert.equal(controlsAboveStage, true, 'green flag and stop controls must sit above the Scratch stage')
+  const initialStop = page.locator('#student-preview .student-preview-controls .preview-control-stop')
+  assert.equal(await initialStop.isVisible(), true, 'stop control must remain visible like Scratch')
+  assert.equal(await initialStop.isDisabled(), true, 'stop control must be disabled before the preview starts')
   await page.locator('#student-preview .student-preview-actions button').filter({ hasText: '執行作品' }).click()
   await page.locator('#student-preview iframe.student-preview-animation').waitFor({ state: 'attached' })
   const stop = page.locator('#student-preview .student-preview-actions button').filter({ hasText: '停止預覽' })

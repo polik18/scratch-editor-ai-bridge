@@ -1036,6 +1036,11 @@ h1 {
   margin-top: 16px;
   align-items: start;
 }
+.student-preview-main {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
 .student-preview-stage {
   position: relative;
   width: 100%;
@@ -1080,6 +1085,40 @@ h1 {
   justify-content: center;
   gap: 8px;
   padding: 10px;
+}
+.student-preview-controls {
+  min-height: 42px;
+  padding: 0 0 2px;
+  align-items: center;
+  gap: 8px;
+}
+.student-preview-controls .preview-control {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px #17255424;
+  font-size: 18px;
+  line-height: 1;
+}
+.student-preview-controls .preview-control-flag {
+  background: #4cbf19;
+  color: #fff;
+}
+.student-preview-controls .preview-control-stop {
+  background: #e34b4b;
+  color: #fff;
+}
+.student-preview-controls .preview-control:hover:not(:disabled),
+.student-preview-controls .preview-control:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px #17255438;
+}
+.student-preview-controls .preview-control:disabled {
+  opacity: 0.45;
 }
 
 .student-preview-playtest-status {

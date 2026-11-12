@@ -2217,19 +2217,32 @@ const renderStudentPreview = (
 
   startAnimation.type = 'button'
 
-  startAnimation.className = 'button secondary'
+  startAnimation.className = 'button secondary preview-control preview-control-flag'
 
-  startAnimation.textContent = '🟢 綠旗：開始執行作品'
+  startAnimation.setAttribute('aria-label', '綠旗：開始執行作品')
+  startAnimation.title = '綠旗：開始執行作品'
+  startAnimation.innerHTML =
+    '<span class="preview-control-icon" aria-hidden="true">⚑</span><span class="visually-hidden">綠旗：開始執行作品</span>'
 
   const stopAnimation = document.createElement('button')
 
   stopAnimation.type = 'button'
 
-  stopAnimation.className = 'button secondary'
+  stopAnimation.className = 'button secondary preview-control preview-control-stop'
 
-  stopAnimation.textContent = '🔴 停止預覽'
+  stopAnimation.setAttribute('aria-label', '停止預覽')
+  stopAnimation.title = '停止預覽'
+  stopAnimation.innerHTML =
+    '<span class="preview-control-icon" aria-hidden="true">■</span><span class="visually-hidden">停止預覽</span>'
 
-  stopAnimation.hidden = true
+  stopAnimation.hidden = false
+  stopAnimation.disabled = true
+
+  const previewControls = document.createElement('div')
+  previewControls.className = 'student-preview-actions student-preview-controls'
+  previewControls.setAttribute('aria-label', '作品執行控制')
+  previewControls.append(startAnimation, stopAnimation)
+  previewColumn.prepend(previewControls)
 
   const playtestButton = document.createElement('button')
 
@@ -2276,7 +2289,7 @@ const renderStudentPreview = (
     })
   })
   visualDownloadActions.append(downloadStageImage, downloadCostumeCollage)
-  previewActions.append(startAnimation, stopAnimation, playtestButton, playtestStatus, visualDownloadActions)
+  previewActions.append(playtestButton, playtestStatus, visualDownloadActions)
 
   previewColumn.append(previewActions)
 
@@ -3322,7 +3335,7 @@ const renderStudentPreview = (
     if (currentAnimation) {
       stageStatus.textContent = '正在重新載入作品。'
       currentAnimation.replaceProject(archive, revision)
-    } else if (!startAnimation.hidden) startAnimation.click()
+    } else if (!startAnimation.hidden && !startAnimation.disabled) startAnimation.click()
     else throw new Error('動畫預覽目前無法重載。')
     await waitForAnimationReady()
   }
@@ -5352,11 +5365,12 @@ const renderStudentPreview = (
 
           if (hardwareExtensions.length > 0) hardwareControls.hidden = false
 
-          startAnimation.hidden = true
+          startAnimation.hidden = false
 
           startAnimation.disabled = false
 
           stopAnimation.hidden = false
+          stopAnimation.disabled = false
 
           playtestButton.disabled = false
 
@@ -5480,7 +5494,8 @@ const renderStudentPreview = (
 
           startAnimation.disabled = false
 
-          stopAnimation.hidden = true
+          stopAnimation.hidden = false
+          stopAnimation.disabled = true
         },
       }
 
