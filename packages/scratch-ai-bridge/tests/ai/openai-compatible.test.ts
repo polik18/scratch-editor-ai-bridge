@@ -74,9 +74,7 @@ describe('requestOpenAiCompatiblePatch when the request cannot be done', () => {
   })
 
   it('sends both a stage image and a costume collage, and exposes ask_student', async () => {
-    const { bodies, fetchImpl } = recorder([
-      { finish_reason: 'stop', message: { role: 'assistant', content: '{}' } },
-    ])
+    const { bodies, fetchImpl } = recorder([{ finish_reason: 'stop', message: { role: 'assistant', content: '{}' } }])
     await requestOpenAiCompatiblePatch({
       baseUrl: 'http://127.0.0.1:1234/v1',
       model: 'fake-model',
