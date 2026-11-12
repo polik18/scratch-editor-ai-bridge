@@ -1,7 +1,9 @@
+import { execFileSync } from 'node:child_process'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { mkdir, readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { runBatch } from './batch'
-import { inspectSb3Bytes, inspectionToMarkdown, inspectionToStudentMarkdown } from './inspect'
+import { inspectSb3Bytes, inspectSb3ForAiReader, inspectionToMarkdown, inspectionToStudentMarkdown } from './inspect'
 
 const VERSION = '0.1.0'
 const USAGE = `Scratch AI Bridge CLI ${VERSION}
@@ -36,7 +38,8 @@ Usage:
   scratch-ai-bridge guide [game|story]
   scratch-ai-bridge story <story.json> [--out <file.sb3>] [--request <file-or-text>] [--playtest] [--force] [--offline]
   scratch-ai-bridge spec <game-spec.json> [--out <file.sb3>] [--ir <canonical-ir.json>] [--report <report.json>] [--request <file-or-text>] [--playtest] [--force] [--offline]
-  scratch-ai-bridge inspect <file.sb3> [--format json|markdown|student-markdown]
+  scratch-ai-bridge inspect <file.sb3> [--format json|markdown|student-markdown|ai-reader]
+  scratch-ai-bridge fetch <Scratch URL or project ID> [--out <directory>]
   scratch-ai-bridge batch <directory> [--out <new-directory>] [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
   scratch-ai-bridge generate <design.json> --out <new-file.sb3> [--report <report.json>] [--preview <stage.png>] [--force]
   scratch-ai-bridge clean [--all]               remove _過程 folders and output/tmp/; --all removes output/ entirely
@@ -215,7 +218,7 @@ ${createGameSpecGuide()}
     const argument = args[index]
     if (argument === '--format') {
       const value = args[index + 1]
-      if (value !== 'json' && value !== 'markdown' && value !== 'student-markdown') {
+      if (value !== 'json' && value !== 'markdown' && value !== 'student-markdown' && value !== 'ai-reader') {
         argumentError = true
         break
       }
@@ -235,10 +238,14 @@ ${createGameSpecGuide()}
   } else {
     try {
       const bytes = await readFile(positionals[0] ?? '')
-      const result = await inspectSb3Bytes(bytes)
-      if (format === 'markdown') process.stdout.write(`${inspectionToMarkdown(result)}\n`)
-      else if (format === 'student-markdown') process.stdout.write(`${inspectionToStudentMarkdown(result)}\n`)
-      else writeJson(result)
+      if (format === 'ai-reader') {
+        writeJson(await inspectSb3ForAiReader(bytes))
+      } else {
+        const result = await inspectSb3Bytes(bytes)
+        if (format === 'markdown') process.stdout.write(`${inspectionToMarkdown(result)}\n`)
+        else if (format === 'student-markdown') process.stdout.write(`${inspectionToStudentMarkdown(result)}\n`)
+        else writeJson(result)
+      }
     } catch {
       writeJson({
         format: 'scratch-ai-bridge/inspection-error',
@@ -248,6 +255,76 @@ ${createGameSpecGuide()}
           code: 'inspect-failed',
           message: '無法讀取或解析這份 Scratch 專案；請確認檔案是有效的 .sb3。',
         },
+      })
+      process.exitCode = 1
+    }
+  }
+} else if (command === 'fetch') {
+  const positionals: string[] = []
+  let outputDirectory: string | undefined
+  let argumentError = false
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index]
+    if (argument === '--out') {
+      const value = args[index + 1]
+      if (!value || value.startsWith('-')) {
+        argumentError = true
+        break
+      }
+      outputDirectory = value
+      index += 1
+    } else if (argument.startsWith('-')) {
+      argumentError = true
+      break
+    } else positionals.push(argument)
+  }
+  const source = positionals[0]
+  const projectId = /(?:scratch\.mit\.edu\/projects\/)?(\d+)/.exec(source)?.[1]
+  if (argumentError || positionals.length !== 1 || !projectId) {
+    process.stderr.write(`${USAGE}\n`)
+    process.exitCode = 2
+  } else {
+    try {
+      const defaultDirectory = path.resolve('output', 'scratch', projectId)
+      const directory = path.resolve(outputDirectory ?? defaultDirectory)
+      const scriptCandidates = [
+        path.resolve(process.cwd(), 'packages/scratch-ai-bridge/scripts/tools/fetch-scratch.mjs'),
+        path.resolve(process.cwd(), 'scripts/tools/fetch-scratch.mjs'),
+      ]
+      const script = scriptCandidates.find((candidate) => existsSync(candidate))
+      if (!script) throw new Error('找不到 Scratch 下載腳本。')
+      execFileSync(process.execPath, [script, directory, projectId], { stdio: 'inherit' })
+      const file = readdirSync(directory)
+        .filter((name) => name.endsWith('.sb3'))
+        .sort()
+        .at(-1)
+      if (!file) throw new Error('Scratch 沒有回傳可讀的 SB3 作品。')
+      const bytes = readFileSync(path.join(directory, file))
+      let metadata: { title?: unknown; instructions?: unknown; notes?: unknown } = {}
+      try {
+        const metadataPath = path.join(directory, file.replace(/\.sb3$/, '.json'))
+        const parsed: unknown = JSON.parse(readFileSync(metadataPath, 'utf8'))
+        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) metadata = parsed
+      } catch {
+        // The SB3 remains useful when metadata was not written by the public fetcher.
+      }
+      writeJson({
+        format: 'scratch-ai-bridge/fetch',
+        version: 1,
+        projectId,
+        file: path.join(directory, file),
+        reader: await inspectSb3ForAiReader(bytes, {
+          ...(typeof metadata.title === 'string' ? { title: metadata.title } : {}),
+          ...(typeof metadata.instructions === 'string' ? { authorInstructions: metadata.instructions } : {}),
+          ...(typeof metadata.notes === 'string' ? { notesAndCredits: metadata.notes } : {}),
+        }),
+      })
+    } catch (error) {
+      writeJson({
+        format: 'scratch-ai-bridge/fetch-error',
+        version: 1,
+        status: 'failed',
+        error: error instanceof Error ? error.message : String(error),
       })
       process.exitCode = 1
     }

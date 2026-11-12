@@ -10,7 +10,7 @@ export const BRIDGE_MCP_INSTRUCTIONS = `Scratch AI Bridge 有三種用法：
 1. 做新遊戲：用 make_game。你寫一個 Game Spec JSON（格式在 make_game 的說明裡），工具會產生 .sb3 並回報 feedback。
    有錯就照 feedback 中「→」後面的建議修改，再呼叫一次。不要自己寫 project.json 或 .sb3。
 2. 做動畫（60～180 秒、至少換一次背景）：用 make_story，格式在它的說明裡，用法同上。
-3. 修改使用者在 Bridge 網頁中開著的作品：先 inspect_project，再 propose_live_patch（只會產生待審候選，由使用者在網頁確認）。
+3. 修改使用者在 Bridge 網頁中開著的作品：先 inspect_project，再依需要 read_script/find，最後 propose_live_patch（只會產生待審候選，由使用者在網頁確認）。
    這些工具需要使用者先開啟 Bridge 網頁並連線。`
 
 export interface BridgeMcpOptions {
@@ -153,6 +153,38 @@ ${createGameSpecGuide()}`,
         try {
           enforceToolLimit()
           return result(await relay.call('inspect_raw_targets', args))
+        } catch (error) {
+          return failure(error)
+        }
+      },
+    )
+
+    server.registerTool(
+      'read_script',
+      {
+        description: '讀取原始 SB3 讀本中的一段可讀程式；需提供 inspect_project 回傳的 revision 與 script ID。',
+        inputSchema: z.object({ baseRevision: z.string().min(1).max(100), scriptId: z.string().min(1).max(256) }),
+      },
+      async (args) => {
+        try {
+          enforceToolLimit()
+          return result(await relay.call('read_script', args))
+        } catch (error) {
+          return failure(error)
+        }
+      },
+    )
+
+    server.registerTool(
+      'find',
+      {
+        description: '在目前原始 SB3 的讀本中搜尋文字；需提供目前 revision。',
+        inputSchema: z.object({ baseRevision: z.string().min(1).max(100), query: z.string().min(1).max(256) }),
+      },
+      async (args) => {
+        try {
+          enforceToolLimit()
+          return result(await relay.call('find', args))
         } catch (error) {
           return failure(error)
         }

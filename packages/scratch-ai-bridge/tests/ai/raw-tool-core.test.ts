@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument -- These tests inspect intentionally raw SB3 JSON. */
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { requestOpenAiCompatiblePatch } from '../../src/core/ai/openai-compatible'
@@ -7,6 +8,7 @@ import {
   inspectRawTargets,
   inspectRawVariables,
   proposeRawLivePatch,
+  rawProjectInventory,
 } from '../../src/core/ai/raw-tool-core'
 import { exportLosslessSb3, importLosslessSb3, rawSb3Revision } from '../../src/core/archive'
 
@@ -65,6 +67,85 @@ describe('raw SB3 AI proposal', () => {
     expect(summary).toContain(rawSb3Revision(project))
     expect(summary).toMatch(/省略|截斷/)
     expect(summary).not.toContain('do-not-disclose')
+  })
+  it('returns a reusable inventory without mutating the project or exposing cloud variables', async () => {
+    const zip = new JSZip()
+    zip.file(
+      'project.json',
+      JSON.stringify({
+        targets: [
+          {
+            name: 'Cat',
+            isStage: false,
+            x: 12,
+            variables: {
+              score: ['score', 3],
+              cloud: ['☁ secret', 'hidden', true],
+            },
+          },
+        ],
+      }),
+    )
+    const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
+    const first = rawProjectInventory(project)
+    const second = rawProjectInventory(project)
+    expect(first).toEqual(second)
+    expect(first[0]?.variables).toEqual([{ id: 'score', name: 'score', value: 3 }])
+    expect(JSON.stringify(first)).not.toContain('hidden')
+  })
+
+  it('applies line-number set, insert, and delete operations while retaining the graph', async () => {
+    const zip = new JSZip()
+    zip.file(
+      'project.json',
+      JSON.stringify({
+        targets: [
+          {
+            name: 'Cat',
+            isStage: false,
+            blocks: {
+              hat: {
+                opcode: 'event_whenflagclicked',
+                next: 'move',
+                parent: null,
+                inputs: {},
+                fields: {},
+                topLevel: true,
+              },
+              move: {
+                opcode: 'motion_movesteps',
+                next: null,
+                parent: 'hat',
+                inputs: { STEPS: [1, [4, 10]] },
+                fields: {},
+                topLevel: false,
+              },
+            },
+          },
+        ],
+      }),
+    )
+    const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
+    const revision = rawSb3Revision(project)
+    const patch = (operations: unknown[]) =>
+      JSON.stringify({
+        format: 'scratch-ai-bridge/raw-patch',
+        version: 1,
+        baseRevision: revision,
+        summary: 'line edit',
+        change: { kind: 'lines', operations },
+      })
+    const set = proposeRawLivePatch(project, patch([{ op: 'set', line: 'L2', slot: 1, value: 20 }]))
+    expect((set.project.projectJson as any).targets[0].blocks.move.inputs.STEPS).toEqual([1, [4, 20]])
+    const inserted = proposeRawLivePatch(project, patch([{ op: 'insert_after', line: 'L2', text: '播放音效 [Pop]' }]))
+    const insertedBlocks = (inserted.project.projectJson as any).targets[0].blocks
+    expect(insertedBlocks.hat.next).toBe('move')
+    expect(insertedBlocks.move.next).toMatch(/^sab_line_move/)
+    expect(Object.values(insertedBlocks).some((block: any) => block.opcode === 'sound_play')).toBe(true)
+    const deleted = proposeRawLivePatch(project, patch([{ op: 'delete', line: 'L2' }]))
+    expect((deleted.project.projectJson as any).targets[0].blocks).toEqual({
+      hat: expect.objectContaining({ next: null }),
+    })
   })
 
   it('edits targets with leftover issues Scratch tolerates, but rejects edits that add new issues', async () => {
@@ -325,3 +406,4 @@ describe('raw SB3 AI proposal', () => {
     expect(Object.keys(procBlocks.blocks)).toEqual(['call'])
   })
 })
+/* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */

@@ -36,7 +36,16 @@ export const COMMANDS: readonly CommandEntry[] = [
     goal: '交給本機模型寫描述，工具建置、試玩、修正',
     usage: 'make "<需求>" [--story] --playtest [--rounds 0-3]',
   },
-  { name: 'inspect', goal: '分析一個 .sb3', usage: 'inspect <檔案.sb3> --format student-markdown|markdown|json' },
+  {
+    name: 'inspect',
+    goal: '分析一個 .sb3 或輸出給 AI 的作品讀本',
+    usage: 'inspect <檔案.sb3> --format student-markdown|markdown|json|ai-reader',
+  },
+  {
+    name: 'fetch',
+    goal: '下載公開 Scratch 作品並輸出讀本',
+    usage: 'fetch <Scratch 網址或作品編號> [--out <資料夾>]',
+  },
   { name: 'batch', goal: '分析整個資料夾的 .sb3', usage: 'batch <資料夾>' },
   { name: 'generate', goal: '從 Canonical IR 建置（進階，一般不用）', usage: 'generate <ir.json> --out <檔案.sb3>' },
   { name: 'clean', goal: '刪掉做作品的過程檔', usage: 'clean [--all]' },

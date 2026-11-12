@@ -1,0 +1,1249 @@
+{
+  "blocks": {
+    "boost_getMotorPosition": {
+      "messageKey": "boost.getMotorPosition",
+      "template": "[MOTOR_REPORTER_ID] 轉向角度",
+      "args": ["MOTOR_REPORTER_ID"]
+    },
+    "boost_getTiltAngle": {
+      "messageKey": "boost.getTiltAngle",
+      "template": "傾斜角度 [TILT_DIRECTION]",
+      "args": ["TILT_DIRECTION"]
+    },
+    "boost_motorOff": {
+      "messageKey": "boost.motorOff",
+      "template": "[MOTOR_ID] 停止",
+      "args": ["MOTOR_ID"]
+    },
+    "boost_motorOn": {
+      "messageKey": "boost.motorOn",
+      "template": "[MOTOR_ID] 啟動",
+      "args": ["MOTOR_ID"]
+    },
+    "boost_motorOnFor": {
+      "messageKey": "boost.motorOnFor",
+      "template": "[MOTOR_ID] 啟動 持續 [DURATION] 秒",
+      "args": ["MOTOR_ID", "DURATION"]
+    },
+    "boost_motorOnForRotation": {
+      "messageKey": "boost.motorOnForRotation",
+      "template": "[MOTOR_ID] 啟動 持續 [ROTATION] 圈",
+      "args": ["MOTOR_ID", "ROTATION"]
+    },
+    "boost_seeingColor": {
+      "messageKey": "boost.seeingColor",
+      "template": "看到顏色 [COLOR]？",
+      "args": ["COLOR"]
+    },
+    "boost_setLightHue": {
+      "messageKey": "boost.setLightHue",
+      "template": "LED 顏色設為 [HUE]",
+      "args": ["HUE"]
+    },
+    "boost_setMotorDirection": {
+      "messageKey": "boost.setMotorDirection",
+      "template": "[MOTOR_ID] 方向設為 [MOTOR_DIRECTION]",
+      "args": ["MOTOR_ID", "MOTOR_DIRECTION"]
+    },
+    "boost_setMotorPower": {
+      "messageKey": "boost.setMotorPower",
+      "template": "[MOTOR_ID] 動力設為 [POWER] %",
+      "args": ["MOTOR_ID", "POWER"]
+    },
+    "boost_whenColor": {
+      "messageKey": "boost.whenColor",
+      "template": "當顏色 [COLOR]  被看到",
+      "args": ["COLOR"]
+    },
+    "boost_whenTilted": {
+      "messageKey": "boost.whenTilted",
+      "template": "當傾斜 [TILT_DIRECTION_ANY]",
+      "args": ["TILT_DIRECTION_ANY"]
+    },
+    "control_all_at_once": {
+      "messageKey": "CONTROL_ALLATONCE",
+      "template": "全部一起",
+      "args": []
+    },
+    "control_clear_counter": {
+      "messageKey": "CONTROL_CLEARCOUNTER",
+      "template": "計數器重置",
+      "args": []
+    },
+    "control_create_clone_of": {
+      "messageKey": "CONTROL_CREATECLONEOF",
+      "template": "建立 %1 的分身",
+      "args": ["CLONE_OPTION"]
+    },
+    "control_create_clone_of_menu": {
+      "messageKey": "CONTROL_CREATECLONEOF_MENU",
+      "template": "%1",
+      "args": ["CLONE_OPTION"]
+    },
+    "control_delete_this_clone": {
+      "messageKey": "CONTROL_DELETETHISCLONE",
+      "template": "分身刪除",
+      "args": []
+    },
+    "control_for_each": {
+      "messageKey": "CONTROL_FOREACH",
+      "template": "計數 %1 於 %2",
+      "args": ["VARIABLE", "VALUE"]
+    },
+    "control_forever": {
+      "messageKey": "CONTROL_FOREVER",
+      "template": "重複無限次",
+      "args": []
+    },
+    "control_get_counter": {
+      "messageKey": "CONTROL_COUNTER",
+      "template": "計數器",
+      "args": []
+    },
+    "control_if": {
+      "messageKey": "CONTROL_IF",
+      "template": "如果 %1 那麼",
+      "args": ["CONDITION"]
+    },
+    "control_if_else": {
+      "messageKey": "CONTROL_IF",
+      "template": "如果 %1 那麼",
+      "args": ["CONDITION"]
+    },
+    "control_incr_counter": {
+      "messageKey": "CONTROL_INCRCOUNTER",
+      "template": "計數器累計",
+      "args": []
+    },
+    "control_repeat": {
+      "messageKey": "CONTROL_REPEAT",
+      "template": "重複 %1 次",
+      "args": ["TIMES"]
+    },
+    "control_repeat_until": {
+      "messageKey": "CONTROL_REPEATUNTIL",
+      "template": "重複直到 %1",
+      "args": ["CONDITION"]
+    },
+    "control_start_as_clone": {
+      "messageKey": "CONTROL_STARTASCLONE",
+      "template": "當分身產生",
+      "args": []
+    },
+    "control_stop": {
+      "messageKey": "CONTROL_STOP",
+      "args": [],
+      "template": "停止"
+    },
+    "control_wait": {
+      "messageKey": "CONTROL_WAIT",
+      "template": "等待 %1 秒",
+      "args": ["DURATION"]
+    },
+    "control_wait_until": {
+      "messageKey": "CONTROL_WAITUNTIL",
+      "template": "等待直到 %1",
+      "args": ["CONDITION"]
+    },
+    "control_while": {
+      "messageKey": "CONTROL_WHILE",
+      "template": "當 %1",
+      "args": ["CONDITION"]
+    },
+    "data_addtolist": {
+      "messageKey": "DATA_ADDTOLIST",
+      "template": "添加 %1 到 %2",
+      "args": ["ITEM", "LIST"]
+    },
+    "data_changevariableby": {
+      "messageKey": "DATA_CHANGEVARIABLEBY",
+      "template": "變數 %1 改變 %2",
+      "args": ["VARIABLE", "VALUE"]
+    },
+    "data_deletealloflist": {
+      "messageKey": "DATA_DELETEALLOFLIST",
+      "template": "刪除 %1 的所有項目",
+      "args": ["LIST"]
+    },
+    "data_deleteoflist": {
+      "messageKey": "DATA_DELETEOFLIST",
+      "template": "刪除 %2 的第 %1 項",
+      "args": ["INDEX", "LIST"]
+    },
+    "data_hidelist": {
+      "messageKey": "DATA_HIDELIST",
+      "template": "清單 %1 隱藏",
+      "args": ["LIST"]
+    },
+    "data_hidevariable": {
+      "messageKey": "DATA_HIDEVARIABLE",
+      "template": "變數 %1 隱藏",
+      "args": ["VARIABLE"]
+    },
+    "data_insertatlist": {
+      "messageKey": "DATA_INSERTATLIST",
+      "template": "插入 %1 到 %3 的第 %2 項",
+      "args": ["ITEM", "INDEX", "LIST"]
+    },
+    "data_itemnumoflist": {
+      "messageKey": "DATA_ITEMNUMOFLIST",
+      "template": "%1 在 %2 裡的項目編號",
+      "args": ["ITEM", "LIST"]
+    },
+    "data_itemoflist": {
+      "messageKey": "DATA_ITEMOFLIST",
+      "template": "%2 的第 %1 項",
+      "args": ["INDEX", "LIST"]
+    },
+    "data_lengthoflist": {
+      "messageKey": "DATA_LENGTHOFLIST",
+      "template": "清單 %1 的長度",
+      "args": ["LIST"]
+    },
+    "data_listcontainsitem": {
+      "messageKey": "DATA_LISTCONTAINSITEM",
+      "template": "清單 %1 包含 %2？",
+      "args": ["LIST", "ITEM"]
+    },
+    "data_replaceitemoflist": {
+      "messageKey": "DATA_REPLACEITEMOFLIST",
+      "template": "替換 %2 的第 %1 項為 %3",
+      "args": ["INDEX", "LIST", "ITEM"]
+    },
+    "data_setvariableto": {
+      "messageKey": "DATA_SETVARIABLETO",
+      "template": "變數 %1 設為 %2",
+      "args": ["VARIABLE", "VALUE"]
+    },
+    "data_showlist": {
+      "messageKey": "DATA_SHOWLIST",
+      "template": "清單 %1 顯示",
+      "args": ["LIST"]
+    },
+    "data_showvariable": {
+      "messageKey": "DATA_SHOWVARIABLE",
+      "template": "變數 %1 顯示",
+      "args": ["VARIABLE"]
+    },
+    "ev3_beep": {
+      "messageKey": "ev3.beepNote",
+      "template": "演奏音階 [NOTE] 持續 [TIME] 秒",
+      "args": ["NOTE", "TIME"]
+    },
+    "ev3_buttonPressed": {
+      "messageKey": "ev3.buttonPressed",
+      "template": "按鈕 [PORT] 被按下？",
+      "args": ["PORT"]
+    },
+    "ev3_getBrightness": {
+      "messageKey": "ev3.getBrightness",
+      "template": "亮度",
+      "args": []
+    },
+    "ev3_getDistance": {
+      "messageKey": "ev3.getDistance",
+      "template": "距離",
+      "args": []
+    },
+    "ev3_getMotorPosition": {
+      "messageKey": "ev3.getMotorPosition",
+      "template": "馬達 埠[PORT] 轉向角度",
+      "args": ["PORT"]
+    },
+    "ev3_motorSetPower": {
+      "messageKey": "ev3.motorSetPower",
+      "template": "馬達 埠[PORT] 動力設為 [POWER] %",
+      "args": ["PORT", "POWER"]
+    },
+    "ev3_motorTurnClockwise": {
+      "messageKey": "ev3.motorTurnClockwise",
+      "template": "馬達 埠[PORT] 順時針旋轉 [TIME] 秒",
+      "args": ["PORT", "TIME"]
+    },
+    "ev3_motorTurnCounterClockwise": {
+      "messageKey": "ev3.motorTurnCounterClockwise",
+      "template": "馬達 埠[PORT] 逆時針旋轉 [TIME] 秒",
+      "args": ["PORT", "TIME"]
+    },
+    "ev3_whenBrightnessLessThan": {
+      "messageKey": "ev3.whenBrightnessLessThan",
+      "template": "當亮度 < [DISTANCE]",
+      "args": ["DISTANCE"]
+    },
+    "ev3_whenButtonPressed": {
+      "messageKey": "ev3.whenButtonPressed",
+      "template": "當按鈕 [PORT] 被按下",
+      "args": ["PORT"]
+    },
+    "ev3_whenDistanceLessThan": {
+      "messageKey": "ev3.whenDistanceLessThan",
+      "template": "當距離 < [DISTANCE]",
+      "args": ["DISTANCE"]
+    },
+    "event_broadcast": {
+      "messageKey": "EVENT_BROADCAST",
+      "template": "廣播訊息 %1",
+      "args": ["BROADCAST_INPUT"]
+    },
+    "event_broadcastandwait": {
+      "messageKey": "EVENT_BROADCASTANDWAIT",
+      "template": "廣播訊息 %1 並等待",
+      "args": ["BROADCAST_INPUT"]
+    },
+    "event_whenbackdropswitchesto": {
+      "messageKey": "EVENT_WHENBACKDROPSWITCHESTO",
+      "args": ["BACKDROP"],
+      "template": "當背景換成 %1"
+    },
+    "event_whenbroadcastreceived": {
+      "messageKey": "EVENT_WHENBROADCASTRECEIVED",
+      "template": "當收到訊息 %1",
+      "args": ["BROADCAST_OPTION"]
+    },
+    "event_whenflagclicked": {
+      "messageKey": "EVENT_WHENFLAGCLICKED",
+      "template": "當 %1 被點擊",
+      "args": []
+    },
+    "event_whengreaterthan": {
+      "messageKey": "EVENT_WHENGREATERTHAN",
+      "template": "當 %1 > %2",
+      "args": ["WHENGREATERTHANMENU", "VALUE"]
+    },
+    "event_whenkeypressed": {
+      "messageKey": "EVENT_WHENKEYPRESSED",
+      "template": "當 %1 鍵被按下",
+      "args": ["KEY_OPTION"]
+    },
+    "event_whenstageclicked": {
+      "messageKey": "EVENT_WHENSTAGECLICKED",
+      "template": "當舞台被點擊",
+      "args": []
+    },
+    "event_whenthisspriteclicked": {
+      "messageKey": "EVENT_WHENTHISSPRITECLICKED",
+      "template": "當角色被點擊",
+      "args": []
+    },
+    "event_whentouchingobject": {
+      "messageKey": "EVENT_WHENTOUCHINGOBJECT",
+      "template": "當角色碰到 %1",
+      "args": ["TOUCHINGOBJECTMENU"]
+    },
+    "face_sensing_faceIsDetected": {
+      "messageKey": "faceSensing.faceDetected",
+      "template": "臉部被偵測到？",
+      "args": []
+    },
+    "face_sensing_faceSize": {
+      "messageKey": "faceSensing.faceSize",
+      "template": "臉部尺寸",
+      "args": []
+    },
+    "face_sensing_faceTilt": {
+      "messageKey": "faceSensing.faceTilt",
+      "template": "臉部傾斜",
+      "args": []
+    },
+    "face_sensing_goToPart": {
+      "messageKey": "faceSensing.goToPart",
+      "template": "定位到 [PART] 位置",
+      "args": ["PART"]
+    },
+    "face_sensing_pointInFaceTiltDirection": {
+      "messageKey": "faceSensing.pointInFaceTiltDirection",
+      "template": "面朝臉部傾斜方向",
+      "args": []
+    },
+    "face_sensing_setSizeToFaceSize": {
+      "messageKey": "faceSensing.setSizeToFaceSize",
+      "template": "尺寸設為臉部的尺寸",
+      "args": []
+    },
+    "face_sensing_whenFaceDetected": {
+      "messageKey": "faceSensing.whenFaceDetected",
+      "template": "當臉部被偵側到",
+      "args": []
+    },
+    "face_sensing_whenSpriteTouchesPart": {
+      "messageKey": "faceSensing.whenSpriteTouchesPart",
+      "template": "當角色碰到 [PART]",
+      "args": ["PART"]
+    },
+    "face_sensing_whenTilted": {
+      "messageKey": "faceSensing.whenTilted",
+      "template": "當臉部傾斜方向 [DIRECTION]",
+      "args": ["DIRECTION"]
+    },
+    "gdx_for_getAcceleration": {
+      "messageKey": "gdxfor.getAcceleration",
+      "template": "加速度 [DIRECTION]",
+      "args": ["DIRECTION"]
+    },
+    "gdx_for_getForce": {
+      "messageKey": "gdxfor.getForce",
+      "template": "力量",
+      "args": []
+    },
+    "gdx_for_getSpinSpeed": {
+      "messageKey": "gdxfor.getSpin",
+      "template": "旋轉速度 [DIRECTION]",
+      "args": ["DIRECTION"]
+    },
+    "gdx_for_getTilt": {
+      "messageKey": "gdxfor.getTilt",
+      "template": "傾斜角度 [TILT]",
+      "args": ["TILT"]
+    },
+    "gdx_for_isFreeFalling": {
+      "messageKey": "gdxfor.isFreeFalling",
+      "template": "自由掉落？",
+      "args": []
+    },
+    "gdx_for_isTilted": {
+      "messageKey": "gdxfor.isTilted",
+      "template": "傾斜 [TILT]？",
+      "args": ["TILT"]
+    },
+    "gdx_for_whenForcePushedOrPulled": {
+      "messageKey": "gdxfor.whenForcePushedOrPulled",
+      "template": "當重力感測器[PUSH_PULL]",
+      "args": ["PUSH_PULL"]
+    },
+    "gdx_for_whenGesture": {
+      "messageKey": "gdxfor.whenGesture",
+      "template": "當 [GESTURE]",
+      "args": ["GESTURE"]
+    },
+    "gdx_for_whenTilted": {
+      "messageKey": "gdxfor.whenTilted",
+      "template": "當傾斜 [TILT]",
+      "args": ["TILT"]
+    },
+    "looks_backdropnumbername": {
+      "messageKey": "LOOKS_BACKDROPNUMBERNAME",
+      "template": "背景 %1",
+      "args": ["NUMBER_NAME"]
+    },
+    "looks_backdrops": {
+      "messageKey": "LOOKS_BACKDROPS_MENU",
+      "template": "%1",
+      "args": ["BACKDROP"]
+    },
+    "looks_changeeffectby": {
+      "messageKey": "LOOKS_CHANGEEFFECTBY",
+      "template": "圖像效果 %1 改變 %2",
+      "args": ["EFFECT", "CHANGE"]
+    },
+    "looks_changesizeby": {
+      "messageKey": "LOOKS_CHANGESIZEBY",
+      "template": "尺寸改變 %1",
+      "args": ["CHANGE"]
+    },
+    "looks_changestretchby": {
+      "messageKey": "LOOKS_CHANGESTRETCHBY",
+      "template": "伸縮改變 %1",
+      "args": ["CHANGE"]
+    },
+    "looks_cleargraphiceffects": {
+      "messageKey": "LOOKS_CLEARGRAPHICEFFECTS",
+      "template": "圖像效果清除",
+      "args": []
+    },
+    "looks_costume": {
+      "messageKey": "LOOKS_COSTUME_MENU",
+      "template": "%1",
+      "args": ["COSTUME"]
+    },
+    "looks_costumenumbername": {
+      "messageKey": "LOOKS_COSTUMENUMBERNAME",
+      "args": ["COSTUME"],
+      "template": "造型 %1"
+    },
+    "looks_goforwardbackwardlayers": {
+      "messageKey": "LOOKS_GOFORWARDBACKWARDLAYERS",
+      "template": "圖層 %1 移 %2 層",
+      "args": ["FORWARD_BACKWARD", "NUM"]
+    },
+    "looks_gotofrontback": {
+      "messageKey": "LOOKS_GOTOFRONTBACK",
+      "template": "圖層移到 %1 層",
+      "args": ["FRONT_BACK"]
+    },
+    "looks_hide": {
+      "messageKey": "LOOKS_HIDE",
+      "template": "隱藏",
+      "args": []
+    },
+    "looks_hideallsprites": {
+      "messageKey": "LOOKS_HIDEALLSPRITES",
+      "template": "隱藏所有角色",
+      "args": []
+    },
+    "looks_nextbackdrop": {
+      "messageKey": "LOOKS_NEXTBACKDROP_BLOCK",
+      "template": "背景換成下一個",
+      "args": []
+    },
+    "looks_nextcostume": {
+      "messageKey": "LOOKS_NEXTCOSTUME",
+      "template": "造型換成下一個",
+      "args": ["BACKDROP"]
+    },
+    "looks_say": {
+      "messageKey": "LOOKS_SAY",
+      "template": "說出 %1",
+      "args": ["MESSAGE"]
+    },
+    "looks_sayforsecs": {
+      "messageKey": "LOOKS_SAYFORSECS",
+      "template": "說出 %1 持續 %2 秒",
+      "args": ["MESSAGE", "SECS"]
+    },
+    "looks_seteffectto": {
+      "messageKey": "LOOKS_SETEFFECTTO",
+      "template": "圖像效果 %1 設為 %2",
+      "args": ["EFFECT", "VALUE"]
+    },
+    "looks_setsizeto": {
+      "messageKey": "LOOKS_SETSIZETO",
+      "template": "尺寸設為 %1 %",
+      "args": ["SIZE"]
+    },
+    "looks_setstretchto": {
+      "messageKey": "LOOKS_SETSTRETCHTO",
+      "template": "伸縮設為 %1 %",
+      "args": ["STRETCH"]
+    },
+    "looks_show": {
+      "messageKey": "LOOKS_SHOW",
+      "template": "顯示",
+      "args": []
+    },
+    "looks_size": {
+      "messageKey": "LOOKS_SIZE",
+      "template": "尺寸",
+      "args": []
+    },
+    "looks_switchbackdropto": {
+      "messageKey": "LOOKS_SWITCHBACKDROPTO",
+      "template": "背景換成 %1",
+      "args": ["BACKDROP"]
+    },
+    "looks_switchbackdroptoandwait": {
+      "messageKey": "LOOKS_SWITCHBACKDROPTOANDWAIT",
+      "template": "背景換成 %1 並等待",
+      "args": ["BACKDROP"]
+    },
+    "looks_switchcostumeto": {
+      "messageKey": "LOOKS_SWITCHCOSTUMETO",
+      "template": "造型換成 %1",
+      "args": ["COSTUME"]
+    },
+    "looks_think": {
+      "messageKey": "LOOKS_THINK",
+      "template": "想著 %1",
+      "args": ["MESSAGE"]
+    },
+    "looks_thinkforsecs": {
+      "messageKey": "LOOKS_THINKFORSECS",
+      "template": "想著 %1 持續 %2 秒",
+      "args": ["MESSAGE", "SECS"]
+    },
+    "makeymakey_whenCodePressed": {
+      "messageKey": "makeymakey.whenKeysPressedInOrder",
+      "template": "當 [SEQUENCE] 按鈕被依序按下",
+      "args": ["SEQUENCE"]
+    },
+    "makeymakey_whenMakeyKeyPressed": {
+      "messageKey": "makeymakey.whenKeyPressed",
+      "template": "當 [KEY] 按鈕被按下",
+      "args": ["KEY"]
+    },
+    "microbit_displayClear": {
+      "messageKey": "microbit.clearDisplay",
+      "template": "清空畫面",
+      "args": []
+    },
+    "microbit_displaySymbol": {
+      "messageKey": "microbit.displaySymbol",
+      "template": "顯示圖示 [MATRIX]",
+      "args": ["MATRIX"]
+    },
+    "microbit_displayText": {
+      "messageKey": "microbit.displayText",
+      "template": "顯示文字 [TEXT]",
+      "args": ["TEXT"]
+    },
+    "microbit_getTiltAngle": {
+      "messageKey": "microbit.tiltAngle",
+      "template": "傾斜角度 [DIRECTION]",
+      "args": ["DIRECTION"]
+    },
+    "microbit_isButtonPressed": {
+      "messageKey": "microbit.isButtonPressed",
+      "template": "按鈕 [BTN] 被按下？",
+      "args": ["BTN"]
+    },
+    "microbit_isTilted": {
+      "messageKey": "microbit.isTilted",
+      "template": "傾斜 [DIRECTION]？",
+      "args": ["DIRECTION"]
+    },
+    "microbit_whenButtonPressed": {
+      "messageKey": "microbit.whenButtonPressed",
+      "template": "當按鈕 [BTN] 被按下",
+      "args": ["BTN"]
+    },
+    "microbit_whenGesture": {
+      "messageKey": "microbit.whenGesture",
+      "template": "當 [GESTURE]",
+      "args": ["GESTURE"]
+    },
+    "microbit_whenPinConnected": {
+      "messageKey": "microbit.whenPinConnected",
+      "template": "當引腳 [PIN] 接地",
+      "args": ["PIN"]
+    },
+    "microbit_whenTilted": {
+      "messageKey": "microbit.whenTilted",
+      "template": "當傾斜 [DIRECTION]",
+      "args": ["DIRECTION"]
+    },
+    "motion_changexby": {
+      "messageKey": "MOTION_CHANGEXBY",
+      "template": "x 改變 %1",
+      "args": ["DX"]
+    },
+    "motion_changeyby": {
+      "messageKey": "MOTION_CHANGEYBY",
+      "template": "y 改變 %1",
+      "args": ["DY"]
+    },
+    "motion_direction": {
+      "messageKey": "MOTION_DIRECTION",
+      "template": "方向",
+      "args": []
+    },
+    "motion_glidesecstoxy": {
+      "messageKey": "MOTION_GLIDESECSTOXY",
+      "template": "滑行 %1 秒到 x:%2 y:%3",
+      "args": ["SECS", "X", "Y"]
+    },
+    "motion_glideto": {
+      "messageKey": "MOTION_GLIDETO",
+      "template": "滑行 %1 秒到 %2 位置",
+      "args": ["SECS", "TO"]
+    },
+    "motion_glideto_menu": {
+      "messageKey": "MOTION_GLIDETO_MENU",
+      "template": "%1",
+      "args": ["TO"]
+    },
+    "motion_goto": {
+      "messageKey": "MOTION_GOTO",
+      "template": "定位到 %1 位置",
+      "args": ["TO"]
+    },
+    "motion_goto_menu": {
+      "messageKey": "MOTION_GOTO_MENU",
+      "template": "%1",
+      "args": ["TO"]
+    },
+    "motion_gotoxy": {
+      "messageKey": "MOTION_GOTOXY",
+      "template": "定位到 x:%1 y:%2",
+      "args": ["X", "Y"]
+    },
+    "motion_ifonedgebounce": {
+      "messageKey": "MOTION_IFONEDGEBOUNCE",
+      "template": "碰到邊緣就反彈",
+      "args": []
+    },
+    "motion_movesteps": {
+      "messageKey": "MOTION_MOVESTEPS",
+      "template": "移動 %1 點",
+      "args": ["STEPS"]
+    },
+    "motion_pointindirection": {
+      "messageKey": "MOTION_POINTINDIRECTION",
+      "template": "面朝 %1 度",
+      "args": ["DIRECTION"]
+    },
+    "motion_pointtowards": {
+      "messageKey": "MOTION_POINTTOWARDS",
+      "template": "面朝 %1 向",
+      "args": ["TOWARDS"]
+    },
+    "motion_pointtowards_menu": {
+      "messageKey": "MOTION_POINTTOWARDS_MENU",
+      "template": "%1",
+      "args": ["TOWARDS"]
+    },
+    "motion_scroll_right": {
+      "messageKey": "MOTION_SCROLLRIGHT",
+      "template": "滾動向右 %1",
+      "args": ["DISTANCE"]
+    },
+    "motion_scroll_up": {
+      "messageKey": "MOTION_SCROLLUP",
+      "template": "滾動向上 %1",
+      "args": ["DISTANCE"]
+    },
+    "motion_setrotationstyle": {
+      "messageKey": "MOTION_SETROTATIONSTYLE",
+      "template": "迴轉方式設為 %1",
+      "args": ["STYLE"]
+    },
+    "motion_setx": {
+      "messageKey": "MOTION_SETX",
+      "template": "x 設為 %1",
+      "args": ["X"]
+    },
+    "motion_sety": {
+      "messageKey": "MOTION_SETY",
+      "template": "y 設為 %1",
+      "args": ["Y"]
+    },
+    "motion_turnleft": {
+      "messageKey": "MOTION_TURNLEFT",
+      "template": "左轉 %1 %2 度",
+      "args": ["DEGREES"]
+    },
+    "motion_turnright": {
+      "messageKey": "MOTION_TURNRIGHT",
+      "template": "右轉 %1 %2 度",
+      "args": ["DEGREES"]
+    },
+    "motion_xposition": {
+      "messageKey": "MOTION_XPOSITION",
+      "template": "x 座標",
+      "args": []
+    },
+    "motion_xscroll": {
+      "messageKey": "MOTION_XSCROLL",
+      "template": "x 捲軸",
+      "args": []
+    },
+    "motion_yposition": {
+      "messageKey": "MOTION_YPOSITION",
+      "template": "y 座標",
+      "args": []
+    },
+    "motion_yscroll": {
+      "messageKey": "MOTION_YSCROLL",
+      "template": "y 捲軸",
+      "args": []
+    },
+    "music_changeTempo": {
+      "messageKey": "music.changeTempo",
+      "template": "演奏速度改變 [TEMPO]",
+      "args": ["TEMPO"]
+    },
+    "music_getTempo": {
+      "messageKey": "music.getTempo",
+      "template": "演奏速度",
+      "args": []
+    },
+    "music_menu_DRUM": {
+      "messageKey": "MUSIC_MENU_DRUM",
+      "template": "鼓聲 %1",
+      "args": ["DRUM"]
+    },
+    "music_menu_INSTRUMENT": {
+      "messageKey": "MUSIC_MENU_INSTRUMENT",
+      "template": "樂器 %1",
+      "args": ["INSTRUMENT"]
+    },
+    "music_midiPlayDrumForBeats": {
+      "messageKey": "music.midiPlayDrumForBeats",
+      "template": "演奏節拍 [DRUM] [BEATS] 拍",
+      "args": ["DRUM", "BEATS"]
+    },
+    "music_midiSetInstrument": {
+      "messageKey": "music.midiSetInstrument",
+      "template": "演奏樂器設為 [INSTRUMENT]",
+      "args": ["INSTRUMENT"]
+    },
+    "music_playDrumForBeats": {
+      "messageKey": "music.playDrumForBeats",
+      "template": "演奏節拍 [DRUM] [BEATS] 拍",
+      "args": ["DRUM", "BEATS"]
+    },
+    "music_playNoteForBeats": {
+      "messageKey": "music.playNoteForBeats",
+      "template": "演奏音階 [NOTE] [BEATS] 拍",
+      "args": ["NOTE", "BEATS"]
+    },
+    "music_restForBeats": {
+      "messageKey": "music.restForBeats",
+      "template": "演奏休息 [BEATS] 拍",
+      "args": ["BEATS"]
+    },
+    "music_setInstrument": {
+      "messageKey": "music.setInstrument",
+      "template": "演奏樂器設為 [INSTRUMENT]",
+      "args": ["INSTRUMENT"]
+    },
+    "music_setTempo": {
+      "messageKey": "music.setTempo",
+      "template": "演奏速度設為 [TEMPO]",
+      "args": ["TEMPO"]
+    },
+    "note": {
+      "messageKey": "NOTE",
+      "template": "音符 %1",
+      "args": ["NOTE"]
+    },
+    "operator_add": {
+      "messageKey": "OPERATORS_ADD",
+      "template": "%1 + %2",
+      "args": ["NUM1", "NUM2"]
+    },
+    "operator_and": {
+      "messageKey": "OPERATORS_AND",
+      "template": "%1 且 %2",
+      "args": ["OPERAND1", "OPERAND2"]
+    },
+    "operator_contains": {
+      "messageKey": "OPERATORS_CONTAINS",
+      "template": "字串 %1 包含 %2？",
+      "args": ["STRING1", "STRING2"]
+    },
+    "operator_divide": {
+      "messageKey": "OPERATORS_DIVIDE",
+      "template": "%1 / %2",
+      "args": ["NUM1", "NUM2"]
+    },
+    "operator_equals": {
+      "messageKey": "OPERATORS_EQUALS",
+      "template": "%1 = %2",
+      "args": ["OPERAND1", "OPERAND2"]
+    },
+    "operator_gt": {
+      "messageKey": "OPERATORS_GT",
+      "template": "%1 > %2",
+      "args": ["OPERAND1", "OPERAND2"]
+    },
+    "operator_join": {
+      "messageKey": "OPERATORS_JOIN",
+      "template": "字串組合 %1 %2",
+      "args": ["STRING1", "STRING2"]
+    },
+    "operator_length": {
+      "messageKey": "OPERATORS_LENGTH",
+      "template": "字串 %1 的長度",
+      "args": ["STRING"]
+    },
+    "operator_letter_of": {
+      "messageKey": "OPERATORS_LETTEROF",
+      "template": "字串 %2 的第 %1 字",
+      "args": ["LETTER", "STRING"]
+    },
+    "operator_lt": {
+      "messageKey": "OPERATORS_LT",
+      "template": "%1 < %2",
+      "args": ["OPERAND1", "OPERAND2"]
+    },
+    "operator_mathop": {
+      "messageKey": "OPERATORS_MATHOP",
+      "template": "%1 數值 %2",
+      "args": ["OPERATOR", "NUM"]
+    },
+    "operator_mod": {
+      "messageKey": "OPERATORS_MOD",
+      "template": "%1 除以 %2 的餘數",
+      "args": ["NUM1", "NUM2"]
+    },
+    "operator_multiply": {
+      "messageKey": "OPERATORS_MULTIPLY",
+      "template": "%1 * %2",
+      "args": ["NUM1", "NUM2"]
+    },
+    "operator_not": {
+      "messageKey": "OPERATORS_NOT",
+      "template": "%1 不成立",
+      "args": ["OPERAND"]
+    },
+    "operator_or": {
+      "messageKey": "OPERATORS_OR",
+      "template": "%1 或 %2",
+      "args": ["OPERAND1", "OPERAND2"]
+    },
+    "operator_random": {
+      "messageKey": "OPERATORS_RANDOM",
+      "template": "隨機取數 %1 到 %2",
+      "args": ["FROM", "TO"]
+    },
+    "operator_round": {
+      "messageKey": "OPERATORS_ROUND",
+      "template": "四捨五入數值 %1",
+      "args": ["NUM"]
+    },
+    "operator_subtract": {
+      "messageKey": "OPERATORS_SUBTRACT",
+      "template": "%1 - %2",
+      "args": ["NUM1", "NUM2"]
+    },
+    "pen_changePenColorParamBy": {
+      "messageKey": "pen.changeColorParam",
+      "template": "筆跡 [COLOR_PARAM] 改變 [VALUE]",
+      "args": ["COLOR_PARAM", "VALUE"]
+    },
+    "pen_changePenHueBy": {
+      "messageKey": "pen.changeHue",
+      "template": "筆跡顏色改變 [HUE]",
+      "args": ["HUE"]
+    },
+    "pen_changePenShadeBy": {
+      "messageKey": "pen.changeShade",
+      "template": "筆跡亮度改變 [SHADE]",
+      "args": ["SHADE"]
+    },
+    "pen_changePenSizeBy": {
+      "messageKey": "pen.changeSize",
+      "template": "筆跡寬度改變 [SIZE]",
+      "args": ["SIZE"]
+    },
+    "pen_clear": {
+      "messageKey": "pen.clear",
+      "template": "筆跡全部清除",
+      "args": []
+    },
+    "pen_menu_colorParam": {
+      "messageKey": "PEN_MENU_COLOR_PARAM",
+      "template": "顏色參數 %1",
+      "args": ["COLOR_PARAM"]
+    },
+    "pen_penDown": {
+      "messageKey": "pen.penDown",
+      "template": "下筆",
+      "args": []
+    },
+    "pen_penUp": {
+      "messageKey": "pen.penUp",
+      "template": "停筆",
+      "args": []
+    },
+    "pen_setPenColorParamTo": {
+      "messageKey": "pen.setColorParam",
+      "template": "筆跡 [COLOR_PARAM] 設為 [VALUE]",
+      "args": ["COLOR_PARAM", "VALUE"]
+    },
+    "pen_setPenColorToColor": {
+      "messageKey": "pen.setColor",
+      "template": "筆跡顏色設為 [COLOR]",
+      "args": ["COLOR"]
+    },
+    "pen_setPenHueToNumber": {
+      "messageKey": "pen.setHue",
+      "template": "筆跡顏色設為 [HUE]",
+      "args": ["HUE"]
+    },
+    "pen_setPenShadeToNumber": {
+      "messageKey": "pen.setShade",
+      "template": "筆跡亮度設為 [SHADE]",
+      "args": ["SHADE"]
+    },
+    "pen_setPenSizeTo": {
+      "messageKey": "pen.setSize",
+      "template": "筆跡寬度設為 [SIZE]",
+      "args": ["SIZE"]
+    },
+    "pen_stamp": {
+      "messageKey": "pen.stamp",
+      "template": "蓋章",
+      "args": []
+    },
+    "procedures_definition": {
+      "messageKey": "PROCEDURES_DEFINITION",
+      "template": "定義 %1",
+      "args": ["custom_block"]
+    },
+    "sensing_answer": {
+      "messageKey": "SENSING_ANSWER",
+      "template": "詢問的答案",
+      "args": []
+    },
+    "sensing_askandwait": {
+      "messageKey": "SENSING_ASKANDWAIT",
+      "template": "詢問 %1 並等待",
+      "args": ["QUESTION"]
+    },
+    "sensing_coloristouchingcolor": {
+      "messageKey": "SENSING_COLORISTOUCHINGCOLOR",
+      "template": "顏色 %1 碰到 顏色 %2？",
+      "args": ["COLOR", "COLOR2"]
+    },
+    "sensing_current": {
+      "messageKey": "SENSING_CURRENT",
+      "template": "目前時間的 %1",
+      "args": ["CURRENTMENU"]
+    },
+    "sensing_dayssince2000": {
+      "messageKey": "SENSING_DAYSSINCE2000",
+      "template": "2000年迄今日數",
+      "args": []
+    },
+    "sensing_distanceto": {
+      "messageKey": "SENSING_DISTANCETO",
+      "template": "與 %1 的間距",
+      "args": ["DISTANCETOMENU"]
+    },
+    "sensing_distancetomenu": {
+      "messageKey": "SENSING_DISTANCETOMENU",
+      "template": "%1",
+      "args": ["DISTANCETOMENU"]
+    },
+    "sensing_keyoptions": {
+      "messageKey": "SENSING_KEYOPTIONS",
+      "template": "%1",
+      "args": ["KEY_OPTION"]
+    },
+    "sensing_keypressed": {
+      "messageKey": "SENSING_KEYPRESSED",
+      "template": "%1 鍵被按下？",
+      "args": ["KEY_OPTION"]
+    },
+    "sensing_loud": {
+      "messageKey": "SENSING_LOUD",
+      "template": "大聲？",
+      "args": []
+    },
+    "sensing_loudness": {
+      "messageKey": "SENSING_LOUDNESS",
+      "template": "聲音響度",
+      "args": []
+    },
+    "sensing_mousedown": {
+      "messageKey": "SENSING_MOUSEDOWN",
+      "template": "滑鼠鍵被按下？",
+      "args": []
+    },
+    "sensing_mousex": {
+      "messageKey": "SENSING_MOUSEX",
+      "template": "鼠標的 x",
+      "args": []
+    },
+    "sensing_mousey": {
+      "messageKey": "SENSING_MOUSEY",
+      "template": "鼠標的 y",
+      "args": ["DRAG_MODE"]
+    },
+    "sensing_of": {
+      "messageKey": "SENSING_OF",
+      "args": ["PROPERTY", "OBJECT"],
+      "template": "%2 的 %1"
+    },
+    "sensing_of_object_menu": {
+      "messageKey": "SENSING_OF_OBJECT_MENU",
+      "template": "%1",
+      "args": ["OBJECT"]
+    },
+    "sensing_online": {
+      "messageKey": "SENSING_ONLINE",
+      "template": "在線上？",
+      "args": []
+    },
+    "sensing_resettimer": {
+      "messageKey": "SENSING_RESETTIMER",
+      "template": "計時器重置",
+      "args": []
+    },
+    "sensing_setdragmode": {
+      "messageKey": "SENSING_SETDRAGMODE",
+      "template": "拖曳方式設為 %1",
+      "args": ["DRAG_MODE"]
+    },
+    "sensing_timer": {
+      "messageKey": "SENSING_TIMER",
+      "template": "計時器",
+      "args": []
+    },
+    "sensing_touchingcolor": {
+      "messageKey": "SENSING_TOUCHINGCOLOR",
+      "template": "碰到顏色 %1？",
+      "args": ["COLOR"]
+    },
+    "sensing_touchingobject": {
+      "messageKey": "SENSING_TOUCHINGOBJECT",
+      "template": "碰到 %1？",
+      "args": ["TOUCHINGOBJECTMENU"]
+    },
+    "sensing_touchingobjectmenu": {
+      "messageKey": "SENSING_TOUCHINGOBJECT_MENU",
+      "template": "%1",
+      "args": ["TOUCHINGOBJECTMENU"]
+    },
+    "sensing_username": {
+      "messageKey": "SENSING_USERNAME",
+      "template": "用戶名稱",
+      "args": []
+    },
+    "sound_changeeffectby": {
+      "messageKey": "SOUND_CHANGEEFFECTBY",
+      "template": "聲音效果 %1 改變 %2",
+      "args": ["EFFECT", "VALUE"]
+    },
+    "sound_changevolumeby": {
+      "messageKey": "SOUND_CHANGEVOLUMEBY",
+      "template": "音量改變 %1",
+      "args": ["VOLUME"]
+    },
+    "sound_cleareffects": {
+      "messageKey": "SOUND_CLEAREFFECTS",
+      "template": "聲音效果清除",
+      "args": []
+    },
+    "sound_play": {
+      "messageKey": "SOUND_PLAY",
+      "template": "播放音效 %1",
+      "args": ["SOUND_MENU"]
+    },
+    "sound_playuntildone": {
+      "messageKey": "SOUND_PLAYUNTILDONE",
+      "template": "播放音效 %1 直到結束",
+      "args": ["SOUND_MENU"]
+    },
+    "sound_seteffectto": {
+      "messageKey": "SOUND_SETEFFECTO",
+      "template": "聲音效果 %1 設為 %2",
+      "args": ["EFFECT", "VALUE"]
+    },
+    "sound_sounds_menu": {
+      "messageKey": "SOUND_SOUNDS_MENU",
+      "template": "%1",
+      "args": ["SOUND_MENU"]
+    },
+    "sound_stopallsounds": {
+      "messageKey": "SOUND_STOPALLSOUNDS",
+      "template": "停播所有音效",
+      "args": []
+    },
+    "sound_volume": {
+      "messageKey": "SOUND_VOLUME",
+      "template": "音量",
+      "args": []
+    },
+    "speech2text_getSpeech": {
+      "messageKey": "speech.speechReporter",
+      "template": "語音文本",
+      "args": []
+    },
+    "speech2text_listenAndWait": {
+      "messageKey": "speech.listenAndWait",
+      "template": "收聽並等待",
+      "args": []
+    },
+    "speech2text_whenIHearHat": {
+      "messageKey": "speech.whenIHear",
+      "template": "當收到語音 [PHRASE]",
+      "args": ["PHRASE"]
+    },
+    "text2speech_setLanguage": {
+      "messageKey": "text2speech.setLanguageBlock",
+      "template": "語言設為 [LANGUAGE]",
+      "args": ["LANGUAGE"]
+    },
+    "text2speech_setVoice": {
+      "messageKey": "text2speech.setVoiceBlock",
+      "template": "語音設為 [VOICE]",
+      "args": ["VOICE"]
+    },
+    "text2speech_speakAndWait": {
+      "messageKey": "text2speech.speakAndWaitBlock",
+      "template": "唸出 [WORDS]",
+      "args": ["WORDS"]
+    },
+    "translate_getTranslate": {
+      "messageKey": "translate.translateBlock",
+      "template": "文字 [WORDS] 翻譯成 [LANGUAGE]",
+      "args": ["WORDS", "LANGUAGE"]
+    },
+    "translate_getViewerLanguage": {
+      "messageKey": "translate.viewerLanguage",
+      "template": "瀏覽者的語言",
+      "args": []
+    },
+    "video_sensing_setVideoTransparency": {
+      "messageKey": "videoSensing.setVideoTransparency",
+      "template": "視訊透明度設為 [TRANSPARENCY]",
+      "args": ["TRANSPARENCY"]
+    },
+    "video_sensing_videoOn": {
+      "messageKey": "videoSensing.videoOn",
+      "template": "[SUBJECT] 的視訊 [ATTRIBUTE]",
+      "args": ["SUBJECT", "ATTRIBUTE"]
+    },
+    "video_sensing_videoToggle": {
+      "messageKey": "videoSensing.videoToggle",
+      "template": "視訊設為 [VIDEO_STATE]",
+      "args": ["VIDEO_STATE"]
+    },
+    "video_sensing_whenMotionGreaterThan": {
+      "messageKey": "videoSensing.whenMotionGreaterThan",
+      "template": "當視訊動作 > [REFERENCE]",
+      "args": ["REFERENCE"]
+    },
+    "wedo2_getDistance": {
+      "messageKey": "wedo2.getDistance",
+      "template": "距離",
+      "args": []
+    },
+    "wedo2_getTiltAngle": {
+      "messageKey": "wedo2.getTiltAngle",
+      "template": "傾斜角度 [TILT_DIRECTION]",
+      "args": ["TILT_DIRECTION"]
+    },
+    "wedo2_isTilted": {
+      "messageKey": "wedo2.isTilted",
+      "template": "傾斜 [TILT_DIRECTION_ANY]？",
+      "args": ["TILT_DIRECTION_ANY"]
+    },
+    "wedo2_motorOff": {
+      "messageKey": "wedo2.motorOff",
+      "template": "[MOTOR_ID] 停止",
+      "args": ["MOTOR_ID"]
+    },
+    "wedo2_motorOn": {
+      "messageKey": "wedo2.motorOn",
+      "template": "[MOTOR_ID] 啟動",
+      "args": ["MOTOR_ID"]
+    },
+    "wedo2_motorOnFor": {
+      "messageKey": "wedo2.motorOnFor",
+      "template": "[MOTOR_ID] 啟動 持續 [DURATION] 秒",
+      "args": ["MOTOR_ID", "DURATION"]
+    },
+    "wedo2_playNoteFor": {
+      "messageKey": "wedo2.playNoteFor",
+      "template": "演奏音階 [NOTE] 持續 [DURATION] 秒",
+      "args": ["NOTE", "DURATION"]
+    },
+    "wedo2_setLightHue": {
+      "messageKey": "wedo2.setLightHue",
+      "template": "LED 顏色設為 [HUE]",
+      "args": ["HUE"]
+    },
+    "wedo2_setMotorDirection": {
+      "messageKey": "wedo2.setMotorDirection",
+      "template": "[MOTOR_ID] 方向設為 [MOTOR_DIRECTION]",
+      "args": ["MOTOR_ID", "MOTOR_DIRECTION"]
+    },
+    "wedo2_startMotorPower": {
+      "messageKey": "wedo2.startMotorPower",
+      "template": "[MOTOR_ID] 動力設為 [POWER]",
+      "args": ["MOTOR_ID", "POWER"]
+    },
+    "wedo2_whenDistance": {
+      "messageKey": "wedo2.whenDistance",
+      "template": "當距離 [OP] [REFERENCE]",
+      "args": ["OP", "REFERENCE"]
+    },
+    "wedo2_whenTilted": {
+      "messageKey": "wedo2.whenTilted",
+      "template": "當傾斜 [TILT_DIRECTION_ANY]",
+      "args": ["TILT_DIRECTION_ANY"]
+    }
+  }
+}

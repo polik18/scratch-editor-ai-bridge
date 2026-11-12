@@ -11,6 +11,27 @@ import { importLosslessSb3 } from '../core/archive'
 import { projectJsonToCanonicalWithReport } from '../core/decompiler/project-json'
 import { extractProjectBlockGraphs } from '../core/graph'
 import { hideTargetNames, restoreTargetNames } from '../core/prompt/target-placeholders'
+import { readProjectForAi } from '../core/reader'
+import type { ReaderOptions } from '../core/reader/types'
+
+/**
+ * Return the lossless, human-readable project reader used by AI and MCP.
+ * @param bytes SB3 archive bytes.
+ * @param options Reader metadata and output limits.
+ * @returns Structured AI-reader text, sections, line map, and coverage.
+ */
+export const inspectSb3ForAiReader = async (bytes: Uint8Array, options: ReaderOptions = {}) => {
+  const archive = await importLosslessSb3(bytes)
+  const reader = readProjectForAi(archive.projectJson, { entries: archive.entries }, options)
+  return {
+    format: 'scratch-ai-bridge/ai-reader' as const,
+    version: 1 as const,
+    text: reader.text,
+    sections: reader.sections,
+    lineMap: Object.fromEntries(reader.lineMap),
+    coverage: reader.coverage,
+  }
+}
 
 export interface CliInspection {
   readonly format: 'scratch-ai-bridge/inspection'

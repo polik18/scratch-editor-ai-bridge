@@ -30,12 +30,12 @@
 | A | 主頁打開作品、整窗拖曳、白話錯誤 | ✅ | claude | `npm run test:open-project-browser` | `src/open-project.ts`、`src/main.ts` |
 | B0a | 自製積木預設值數量不符不再鎖角色 | ✅ | claude | `tests/graph/block-graph.test.ts`（argument defaults 那一則） | `src/core/graph/block-graph.ts` |
 | B0b | 其他「Scratch 能跑、Bridge 判錯」的積木圖問題（見 0.4） | ✅ | claude | `tests/graph/block-graph.test.ts`、`tests/ai/raw-tool-core.test.ts`；樣本 `lockedSprites` 全空 | `src/core/graph/block-graph.ts`、`src/core/ai/raw-tool-core.ts` |
-| 0 | 樣本＋現況量測（含理解測試題目） | 🟡 | （待接手） | 樣本和數字 ✅；**理解測試題目還沒寫**（見 0.6） | `scripts/tools/`、`output/handmade-corpus/` |
-| B1–B2 | 作品讀本（只讀）＋E3 作者說明，取代網頁 raw 路徑的原始 JSON | ⬜ | | 第 7 節指標：一次放得進 ≥ 90%、內建積木可讀 100% | 新增 `src/core/reader/` |
-| C1 | 造型、位置翻成文字 | ⬜ | | 讀本寫出每個角色的顏色、大小、九宮格位置 | `src/core/reader/` |
-| C2 | 點舞台指定角色、AI 不確定時先問 | ⬜ | | 瀏覽器測試 | `src/main.ts`、預覽 iframe |
-| B3a | 行號操作修改 | ⬜ | | 來回測試 100%；本機模型一次可套用 ≥ 70% | `src/core/ai/raw-tool-core.ts` |
-| D＋E4 | CLI `fetch`／MCP／文件、`skill-scratch-site` | ⬜ | | `start` 列出新指令；skill 可用 | `src/cli/`、`~/ObsidianVault/skills/` |
+| 0 | 樣本＋現況量測（含理解測試題目） | 🟡 | codex | 16 份標準答案、評分器和本機模型腳本已完成；等待使用者在本機模型執行理解測試 | `scripts/tools/`、`output/handmade-corpus/` |
+| B1–B2 | 作品讀本（只讀）＋E3 作者說明，取代網頁 raw 路徑的原始 JSON | ✅ | codex | 73/73 讀本 ≤ 24,000 字、內建積木可讀 100%，作者說明可由 CLI fetch 帶入 | 新增 `src/core/reader/` |
+| C1 | 造型、位置翻成文字 | 🟡 | codex | 官方素材、尺寸、九宮格和 SVG 顏色已加入；PNG 目前只報尺寸，主要顏色仍待瀏覽器取樣 | `src/core/reader/` |
+| C2 | 點舞台指定角色、AI 不確定時先問 | 🟡 | codex | 靜態預覽可點選角色並附加到 Canonical AI 要求；`ask_student` 和 raw/MCP 路徑仍待補 | `src/main.ts`、預覽 iframe |
+| B3a | 行號操作修改 | ✅ | codex | `set/replace/insert_after/delete` 已接到 raw patch，保留 ID、revision 和 VM 驗證；單元測試通過 | `src/core/ai/line-patch.ts`、`raw-tool-core.ts` |
+| D＋E4 | CLI `fetch`／MCP／文件、`skill-scratch-site` | ✅ | codex | `start` 列出 fetch/ai-reader；MCP 有 read_script/find；skill validator 因環境缺 PyYAML 尚未執行 | `src/cli/`、`~/ObsidianVault/skills/` |
 | C3、E2、B3b、C4、E5 | 見第 8 節 | ⬜ | | | |
 
 ### 0.3 怎麼開始
@@ -481,3 +481,8 @@ L8        廣播訊息 [遊戲結束]
   - 真的壞掉的情況仍會擋下：循環、缺積木、共用子積木、一般積木的 parent 不一致。
   - 驗證：800 個單元測試、lint、原始 SB3 修改和打開作品的瀏覽器測試都通過。
 - 2026-11-12 **交接**：claude 停在這裡。下一步見 0.6。
+- 2026-11-12 **codex 完成 B1–B2、B3a 和 D＋E4，並推進 C1/C2/C3**：
+  - 新增 `src/core/reader/` 與建置期訊息抽取器；73 件 leejoneshane 樣本全部在 24,000 字上限內，讀本涵蓋 73/73 內建與畫筆／音樂積木，沒有 `⟦未知⟧` 標記。
+  - raw AI 第一則訊息改用讀本；MCP 的 `inspect_project`、`read_script`、`find` 和原始積木分頁共用 revision。行號 patch 支援 `set`、`replace`、`insert_after`、`delete`，並以原始 graph patch 驗證後保留素材。
+  - CLI 新增 `inspect --format ai-reader` 和公開作品 `fetch`；Bridge 靜態舞台可點角色，Canonical 本機 AI 可附舞台截圖；補上 `skill-scratch-site`、CLI/MCP 文件。理解測試 16 件的標準答案與評分器已寫好，尚未執行本機模型基線。
+  - 尚待：使用者執行本機理解測試；PNG 顏色取樣、raw/MCP 的角色詢問、造型拼貼、跑動觀察、Scratch 網址直接開啟和登入後上傳。

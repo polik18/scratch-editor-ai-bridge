@@ -4,6 +4,7 @@ export interface OpenAiCompatiblePatchRequest {
   readonly apiKey?: string
   readonly instruction: string
   readonly request: string
+  readonly imageDataUrl?: string
   readonly signal?: AbortSignal
   readonly fetchImpl?: typeof fetch
   readonly enableRawBlockInspection?: boolean
@@ -208,6 +209,7 @@ export const requestOpenAiCompatiblePatch = async ({
   apiKey,
   instruction,
   request,
+  imageDataUrl,
   signal,
   onToolCall,
   enableRawBlockInspection = false,
@@ -218,9 +220,15 @@ export const requestOpenAiCompatiblePatch = async ({
     throw new Error('送給模型的文字超過 32 KB 限制。')
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (apiKey?.trim()) headers.Authorization = `Bearer ${apiKey.trim()}`
+  const userContent = imageDataUrl
+    ? [
+        { type: 'text', text: request.trim() },
+        { type: 'image_url', image_url: { url: imageDataUrl } },
+      ]
+    : request.trim()
   const messages: Record<string, unknown>[] = [
     { role: 'system', content: `${instruction}\n\n${LOOP_RULES}` },
-    { role: 'user', content: request.trim() },
+    { role: 'user', content: userContent },
   ]
   let toolCallCount = 0
   // Every round uses at least one lookup, so the lookup limit also bounds the rounds.

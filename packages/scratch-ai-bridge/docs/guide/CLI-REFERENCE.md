@@ -49,6 +49,21 @@ scratch-ai-bridge inspect graph game.json
 scratch-ai-bridge inspect session game.json
 ```
 
+輸出給 AI 的作品讀本會保留角色、位置、帶行號程式和 `lineMap`：
+
+```bash
+scratch-ai-bridge inspect game.sb3 --format ai-reader
+```
+
+### fetch
+
+下載公開 Scratch 作品到 `output/scratch/<作品編號>/`，並在同一份 JSON 輸出檔案位置和 AI 讀本；不需要 Scratch 登入。
+
+```bash
+scratch-ai-bridge fetch https://scratch.mit.edu/projects/123456789/
+scratch-ai-bridge fetch 123456789 --out output/my-scratch-project
+```
+
 ### compile
 
 編譯命令。

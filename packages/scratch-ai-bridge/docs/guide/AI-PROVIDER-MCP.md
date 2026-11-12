@@ -54,9 +54,11 @@ args = [
 
 Server 提供以下工具：
 
-- `inspect_project`：讀取目前 Bridge 頁面的精簡結構及可修改規則。
+- `inspect_project`：讀取目前 Bridge 頁面的作品讀本、角色概覽、revision 及可修改規則。
+- `read_script`：依 `scriptId` 讀取一段帶行號的可讀程式。
+- `find`：在作品讀本中搜尋文字，回傳所在段落和行內容。
 - `inspect_raw_targets`、`inspect_raw_variables`、`inspect_raw_blocks`：依 revision 分頁讀取原始 SB3 的角色、非雲端變數和積木圖。
-- `propose_live_patch`：讓 Bridge 依目前 revision 驗證外部模型提出的 live-patch JSON，並在頁面顯示差異。
+- `propose_live_patch`：讓 Bridge 依目前 revision 驗證外部模型提出的 live-patch JSON；原始 SB3 也可提出最多 20 個積木的局部 patch，並在頁面顯示差異。
 - `get_patch_status`：查詢目前 Bridge 頁面的最近候選與 revision 狀態。
 
 Server 不提供 apply tool，也不寫入檔案。AI 的候選會留在 Bridge 的差異審查區，由使用者確認套用。API 和 MCP 同時有待審 patch 時，Bridge 不會靜默互相覆蓋；需先處理目前候選。

@@ -701,6 +701,36 @@ export interface ScratchPreviewDragState {
 }
 
 /**
+ * Pick the original sprite drawn under a static preview point for AI target disambiguation.
+ * @param vm Scratch VM whose renderer owns the preview drawables.
+ * @param x Preview-canvas x coordinate in CSS pixels.
+ * @param y Preview-canvas y coordinate in CSS pixels.
+ * @param canvasWidth Preview canvas width in CSS pixels.
+ * @param canvasHeight Preview canvas height in CSS pixels.
+ * @returns The selected sprite name, or null when no sprite is under the point.
+ */
+export const pickScratchPreviewTarget = (
+  vm: ScratchVMHandle,
+  x: number,
+  y: number,
+  canvasWidth: number,
+  canvasHeight: number,
+): string | null => {
+  const internalVM = asInternalVM(vm)
+  const renderer = internalVM.renderer
+  if (!renderer || canvasWidth <= 0 || canvasHeight <= 0) return null
+  const targets = internalVM.runtime.targets.filter((target) => !target.isStage && Number.isFinite(target.drawableID))
+  const drawableIds = targets.flatMap((target) =>
+    typeof target.drawableID === 'number' && Number.isFinite(target.drawableID) ? [target.drawableID] : [],
+  )
+  const drawableId = renderer.pick(x, y, 1, 1, drawableIds)
+  if (drawableId === null) return null
+  const targetId = internalVM.getTargetIdForDrawableId(drawableId)
+  if (targetId === null) return null
+  return internalVM.runtime.getTargetById(targetId)?.getName() ?? null
+}
+
+/**
  * Begin a player-style drag for a draggable target under the stage pointer.
  * Coordinates are CSS pixels relative to the preview canvas, matching Scratch GUI.
  * @param vm VM receiving the drag interaction.

@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { inspectRawProjectForAi } from '../../src/core/ai/raw-tool-core'
 import { importLosslessSb3 } from '../../src/core/archive/sb3-archive'
 import { extractProjectBlockGraphs, isToleratedGraphIssue } from '../../src/core/graph/block-graph'
+import { readProjectForAi } from '../../src/core/reader'
 import library from '../../src/core/visuals/library-index.json'
 
 interface RawBlock {
@@ -58,6 +59,7 @@ const main = async (): Promise<void> => {
       }
     }
     const graphs = extractProjectBlockGraphs(project.projectJson)
+    const reader = readProjectForAi(project.projectJson, { entries: project.entries })
     const issues = graphs.flatMap((graph) => graph.issues)
     const lockedSprites = graphs
       .filter((graph) => !graph.issues.every((issue) => isToleratedGraphIssue(issue, graph.blocks)))
@@ -76,6 +78,10 @@ const main = async (): Promise<void> => {
       officialCostumes,
       rawBlockJsonChars,
       firstPromptChars: inspectRawProjectForAi(project).length,
+      readerChars: reader.text.length,
+      readerBlocks: reader.coverage.blocks,
+      readerReadable: reader.coverage.readable,
+      readerOpaque: reader.coverage.opaque,
       pagesOf10: Math.ceil(blocks / 10),
       graphIssues: issues.length,
       lockedSprites: lockedSprites.join(','),

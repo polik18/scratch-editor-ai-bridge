@@ -112,6 +112,7 @@ import {
   type SyncConnection,
 } from './core/progress/sync-client'
 import { createAnalysisPrompt, createScoringFeedbackPrompt, type TutorMode } from './core/prompt'
+import { readProjectForAi } from './core/reader'
 import {
   createAiOutputValidationReport,
   createRepairPrompt,
@@ -146,6 +147,7 @@ import { SCRATCH_LINK_HARDWARE_EXTENSION_IDS } from './scratch/extensions'
 import {
   createVM,
   loadSb3,
+  pickScratchPreviewTarget,
   renderSb3Preview,
   type ScratchRuntimePatchChange,
   type ScratchRuntimePatchUpdate,
@@ -1928,6 +1930,30 @@ const renderStudentPreview = (
 
   stageFrame.append(background, studentStageCanvas, stageStatus)
 
+  let pickedTargetName: string | undefined
+  const stagePickHint = document.createElement('p')
+  stagePickHint.className = 'inline-status'
+  stagePickHint.textContent = '點一下舞台上的角色，就能把「我指的是誰」加到 AI 要求。'
+  stagePickHint.setAttribute('role', 'status')
+  stagePickHint.setAttribute('aria-live', 'polite')
+  stageFrame.append(stagePickHint)
+  studentStageCanvas.onclick = (event) => {
+    const rect = studentStageCanvas.getBoundingClientRect()
+    const targetName = pickScratchPreviewTarget(
+      bootstrapVm,
+      ((event.clientX - rect.left) / rect.width) * studentStageCanvas.width,
+      ((event.clientY - rect.top) / rect.height) * studentStageCanvas.height,
+      rect.width,
+      rect.height,
+    )
+    if (!targetName) {
+      stagePickHint.textContent = '這個位置沒有辨識到角色；請點角色本身，或在 AI 要求中寫出角色名稱。'
+      return
+    }
+    pickedTargetName = targetName
+    stagePickHint.textContent = `已選取：${targetName}。下一次送出 AI 要求時會附上「我指的是：${targetName}」。`
+  }
+
   const previewColumn = document.createElement('div')
 
   previewColumn.className = 'student-preview-main'
@@ -2219,6 +2245,11 @@ const renderStudentPreview = (
   localAiRequest.className = 'ai-request'
   localAiRequest.placeholder = '例如：讓主角跳高一點，一開始多給 2 條命。'
   localAiRequest.rows = 3
+  const visionLabel = document.createElement('label')
+  visionLabel.className = 'ai-remember'
+  const visionCheckbox = document.createElement('input')
+  visionCheckbox.type = 'checkbox'
+  visionLabel.append(visionCheckbox, ' 這個模型看得懂圖片（送出目前舞台截圖）')
   const localAiActions = document.createElement('div')
   localAiActions.className = 'button-row'
   const localAiGenerateButton = document.createElement('button')
@@ -2353,7 +2384,7 @@ const renderStudentPreview = (
   }
   const requestBlock = document.createElement('div')
   requestBlock.className = 'ai-request-block'
-  requestBlock.append(localAiRequestLabel, localAiRequest, examples, localAiActions, localAiStatus)
+  requestBlock.append(localAiRequestLabel, localAiRequest, visionLabel, examples, localAiActions, localAiStatus)
   localAiSettings.append(aiConnection, requestBlock)
 
   const browserStorage = ((): Storage | undefined => {
@@ -2567,6 +2598,9 @@ const renderStudentPreview = (
   } | null = null
   let rawAi: {
     inspect: () => string
+    revision: () => string
+    readScript: (args: unknown) => unknown
+    find: (args: unknown) => unknown
     inspectBlocks: (args: unknown) => ReturnType<typeof inspectRawBlocks>
     inspectTargets: (args: unknown) => ReturnType<typeof inspectRawTargets>
     inspectVariables: (args: unknown) => ReturnType<typeof inspectRawVariables>
@@ -2608,10 +2642,10 @@ const renderStudentPreview = (
   livePatchStatus.setAttribute('aria-live', 'polite')
   const canPatchLiveProject = !rawSource
   if (rawSource) {
-    livePatchStatus.textContent = '為保留匯入作品的原始積木與素材，即時修改目前只開放 Canonical IR 作品。'
+    livePatchStatus.textContent =
+      '為保留匯入作品的原始積木與素材，這裡不直接編輯積木；可用 MCP 讀取讀本並提出待審修改。'
     livePatchPromptButton.disabled = true
     localAiSettings.hidden = true
-    mcpSettings.hidden = true
   } else {
     livePatchStatus.textContent = '作品執行後可以修改變數、角色和舞台；積木和雲端變數不能在這裡改。'
   }
@@ -2678,7 +2712,14 @@ const renderStudentPreview = (
     const { tool, arguments: args } = request as { tool?: unknown; arguments?: unknown }
     if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('MCP 工具參數格式錯誤。')
     if (rawAi) {
-      if (tool === 'inspect_project') return { projectName: liveProject.name, instruction: rawAi.inspect() }
+      if (tool === 'inspect_project')
+        return {
+          projectName: liveProject.name,
+          baseRevision: rawAi.revision(),
+          instruction: rawAi.inspect(),
+        }
+      if (tool === 'read_script') return rawAi.readScript(args)
+      if (tool === 'find') return rawAi.find(args)
       if (tool === 'inspect_raw_blocks') return rawAi.inspectBlocks(args)
       if (tool === 'inspect_raw_targets') return rawAi.inspectTargets(args)
       if (tool === 'inspect_raw_variables') return rawAi.inspectVariables(args)
@@ -2925,7 +2966,17 @@ const renderStudentPreview = (
           model: localAiModel.value,
           apiKey: localAiKey.value,
           instruction: inspectProjectForAi(liveProject, liveRevision),
-          request: localAiRequest.value,
+          request: `${pickedTargetName ? `我指的是角色「${pickedTargetName}」。` : ''}${localAiRequest.value}`,
+          ...(visionCheckbox.checked
+            ? (() => {
+                try {
+                  const imageDataUrl = studentStageCanvas.toDataURL('image/png')
+                  return imageDataUrl.length <= 2_000_000 ? { imageDataUrl } : {}
+                } catch {
+                  return {}
+                }
+              })()
+            : {}),
           signal: controller.signal,
           ...(gatewayToken ? { fetchImpl: gatewayFetch } : {}),
           onToolCall: (name, argumentsJson) => {
@@ -3336,6 +3387,40 @@ const renderStudentPreview = (
     }
     rawAi = {
       inspect: () => inspectRawProjectForAi(currentRaw),
+      revision: () => rawSb3Revision(currentRaw),
+      readScript: (args) => {
+        if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('程式查詢格式無效。')
+        const item = args as { baseRevision?: unknown; scriptId?: unknown }
+        if (typeof item.baseRevision !== 'string' || typeof item.scriptId !== 'string' || item.scriptId.length > 256)
+          throw new Error('程式查詢欄位無效。')
+        const currentRevision = rawSb3Revision(currentRaw)
+        if (item.baseRevision !== currentRevision)
+          throw new Error(`SB3 revision has changed (expected ${currentRevision})`)
+        const reader = readProjectForAi(currentRaw.projectJson, { entries: currentRaw.entries })
+        const section = reader.sections.find((candidate) => candidate.id === `script:${String(item.scriptId)}`)
+        return { baseRevision: currentRevision, scriptId: item.scriptId, text: section?.text ?? null }
+      },
+      find: (args) => {
+        if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('讀本搜尋格式無效。')
+        const item = args as { baseRevision?: unknown; query?: unknown }
+        if (
+          typeof item.baseRevision !== 'string' ||
+          typeof item.query !== 'string' ||
+          !item.query.trim() ||
+          item.query.length > 256
+        )
+          throw new Error('讀本搜尋欄位無效。')
+        const currentRevision = rawSb3Revision(currentRaw)
+        if (item.baseRevision !== currentRevision)
+          throw new Error(`SB3 revision has changed (expected ${currentRevision})`)
+        const reader = readProjectForAi(currentRaw.projectJson, { entries: currentRaw.entries })
+        const query = item.query.toLocaleLowerCase('zh-TW')
+        const matches = reader.sections
+          .flatMap((section) => section.text.split('\n').map((line) => ({ section: section.id, line })))
+          .filter(({ line }) => line.toLocaleLowerCase('zh-TW').includes(query))
+          .slice(0, 100)
+        return { baseRevision: currentRevision, query: item.query, matches }
+      },
       inspectTargets: (args) => {
         if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('角色查詢格式無效。')
         const item = args as { baseRevision?: unknown; offset?: unknown; limit?: unknown; query?: unknown }
@@ -3860,7 +3945,7 @@ const renderStudentPreview = (
     livePatchActions,
     livePatchStatus,
     livePatchPanel,
-    ...(rawSource ? [] : [mcpSettings]),
+    mcpSettings,
   )
   sideColumn.append(aiPanel)
 

@@ -9,21 +9,42 @@ import {
   type RawSb3Project,
 } from '../archive'
 import { extractProjectBlockGraphs, isToleratedGraphIssue, parsePreservationEditPatch } from '../graph'
+import { readProjectForAi } from '../reader'
+import { buildLinePatch, type LinePatchOperation } from './line-patch'
 
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 const scalar = (value: unknown): value is string | number | boolean =>
   typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))
 
-export const inspectRawProjectForAi = (project: RawSb3Project): string => {
+export interface RawProjectInventoryVariable {
+  readonly id: string
+  readonly name: string
+  readonly value: string | number | boolean
+}
+
+export interface RawProjectInventoryTarget {
+  readonly targetIndex: number
+  readonly name: string
+  readonly isStage: unknown
+  readonly fields: Record<string, string | number | boolean>
+  readonly variables: RawProjectInventoryVariable[]
+}
+
+/**
+ * Return only the bounded target/variable inventory used by the raw AI prompt.
+ * @param project Imported lossless SB3 project.
+ * @returns Bounded target and variable inventory.
+ */
+export const rawProjectInventory = (project: RawSb3Project): RawProjectInventoryTarget[] => {
   const targets = Array.isArray(project.projectJson.targets) ? project.projectJson.targets : []
-  const inventory = targets.slice(0, 30).flatMap((target: unknown, targetIndex: number) => {
+  return targets.slice(0, 30).flatMap((target: unknown, targetIndex: number) => {
     if (!record(target)) return []
     const fields = Object.fromEntries(
       ['x', 'y', 'direction', 'size', 'visible', 'currentCostume', 'volume', 'tempo']
         .filter((field) => scalar(target[field]))
         .map((field) => [field, target[field]]),
-    )
+    ) as Record<string, string | number | boolean>
     const vars = record(target.variables)
       ? Object.entries(target.variables)
           .slice(0, 30)
@@ -48,13 +69,25 @@ export const inspectRawProjectForAi = (project: RawSb3Project): string => {
       },
     ]
   })
-  const variablePages = inventory.map((target) => target.variables.splice(0))
+}
+
+export const inspectRawProjectForAi = (project: RawSb3Project): string => {
+  const inventory = rawProjectInventory(project)
+  const variablePages = inventory.map((target) => target.variables.slice())
+  for (const target of inventory) target.variables.length = 0
   const revision = rawSb3Revision(project)
+  let readerText = readProjectForAi(project.projectJson, { entries: project.entries }).text
+  const lineOperationsInstruction =
+    '修改積木時優先使用行號 change：{"kind":"lines","operations":[{"op":"set","line":"L6","slot":1,"value":15},{"op":"replace","line":"L7","text":"播放音效 [Pop]"},{"op":"insert_after","line":"L6","text":"播放音效 [Pop]"},{"op":"delete","line":"L8"}]}；一次最多 20 個操作，文字使用讀本的繁體中文格式。'
   const buildInstruction = () =>
-    `你是 Scratch 遊戲修改助手。只提交一個 change，不可修改雲端變數。屬性或變數一次只能改一個；要改的地方都在積木裡時，把所有積木（最多 20 個）放進同一個 blocks change，一次完成。輸出 JSON：{"format":"scratch-ai-bridge/raw-patch","version":1,"baseRevision":"${revision}","summary":"簡述","change":{"kind":"property","targetName":"角色名稱","property":"x","expected":原值,"value":新值}}。變數使用 change {"kind":"variable","targetName":"角色名稱","variableId":"清單中的 ID","expected":原值,"value":新值}。積木先呼叫 inspect_raw_blocks（baseRevision 填 "${revision}"）讀取目標圖，可依 blockId、opcode 或 query 篩選；graphEditable 為 false 時只能讀取，不可提出積木修改；graphIssueCount 大於 0 但 graphEditable 為 true，表示作品原本就有 Scratch 能執行的小問題，照常修改即可，但修改不可增加新的問題。再使用 change {"kind":"blocks","graphPatch":{"format":"scratch-ai-bridge/block-graph-patch","version":1,"patches":[{"targetIndex":0,"targetName":"Stage","isStage":true,"blocks":{"block-id":{"fields":{}}}}]}}。既有 block 只提供要替換的頂層屬性；inputs/fields/mutation 會整個替換。可用 inspect_raw_targets（支援 query 篩選角色名）和 inspect_raw_variables 分頁讀取未顯示的角色和變數。不可猜測省略的內容，必須維持 parent、next 和 inputs 圖結構。只提案，使用者會確認。\nrevision: ${revision}\n清單（最多 30 角色，每個最多 30 個變數；可能省略）：${JSON.stringify(inventory)}`
+    `你是 Scratch 遊戲修改助手。只提交一個 change，不可修改雲端變數。屬性或變數一次只能改一個；要改的地方都在積木裡時，把所有積木（最多 20 個）放進同一個 blocks change，一次完成。輸出 JSON：{"format":"scratch-ai-bridge/raw-patch","version":1,"baseRevision":"${revision}","summary":"簡述","change":{"kind":"property","targetName":"角色名稱","property":"x","expected":原值,"value":新值}}。變數使用 change {"kind":"variable","targetName":"角色名稱","variableId":"清單中的 ID","expected":原值,"value":新值}。積木先呼叫 inspect_raw_blocks（baseRevision 填 "${revision}"）讀取目標圖，可依 blockId、opcode 或 query 篩選；graphEditable 為 false 時只能讀取，不可提出積木修改；graphIssueCount 大於 0 但 graphEditable 為 true，表示作品原本就有 Scratch 能執行的小問題，照常修改即可，但修改不可增加新的問題。再使用 change {"kind":"blocks","graphPatch":{"format":"scratch-ai-bridge/block-graph-patch","version":1,"patches":[{"targetIndex":0,"targetName":"Stage","isStage":true,"blocks":{"block-id":{"fields":{}}}}]}}。既有 block 只提供要替換的頂層屬性；inputs/fields/mutation 會整個替換。可用 inspect_raw_targets（支援 query 篩選角色名）和 inspect_raw_variables 分頁讀取未顯示的角色和變數。不可猜測省略的內容，必須維持 parent、next 和 inputs 圖結構。只提案，使用者會確認。\n${lineOperationsInstruction}\nrevision: ${revision}\n作品讀本（第一優先，行號可用來定位）：\n${readerText}\n角色與變數清單（最多 30 角色，每個最多 30 個變數；可能省略）：${JSON.stringify(inventory)}`
   // Keep target identities first, then add variable details within the byte budget.
   const encoder = new TextEncoder()
   let instruction = buildInstruction()
+  while (encoder.encode(instruction).byteLength > 23800 && readerText.length > 4000) {
+    readerText = readerText.slice(0, Math.max(4000, readerText.length - 1000))
+    instruction = buildInstruction()
+  }
   while (encoder.encode(instruction).byteLength > 23800 && inventory.length > 0) {
     inventory.pop()
     instruction = buildInstruction()
@@ -350,6 +383,50 @@ export const proposeRawLivePatch = (project: RawSb3Project, patchJson: string) =
     if (hasVariableSetter) {
       warnings.push('注意：作品腳本含有設定此變數的積木（如綠旗初始化），執行時可能會覆寫此初始變數值。')
     }
+  } else if (change.kind === 'lines') {
+    if (
+      Object.keys(change).some((key) => !['kind', 'operations'].includes(key)) ||
+      !Array.isArray(change.operations) ||
+      change.operations.length < 1 ||
+      change.operations.length > 20
+    )
+      throw new Error('Raw line patch 格式無效。')
+    const rawOperations = change.operations as unknown[]
+    for (const operation of rawOperations) {
+      if (!record(operation) || typeof operation.op !== 'string' || typeof operation.line !== 'string')
+        throw new Error('Raw line patch 的操作格式無效。')
+      if (operation.op === 'set') {
+        if (
+          typeof operation.slot !== 'number' ||
+          !Number.isSafeInteger(operation.slot) ||
+          operation.slot < 1 ||
+          !scalar(operation.value)
+        )
+          throw new Error('Raw line patch 的 set 操作無效。')
+      } else if (operation.op === 'replace' || operation.op === 'insert_after') {
+        if (typeof operation.text !== 'string' || !operation.text.trim() || operation.text.length > 2_000)
+          throw new Error('Raw line patch 的文字操作無效。')
+      } else if (operation.op !== 'delete') throw new Error('Raw line patch 有不支援的操作。')
+    }
+    const operations = rawOperations as LinePatchOperation[]
+    const patches = buildLinePatch(project, operations)
+    if (patches.reduce((count, patch) => count + Object.keys(patch.blocks).length, 0) > 20)
+      throw new Error('單次 AI 積木提案最多修改 20 個積木。')
+    const graphs = extractProjectBlockGraphs(project.projectJson)
+    if (
+      patches.some((patch) => {
+        const graph = graphs.at(patch.targetIndex)
+        return graph !== undefined && !graph.issues.every((issue) => isToleratedGraphIssue(issue, graph.blocks))
+      })
+    )
+      throw new Error(
+        'Target block graph is broken (for example a loop or a missing block) and cannot be safely patched.',
+      )
+    next = patchLosslessSb3BlockGraphs(project, patches)
+    changes = operations.map(
+      (operation) => `${operation.op} ${operation.line}${'text' in operation ? `：${operation.text}` : ''}`,
+    )
+    requiresVmValidation = true
   } else if (change.kind === 'blocks') {
     if (Object.keys(change).some((key) => !['kind', 'graphPatch'].includes(key)) || !record(change.graphPatch))
       throw new Error('Raw block patch 格式無效。')
