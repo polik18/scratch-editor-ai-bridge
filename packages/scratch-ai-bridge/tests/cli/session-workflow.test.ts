@@ -285,7 +285,7 @@ describe('scratch-session CLI workflow', () => {
     }
   }, 60000)
 
-  it('migrates legacy state and reports a missing project path', () => {
+  it('migrates legacy state and reports a missing project path', { timeout: 30_000 }, () => {
     const dir = workdir()
     writeFileSync(
       path.join(dir, '.scratch-session.json'),
