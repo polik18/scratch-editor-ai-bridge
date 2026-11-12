@@ -300,7 +300,14 @@ ${createGameSpecGuide()}
         .at(-1)
       if (!file) throw new Error('Scratch 沒有回傳可讀的 SB3 作品。')
       const bytes = readFileSync(path.join(directory, file))
-      let metadata: { title?: unknown; instructions?: unknown; notes?: unknown } = {}
+      let metadata: {
+        title?: unknown
+        author?: unknown
+        url?: unknown
+        license?: unknown
+        instructions?: unknown
+        notes?: unknown
+      } = {}
       try {
         const metadataPath = path.join(directory, file.replace(/\.sb3$/, '.json'))
         const parsed: unknown = JSON.parse(readFileSync(metadataPath, 'utf8'))
@@ -315,6 +322,9 @@ ${createGameSpecGuide()}
         file: path.join(directory, file),
         reader: await inspectSb3ForAiReader(bytes, {
           ...(typeof metadata.title === 'string' ? { title: metadata.title } : {}),
+          ...(typeof metadata.author === 'string' ? { author: metadata.author } : {}),
+          ...(typeof metadata.url === 'string' ? { sourceUrl: metadata.url } : {}),
+          ...(typeof metadata.license === 'string' ? { license: metadata.license } : {}),
           ...(typeof metadata.instructions === 'string' ? { authorInstructions: metadata.instructions } : {}),
           ...(typeof metadata.notes === 'string' ? { notesAndCredits: metadata.notes } : {}),
         }),

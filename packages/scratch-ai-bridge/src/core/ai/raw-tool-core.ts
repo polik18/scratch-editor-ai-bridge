@@ -10,7 +10,8 @@ import {
 } from '../archive'
 import { extractProjectBlockGraphs, isToleratedGraphIssue, parsePreservationEditPatch } from '../graph'
 import { readProjectForAi } from '../reader'
-import { buildLinePatch, type LinePatchOperation } from './line-patch'
+import type { ReaderOptions } from '../reader/types'
+import { buildLinePatch, buildScriptPatch, type LinePatchOperation } from './line-patch'
 
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -71,14 +72,14 @@ export const rawProjectInventory = (project: RawSb3Project): RawProjectInventory
   })
 }
 
-export const inspectRawProjectForAi = (project: RawSb3Project): string => {
+export const inspectRawProjectForAi = (project: RawSb3Project, readerOptions: ReaderOptions = {}): string => {
   const inventory = rawProjectInventory(project)
   const variablePages = inventory.map((target) => target.variables.slice())
   for (const target of inventory) target.variables.length = 0
   const revision = rawSb3Revision(project)
-  let readerText = readProjectForAi(project.projectJson, { entries: project.entries }).text
+  let readerText = readProjectForAi(project.projectJson, { entries: project.entries }, readerOptions).text
   const lineOperationsInstruction =
-    '修改積木時優先使用行號 change：{"kind":"lines","operations":[{"op":"set","line":"L6","slot":1,"value":15},{"op":"replace","line":"L7","text":"播放音效 [Pop]"},{"op":"insert_after","line":"L6","text":"播放音效 [Pop]"},{"op":"delete","line":"L8"}]}；一次最多 20 個操作，文字使用讀本的繁體中文格式。'
+    '修改少量積木時優先使用行號 change：{"kind":"lines","operations":[{"op":"set","line":"L6","slot":1,"value":15},{"op":"replace","line":"L7","text":"播放音效 [Pop]"},{"op":"insert_after","line":"L6","text":"播放音效 [Pop]"},{"op":"delete","line":"L8"}]}；若要重寫一個完整程式，使用 change：{"kind":"script","targetName":"角色名稱","scriptId":"script:根積木 ID","text":"### 程式 script:根積木 ID\\nL1 當綠旗被點擊\\nL2 移動 20 點"}。完整程式必須保留一個可辨識的事件帽，會在本機解析成圖形積木並要求 VM 驗證；文字使用讀本的繁體中文格式。'
   const buildInstruction = () =>
     `你是 Scratch 遊戲修改助手。只提交一個 change，不可修改雲端變數。屬性或變數一次只能改一個；要改的地方都在積木裡時，把所有積木（最多 20 個）放進同一個 blocks change，一次完成。輸出 JSON：{"format":"scratch-ai-bridge/raw-patch","version":1,"baseRevision":"${revision}","summary":"簡述","change":{"kind":"property","targetName":"角色名稱","property":"x","expected":原值,"value":新值}}。變數使用 change {"kind":"variable","targetName":"角色名稱","variableId":"清單中的 ID","expected":原值,"value":新值}。積木先呼叫 inspect_raw_blocks（baseRevision 填 "${revision}"）讀取目標圖，可依 blockId、opcode 或 query 篩選；graphEditable 為 false 時只能讀取，不可提出積木修改；graphIssueCount 大於 0 但 graphEditable 為 true，表示作品原本就有 Scratch 能執行的小問題，照常修改即可，但修改不可增加新的問題。再使用 change {"kind":"blocks","graphPatch":{"format":"scratch-ai-bridge/block-graph-patch","version":1,"patches":[{"targetIndex":0,"targetName":"Stage","isStage":true,"blocks":{"block-id":{"fields":{}}}}]}}。既有 block 只提供要替換的頂層屬性；inputs/fields/mutation 會整個替換。可用 inspect_raw_targets（支援 query 篩選角色名）和 inspect_raw_variables 分頁讀取未顯示的角色和變數。不可猜測省略的內容，必須維持 parent、next 和 inputs 圖結構。只提案，使用者會確認。\n${lineOperationsInstruction}\nrevision: ${revision}\n作品讀本（第一優先，行號可用來定位）：\n${readerText}\n角色與變數清單（最多 30 角色，每個最多 30 個變數；可能省略）：${JSON.stringify(inventory)}`
   // Keep target identities first, then add variable details within the byte budget.
@@ -427,6 +428,21 @@ export const proposeRawLivePatch = (project: RawSb3Project, patchJson: string) =
       (operation) => `${operation.op} ${operation.line}${'text' in operation ? `：${operation.text}` : ''}`,
     )
     requiresVmValidation = true
+  } else if (change.kind === 'script') {
+    if (
+      Object.keys(change).some((key) => !['kind', 'targetName', 'scriptId', 'text'].includes(key)) ||
+      typeof change.targetName !== 'string' ||
+      typeof change.scriptId !== 'string' ||
+      typeof change.text !== 'string'
+    )
+      throw new Error('Raw complete script patch 格式無效。')
+    if (rawSb3Revision(project) !== input.baseRevision) throw new Error('SB3 revision has changed')
+    const result = buildScriptPatch(project, change.targetName, change.scriptId, change.text)
+    next = patchLosslessSb3BlockGraphs(project, [result.patch])
+    changes = [
+      `${change.targetName}/${change.scriptId}：完整程式 ${result.oldBlockCount} 個圖節點 → ${result.newBlockCount} 個圖節點`,
+    ]
+    requiresVmValidation = true
   } else if (change.kind === 'blocks') {
     if (Object.keys(change).some((key) => !['kind', 'graphPatch'].includes(key)) || !record(change.graphPatch))
       throw new Error('Raw block patch 格式無效。')
@@ -456,7 +472,7 @@ export const proposeRawLivePatch = (project: RawSb3Project, patchJson: string) =
     )
     if (changes.join('\n').length > 12000) throw new Error('積木差異太大，請縮小修改範圍。')
     requiresVmValidation = true
-  } else throw new Error('Raw patch 僅支援 property、variable 或 blocks。')
+  } else throw new Error('Raw patch 僅支援 property、variable、lines、script 或 blocks。')
   const normalized = JSON.stringify(input)
   return {
     candidateId: bytesToHex(sha256(new TextEncoder().encode(normalized))),

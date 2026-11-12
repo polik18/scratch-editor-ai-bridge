@@ -209,12 +209,21 @@ const visualHint = (costume: Costume, assets: ReaderAssets): string => {
   return ''
 }
 
-const costumeDescriptionWithAssets = (costume: Costume, assets: ReaderAssets): string => {
+const costumeDescriptionWithAssets = (
+  costume: Costume,
+  assets: ReaderAssets,
+  visualHints: Readonly<Record<string, string>> = {},
+): string => {
   const description = costumeDescription(costume)
-  return description + visualHint(costume, assets)
+  return description + (visualHints[asString(costume.md5ext)] ?? visualHint(costume, assets))
 }
 
-const targetDescription = (target: RecordLike, index: number, assets: ReaderAssets): string => {
+const targetDescription = (
+  target: RecordLike,
+  index: number,
+  assets: ReaderAssets,
+  visualHints: Readonly<Record<string, string>> = {},
+): string => {
   const name = asString(target.name, '角色 ' + index)
   const costumes = targetCostumes(target)
   if (target.isStage === true) {
@@ -222,7 +231,9 @@ const targetDescription = (target: RecordLike, index: number, assets: ReaderAsse
     return [
       '## 舞台「' + name + '」',
       '- 舞台大小：480×360。',
-      '- 目前背景：' + (backdrop ? costumeDescriptionWithAssets(backdrop, assets) : '沒有可辨識的背景') + '。',
+      '- 目前背景：' +
+        (backdrop ? costumeDescriptionWithAssets(backdrop, assets, visualHints) : '沒有可辨識的背景') +
+        '。',
     ].join('\n')
   }
   const x = asNumber(target.x)
@@ -232,7 +243,7 @@ const targetDescription = (target: RecordLike, index: number, assets: ReaderAsse
   const lines = [
     '## 角色「' + name + '」',
     '- 外觀：' +
-      (currentCostume ? costumeDescriptionWithAssets(currentCostume, assets) : '沒有造型') +
+      (currentCostume ? costumeDescriptionWithAssets(currentCostume, assets, visualHints) : '沒有造型') +
       '；共 ' +
       costumes.length +
       ' 個造型。',
@@ -363,12 +374,12 @@ export const readProjectForAi = (
         targetLines.push(line + ' ' + result.text)
       }
     }
-    targetSummaries.push(targetDescription(target, targetIndex, _assets))
+    targetSummaries.push(targetDescription(target, targetIndex, _assets, options.visualHints))
     allSections.push({
       id: 'sprite:' + asString(target.name, '角色 ' + targetIndex),
       targetIndex,
       text: [
-        targetDescription(target, targetIndex, _assets),
+        targetDescription(target, targetIndex, _assets, options.visualHints),
         targetLines.length ? '### 程式\n' + targetLines.join('\n') : '（沒有程式）',
       ].join('\n\n'),
       blockIds: Object.keys(graph.blocks),
@@ -379,6 +390,9 @@ export const readProjectForAi = (
   const overview = [
     '# 作品「' + title + '」',
     '舞台大小：480×360。',
+    options.author ? '作者：' + options.author : '',
+    options.sourceUrl ? '來源：' + options.sourceUrl : '',
+    options.license ? '授權：' + options.license : '',
     targetSummaries.length ? targetSummaries.join('\n\n') : '作品沒有角色或舞台。',
     options.authorInstructions?.trim() ? '## 作者操作說明\n' + options.authorInstructions.trim() : '',
     options.notesAndCredits?.trim() ? '## 作者備註\n' + options.notesAndCredits.trim() : '',

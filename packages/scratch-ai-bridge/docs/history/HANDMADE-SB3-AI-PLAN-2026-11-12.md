@@ -32,11 +32,15 @@
 | B0b | 其他「Scratch 能跑、Bridge 判錯」的積木圖問題（見 0.4） | ✅ | claude | `tests/graph/block-graph.test.ts`、`tests/ai/raw-tool-core.test.ts`；樣本 `lockedSprites` 全空 | `src/core/graph/block-graph.ts`、`src/core/ai/raw-tool-core.ts` |
 | 0 | 樣本＋現況量測（含理解測試題目） | 🟡 | codex | 16 份標準答案、評分器和本機模型腳本已完成；等待使用者在本機模型執行理解測試 | `scripts/tools/`、`output/handmade-corpus/` |
 | B1–B2 | 作品讀本（只讀）＋E3 作者說明，取代網頁 raw 路徑的原始 JSON | ✅ | codex | 73/73 讀本 ≤ 24,000 字、內建積木可讀 100%，作者說明可由 CLI fetch 帶入 | 新增 `src/core/reader/` |
-| C1 | 造型、位置翻成文字 | 🟡 | codex | 官方素材、尺寸、九宮格和 SVG 顏色已加入；PNG 目前只報尺寸，主要顏色仍待瀏覽器取樣 | `src/core/reader/` |
-| C2 | 點舞台指定角色、AI 不確定時先問 | 🟡 | codex | 靜態預覽可點選角色並附加到 Canonical AI 要求；`ask_student` 和 raw/MCP 路徑仍待補 | `src/main.ts`、預覽 iframe |
+| C1 | 造型、位置翻成文字 | ✅ | codex | 官方素材、尺寸、九宮格、SVG 顏色與瀏覽器 PNG 主要顏色取樣已加入；reader 可接收 visual hints | `src/core/reader/`、`src/main.ts` |
+| C2 | 點舞台指定角色、AI 不確定時先問 | ✅ | codex | 靜態預覽可點選角色；Canonical、raw 與 MCP 都能轉送 `ask_student`，並有選項對話框 | `src/main.ts`、`src/mcp/tools.ts` |
 | B3a | 行號操作修改 | ✅ | codex | `set/replace/insert_after/delete` 已接到 raw patch，保留 ID、revision 和 VM 驗證；單元測試通過 | `src/core/ai/line-patch.ts`、`raw-tool-core.ts` |
 | D＋E4 | CLI `fetch`／MCP／文件、`skill-scratch-site` | ✅ | codex | `start` 列出 fetch/ai-reader；MCP 有 read_script/find；skill validator 因環境缺 PyYAML 尚未執行 | `src/cli/`、`~/ObsidianVault/skills/` |
-| C3、E2、B3b、C4、E5 | 見第 8 節 | ⬜ | | | |
+| C3 | 看得懂圖的模型附截圖 | ✅ | codex | Vision 勾選會送舞台截圖與造型拼貼；複製路線可下載兩張 PNG | `src/main.ts`、`src/core/ai/openai-compatible.ts` |
+| E2 | 網址讀取公開作品 | 🟡 | codex | URL 欄位、metadata／SB3 下載與作者說明已完成；已驗證 GitHub Pages 來源被 Scratch metadata API CORS 擋住，畫面會引導 CLI／skill fallback | `src/scratch/public-project.ts`、`src/main.ts` |
+| B3b | 整段程式文字修改 | ✅ | codex | `script` change 會依 `script:<rootId>` 解析完整 zh-tw 文字、保留圖節點 ID、產生 raw graph patch 並要求 VM 驗證 | `src/core/ai/line-patch.ts`、`raw-tool-core.ts` |
+| C4 | 自動跑動觀察 | ✅ | codex | 學生預覽已可自動執行、擷取角色位置／造型／變數與測試回饋 | `src/main.ts` |
+| E5 | 放回 Scratch 網站 | ⬜ | | 尚未在沒有使用者明確同意下登入或執行外部上傳；待獨立授權後用 Camoufox 實作 | 共用 Camoufox |
 
 ### 0.3 怎麼開始
 
@@ -303,7 +307,7 @@ L8        廣播訊息 [遊戲結束]
 
    `text` 用讀本的格式寫，由解析器轉成積木。工具把操作換成現有的 raw graph patch，
    沒動到的積木保留原本的 ID。原本的確認、套用、復原流程不變。
-2. **改整段（之後做）。** AI 回傳修改後的整段程式文字，工具比對差異，再轉成 graph patch。給大模型用。
+2. **改整段。** AI 回傳修改後的整段程式文字，工具以 `script:<根積木 ID>` 鎖定單一程式，解析後比對可達圖節點，再轉成 graph patch。給大模型用；不支援的行或無事件帽會拒絕，不會半套用。
 
 `parseScratchblocks` 需要擴充，讓它讀得懂讀本的 zh-tw 格式和 `[ ]`、`( )`、`< >` 的寫法。
 
@@ -336,7 +340,7 @@ L8        廣播訊息 [遊戲結束]
 - 連線設定加一個勾選「這個模型看得懂圖片」。勾了之後，第一則訊息附上舞台截圖和造型縮圖拼貼（PNG，OpenAI 相容格式的 `image_url`）。
 - 複製貼上的路線（Gemini／ChatGPT）提供「下載舞台截圖」和「下載造型一覽圖」，讓學生一起貼上。
 
-### C4. 跑起來的樣子（之後做）
+### C4. 跑起來的樣子
 
 在預覽中自動跑幾秒，記錄每個角色的位置變化，寫成「綠旗後 3 秒：隕石從上往下掉；猩猩不動」。
 這可以沿用 `src/core/playtest` 的做法。這一步讓 AI 知道「作品實際做了什麼」，不只是「程式寫了什麼」。
@@ -485,4 +489,9 @@ L8        廣播訊息 [遊戲結束]
   - 新增 `src/core/reader/` 與建置期訊息抽取器；73 件 leejoneshane 樣本全部在 24,000 字上限內，讀本涵蓋 73/73 內建與畫筆／音樂積木，沒有 `⟦未知⟧` 標記。
   - raw AI 第一則訊息改用讀本；MCP 的 `inspect_project`、`read_script`、`find` 和原始積木分頁共用 revision。行號 patch 支援 `set`、`replace`、`insert_after`、`delete`，並以原始 graph patch 驗證後保留素材。
   - CLI 新增 `inspect --format ai-reader` 和公開作品 `fetch`；Bridge 靜態舞台可點角色，Canonical 本機 AI 可附舞台截圖；補上 `skill-scratch-site`、CLI/MCP 文件。理解測試 16 件的標準答案與評分器已寫好，尚未執行本機模型基線。
-  - 尚待：使用者執行本機理解測試；PNG 顏色取樣、raw/MCP 的角色詢問、造型拼貼、跑動觀察、Scratch 網址直接開啟和登入後上傳。
+- 2026-11-12 **codex 完成 C1–C4 與 B3b，並完成 E2 的可行性驗證**：
+  - PNG 造型在瀏覽器取樣主要顏色並寫回 reader visual hints；預覽新增舞台角色點選、`ask_student` 對話、造型拼貼、舞台／拼貼下載與多圖 Vision 請求。
+  - 公開 Scratch URL 可解析、取得 metadata、作者說明與 SB3；但實測 `api.scratch.mit.edu` 只允許 `https://scratch.mit.edu` 的 CORS，GitHub Pages 不能直接讀 metadata，因此 UI 明確提供 CLI `fetch`／`skill-scratch-site` fallback。
+  - `runAutoPlaytest` 已擷取執行後角色位置、造型、變數與測試鍵；完整 `script` patch 已加入 ID 保留、解析拒絕與 VM 驗證測試。
+  - 驗證：100 個測試檔、810 個測試全過；`eslint src tests`、`tsc --noEmit`、production build、bundle budget、Chromium browser smoke 全過。
+  - 尚待：使用者執行本機理解測試；E5 登入／上傳必須等使用者明確授權，不能由本次本地開發驗證代替。

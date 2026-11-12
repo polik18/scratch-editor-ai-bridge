@@ -1847,6 +1847,45 @@ pre {
 .open-project-card .status-box {
   grid-column: 1 / -1;
 }
+.scratch-url-field,
+.scratch-url-row {
+  grid-column: 1 / -1;
+}
+.scratch-url-field {
+  margin-top: 4px;
+  font-weight: 700;
+}
+.scratch-url-row {
+  display: flex;
+  gap: 8px;
+}
+.scratch-url-row input {
+  min-width: 0;
+  flex: 1;
+}
+.student-author-notes {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.student-author-notes p {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+}
+.ai-question-dialog {
+  max-width: min(560px, calc(100% - 32px));
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  color: var(--ink);
+  background: var(--surface);
+}
+.ai-question-dialog::backdrop {
+  background: rgb(13 53 40 / 46%);
+}
 .drop-overlay {
   position: fixed;
   z-index: 1000;

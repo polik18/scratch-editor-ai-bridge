@@ -10,7 +10,7 @@ export const BRIDGE_MCP_INSTRUCTIONS = `Scratch AI Bridge 有三種用法：
 1. 做新遊戲：用 make_game。你寫一個 Game Spec JSON（格式在 make_game 的說明裡），工具會產生 .sb3 並回報 feedback。
    有錯就照 feedback 中「→」後面的建議修改，再呼叫一次。不要自己寫 project.json 或 .sb3。
 2. 做動畫（60～180 秒、至少換一次背景）：用 make_story，格式在它的說明裡，用法同上。
-3. 修改使用者在 Bridge 網頁中開著的作品：先 inspect_project，再依需要 read_script/find，最後 propose_live_patch（只會產生待審候選，由使用者在網頁確認）。
+3. 修改使用者在 Bridge 網頁中開著的作品：先 inspect_project，再依需要 read_script/find；角色不確定時用 ask_student，最後 propose_live_patch（只會產生待審候選，由使用者在網頁確認）。
    這些工具需要使用者先開啟 Bridge 網頁並連線。`
 
 export interface BridgeMcpOptions {
@@ -252,6 +252,25 @@ ${createGameSpecGuide()}`,
         try {
           enforceToolLimit()
           return result(await relay.call('propose_live_patch', { patchJson }))
+        } catch (error) {
+          return failure(error)
+        }
+      },
+    )
+
+    server.registerTool(
+      'ask_student',
+      {
+        description: '當角色或畫面指涉不確定時，請使用者從選項中選擇；不要猜測目標。',
+        inputSchema: z.object({
+          question: z.string().min(1).max(300),
+          choices: z.array(z.string().min(1).max(120)).min(1).max(8),
+        }),
+      },
+      async (args) => {
+        try {
+          enforceToolLimit()
+          return result(await relay.call('ask_student', args))
         } catch (error) {
           return failure(error)
         }

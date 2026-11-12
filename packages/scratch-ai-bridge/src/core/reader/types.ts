@@ -22,10 +22,14 @@ export interface ReaderAssets {
 
 export interface ReaderOptions {
   readonly title?: string
+  readonly author?: string
+  readonly sourceUrl?: string
+  readonly license?: string
   readonly authorInstructions?: string
   readonly notesAndCredits?: string
   readonly maxChars?: number
   readonly hideTargetNames?: boolean
+  readonly visualHints?: Readonly<Record<string, string>>
 }
 
 export interface ProjectReaderResult {

@@ -4,7 +4,7 @@ export interface OpenAiCompatiblePatchRequest {
   readonly apiKey?: string
   readonly instruction: string
   readonly request: string
-  readonly imageDataUrl?: string
+  readonly imageDataUrl?: string | readonly string[]
   readonly signal?: AbortSignal
   readonly fetchImpl?: typeof fetch
   readonly enableRawBlockInspection?: boolean
@@ -142,7 +142,7 @@ const MAX_LOOKUPS = 8
 // add a picture until it runs out of lookups.
 const LOOP_RULES = `只能修改作品裡已經有的東西：數值、變數、角色屬性、積木，以及切換到作品裡已有的造型。不能新增圖片、造型、音效或角色。
 要求做不到時，不要再查詢，直接用一兩句中文說明做不到的原因，以及可以改成什麼。
-最多查詢 ${MAX_LOOKUPS} 次；查到足夠的資訊就提交修改。`
+角色或畫面指涉不確定時，使用 ask_student 讓學生從選項中選擇，不要猜測。最多查詢 ${MAX_LOOKUPS} 次；查到足夠的資訊就提交修改。`
 
 const lookupLimitMessage = `AI 查了 ${MAX_LOOKUPS} 次作品，還是沒有提出修改，已停止。這個要求可能做不到（例如要換成作品裡沒有的圖片），或請說得更具體，例如指出要改哪個角色的什麼。`
 
@@ -220,11 +220,9 @@ export const requestOpenAiCompatiblePatch = async ({
     throw new Error('送給模型的文字超過 32 KB 限制。')
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (apiKey?.trim()) headers.Authorization = `Bearer ${apiKey.trim()}`
-  const userContent = imageDataUrl
-    ? [
-        { type: 'text', text: request.trim() },
-        { type: 'image_url', image_url: { url: imageDataUrl } },
-      ]
+  const imageUrls: readonly string[] = typeof imageDataUrl === 'string' ? [imageDataUrl] : (imageDataUrl ?? [])
+  const userContent = imageUrls.length
+    ? [{ type: 'text', text: request.trim() }, ...imageUrls.map((url) => ({ type: 'image_url', image_url: { url } }))]
     : request.trim()
   const messages: Record<string, unknown>[] = [
     { role: 'system', content: `${instruction}\n\n${LOOP_RULES}` },
@@ -256,6 +254,22 @@ export const requestOpenAiCompatiblePatch = async ({
               name: 'inspect_project',
               description: '重新讀取目前專案的精簡結構、可修改欄位與 revision。',
               parameters: { type: 'object', properties: {}, additionalProperties: false },
+            },
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'ask_student',
+              description: '角色或畫面指涉不確定時，先請學生在有限選項中選擇，不要猜測。',
+              parameters: {
+                type: 'object',
+                properties: {
+                  question: { type: 'string', minLength: 1, maxLength: 300 },
+                  choices: { type: 'array', items: { type: 'string', minLength: 1, maxLength: 120 }, maxItems: 8 },
+                },
+                required: ['question', 'choices'],
+                additionalProperties: false,
+              },
             },
           },
           ...(enableRawBlockInspection

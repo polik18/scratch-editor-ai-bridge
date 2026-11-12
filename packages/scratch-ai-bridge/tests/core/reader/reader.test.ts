@@ -103,5 +103,21 @@ describe('readProjectForAi', () => {
     expect(result.text.length).toBeLessThanOrEqual(120)
     expect(result.sections.some((section) => section.id === 'sprite:藍色魚')).toBe(true)
   })
+
+  it('uses browser-supplied PNG color hints and preserves public author metadata', () => {
+    const result = readProjectForAi(
+      project,
+      {},
+      {
+        author: 'student',
+        sourceUrl: 'https://scratch.mit.edu/projects/123456/',
+        license: 'CC BY-SA 2.0',
+        visualHints: { 'fish.png': '；瀏覽器取樣主要顏色約為藍色、白色' },
+      },
+    )
+    expect(result.text).toContain('作者：student')
+    expect(result.text).toContain('授權：CC BY-SA 2.0')
+    expect(result.text).toContain('瀏覽器取樣主要顏色約為藍色、白色')
+  })
 })
 /* eslint-enable @typescript-eslint/no-unnecessary-condition */

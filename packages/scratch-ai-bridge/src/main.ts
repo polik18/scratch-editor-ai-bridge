@@ -113,6 +113,7 @@ import {
 } from './core/progress/sync-client'
 import { createAnalysisPrompt, createScoringFeedbackPrompt, type TutorMode } from './core/prompt'
 import { readProjectForAi } from './core/reader'
+import type { ReaderOptions } from './core/reader/types'
 import {
   createAiOutputValidationReport,
   createRepairPrompt,
@@ -144,6 +145,7 @@ import {
 } from './core/visuals/presets'
 import { chooseProjectFile, friendlyOpenError, isFileDrag, projectFileProblem } from './open-project'
 import { SCRATCH_LINK_HARDWARE_EXTENSION_IDS } from './scratch/extensions'
+import { fetchPublicScratchProject } from './scratch/public-project'
 import {
   createVM,
   loadSb3,
@@ -648,6 +650,9 @@ app.innerHTML = `
           </div>
           <button id="open-sb3-button" class="button primary" type="button">打開我的作品</button>
           <input id="open-sb3-file" class="visually-hidden" type="file" accept=".sb3,application/zip" tabindex="-1" aria-hidden="true">
+          <label class="scratch-url-field" for="scratch-project-url">或貼上 Scratch 公開作品網址</label>
+          <div class="scratch-url-row"><input id="scratch-project-url" type="url" inputmode="url" placeholder="https://scratch.mit.edu/projects/作品編號/" autocomplete="url"><button id="open-scratch-url" class="button secondary" type="button">從網址讀取</button></div>
+          <p class="open-project-privacy">只讀公開作品；若瀏覽器的 CORS 政策不允許直接下載，請用 CLI fetch 或 skill-scratch-site 先下載，再把 .sb3 拖進來。</p>
           <div id="open-sb3-status" class="status-box" role="status" aria-live="polite"></div>
         </article>
 
@@ -1353,6 +1358,7 @@ interface StudentSnapshot {
 let latestStudentSnapshot: StudentSnapshot | null = null
 let previousStudentSnapshot: StudentSnapshot | null = null
 let pendingStudentSnapshot: StudentSnapshot | null = null
+let currentReaderOptions: ReaderOptions = {}
 let studentRevisionRequested = false
 const studentCandidateActions = byId<HTMLElement>('student-candidate-actions')
 const restoreStudentProject = byId<HTMLButtonElement>('restore-student-project')
@@ -1572,6 +1578,120 @@ const costumeImageSource = (costume: CanonicalProject['stage']['costumes'][numbe
   }
 
   return null
+}
+
+const sampledColorName = (red: number, green: number, blue: number): string => {
+  const maximum = Math.max(red, green, blue)
+  const minimum = Math.min(red, green, blue)
+  if (maximum < 45) return '黑色'
+  if (minimum > 220) return '白色'
+  if (maximum - minimum < 24) return maximum < 130 ? '灰色' : '淺灰色'
+  if (maximum === red && green >= blue * 1.35) return red > 190 && green > 130 ? '橘色' : '黃綠色'
+  if (maximum === red) return '紅色'
+  if (maximum === green && blue > red * 1.2) return '青色'
+  if (maximum === green) return '綠色'
+  if (maximum === blue && red > green * 1.2) return '紫色'
+  return '藍色'
+}
+
+const samplePngVisualHints = async (archive: RawSb3Project): Promise<Record<string, string>> => {
+  if (typeof createImageBitmap !== 'function') return {}
+  const targets = Array.isArray(archive.projectJson.targets) ? archive.projectJson.targets : []
+  const entries = new Map(archive.entries.map((entry) => [entry.name, entry.bytes]))
+  const hints: Record<string, string> = {}
+  for (const target of targets) {
+    if (typeof target !== 'object' || target === null || Array.isArray(target)) continue
+    const costumes = (target as Record<string, unknown>).costumes
+    if (!Array.isArray(costumes)) continue
+    for (const costume of costumes) {
+      if (typeof costume !== 'object' || costume === null || Array.isArray(costume)) continue
+      const record = costume as { md5ext?: unknown; dataFormat?: unknown }
+      if (record.dataFormat !== 'png' || typeof record.md5ext !== 'string') continue
+      const bytes = entries.get(record.md5ext)
+      if (!bytes) continue
+      try {
+        const image = await createImageBitmap(new Blob([bytes.buffer as ArrayBuffer], { type: 'image/png' }))
+        const canvas = document.createElement('canvas')
+        canvas.width = 48
+        canvas.height = 48
+        const context = canvas.getContext('2d', { willReadFrequently: true })
+        if (!context) {
+          image.close()
+          continue
+        }
+        context.drawImage(image, 0, 0, 48, 48)
+        image.close()
+        const pixels = context.getImageData(0, 0, 48, 48).data
+        const counts = new Map<string, number>()
+        for (let index = 0; index < pixels.length; index += 4) {
+          const alpha = pixels[index + 3] ?? 0
+          if (alpha < 32) continue
+          const color = sampledColorName(pixels[index] ?? 0, pixels[index + 1] ?? 0, pixels[index + 2] ?? 0)
+          counts.set(color, (counts.get(color) ?? 0) + alpha)
+        }
+        const colors = [...counts.entries()]
+          .sort((left, right) => right[1] - left[1])
+          .slice(0, 3)
+          .map(([color]) => color)
+        if (colors.length > 0) hints[record.md5ext] = `；瀏覽器取樣主要顏色約為${colors.join('、')}`
+      } catch {
+        // A browser decoder or a damaged PNG must not prevent the project from opening.
+      }
+    }
+  }
+  return hints
+}
+
+const loadPreviewImage = async (source: string): Promise<HTMLImageElement> => {
+  const image = new Image()
+  image.decoding = 'async'
+  image.src = source
+  await image.decode()
+  return image
+}
+
+const createCostumeCollageDataUrl = async (project: CanonicalProject): Promise<string | null> => {
+  const items = [
+    { label: `背景：${project.stage.name}`, costume: project.stage.costumes.at(project.stage.currentCostume ?? 0) },
+    ...project.sprites.map((sprite) => ({
+      label: `角色：${sprite.name}`,
+      costume: sprite.costumes.at(sprite.currentCostume ?? 0),
+    })),
+  ].slice(0, 48)
+  const loaded: { readonly label: string; readonly image: HTMLImageElement }[] = []
+  for (const item of items) {
+    const source = costumeImageSource(item.costume)
+    if (!source) continue
+    try {
+      loaded.push({ label: item.label, image: await loadPreviewImage(source) })
+    } catch {
+      // One damaged costume must not prevent the rest of the collage from being useful.
+    }
+  }
+  if (loaded.length === 0) return null
+  const columns = 4
+  const tileWidth = 180
+  const tileHeight = 150
+  const canvas = document.createElement('canvas')
+  canvas.width = columns * tileWidth
+  canvas.height = Math.ceil(loaded.length / columns) * tileHeight
+  const context = canvas.getContext('2d')
+  if (!context) return null
+  context.fillStyle = '#ffffff'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.font = '14px sans-serif'
+  context.fillStyle = '#111827'
+  for (const [index, item] of loaded.entries()) {
+    const x = (index % columns) * tileWidth
+    const y = Math.floor(index / columns) * tileHeight
+    const scale = Math.min((tileWidth - 20) / item.image.naturalWidth, (tileHeight - 40) / item.image.naturalHeight)
+    const width = Math.max(1, item.image.naturalWidth * scale)
+    const height = Math.max(1, item.image.naturalHeight * scale)
+    context.drawImage(item.image, x + (tileWidth - width) / 2, y + 8, width, height)
+    context.fillText(item.label.slice(0, 24), x + 8, y + tileHeight - 12)
+  }
+  const dataUrl = canvas.toDataURL('image/png')
+  return dataUrl.length <= 2_000_000 ? dataUrl : null
 }
 
 const libraryCostumeFormat = (md5ext: string): CanonicalProject['stage']['costumes'][number]['dataFormat'] =>
@@ -1850,7 +1970,7 @@ const renderStudentPreview = (
   project: CanonicalProject,
   sb3: Blob,
   rawSource?: RawSb3Project,
-  options: { readonly autoPlaytest?: boolean } = {},
+  options: { readonly autoPlaytest?: boolean; readonly readerOptions?: ReaderOptions } = {},
 ): void => {
   cancelActiveStudentPlaytest?.()
   cancelActiveStudentPlaytest = null
@@ -1959,6 +2079,27 @@ const renderStudentPreview = (
   previewColumn.className = 'student-preview-main'
 
   previewColumn.append(stageFrame)
+
+  const authorInstructions = options.readerOptions?.authorInstructions?.trim()
+  const notesAndCredits = options.readerOptions?.notesAndCredits?.trim()
+  if (authorInstructions || notesAndCredits) {
+    const authorDetails = document.createElement('details')
+    authorDetails.className = 'student-author-notes'
+    const authorSummary = document.createElement('summary')
+    authorSummary.textContent = 'Scratch 作者說明'
+    authorDetails.append(authorSummary)
+    if (authorInstructions) {
+      const instructions = document.createElement('p')
+      instructions.textContent = `操作說明：${authorInstructions}`
+      authorDetails.append(instructions)
+    }
+    if (notesAndCredits) {
+      const notes = document.createElement('p')
+      notes.textContent = `備註：${notesAndCredits}`
+      authorDetails.append(notes)
+    }
+    previewColumn.append(authorDetails)
+  }
 
   // AI editing and progress sit beside the stage, where the student is looking while playing.
   const sideColumn = document.createElement('div')
@@ -2109,7 +2250,32 @@ const renderStudentPreview = (
 
   playtestStatus.textContent = '作品執行後會自動檢查按鍵與遊戲進度。'
 
-  previewActions.append(startAnimation, stopAnimation, playtestButton, playtestStatus)
+  const visualDownloadActions = document.createElement('div')
+  visualDownloadActions.className = 'button-row student-preview-visual-actions'
+  const downloadStageImage = document.createElement('button')
+  downloadStageImage.type = 'button'
+  downloadStageImage.className = 'button secondary'
+  downloadStageImage.textContent = '下載舞台截圖'
+  downloadStageImage.addEventListener('click', () => {
+    studentStageCanvas.toBlob((blob) => {
+      if (blob) download(blob, `${project.name || 'scratch-project'}-舞台.png`)
+    }, 'image/png')
+  })
+  const downloadCostumeCollage = document.createElement('button')
+  downloadCostumeCollage.type = 'button'
+  downloadCostumeCollage.className = 'button secondary'
+  downloadCostumeCollage.textContent = '下載造型一覽圖'
+  downloadCostumeCollage.addEventListener('click', () => {
+    void createCostumeCollageDataUrl(project).then((dataUrl) => {
+      if (!dataUrl) return
+      const comma = dataUrl.indexOf(',')
+      if (comma < 0) return
+      const bytes = Uint8Array.from(atob(dataUrl.slice(comma + 1)), (character) => character.charCodeAt(0))
+      download(new Blob([bytes], { type: 'image/png' }), `${project.name || 'scratch-project'}-造型一覽.png`)
+    })
+  })
+  visualDownloadActions.append(downloadStageImage, downloadCostumeCollage)
+  previewActions.append(startAnimation, stopAnimation, playtestButton, playtestStatus, visualDownloadActions)
 
   previewColumn.append(previewActions)
 
@@ -2249,7 +2415,7 @@ const renderStudentPreview = (
   visionLabel.className = 'ai-remember'
   const visionCheckbox = document.createElement('input')
   visionCheckbox.type = 'checkbox'
-  visionLabel.append(visionCheckbox, ' 這個模型看得懂圖片（送出目前舞台截圖）')
+  visionLabel.append(visionCheckbox, ' 這個模型看得懂圖片（送出舞台截圖和造型一覽圖）')
   const localAiActions = document.createElement('div')
   localAiActions.className = 'button-row'
   const localAiGenerateButton = document.createElement('button')
@@ -2706,11 +2872,21 @@ const renderStudentPreview = (
         cache: 'no-store',
       }).catch(() => undefined)
   }
-  const handleMcpToolRequest = (request: unknown): unknown => {
+  const handleMcpToolRequest = async (request: unknown): Promise<unknown> => {
     if (typeof request !== 'object' || request === null || Array.isArray(request))
       throw new Error('MCP relay 傳來無效的工具要求。')
     const { tool, arguments: args } = request as { tool?: unknown; arguments?: unknown }
     if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('MCP 工具參數格式錯誤。')
+    if (
+      tool === 'ask_student' &&
+      typeof (args as { question?: unknown }).question === 'string' &&
+      Array.isArray((args as { choices?: unknown }).choices)
+    ) {
+      const choices = (args as { choices: unknown[] }).choices.filter(
+        (choice): choice is string => typeof choice === 'string',
+      )
+      return { answer: await askStudent((args as { question: string }).question, choices) }
+    }
     if (rawAi) {
       if (tool === 'inspect_project')
         return {
@@ -2804,7 +2980,7 @@ const renderStudentPreview = (
           let result: unknown
           let error: string | undefined
           try {
-            result = handleMcpToolRequest(request)
+            result = await handleMcpToolRequest(request)
           } catch (toolError) {
             error = toolError instanceof Error ? toolError.message : String(toolError)
           }
@@ -2876,6 +3052,52 @@ const renderStudentPreview = (
       '已複製目前作品的即時修改指令',
     )
   })
+  const askStudent = async (question: string, choices: readonly string[]): Promise<string | null> => {
+    const dialog = document.createElement('dialog')
+    dialog.className = 'ai-question-dialog'
+    const heading = document.createElement('h3')
+    heading.textContent = 'AI 想確認一件事'
+    const prompt = document.createElement('p')
+    prompt.textContent = question
+    const actions = document.createElement('div')
+    actions.className = 'button-row'
+    const safeChoices = [...new Set(choices)].filter((choice) => choice.trim()).slice(0, 8)
+    const fallbackChoices =
+      safeChoices.length > 0 ? safeChoices : project.sprites.map((sprite) => sprite.name).slice(0, 8)
+    let settled = false
+    return new Promise((resolve) => {
+      const finish = (answer: string | null): void => {
+        if (settled) return
+        settled = true
+        dialog.close()
+        dialog.remove()
+        if (answer && project.sprites.some((sprite) => sprite.name === answer)) {
+          pickedTargetName = answer
+          stagePickHint.textContent = `已選取：${answer}。下一次送出 AI 要求時會附上「我指的是：${answer}」。`
+        }
+        resolve(answer)
+      }
+      for (const choice of fallbackChoices) {
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'button secondary'
+        button.textContent = choice
+        button.addEventListener('click', () => finish(choice))
+        actions.append(button)
+      }
+      const cancel = document.createElement('button')
+      cancel.type = 'button'
+      cancel.className = 'button secondary'
+      cancel.textContent = '取消這次修改'
+      cancel.addEventListener('click', () => finish(null))
+      actions.append(cancel)
+      dialog.addEventListener('cancel', () => finish(null), { once: true })
+      dialog.append(heading, prompt, actions)
+      document.body.append(dialog)
+      dialog.showModal()
+    })
+  }
+
   localAiGenerateButton.addEventListener('click', () => {
     void (async () => {
       if (localAiController.current) return
@@ -2898,10 +3120,23 @@ const renderStudentPreview = (
             signal: controller.signal,
             enableRawBlockInspection: true,
             ...(gatewayToken ? { fetchImpl: gatewayFetch } : {}),
-            onToolCall: (name, argumentsJson) => {
+            onToolCall: async (name, argumentsJson) => {
               try {
                 if (name === 'inspect_project') return { output: adapter.inspect() }
                 const args: unknown = JSON.parse(argumentsJson)
+                if (
+                  name === 'ask_student' &&
+                  typeof args === 'object' &&
+                  args !== null &&
+                  typeof (args as { question?: unknown }).question === 'string' &&
+                  Array.isArray((args as { choices?: unknown }).choices)
+                ) {
+                  const choices = (args as { choices: unknown[] }).choices.filter(
+                    (choice): choice is string => typeof choice === 'string',
+                  )
+                  const answer = await askStudent((args as { question: string }).question, choices)
+                  return { output: JSON.stringify({ answer }) }
+                }
                 if (name === 'inspect_raw_blocks') return { output: JSON.stringify(adapter.inspectBlocks(args)) }
                 if (name === 'inspect_raw_targets') return { output: JSON.stringify(adapter.inspectTargets(args)) }
                 if (name === 'inspect_raw_variables')
@@ -2961,29 +3196,44 @@ const renderStudentPreview = (
       livePatchStatus.textContent = '正在把目前作品的精簡結構與修改要求送到你設定的模型…'
       const finish = watchLocalAi()
       try {
+        const imageDataUrls: string[] = []
+        if (visionCheckbox.checked) {
+          try {
+            const stageImage = studentStageCanvas.toDataURL('image/png')
+            if (stageImage.length <= 2_000_000) imageDataUrls.push(stageImage)
+            const collage = await createCostumeCollageDataUrl(liveProject)
+            if (collage) imageDataUrls.push(collage)
+          } catch {
+            // Vision is optional; a browser canvas failure must not block a text-only patch request.
+          }
+        }
         const response = await requestOpenAiCompatiblePatch({
           baseUrl: localAiBaseUrl.value,
           model: localAiModel.value,
           apiKey: localAiKey.value,
           instruction: inspectProjectForAi(liveProject, liveRevision),
           request: `${pickedTargetName ? `我指的是角色「${pickedTargetName}」。` : ''}${localAiRequest.value}`,
-          ...(visionCheckbox.checked
-            ? (() => {
-                try {
-                  const imageDataUrl = studentStageCanvas.toDataURL('image/png')
-                  return imageDataUrl.length <= 2_000_000 ? { imageDataUrl } : {}
-                } catch {
-                  return {}
-                }
-              })()
-            : {}),
+          ...(imageDataUrls.length > 0 ? { imageDataUrl: imageDataUrls } : {}),
           signal: controller.signal,
           ...(gatewayToken ? { fetchImpl: gatewayFetch } : {}),
-          onToolCall: (name, argumentsJson) => {
+          onToolCall: async (name, argumentsJson) => {
             try {
               const args: unknown = JSON.parse(argumentsJson)
               if (name === 'inspect_project') {
                 return { output: inspectProjectForAi(liveProject, liveRevision) }
+              }
+              if (
+                name === 'ask_student' &&
+                typeof args === 'object' &&
+                args !== null &&
+                typeof (args as { question?: unknown }).question === 'string' &&
+                Array.isArray((args as { choices?: unknown }).choices)
+              ) {
+                const choices = (args as { choices: unknown[] }).choices.filter(
+                  (choice): choice is string => typeof choice === 'string',
+                )
+                const answer = await askStudent((args as { question: string }).question, choices)
+                return { output: JSON.stringify({ answer }) }
               }
               if (name === 'propose_live_patch') {
                 if (
@@ -3386,7 +3636,7 @@ const renderStudentPreview = (
       return inverse
     }
     rawAi = {
-      inspect: () => inspectRawProjectForAi(currentRaw),
+      inspect: () => inspectRawProjectForAi(currentRaw, currentReaderOptions),
       revision: () => rawSb3Revision(currentRaw),
       readScript: (args) => {
         if (typeof args !== 'object' || args === null || Array.isArray(args)) throw new Error('程式查詢格式無效。')
@@ -3396,7 +3646,7 @@ const renderStudentPreview = (
         const currentRevision = rawSb3Revision(currentRaw)
         if (item.baseRevision !== currentRevision)
           throw new Error(`SB3 revision has changed (expected ${currentRevision})`)
-        const reader = readProjectForAi(currentRaw.projectJson, { entries: currentRaw.entries })
+        const reader = readProjectForAi(currentRaw.projectJson, { entries: currentRaw.entries }, currentReaderOptions)
         const section = reader.sections.find((candidate) => candidate.id === `script:${String(item.scriptId)}`)
         return { baseRevision: currentRevision, scriptId: item.scriptId, text: section?.text ?? null }
       },
@@ -3413,7 +3663,7 @@ const renderStudentPreview = (
         const currentRevision = rawSb3Revision(currentRaw)
         if (item.baseRevision !== currentRevision)
           throw new Error(`SB3 revision has changed (expected ${currentRevision})`)
-        const reader = readProjectForAi(currentRaw.projectJson, { entries: currentRaw.entries })
+        const reader = readProjectForAi(currentRaw.projectJson, { entries: currentRaw.entries }, currentReaderOptions)
         const query = item.query.toLocaleLowerCase('zh-TW')
         const matches = reader.sections
           .flatMap((section) => section.text.split('\n').map((line) => ({ section: section.id, line })))
@@ -7174,7 +7424,7 @@ const renderAnalysis = () => {
   normalizeVmSb3.disabled = rawArchive === null
 }
 
-const analyzeFile = async (file: File): Promise<string | undefined> => {
+const analyzeFile = async (file: File, readerOptions: ReaderOptions = {}): Promise<string | undefined> => {
   vmNormalizationGeneration += 1
 
   projectScore = null
@@ -7196,6 +7446,7 @@ const analyzeFile = async (file: File): Promise<string | undefined> => {
   vmNormalizationOutput.textContent = '尚未執行 VM 正規化'
 
   sourceArchiveFilename = file.name.replace(/\.sb3$/i, '') || 'scratch-project'
+  currentReaderOptions = readerOptions
 
   sourceBlockGraphs = []
 
@@ -7225,6 +7476,10 @@ const analyzeFile = async (file: File): Promise<string | undefined> => {
     canonicalBlockMappings = decompiled.canonicalBlockMappings
 
     rawArchive = decompiled.rawArchive
+    currentReaderOptions = {
+      ...readerOptions,
+      visualHints: await samplePngVisualHints(decompiled.rawArchive),
+    }
 
     sourceBlockGraphs = decompiled.rawBlockGraphs
 
@@ -7325,7 +7580,7 @@ const previewImported = async (): Promise<string | undefined> => {
 
     activateTab(byId<HTMLButtonElement>('generate-tab'))
 
-    renderStudentPreview(project, sb3, archive)
+    renderStudentPreview(project, sb3, archive, { readerOptions: currentReaderOptions })
     return undefined
   } catch (error) {
     const message = friendlyOpenError(error instanceof Error ? error.message : String(error))
@@ -7343,6 +7598,8 @@ previewImportedProject.addEventListener('click', () => {
 const fileInput = byId<HTMLInputElement>('sb3-file')
 const openFileInput = byId<HTMLInputElement>('open-sb3-file')
 const openFileStatus = byId<HTMLDivElement>('open-sb3-status')
+const scratchProjectUrl = byId<HTMLInputElement>('scratch-project-url')
+const openScratchUrlButton = byId<HTMLButtonElement>('open-scratch-url')
 const dropOverlay = byId<HTMLDivElement>('drop-overlay')
 const dropOverlayTitle = byId<HTMLElement>('drop-overlay-title')
 const generateTab = byId<HTMLButtonElement>('generate-tab')
@@ -7352,8 +7609,9 @@ const onGenerateTab = (): boolean => generateTab.getAttribute('aria-selected') =
  * Opens a student's own project. On the main tab it goes straight to the preview with the AI edit panel; on the
  * analysis tab it only runs the analysis there.
  * @param files - What was chosen or dropped; the first .sb3 is opened.
+ * @param readerOptions - Optional public Scratch metadata passed into the AI reader.
  */
-const openProjectFiles = async (files: readonly File[]): Promise<void> => {
+const openProjectFiles = async (files: readonly File[], readerOptions: ReaderOptions = {}): Promise<void> => {
   const forPreview = onGenerateTab()
   const status = forPreview ? openFileStatus : fileStatus
   const { file, note } = chooseProjectFile(files)
@@ -7370,7 +7628,7 @@ const openProjectFiles = async (files: readonly File[]): Promise<void> => {
   )
     return
   setStatus(status, `正在打開「${file.name}」…`)
-  const analyzeError = await analyzeFile(file)
+  const analyzeError = await analyzeFile(file, readerOptions)
   if (analyzeError) {
     setStatus(status, analyzeError, 'error')
     return
@@ -7397,6 +7655,44 @@ openFileInput.addEventListener('change', () => {
 })
 byId<HTMLButtonElement>('open-sb3-button').addEventListener('click', () => {
   openFileInput.click()
+})
+openScratchUrlButton.addEventListener('click', () => {
+  if (
+    studentPreviewHasEdits() &&
+    !window.confirm('目前的作品有改過。換成網址作品後，還沒下載的修改就不見了。要換嗎？')
+  )
+    return
+  openScratchUrlButton.disabled = true
+  setStatus(openFileStatus, '正在從 Scratch 公開伺服器下載作品與素材…')
+  void (async () => {
+    try {
+      const requestedUrl = scratchProjectUrl.value
+      const downloaded = await fetchPublicScratchProject(requestedUrl)
+      const file = new File([downloaded.blob], downloaded.fileName, { type: 'application/zip' })
+      await openProjectFiles([file], {
+        title: downloaded.title,
+        ...(downloaded.author ? { author: downloaded.author } : {}),
+        sourceUrl: downloaded.url,
+        license: downloaded.license,
+        ...(downloaded.instructions ? { authorInstructions: downloaded.instructions } : {}),
+        ...(downloaded.notes ? { notesAndCredits: downloaded.notes } : {}),
+      })
+      setStatus(openFileStatus, `已從 Scratch 讀取「${downloaded.title}」。原作品仍只保存在這個瀏覽器。`, 'ok')
+    } catch (error) {
+      const message =
+        error instanceof TypeError
+          ? 'Scratch 公開伺服器不允許這個網站直接讀取（CORS）。請用 CLI fetch 或 skill-scratch-site 下載後拖入 .sb3。'
+          : error instanceof Error
+            ? error.message
+            : String(error)
+      setStatus(openFileStatus, message, 'error')
+    } finally {
+      openScratchUrlButton.disabled = false
+    }
+  })()
+})
+scratchProjectUrl.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') openScratchUrlButton.click()
 })
 
 // Files can be dropped anywhere on the window. The overlay covers the page, including the cross-origin preview

@@ -73,6 +73,31 @@ describe('requestOpenAiCompatiblePatch when the request cannot be done', () => {
     expect(bodies[0].messages[0].content).toMatch(/不能新增圖片、造型/)
   })
 
+  it('sends both a stage image and a costume collage, and exposes ask_student', async () => {
+    const { bodies, fetchImpl } = recorder([
+      { finish_reason: 'stop', message: { role: 'assistant', content: '{}' } },
+    ])
+    await requestOpenAiCompatiblePatch({
+      baseUrl: 'http://127.0.0.1:1234/v1',
+      model: 'fake-model',
+      instruction: '作品結構',
+      request: '修改角色',
+      imageDataUrl: ['data:image/png;base64,stage', 'data:image/png;base64,costumes'],
+      fetchImpl,
+      onToolCall: () => ({ output: '{}' }),
+    })
+    const body = bodies[0] as unknown as {
+      messages: { content: unknown }[]
+      tools: { function: { name: string } }[]
+    }
+    expect(body.messages[1]?.content).toEqual([
+      { type: 'text', text: '修改角色' },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,stage' } },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,costumes' } },
+    ])
+    expect(body.tools.some((tool) => tool.function.name === 'ask_student')).toBe(true)
+  })
+
   it('shows the model explanation when it answers in words instead of a patch', async () => {
     const { fetchImpl } = recorder([
       { finish_reason: 'stop', message: { role: 'assistant', content: '作品裡沒有魚的造型，網頁不能新增圖片。' } },

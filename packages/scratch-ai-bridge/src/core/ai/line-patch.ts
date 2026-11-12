@@ -1,6 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-condition, @typescript-eslint/no-unsafe-assignment -- Lossless SB3 graphs are external JSON and must retain defensive runtime checks. */
 import type { RawSb3Project } from '../archive'
-import { encodeCanonicalScriptsToBlockGraph, extractProjectBlockGraphs, type ScratchTargetBlockPatch } from '../graph'
+import {
+  encodeCanonicalScriptsToBlockGraph,
+  extractProjectBlockGraphs,
+  isToleratedGraphIssue,
+  type ScratchTargetBlockPatch,
+} from '../graph'
 import type { CanonicalBlock } from '../ir/types'
 import { readProjectForAi } from '../reader'
 import { parseScratchblocks } from '../scratchblocks'
@@ -98,6 +103,152 @@ const firstParsedBlock = (source: string): CanonicalBlock => {
   const block = blocks[0]
   if (!block) throw new Error(`無法把這一行轉回 Scratch 積木：${source}`)
   return block
+}
+
+const toParserSource = (source: string): string =>
+  source
+    .split(/\r?\n/)
+    .map((line) => {
+      const raw = line.replace(/\t/g, '  ')
+      const indent = raw.length - raw.trimStart().length
+      const body = raw.trim()
+      if (!body || body.startsWith('###') || body === '```' || body.startsWith('//') || body.startsWith('#'))
+        return ''
+      return `${' '.repeat(indent)}${toParserText(body)}`
+    })
+    .filter(Boolean)
+    .join('\n')
+
+const referencedBlockIds = (node: RawNode, graph: Record<string, RawNode>): string[] => {
+  const references: string[] = []
+  const visit = (value: unknown): void => {
+    if (typeof value === 'string' && graph[value]) references.push(value)
+    else if (Array.isArray(value)) value.forEach(visit)
+  }
+  visit(node.next)
+  visit(node.inputs)
+  return references
+}
+
+const reachableScriptIds = (rootId: string, graph: Record<string, RawNode>): string[] => {
+  const result: string[] = []
+  const seen = new Set<string>()
+  const queue = [rootId]
+  while (queue.length > 0) {
+    const id = queue.shift()
+    if (!id || seen.has(id)) continue
+    const node = graph[id]
+    if (!node) continue
+    seen.add(id)
+    result.push(id)
+    queue.push(...referencedBlockIds(node, graph))
+  }
+  return result
+}
+
+const targetSymbolId = (target: Record<string, unknown>, collection: string, name: string): string => {
+  const values = isRecord(target[collection]) ? target[collection] : {}
+  const match = Object.entries(values).find(([, value]) => Array.isArray(value) && value[0] === name)
+  return match?.[0] ?? name
+}
+
+const broadcastSymbolId = (graph: Record<string, RawNode>, name: string): string => {
+  for (const node of Object.values(graph)) {
+    const field = node.fields?.BROADCAST_OPTION
+    if (Array.isArray(field) && field[0] === name && typeof field[1] === 'string') return field[1]
+    const input = node.inputs?.BROADCAST_INPUT
+    if (Array.isArray(input)) {
+      const values = input.flat(Infinity)
+      const nameIndex = values.findIndex((value) => value === name)
+      const id = nameIndex >= 0 ? values[nameIndex + 1] : undefined
+      if (typeof id === 'string') return id
+    }
+  }
+  return name
+}
+
+/**
+ * Compile one complete reader script back into an ID-preserving raw graph patch.
+ * @param project Imported lossless SB3 project.
+ * @param targetName Exact target name shown by the reader.
+ * @param scriptId Reader section ID (`script:<root-block-id>`).
+ * @param source Complete replacement script text.
+ * @returns A target-scoped graph patch replacing that script only.
+ */
+export const buildScriptPatch = (
+  project: RawSb3Project,
+  targetName: string,
+  scriptId: string,
+  source: string,
+): { patch: ScratchTargetBlockPatch; oldBlockCount: number; newBlockCount: number } => {
+  if (!targetName.trim() || targetName.length > 256) throw new Error('完整程式修改的 targetName 無效。')
+  if (!scriptId.trim() || scriptId.length > 256) throw new Error('完整程式修改的 scriptId 無效。')
+  if (!source.trim() || source.length > 12_000) throw new Error('完整程式文字不可為空，且不可超過 12,000 字元。')
+
+  const reader = readProjectForAi(project.projectJson, { entries: project.entries })
+  const section = reader.sections.find(
+    (candidate) => candidate.id === scriptId || candidate.id === `script:${scriptId}`,
+  )
+  if (!section?.id.startsWith('script:') || section.targetIndex === undefined)
+    throw new Error(`找不到讀本程式區段 ${scriptId}。`)
+  const rawTargets = Array.isArray(project.projectJson.targets) ? project.projectJson.targets : []
+  const target = rawTargets[section.targetIndex]
+  if (!isRecord(target) || target.name !== targetName) throw new Error('完整程式的 targetName 與讀本不符。')
+  const graphs = extractProjectBlockGraphs(project.projectJson)
+  const graph = graphs[section.targetIndex]
+  if (!graph) throw new Error('找不到完整程式所屬的積木圖。')
+  if (!graph.issues.every((issue) => isToleratedGraphIssue(issue, graph.blocks)))
+    throw new Error('完整程式所屬的積木圖有無法安全修復的問題。')
+
+  const rootId = section.id.slice('script:'.length)
+  if (!graph.blocks[rootId]) throw new Error(`找不到程式根積木 ${rootId}。`)
+  const oldIds = reachableScriptIds(rootId, graph.blocks)
+  const parsed = parseScratchblocks(toParserSource(source), { spriteName: targetName })
+  const script = parsed.project.sprites[0]?.scripts[0]
+  if (
+    parsed.warnings.length > 0 ||
+    parsed.skippedLines > 0 ||
+    !script ||
+    parsed.project.sprites[0]?.scripts.length !== 1 ||
+    script.blocks[0]?.opcode?.startsWith('event_') !== true
+  ) {
+    throw new Error(
+      `完整程式無法安全解析：${
+        [...parsed.warnings, parsed.skippedLines > 0 ? `跳過 ${parsed.skippedLines} 行` : '']
+          .filter(Boolean)
+          .join('；') || '必須包含一個可辨識的事件帽積木。'
+      }`,
+    )
+  }
+
+  const usedIds = new Set(Object.keys(graph.blocks))
+  const availableIds = [...oldIds]
+  let generated = 0
+  const encoded = encodeCanonicalScriptsToBlockGraph([script], {
+    nextId: () => {
+      const preserved = availableIds.shift()
+      if (preserved) return preserved
+      do generated += 1
+      while (usedIds.has(`sab_script_${generated.toString(36)}`))
+      return `sab_script_${generated.toString(36)}`
+    },
+    resolveVariable: (name) => targetSymbolId(target, 'variables', name),
+    resolveList: (name) => targetSymbolId(target, 'lists', name),
+    resolveBroadcast: (name) => broadcastSymbolId(graph.blocks, name),
+  })
+  const blocks: ScratchTargetBlockPatch['blocks'] = {}
+  for (const id of oldIds) if (!encoded[id]) blocks[id] = null
+  for (const [id, node] of Object.entries(encoded)) blocks[id] = node
+  return {
+    patch: {
+      targetIndex: section.targetIndex,
+      targetName,
+      isStage: graph.isStage,
+      blocks,
+    },
+    oldBlockCount: oldIds.length,
+    newBlockCount: Object.keys(encoded).length,
+  }
 }
 
 const compileBlock = (

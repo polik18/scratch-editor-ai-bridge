@@ -148,6 +148,65 @@ describe('raw SB3 AI proposal', () => {
     })
   })
 
+  it('replaces one complete reader script through a validated graph patch', async () => {
+    const zip = new JSZip()
+    zip.file(
+      'project.json',
+      JSON.stringify({
+        targets: [
+          {
+            name: 'Cat',
+            isStage: false,
+            variables: { score: ['score', 0] },
+            blocks: {
+              hat: {
+                opcode: 'event_whenflagclicked',
+                next: 'move',
+                parent: null,
+                inputs: {},
+                fields: {},
+                topLevel: true,
+              },
+              move: {
+                opcode: 'motion_movesteps',
+                next: null,
+                parent: 'hat',
+                inputs: { STEPS: [1, [4, 10]] },
+                fields: {},
+                topLevel: false,
+              },
+            },
+          },
+        ],
+      }),
+    )
+    const project = await importLosslessSb3(await zip.generateAsync({ type: 'uint8array' }))
+    const revision = rawSb3Revision(project)
+    const proposal = {
+      format: 'scratch-ai-bridge/raw-patch',
+      version: 1,
+      baseRevision: revision,
+      summary: '把角色移動距離改成 20',
+      change: {
+        kind: 'script',
+        targetName: 'Cat',
+        scriptId: 'script:hat',
+        text: '### 程式 script:hat\nL1 當綠旗被點擊\nL2 移動 20 點',
+      },
+    }
+    const candidate = proposeRawLivePatch(project, JSON.stringify(proposal))
+    const blocks = (candidate.project.projectJson as any).targets[0].blocks
+    expect(blocks.hat).toEqual(expect.objectContaining({ opcode: 'event_whenflagclicked', next: 'move' }))
+    expect(blocks.move).toEqual(
+      expect.objectContaining({
+        opcode: 'motion_movesteps',
+        parent: 'hat',
+        inputs: { STEPS: [1, [4, 20]] },
+      }),
+    )
+    expect(candidate.requiresVmValidation).toBe(true)
+  })
+
   it('edits targets with leftover issues Scratch tolerates, but rejects edits that add new issues', async () => {
     // A parameter reporter left behind after its parameter was removed is common in real projects and still runs.
     const zip = new JSZip()
