@@ -126,22 +126,25 @@ try {
   const fileInputId = fileInput.ELEMENT ?? fileInput['element-6066-11e4-a52e-4f735466cecf']
   let uploaded = false
   if (fileInputId) {
-    try {
-      await command('POST', `/element/${fileInputId}/value`, { text: fixturePath })
-      uploaded = await command('POST', '/execute/sync', {
-        script: `
-          const input = document.querySelector('#sb3-file');
-          return { name: input?.files?.[0]?.name, size: input?.files?.[0]?.size };
-        `,
-        args: [],
-      }).then((result) => result?.name === 'default.sb3' && result.size === fixtureBytes.byteLength)
-    } catch {
-      uploaded = false
+    for (const body of [{ text: fixturePath }, { value: fixturePath.split('') }]) {
+      if (uploaded) break
+      try {
+        await command('POST', `/element/${fileInputId}/value`, body)
+        uploaded = await command('POST', '/execute/sync', {
+          script: `
+            const input = document.querySelector('#sb3-file');
+            return { name: input?.files?.[0]?.name, size: input?.files?.[0]?.size };
+          `,
+          args: [],
+        }).then((result) => result?.name === 'default.sb3' && result.size === fixtureBytes.byteLength)
+      } catch {
+        uploaded = false
+      }
     }
   }
   if (!uploaded) {
-    // Some hosted Safari runners reject both WebDriver upload and DataTransfer;
-    // retain this fallback for engines that permit synthetic File assignment.
+    // Some hosted Safari runners reject WebDriver upload and DataTransfer;
+    // retain a FileList-shaped property fallback for those that permit it.
     uploaded = await command('POST', '/execute/sync', {
       script: `
         const input = document.querySelector('#sb3-file');
@@ -150,9 +153,14 @@ try {
         const bytes = new Uint8Array(binary.length);
         for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
         const file = new File([bytes], 'default.sb3', { type: 'application/zip' });
-        const transfer = new DataTransfer();
-        transfer.items.add(file);
-        input.files = transfer.files;
+        const files = { 0: file, length: 1, item: (index) => (index === 0 ? file : null) };
+        try {
+          Object.defineProperty(input, 'files', { configurable: true, value: files });
+        } catch {
+          const transfer = new DataTransfer();
+          transfer.items.add(file);
+          input.files = transfer.files;
+        }
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
         return { name: input.files[0]?.name, size: input.files[0]?.size };
