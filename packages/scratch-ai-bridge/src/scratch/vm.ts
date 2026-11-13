@@ -436,14 +436,13 @@ export const createPreviewVM = async (
   try {
     const vm = asInternalVM(await createVM())
     const { default: ScratchAudio } = await import('scratch-audio')
-    const audioEngine = new ScratchAudio()
     // scratch-audio uses startaudiocontext, whose gesture listener calls
     // AudioContext.resume() without observing the returned Promise. Firefox
     // can deliver that gesture after the preview has been stopped and the
     // context has been closed, which otherwise becomes an unhandled
     // `InvalidStateError` in the embedding page. Keep the original Promise
     // semantics for callers, but mark teardown-time rejections as handled.
-    const audioContext = audioEngine.audioContext
+    const audioContext = new AudioContext()
     const originalResume = audioContext.resume.bind(audioContext)
     Object.defineProperty(audioContext, 'resume', {
       configurable: true,
@@ -460,6 +459,12 @@ export const createPreviewVM = async (
         }
       },
     })
+    const audioEngine = new (
+      ScratchAudio as unknown as new (audioContext: AudioContext) => {
+        audioContext: AudioContext
+        decodeSoundPlayer(sound: unknown): Promise<unknown>
+      }
+    )(audioContext)
     const decodeSoundPlayer = audioEngine.decodeSoundPlayer.bind(audioEngine)
     audioEngine.decodeSoundPlayer = (sound: unknown) => {
       const soundRecord = sound as { data?: { buffer?: unknown } }

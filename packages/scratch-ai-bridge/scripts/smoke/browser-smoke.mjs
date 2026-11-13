@@ -391,7 +391,9 @@ try {
   })
   page.on('requestfailed', (request) => {
     const errorText = request.failure()?.errorText ?? ''
-    if (errorText === 'net::ERR_ABORTED' && expectedNavigationAbort.test(request.url())) return
+    const expectedPreviewTeardownFailure =
+      errorText === 'net::ERR_ABORTED' || (browserName === 'firefox' && errorText === 'NS_ERROR_FAILURE')
+    if (expectedPreviewTeardownFailure && expectedNavigationAbort.test(request.url())) return
     failures.push(`request failed: ${request.url()} ${errorText}`)
   })
 
