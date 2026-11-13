@@ -28,17 +28,27 @@ if (
 const browserTypes = { chromium, firefox, webkit }
 const browserType = browserTypes[browserName]
 
-const readCanvasPng = async (canvasLocator) => {
-  // Firefox/WebKit WebGL canvases may have preserveDrawingBuffer disabled;
-  // toDataURL can then return a solid buffer even when the visible canvas is
-  // rendered correctly. Playwright captures the compositor output reliably
-  // for those engines, while Chromium uses the direct read to avoid redraw
-  // stability waits.
-  if (browserName !== 'chromium') return canvasLocator.screenshot({ animations: 'disabled' })
-  const dataUrl = await canvasLocator.evaluate((canvas) => canvas.toDataURL('image/png'))
-  const separator = dataUrl.indexOf(',')
-  if (separator < 0) throw new Error('Canvas did not return a PNG data URL')
-  return Buffer.from(dataUrl.slice(separator + 1), 'base64')
+const readCanvasPng = async (page, canvasLocator) => {
+  // A WebGL canvas can return a solid buffer from toDataURL when
+  // preserveDrawingBuffer is disabled, even though the compositor visibly
+  // rendered the fallback. Clip the page screenshot to the canvas bounds so
+  // Playwright does not wait for a continuously redrawing canvas to stabilize.
+  await canvasLocator.evaluate((canvas) => canvas.scrollIntoView({ block: 'center', inline: 'nearest' }))
+  const box = await canvasLocator.boundingBox()
+  if (!box || box.width <= 0 || box.height <= 0) throw new Error('Canvas did not expose a capturable bounding box')
+  const viewport = page.viewportSize()
+  if (!viewport) throw new Error('Page did not expose a viewport size')
+  const x = Math.max(0, box.x)
+  const y = Math.max(0, box.y)
+  const right = Math.min(viewport.width, box.x + box.width)
+  const bottom = Math.min(viewport.height, box.y + box.height)
+  if (right <= x || bottom <= y)
+    throw new Error(`Canvas is outside the viewport: ${JSON.stringify({ box, viewport })}`)
+  return page.screenshot({
+    animations: 'disabled',
+    clip: { x, y, width: right - x, height: bottom - y },
+    timeout: 15_000,
+  })
 }
 
 const clickStudentPreviewStart = async (page) => {
@@ -785,7 +795,7 @@ try {
     // The VM redraws this canvas continuously. Read the same-origin canvas
     // bitmap directly so Playwright does not wait for a moving canvas to
     // become stable before taking a screenshot or translate iframe bounds.
-    const png = await readCanvasPng(animationCanvas)
+    const png = await readCanvasPng(damagedSvgPage, animationCanvas)
     const pixels = await damagedSvgPage.evaluate(
       async (pngBytes) => {
         const bitmap = await createImageBitmap(new Blob([new Uint8Array(pngBytes)], { type: 'image/png' }))
@@ -898,6 +908,7 @@ try {
     throw new Error('Missing-costume animation preview did not start with its fallback asset')
   }
   const missingFallbackPng = await readCanvasPng(
+    firstImportPage,
     firstImportPage.frameLocator('#student-preview iframe.student-preview-animation').locator('canvas'),
   )
   const missingFallbackPixels = await firstImportPage.evaluate(
@@ -1001,6 +1012,7 @@ try {
     throw new Error('Checksum-mismatch animation preview did not start with its fallback asset')
   }
   const corruptFallbackPng = await readCanvasPng(
+    corruptImportPage,
     corruptImportPage.frameLocator('#student-preview iframe.student-preview-animation').locator('canvas'),
   )
   const corruptFallbackPixels = await corruptImportPage.evaluate(
