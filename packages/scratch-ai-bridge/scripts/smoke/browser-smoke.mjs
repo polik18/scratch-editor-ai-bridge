@@ -1383,6 +1383,14 @@ try {
     throw new Error(`Schema and semantic issues were not reported together: ${JSON.stringify(mixedReport.checks)}`)
   }
   await page.locator('#copy-repair-prompt').click()
+  await page.waitForFunction(
+    () => {
+      const value = globalThis.__scratchAiBridgeClipboard
+      return typeof value === 'string' && value.includes('"/name"') && value.includes('unknown-broadcast')
+    },
+    null,
+    { timeout: 5_000 },
+  )
   const mixedPrompt = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
   if (
     typeof mixedPrompt !== 'string' ||
