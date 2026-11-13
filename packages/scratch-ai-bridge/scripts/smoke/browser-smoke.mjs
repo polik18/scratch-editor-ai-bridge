@@ -5050,7 +5050,6 @@ try {
   // leave the VM's resume queue wedged indefinitely. Keep the bitmap adapter
   // coverage in the same browser, but give it a fresh student page so the
   // result measures compilation rather than accumulated preview state.
-  const mainStudentPage = page
   if (browserName === 'firefox' && process.env.BROWSER_HEADLESS === 'false') {
     page = await browser.newPage({ acceptDownloads: true })
     await page.goto(`http://127.0.0.1:${address.port}${sitePrefix}`, { waitUntil: 'networkidle' })
@@ -5184,9 +5183,6 @@ try {
     const canvas = document.querySelector('#student-preview .student-preview-canvas')
     return canvas instanceof HTMLCanvasElement && !canvas.hidden
   })
-  if (page !== mainStudentPage) {
-    await mainStudentPage.close()
-  }
   await page.locator('button[data-tab="analyze"]').click()
   const benchmarkProject = structuredClone(downloadedProject)
   const benchmarkTarget = benchmarkProject.targets.find((target) => !target.isStage)
