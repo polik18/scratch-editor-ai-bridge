@@ -53,6 +53,14 @@ const clickStudentBuild = async (page) => {
   // skipping only Playwright's stability precheck in that lane.
   await page.locator('#student-build').click({ force: process.env.BROWSER_HEADLESS === 'false' })
 }
+const waitForStudentBuildStatus = async (page) => {
+  // Headed Firefox under xvfb can take longer to finish a Scratch 2 bitmap
+  // adapter compile after the malformed-asset preview sequence. This is still
+  // a bounded functional wait; Chromium, WebKit, and headless Firefox keep the
+  // normal timeout.
+  const timeout = browserName === 'firefox' && process.env.BROWSER_HEADLESS === 'false' ? 90_000 : 30_000
+  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor({ timeout })
+}
 if (!browserType) throw new Error(`Unsupported BROWSER value: ${browserName}`)
 
 const sitePrefix = '/scratch-editor-ai-bridge/'
@@ -1743,7 +1751,7 @@ try {
     const status = document.querySelector('#generate-status')
     return status?.textContent?.includes('無法完成這份作品') || status?.textContent?.includes('已開始下載')
   })
-  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
+  await waitForStudentBuildStatus(page)
   if ((await page.locator('#generate-status').getAttribute('data-kind')) !== 'error') {
     throw new Error(
       `Malformed SVG did not fail browser compilation: ${await page.locator('#generate-status').textContent()}`,
@@ -2121,7 +2129,7 @@ try {
 
   await page.locator('#json-editor').fill(await readFile(geminiMixedResponsePath, 'utf8'))
   await page.locator('#repair').click()
-  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
+  await waitForStudentBuildStatus(page)
   const mixedResponseRepaired = (await page.locator('#generate-status').textContent())?.trim()
   if ((await page.locator('#generate-status').getAttribute('data-kind')) === 'error') {
     throw new Error(`Mixed AI response repair failed: ${mixedResponseRepaired}`)
@@ -2131,7 +2139,7 @@ try {
     throw new Error(`Mixed AI response selected the wrong JSON candidate: ${mixedResponseProject.name}`)
   }
   await page.locator('#validate').click()
-  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
+  await waitForStudentBuildStatus(page)
   if ((await page.locator('#generate-status').getAttribute('data-kind')) === 'error') {
     throw new Error(
       `Extracted AI response validation failed: ${await page.locator('#generate-status').textContent()}`,
@@ -2831,7 +2839,7 @@ try {
   }
   const repairLoopDownloadPromise = page.waitForEvent('download')
   await page.locator('#compile').click()
-  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
+  await waitForStudentBuildStatus(page)
   if ((await page.locator('#generate-status').getAttribute('data-kind')) !== 'ok') {
     throw new Error(`Corrected response did not compile: ${await page.locator('#generate-status').textContent()}`)
   }
@@ -2881,7 +2889,7 @@ try {
   previewPlayer.currentCostume = 1
   await page.locator('#json-editor').fill(JSON.stringify(previewProject))
   await page.locator('#validate').click()
-  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
+  await waitForStudentBuildStatus(page)
   const platformValidated = (await page.locator('#generate-status').textContent())?.trim()
   if ((await page.locator('#generate-status').getAttribute('data-kind')) === 'error') {
     throw new Error(`Platformer sample validation failed: ${platformValidated}`)
@@ -2889,7 +2897,7 @@ try {
 
   const downloadPromise = page.waitForEvent('download').catch((error) => error)
   await page.locator('#student-build').click()
-  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
+  await waitForStudentBuildStatus(page)
 
   const generated = (await page.locator('#generate-status').textContent())?.trim()
   const generateKind = await page.locator('#generate-status').getAttribute('data-kind')
@@ -5034,7 +5042,7 @@ try {
   bitmapPlayer.currentCostume = 0
   await page.locator('#json-editor').fill(JSON.stringify(bitmapProject))
   await clickStudentBuild(page)
-  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
+  await waitForStudentBuildStatus(page)
   if ((await page.locator('#generate-status').getAttribute('data-kind')) !== 'ok') {
     throw new Error(
       `Scratch 2 bitmap adapter preview failed: ${await page.locator('#generate-status').textContent()}`,
@@ -5120,7 +5128,7 @@ try {
   await page.locator('#json-editor').fill(officialBitmapCanonical)
   const officialBitmapDownloadPromise = page.waitForEvent('download')
   await clickStudentBuild(page)
-  await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor()
+  await waitForStudentBuildStatus(page)
   if ((await page.locator('#generate-status').getAttribute('data-kind')) !== 'ok') {
     throw new Error(
       `Official bitmap-bearing Scratch project did not recompile: ${await page.locator('#generate-status').textContent()}`,
