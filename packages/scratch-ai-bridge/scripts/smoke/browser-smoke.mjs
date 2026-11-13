@@ -51,6 +51,35 @@ const readCanvasPng = async (page, canvasLocator) => {
   })
 }
 
+const waitForCopiedText = async (page, fragments) => {
+  await page.waitForFunction(
+    (expected) => {
+      const fallback = document.querySelector('#clipboard-fallback-text')
+      const candidates = [
+        globalThis.__scratchAiBridgeClipboard,
+        fallback && 'value' in fallback ? fallback.value : undefined,
+      ]
+      return candidates.some(
+        (value) => typeof value === 'string' && expected.every((fragment) => value.includes(fragment)),
+      )
+    },
+    fragments,
+    { timeout: 5_000 },
+  )
+  return page.evaluate((expected) => {
+    const fallback = document.querySelector('#clipboard-fallback-text')
+    const candidates = [
+      globalThis.__scratchAiBridgeClipboard,
+      fallback && 'value' in fallback ? fallback.value : undefined,
+    ]
+    return (
+      candidates.find(
+        (value) => typeof value === 'string' && expected.every((fragment) => value.includes(fragment)),
+      ) ?? ''
+    )
+  }, fragments)
+}
+
 const clickStudentPreviewStart = async (page) => {
   await page
     .locator('#student-preview .student-preview-actions button')
@@ -1383,15 +1412,7 @@ try {
     throw new Error(`Schema and semantic issues were not reported together: ${JSON.stringify(mixedReport.checks)}`)
   }
   await page.locator('#copy-repair-prompt').click()
-  await page.waitForFunction(
-    () => {
-      const value = globalThis.__scratchAiBridgeClipboard
-      return typeof value === 'string' && value.includes('"/name"') && value.includes('unknown-broadcast')
-    },
-    null,
-    { timeout: 5_000 },
-  )
-  const mixedPrompt = await page.evaluate(() => globalThis.__scratchAiBridgeClipboard)
+  const mixedPrompt = await waitForCopiedText(page, ['"/name"', 'unknown-broadcast'])
   if (
     typeof mixedPrompt !== 'string' ||
     !mixedPrompt.includes('"/name"') ||
