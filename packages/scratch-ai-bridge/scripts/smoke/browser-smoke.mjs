@@ -29,6 +29,12 @@ const browserTypes = { chromium, firefox, webkit }
 const browserType = browserTypes[browserName]
 
 const readCanvasPng = async (canvasLocator) => {
+  // Firefox/WebKit WebGL canvases may have preserveDrawingBuffer disabled;
+  // toDataURL can then return a solid buffer even when the visible canvas is
+  // rendered correctly. Playwright captures the compositor output reliably
+  // for those engines, while Chromium uses the direct read to avoid redraw
+  // stability waits.
+  if (browserName !== 'chromium') return canvasLocator.screenshot({ animations: 'disabled' })
   const dataUrl = await canvasLocator.evaluate((canvas) => canvas.toDataURL('image/png'))
   const separator = dataUrl.indexOf(',')
   if (separator < 0) throw new Error('Canvas did not return a PNG data URL')
