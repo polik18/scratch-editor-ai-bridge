@@ -5185,8 +5185,7 @@ try {
     return canvas instanceof HTMLCanvasElement && !canvas.hidden
   })
   if (page !== mainStudentPage) {
-    await page.close()
-    page = mainStudentPage
+    await mainStudentPage.close()
   }
   await page.locator('button[data-tab="analyze"]').click()
   const benchmarkProject = structuredClone(downloadedProject)
