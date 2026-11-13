@@ -64,11 +64,11 @@ const clickStudentBuild = async (page) => {
   await page.locator('#student-build').click({ force: process.env.BROWSER_HEADLESS === 'false' })
 }
 const waitForStudentBuildStatus = async (page) => {
-  // Headed Firefox under xvfb can take longer to finish a Scratch 2 bitmap
-  // adapter compile after the malformed-asset preview sequence. This is still
-  // a bounded functional wait; Chromium, WebKit, and headless Firefox keep the
-  // normal timeout.
-  const timeout = browserName === 'firefox' && process.env.BROWSER_HEADLESS === 'false' ? 90_000 : 30_000
+  // Headed Firefox under xvfb can take much longer to finish a Scratch 2
+  // bitmap adapter compile after the malformed-asset preview sequence. This
+  // is still a bounded functional wait; Chromium, WebKit, and headless
+  // Firefox keep the normal timeout.
+  const timeout = browserName === 'firefox' && process.env.BROWSER_HEADLESS === 'false' ? 180_000 : 30_000
   await page.locator('#generate-status[data-kind="ok"], #generate-status[data-kind="error"]').waitFor({ timeout })
 }
 if (!browserType) throw new Error(`Unsupported BROWSER value: ${browserName}`)
