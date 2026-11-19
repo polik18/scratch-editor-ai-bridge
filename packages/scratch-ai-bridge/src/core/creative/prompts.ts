@@ -62,8 +62,30 @@ export const outlineProject = (project: CanonicalProject | undefined): string =>
   ].join('\n')
 }
 
+/** Brief characters later slices still see verbatim; the rest is summarised by the anchors. */
+const LATER_SLICE_BRIEF = 240
+
 /**
- * Stage C: implement one slice on top of the current project.
+ * The work's intent in compact form for slices after the core: the anchors plus the opening of the brief.
+ * @param brief Stage A text.
+ * @param anchors Extracted anchors.
+ * @returns A short summary.
+ */
+export const compactBrief = (brief: string, anchors: IntentAnchors): string => {
+  const text = brief.trim().replace(/\s+/g, ' ')
+  const opening = text.length > LATER_SLICE_BRIEF ? `${text.slice(0, LATER_SLICE_BRIEF)}…` : text
+  return [
+    `類型：${anchors.projectType}${anchors.audience ? `；對象：${anchors.audience}` : ''}`,
+    ...(anchors.characters.length ? [`角色：${anchors.characters.join('、')}`] : []),
+    ...(anchors.scenes.length ? [`場景：${anchors.scenes.join('、')}`] : []),
+    `構想開頭：${opening}`,
+  ].join('\n')
+}
+
+/**
+ * Stage C: implement one slice on top of the current project. The core slice sees the whole brief and the
+ * approximation decisions; later slices see a compact summary, the current outline and only their own cards, which
+ * keeps every call small.
  * @param input Brief, anchors, slice, current project and the last runtime feedback.
  * @param input.brief Stage A text.
  * @param input.anchors Extracted anchors.
@@ -78,21 +100,23 @@ export const createSlicePrompt = (input: {
   readonly slice: ProjectSlice
   readonly project?: CanonicalProject
   readonly feedback?: readonly string[]
-}): string => `我們正在分段完成這個 Scratch 作品。這一次只做一段。
+}): string => {
+  const first = !input.project
+  return `我們正在分段完成這個 Scratch 作品。這一次只做一段。
 
-作品構想：
-${input.brief.trim()}
+${first ? `作品構想：\n${input.brief.trim()}` : `作品重點：\n${compactBrief(input.brief, input.anchors)}`}
 
 目前的作品：
 ${outlineProject(input.project)}
 
 這一段要做：${input.slice.goal}
-${input.feedback?.length ? `\n上一次執行時發現：\n${input.feedback.map((line) => `- ${line}`).join('\n')}\n請修正這些問題。\n` : ''}${decisionsText(input.anchors)}
+${input.feedback?.length ? `\n上一次執行時發現：\n${input.feedback.map((line) => `- ${line}`).join('\n')}\n請修正這些問題。\n` : ''}${first ? decisionsText(input.anchors) : ''}
 可用的積木寫法：
 ${renderCards(selectCards(input.slice.features.length ? input.slice.features : input.anchors.features))}
 
-只輸出這一段要新增的角色段落；要改寫既有角色時，在段落名稱後加 (replace) 並寫出該角色完整的新程式。
+只輸出這一段要新增的角色段落；要改寫既有角色時，在段落名稱後加 (replace) 並寫出該角色完整的新程式，保留它原本已經做好的功能。
 ${outputRules}`
+}
 
 /**
  * Minimal repair prompt: only the failing lines/checks, not the whole spec again.

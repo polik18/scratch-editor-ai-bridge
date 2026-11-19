@@ -3,6 +3,7 @@ import {
   applyFragment,
   createFreeCreationPrompt,
   createProjectPlan,
+  createSlicePrompt,
   createTranslationPrompt,
   EMPTY_STATE,
   extractIntentAnchors,
@@ -271,5 +272,25 @@ describe('regression guard between slices', () => {
     expect(JSON.stringify(result.project?.sprites.find(({ name }) => name === '鯊魚'))).toContain(
       'sensing_keypressed',
     )
+  })
+})
+
+describe('compact later slices', () => {
+  it('sends the whole brief only to the core slice', () => {
+    // Real stage-A briefs run ~500 characters; put the detail late so only the core slice carries it.
+    const longBrief = `${'海底的光線慢慢變暗，小魚成群游過珊瑚礁，鯊魚在遠處巡游。'.repeat(8)}${brief}`
+    const anchors = extractIntentAnchors(request, longBrief)
+    const plan = createProjectPlan(anchors)
+    const project = applyFragment(EMPTY_STATE, core, 'fish').state.project
+    const [coreSlice, later] = plan.slices
+    if (!project) throw new Error('fixture project is missing')
+    const first = createSlicePrompt({ brief: longBrief, anchors, slice: coreSlice })
+    const next = createSlicePrompt({ brief: longBrief, anchors, slice: later, project })
+    expect(first).toContain('拖曳海草裝飾')
+    expect(first).toContain('// 近似')
+    expect(next).not.toContain('拖曳海草裝飾')
+    expect(next).toContain('角色：')
+    expect(next).toContain('保留它原本已經做好的功能')
+    expect(next.length).toBeLessThan(first.length)
   })
 })

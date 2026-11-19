@@ -477,6 +477,8 @@ finalScore = round((1 - relativeWeight) × absoluteBand + relativeWeight × coho
 
 ## 7. 交接紀錄（新的寫在最上面）
 
+- **2026-11-20 Claude Code（縮小 C 階段上下文）**：依計畫「優先縮小該階段的上下文」，後段切片改送 `compactBrief`（類型、對象、角色、場景、構想開頭 240 字），完整構想與近似決策只在核心段出現，`(replace)` 段落被要求保留既有功能。同模型 r4（只跑 a-b-c，10 題）：後段每次提示 −22%、單次最長 2920→2389、建置／實際執行 10/10、媒體種類 3.5，意圖（需求）0.67，與 r1／r3 的 0.70／0.72 在輪間變異內，故採用。r4 期間 oMLX 被另一個工作階段暫停跑 TTS，4 題在恢復後重跑合併。`main` 已 push 到 `b56d54425e`；本次改善與文件另行 commit。vitest 111 檔／867 項通過。
+
 - **2026-11-19 Claude Code（V2-12 準備）**：新增 `calibrate prepare <作品資料夾> --rubric … --out … [--teachers T1,T2] --playtest`：匿名複製作品、每位老師一份空白評分表、依 rubric 產生 `評分說明.md`，系統分數另放 `auto-report/`，老師拿到的資料夾不含任何自動分（真正盲評）。`calibrate` 可合併多份評分表（逗號分隔）、只填各項得分時自動換算 100 分制；系統分數仍 pending 的作品改為只比對已自動判定的項目（`partialScope`）。**更正**：先前的 `calibrate` CLI 因 `--teachers` 不在參數白名單而無法使用，只測過核心函式；已修正並補 CLI 測試。vitest 111 檔／866 項通過。下一步只剩真人：準備 30 件匿名學生作品與兩位老師。
 
 - **2026-11-19 Claude Code（V2-0／V2-7）**：依使用者授權，以 `~/bin/omlx-key classroom` 取用 oMLX 子金鑰（只在指令內使用，規則記在 oMLX 手冊與 Claude 記憶），用 `Cyber-Tiel-Coder-35B` 跑三輪同模型對照。r1 暴露轉譯器問題（模型先宣告角色再用 `// ===` 註解分段、`if…then…else`、`wait secs`、中文積木、按鍵名），補齊後未支援行數約 400→214；修正輪改成只送失敗段落；benchmark 改用「需求意圖」統一計分。r2 a-b-c 退步到 0.24，根因是後段 `(replace)` 刪掉前面已驗證的功能，新增段落間回歸防護（重做一次、仍破壞就退回）。r3：a-b-c 0.72／建置 9／done 3，spec 0.38、a-b 0.27；spec 程式未變卻在 0.38～0.65 擺動，表示輪間變異大。結論與數字見 `research/project-quality-benchmark/runs/2026-11-19-cybertiel35b-v2.md`。vitest 110 檔／864 項通過。**後續建議**：縮小 C 階段上下文（後段只帶構想摘要與相關角色大綱）、加大每題取樣數以降低變異、待真人時補 `ratings.csv` 與 V2-12 盲評。
