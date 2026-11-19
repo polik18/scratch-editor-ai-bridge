@@ -41,7 +41,12 @@ const literal = (value: string | number): CanonicalInput => ({ type: 'literal', 
 const variable = (name: string): CanonicalInput => ({ type: 'variable', name })
 const broadcast = (name: string): CanonicalInput => ({ type: 'broadcast', name })
 
-const cleanMenu = (value: string): string =>
+/**
+ * Strip scratchblocks brackets, dropdown markers and quotes from a menu or reporter value.
+ * @param value Raw text.
+ * @returns The bare value.
+ */
+export const cleanMenu = (value: string): string =>
   value
     .trim()
     .replace(/^[[({<]/, '')
@@ -50,8 +55,86 @@ const cleanMenu = (value: string): string =>
     .replace(/^['"]|['"]$/g, '')
     .trim()
 
+/** Variables declared by set/change lines in the source being parsed, so `(score)` reads as a variable reporter. */
+let knownVariables = new Set<string>()
+
+const SPECIAL_MENU_VALUES: Readonly<Record<string, string>> = {
+  edge: '_edge_',
+  邊緣: '_edge_',
+  'mouse-pointer': '_mouse_',
+  'mouse pointer': '_mouse_',
+  mouse: '_mouse_',
+  滑鼠: '_mouse_',
+  'random position': '_random_',
+  random: '_random_',
+  隨機位置: '_random_',
+  myself: '_myself_',
+  自己: '_myself_',
+}
+
+const specialMenuInput = (raw: string): CanonicalInput => {
+  const value = cleanMenu(raw)
+  return literal(SPECIAL_MENU_VALUES[value.toLowerCase()] ?? value)
+}
+
+const REPORTERS: Readonly<Record<string, string>> = {
+  answer: 'sensing_answer',
+  回答: 'sensing_answer',
+  timer: 'sensing_timer',
+  計時器: 'sensing_timer',
+  'mouse x': 'sensing_mousex',
+  'mouse y': 'sensing_mousey',
+  size: 'looks_size',
+  x: 'motion_xposition',
+  y: 'motion_yposition',
+  direction: 'motion_direction',
+}
+
+const ARITHMETIC: Readonly<Record<string, string>> = {
+  '+': 'operator_add',
+  '-': 'operator_subtract',
+  '*': 'operator_multiply',
+  '/': 'operator_divide',
+}
+
+/**
+ * Remove exactly one balanced outer `(...)` pair, keeping inner reporters intact.
+ * @param raw Value text as written.
+ * @returns The inner text, or undefined when the text is not wrapped in one balanced pair.
+ */
+const unwrapRound = (raw: string): string | undefined => {
+  const text = raw.trim()
+  if (!text.startsWith('(') || !text.endsWith(')')) return undefined
+  let depth = 0
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === '(') depth += 1
+    else if (text[index] === ')') depth -= 1
+    if (depth === 0 && index < text.length - 1) return undefined
+  }
+  return text.slice(1, -1).trim()
+}
+
 const valueInput = (raw: string): CanonicalInput => {
   const value = cleanMenu(raw)
+  const inner = unwrapRound(raw) ?? raw.trim()
+  const arithmetic = /^\((.+?)\)\s*([+\-*/])\s*\((.+)\)$/.exec(inner)
+  if (arithmetic?.[1] && arithmetic[2] && arithmetic[3])
+    return {
+      type: 'block',
+      block: block(ARITHMETIC[arithmetic[2]] ?? 'operator_add', {
+        NUM1: valueInput(`(${arithmetic[1]})`),
+        NUM2: valueInput(`(${arithmetic[3]})`),
+      }),
+    }
+  const join = /^join\s+(\[[^\]]*\]|\([^)]*\))\s*(\[[^\]]*\]|\([^)]*\))$/i.exec(inner)
+  if (join?.[1] && join[2])
+    return {
+      type: 'block',
+      block: block('operator_join', { STRING1: valueInput(join[1]), STRING2: valueInput(join[2]) }),
+    }
+  const reporter = REPORTERS[value.toLowerCase()]
+  if (reporter && raw.trim().startsWith('(')) return { type: 'block', block: block(reporter) }
+  if (raw.trim().startsWith('(') && knownVariables.has(value)) return variable(value)
   const random = /^(?:pick\s+)?random\s+(.+?)\s+to\s+(.+)$/i.exec(value)
   if (random?.[1] && random[2])
     return {
@@ -66,6 +149,116 @@ const valueInput = (raw: string): CanonicalInput => {
 }
 
 const menuInput = (raw: string): CanonicalInput => literal(cleanMenu(raw))
+
+const KEY_NAMES: Readonly<Record<string, string>> = {
+  right: 'right arrow',
+  left: 'left arrow',
+  up: 'up arrow',
+  down: 'down arrow',
+  右: 'right arrow',
+  右鍵: 'right arrow',
+  向右鍵: 'right arrow',
+  左: 'left arrow',
+  左鍵: 'left arrow',
+  向左鍵: 'left arrow',
+  上: 'up arrow',
+  上鍵: 'up arrow',
+  向上鍵: 'up arrow',
+  下: 'down arrow',
+  下鍵: 'down arrow',
+  向下鍵: 'down arrow',
+  空白: 'space',
+  空白鍵: 'space',
+  空格: 'space',
+  空格鍵: 'space',
+  spacebar: 'space',
+  'space bar': 'space',
+  return: 'enter',
+}
+
+/**
+ * Scratch key names from what models write ("right", "空白鍵", "A").
+ * @param raw Key text, possibly in a dropdown.
+ * @returns Scratch's KEY_OPTION value.
+ */
+const normalizeKey = (raw: string): string => {
+  const value = cleanMenu(raw).trim()
+  const lower = value.toLowerCase()
+  if (Object.hasOwn(KEY_NAMES, lower)) return KEY_NAMES[lower]
+  return Object.hasOwn(KEY_NAMES, value) ? KEY_NAMES[value] : lower
+}
+
+const ALIASES: readonly [RegExp, string][] = [
+  [
+    /^(?:when\s+(?:gf|flag|green\s*flag)\s+clicked|<?\s*green flag\s*>?|when green flag pressed|當綠旗被點(?:擊|一下)|當綠旗被按下)$/i,
+    'when green flag clicked',
+  ],
+  [/^(?:when|當)\s*<\s*(?:key\s+)?(.+?)\s+(?:key\s+)?pressed\??\s*>$/i, 'when $1 key pressed'],
+  [/^<\s*key\s+(.+?)\s+pressed\??\s*>$/i, 'when $1 key pressed'],
+  [/^當\s*(.+?)\s*鍵被按下$/, 'when [$1] key pressed'],
+  [/^(?:receive|收到|收|當收到|當我收到|等待收到)\s*(.+)$/i, 'when I receive $1'],
+  [
+    /^(?:start_as_clone|when i start as clone|when cloned|當分身產生|當我是分身|當作為分身啟動時)$/i,
+    'when I start as a clone',
+  ],
+  [/^當角色被點(?:擊|一下)$/, 'when this sprite clicked'],
+  [/^if\s+(\[[^\]]+\])\s+key pressed\??(?:\s+then)?$/i, 'if <key $1 pressed?> then'],
+  // `if <…>` written without `then` (never `if on edge, bounce`).
+  [/^if\s+(<.+>)$/i, 'if $1 then'],
+  [/^(?:wait|等待)\s*<(.+)>$/i, 'wait until <$1>'],
+  [/^wait\s+(.+?)\s+(?:secs?|s)\.?$/i, 'wait $1 seconds'],
+  [/^等待\s*(.+?)\s*秒$/, 'wait $1 seconds'],
+  [/^(?:send|發送|廣播)\s*(.+?)(?:\s*給所有角色)?(\s*(?:and wait|並等待))?$/i, 'broadcast $1$2'],
+  [/^(?:switch|change)\s+background\s+to\s+(.+)$/i, 'switch backdrop to $1'],
+  [/^(?:換背景為|切換背景為|換成背景|背景換成)\s*(.+)$/, 'switch backdrop to $1'],
+  [/^說\s*(.+?)\s*(?:持續|等待)\s*(.+?)\s*秒$/, 'say $1 for $2 seconds'],
+  [/^說\s+(.+)$/, 'say $1'],
+  // "[角色] 說 [台詞] for (2) seconds": the speaker is the sprite the script belongs to.
+  [/^\S+\s+說\s+(.+)$/, 'say $1'],
+  [/^等待\s*\(?\s*(-?\d+(?:\.\d+)?)\s*\)?$/, 'wait ($1) seconds'],
+  [/^(?:去|移到|移動到)\s*x[:：]\s*(.+?)\s+y[:：]\s*(.+)$/i, 'go to x: $1 y: $2'],
+  [/^go to front$/i, 'go to [front v] layer'],
+  [/^go to back$/i, 'go to [back v] layer'],
+  [/^(?:backdrop|去背景|背景)\s+(\[.+\])$/i, 'switch backdrop to $1'],
+  [/^隱藏\s+\S+$/, 'hide'],
+  [/^顯示\s+\S+$/, 'show'],
+  [/^hide\s+(?:sprite\s+)?\[[^\]]*\]$/i, 'hide'],
+  [/^show\s+(?:sprite\s+)?\[[^\]]*\]$/i, 'show'],
+  [/^start clone of\s+(.+)$/i, 'create clone of $1'],
+  [/^建立\s*(.+?)\s*的分身$/, 'create clone of $1'],
+  // Scratch has no while loop: `while <c>` runs until <c> stops holding.
+  [/^while\s+<(.+)>$/i, 'repeat until <not <$1>>'],
+  [/^思考\s*(.+?)\s*(?:持續|等待)\s*(.+?)\s*秒$/, 'think $1 for $2 seconds'],
+  [/^(?:一直重複|重複無限次|永遠重複)$/, 'forever'],
+  [/^重複\s*(.+?)\s*次$/, 'repeat $1'],
+  [/^重複直到\s*(.+)$/, 'repeat until $1'],
+  [/^如果\s*(.+?)\s*那麼$/, 'if $1 then'],
+  [/^否則$/, 'else'],
+  [/^結束$/, 'end'],
+  [/^隱藏$/, 'hide'],
+  [/^顯示$/, 'show'],
+  [/^下一個造型$/, 'next costume'],
+  [/^下一個背景$/, 'next backdrop'],
+  [/^播放音效\s*(.+?)\s*直到結束$/, 'play sound $1 until done'],
+  [/^播放音效\s*(.+)$/, 'play sound $1'],
+  [/^將\s*(.+?)\s*設為\s*(.+)$/, 'set $1 to $2'],
+  [/^將\s*(.+?)\s*改變\s*(.+)$/, 'change $1 by $2'],
+  [/^移動\s*(.+?)\s*步$/, 'move $1 steps'],
+  [/^(?:停止全部|停止所有)$/, 'stop [all v]'],
+  [/^set size to\s+(.+?)\s*(?:percent|%)$/i, 'set size to $1 %'],
+]
+
+/**
+ * Rewrite common variants (Chinese block names, `when flag clicked`, `wait 1 secs`, trailing `// notes`) into the
+ * canonical English lines the parser understands.
+ * @param line Trimmed source line.
+ * @returns The canonical line.
+ */
+const normalizeLine = (line: string): string => {
+  const text = line.replace(/\s+\/\/.*$/, '').trim()
+  for (const [pattern, replacement] of ALIASES) if (pattern.test(text)) return text.replace(pattern, replacement)
+  return text
+}
 
 const conditionInput = (raw: string): CanonicalInput => {
   const condition = cleanMenu(raw)
@@ -90,13 +283,13 @@ const conditionInput = (raw: string): CanonicalInput => {
   if (keyMatch?.[1])
     return {
       type: 'block',
-      block: block('sensing_keypressed', { KEY_OPTION: menuInput(keyMatch[1]) }),
+      block: block('sensing_keypressed', { KEY_OPTION: literal(normalizeKey(keyMatch[1])) }),
     }
-  const touchingMatch = /^touching\s+(.+?)[?]?$/.exec(condition)
+  const touchingMatch = /^touching\s+(.+?)[?]?$/i.exec(condition)
   if (touchingMatch?.[1])
     return {
       type: 'block',
-      block: block('sensing_touchingobject', { TOUCHINGOBJECTMENU: menuInput(touchingMatch[1]) }),
+      block: block('sensing_touchingobject', { TOUCHINGOBJECTMENU: specialMenuInput(touchingMatch[1]) }),
     }
   if (/^(?:mouse down|mouse down\?)$/i.test(condition)) return { type: 'block', block: block('sensing_mousedown') }
 
@@ -164,7 +357,7 @@ const parseLine = (line: string): ScratchBlock | undefined => {
   if (/^when green flag clicked$/i.test(line)) return block('event_whenflagclicked')
   if (/^when this sprite clicked$/i.test(line)) return block('event_whenthisspriteclicked')
   const keyHat = /^when\s+(.+?)\s+key pressed$/i.exec(line)
-  if (keyHat?.[1]) return block('event_whenkeypressed', undefined, { KEY_OPTION: cleanMenu(keyHat[1]) })
+  if (keyHat?.[1]) return block('event_whenkeypressed', undefined, { KEY_OPTION: normalizeKey(keyHat[1]) })
   const receiveHat =
     /^when (?:i )?receive\s+(.+)$/i.exec(line) ?? /^when\s+(.+?)\s+(?:broadcast|received)$/i.exec(line)
   if (receiveHat?.[1])
@@ -174,6 +367,10 @@ const parseLine = (line: string): ScratchBlock | undefined => {
     return block('event_whenbroadcastreceived', undefined, { BROADCAST_OPTION: cleanMenu(bareReceiveHat[1]) })
   if (/^when\s+\[?clone\s+v\]?$/i.test(line)) return block('control_start_as_clone')
   if (/^when stage clicked$/i.test(line)) return block('event_whenstageclicked')
+  if (/^when i start as a clone$/i.test(line)) return block('control_start_as_clone')
+  const backdropHat = /^when backdrop switches to\s+(.+)$/i.exec(line)
+  if (backdropHat?.[1])
+    return block('event_whenbackdropswitchesto', undefined, { BACKDROP: cleanMenu(backdropHat[1]) })
 
   const move = /^move\s+(.+?)\s+steps?$/i.exec(line)
   if (move?.[1]) return block('motion_movesteps', { STEPS: valueInput(move[1]) })
@@ -187,6 +384,27 @@ const parseLine = (line: string): ScratchBlock | undefined => {
   if (setY?.[1]) return block('motion_sety', { Y: valueInput(setY[1]) })
   const goTo = /^go to x:\s*(.+?)\s+y:\s*(.+)$/i.exec(line)
   if (goTo?.[1] && goTo[2]) return block('motion_gotoxy', { X: valueInput(goTo[1]), Y: valueInput(goTo[2]) })
+  const glideXY = /^glide\s+(.+?)\s+secs?\s+to x:\s*(.+?)\s+y:\s*(.+)$/i.exec(line)
+  if (glideXY?.[1] && glideXY[2] && glideXY[3])
+    return block('motion_glidesecstoxy', {
+      SECS: valueInput(glideXY[1]),
+      X: valueInput(glideXY[2]),
+      Y: valueInput(glideXY[3]),
+    })
+  const glideTo = /^glide\s+(.+?)\s+secs?\s+to\s+(.+)$/i.exec(line)
+  if (glideTo?.[1] && glideTo[2])
+    return block('motion_glideto', { SECS: valueInput(glideTo[1]), TO: specialMenuInput(glideTo[2]) })
+  const goToMenu = /^go to\s+(\[.+\])$/i.exec(line)
+  if (goToMenu?.[1]) {
+    const target = cleanMenu(goToMenu[1]).toLowerCase()
+    if (target === 'front' || target === 'back' || target === 'front layer' || target === 'back layer')
+      return block('looks_gotofrontback', undefined, { FRONT_BACK: target.startsWith('front') ? 'front' : 'back' })
+    return block('motion_goto', { TO: specialMenuInput(goToMenu[1]) })
+  }
+  const frontBack = /^go to\s+\[?(front|back)\s*v?\]?\s+layer$/i.exec(line)
+  if (frontBack?.[1]) return block('looks_gotofrontback', undefined, { FRONT_BACK: frontBack[1].toLowerCase() })
+  const towards = /^point towards\s+(.+)$/i.exec(line)
+  if (towards?.[1]) return block('motion_pointtowards', { TOWARDS: specialMenuInput(towards[1]) })
   const turnRight = /^(?:turn cw|turn right)\s+(.+)$/i.exec(line)
   if (turnRight?.[1]) return block('motion_turnright', { DEGREES: valueInput(turnRight[1]) })
   const turnLeft = /^(?:turn ccw|turn left)\s+(.+)$/i.exec(line)
@@ -208,6 +426,25 @@ const parseLine = (line: string): ScratchBlock | undefined => {
   if (/^show$/i.test(line)) return block('looks_show')
   if (/^hide$/i.test(line)) return block('looks_hide')
   if (/^next costume$/i.test(line)) return block('looks_nextcostume')
+  if (/^next backdrop$/i.test(line)) return block('looks_nextbackdrop')
+  const backdrop = /^switch backdrop to\s+(.+?)(\s+and wait)?$/i.exec(line)
+  if (backdrop?.[1])
+    return block(backdrop[2] ? 'looks_switchbackdroptoandwait' : 'looks_switchbackdropto', {
+      BACKDROP: menuInput(backdrop[1]),
+    })
+  const setSize = /^set size to\s+(.+?)\s*%?$/i.exec(line)
+  if (setSize?.[1]) return block('looks_setsizeto', { SIZE: valueInput(setSize[1].replace(/\s*%$/, '')) })
+  const changeSize = /^change size by\s+(.+)$/i.exec(line)
+  if (changeSize?.[1]) return block('looks_changesizeby', { CHANGE: valueInput(changeSize[1]) })
+  const effect =
+    /^(change|set)\s+\[?(color|fisheye|whirl|pixelate|mosaic|brightness|ghost)\s*v?\]?\s+effect\s+(?:by|to)\s+(.+)$/i.exec(
+      line,
+    )
+  if (effect?.[1] && effect[2] && effect[3])
+    return effect[1].toLowerCase() === 'change'
+      ? block('looks_changeeffectby', { CHANGE: valueInput(effect[3]) }, { EFFECT: effect[2].toLowerCase() })
+      : block('looks_seteffectto', { VALUE: valueInput(effect[3]) }, { EFFECT: effect[2].toLowerCase() })
+  if (/^clear graphic effects$/i.test(line)) return block('looks_cleargraphiceffects')
   const costume = /^switch costume to\s+(.+)$/i.exec(line)
   if (costume?.[1]) return block('looks_switchcostumeto', { COSTUME: menuInput(costume[1]) })
 
@@ -247,9 +484,24 @@ const parseLine = (line: string): ScratchBlock | undefined => {
   const stop = /^stop\s+(.+)$/i.exec(line)
   if (stop?.[1]) return block('control_stop', undefined, { STOP_OPTION: cleanMenu(stop[1]) })
   const clone = /^create clone of\s+(.+)$/i.exec(line)
-  if (clone?.[1]) return block('control_create_clone_of', { CLONE_OPTION: menuInput(clone[1]) })
+  if (clone?.[1]) return block('control_create_clone_of', { CLONE_OPTION: specialMenuInput(clone[1]) })
+  if (/^delete this clone$/i.test(line)) return block('control_delete_this_clone')
+  const ask = /^ask\s+(.+?)\s+and wait$/i.exec(line)
+  if (ask?.[1]) return block('sensing_askandwait', { QUESTION: valueInput(ask[1]) })
+  if (/^reset timer$/i.test(line)) return block('sensing_resettimer')
 
   return undefined
+}
+
+/**
+ * Whether a line is a block, container, `end` or `else` the parser understands (used to tell block lines from
+ * bare target-name headers).
+ * @param line Trimmed source line.
+ * @returns True for a recognised block line.
+ */
+export const isBlockLine = (line: string): boolean => {
+  const text = normalizeLine(line)
+  return /^(?:end|else)$/i.test(text) || openContainer(text) !== undefined || parseLine(text) !== undefined
 }
 
 const appendBlock = (script: CanonicalScript, stack: ContainerFrame[], value: CanonicalBlock): void => {
@@ -277,10 +529,43 @@ const closeByIndent = (stack: ContainerFrame[], indent: number): void => {
   while (stack.length > 0 && indent <= (stack.at(-1)?.indent ?? -1)) stack.pop()
 }
 
-export const parseScratchblocks = (
-  source: string,
-  options: ScratchblocksParseOptions = {},
-): ScratchblocksParseResult => {
+const HAT_OPCODES = new Set([
+  'event_whenflagclicked',
+  'event_whenkeypressed',
+  'event_whenthisspriteclicked',
+  'event_whenstageclicked',
+  'event_whenbroadcastreceived',
+  'event_whenbackdropswitchesto',
+  'control_start_as_clone',
+])
+
+/**
+ * Variable names declared with set/change lines.
+ * @param source scratchblocks text.
+ * @returns Names.
+ */
+export const scanVariables = (source: string): Set<string> =>
+  new Set(
+    [...source.matchAll(/^\s*(?:set|change)\s+\[([^\]]+?)(?:\s+v)?\]\s+(?:to|by)\s/gim)]
+      .map((match) => cleanMenu(match[1]))
+      .filter((name) => name && !/^(?:color|fisheye|whirl|pixelate|mosaic|brightness|ghost)$/i.test(name)),
+  )
+
+export interface ParsedScripts {
+  readonly scripts: CanonicalScript[]
+  readonly warnings: string[]
+  readonly recognizedLines: number
+  readonly skippedLines: number
+}
+
+/**
+ * Parse scratchblocks lines into scripts (no targets). Shared by the single-sprite and multi-target parsers.
+ * @param source scratchblocks text for one target.
+ * @param variables Variable names known across the whole project.
+ * @returns Scripts, warnings and line counts.
+ */
+export const parseScripts = (source: string, variables: Set<string> = scanVariables(source)): ParsedScripts => {
+  knownVariables = variables
   const warnings: string[] = []
   const scripts: CanonicalScript[] = []
   const stack: ContainerFrame[] = []
@@ -299,8 +584,9 @@ export const parseScratchblocks = (
   for (const sourceLine of source.split(/\r?\n/)) {
     const raw = sourceLine.replace(/\t/g, '  ')
     const indent = raw.length - raw.trimStart().length
-    const line = raw.trim()
-    if (!line || line === '```' || line.startsWith('//') || line.startsWith('#')) continue
+    const trimmed = raw.trim()
+    if (!trimmed || trimmed.startsWith('```') || trimmed.startsWith('//') || trimmed.startsWith('#')) continue
+    const line = normalizeLine(trimmed)
     if (/^end$/i.test(line)) {
       if (stack.length === 0) warnings.push('遇到沒有對應容器的 end')
       else stack.pop()
@@ -308,6 +594,14 @@ export const parseScratchblocks = (
     }
     if (/^else$/i.test(line)) {
       const frame = stack.at(-1)
+      if (frame && !frame.elseBody && frame.block.opcode === 'control_if') {
+        // Standard scratchblocks writes `if <...> then` … `else` … `end`: turn the open if into an if/else.
+        const elseBody: CanonicalBlock[] = []
+        const mutable = frame.block as { opcode: CanonicalOpcode; inputs?: Record<string, CanonicalInput> }
+        mutable.opcode = opcode('control_if_else')
+        mutable.inputs = { ...mutable.inputs, SUBSTACK2: { type: 'stack', blocks: elseBody } }
+        frame.elseBody = elseBody
+      }
       if (!frame?.elseBody) {
         warnings.push('else 沒有對應的 if/else')
         skippedLines++
@@ -326,16 +620,8 @@ export const parseScratchblocks = (
       continue
     }
     recognizedLines++
-    const isHat =
-      parsed.opcode.startsWith('event_') &&
-      [
-        'event_whenflagclicked',
-        'event_whenkeypressed',
-        'event_whenthisspriteclicked',
-        'event_whenstageclicked',
-        'event_whenbroadcastreceived',
-      ].includes(parsed.opcode)
-    if (isHat) {
+    if (HAT_OPCODES.has(parsed.opcode)) {
+      stack.length = 0
       currentScript = { blocks: [parsed] }
       scripts.push(currentScript)
     } else {
@@ -348,6 +634,14 @@ export const parseScratchblocks = (
         stack.push({ indent, block: container.block, body: body.blocks, elseBody: container.elseBody })
     }
   }
+  return { scripts, warnings, recognizedLines, skippedLines }
+}
+
+export const parseScratchblocks = (
+  source: string,
+  options: ScratchblocksParseOptions = {},
+): ScratchblocksParseResult => {
+  const { scripts, warnings, recognizedLines, skippedLines } = parseScripts(source)
 
   const spriteName = options.spriteName ?? 'Player'
   const sprite: CanonicalSprite = {

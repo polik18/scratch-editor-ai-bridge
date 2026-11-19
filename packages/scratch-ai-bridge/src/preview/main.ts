@@ -18,6 +18,7 @@ import {
   setRuntimePatchValues,
   captureScratchProgress,
   captureScratchClones,
+  installScratchOpcodeCounter,
   captureScratchTargetProgress,
   attachScratchCloudSession,
   restoreScratchProgress,
@@ -31,6 +32,7 @@ const canvas = document.querySelector<HTMLCanvasElement>('#stage')
 if (!canvas) throw new Error('Scratch animation preview canvas is missing')
 
 let vm: ScratchVMHandle | null = null
+let readOpcodeCounts: (() => Record<string, number>) | null = null
 let previewTimeout: number | null = null
 const pressedKeys = new Set<string>()
 let pointerDown = false
@@ -137,6 +139,7 @@ const stop = (notifyParent = true, loseCanvasContext = true): void => {
     }
     vm.quit()
     vm = null
+    readOpcodeCounts = null
     if (loseCanvasContext) {
       const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
       gl?.getExtension('WEBGL_lose_context')?.loseContext()
@@ -288,6 +291,22 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
     if (message.isDown) pressedKeys.add(key)
     else pressedKeys.delete(key)
     postScratchIOData(vm, 'keyboard', { key, isDown: message.isDown })
+    return
+  }
+  if (message.type === 'playtest-events') {
+    const requestId =
+      typeof message.requestId === 'string' && message.requestId.length <= 128 ? message.requestId : ''
+    if (!vm || !requestId) return
+    window.parent.postMessage(
+      {
+        type: 'playtest-events-result',
+        token: previewToken,
+        requestId,
+        opcodes: readOpcodeCounts ? readOpcodeCounts() : {},
+        cloneCount: captureScratchClones(vm).length,
+      },
+      '*',
+    )
     return
   }
   if (message.type === 'playtest-clones') {
@@ -561,6 +580,7 @@ window.addEventListener('message', (event: MessageEvent<unknown>) => {
       send('progress', '正在建立 Scratch 執行環境。')
       const previewVM = await createPreviewVM(createConsentedFetch)
       vm = previewVM
+      readOpcodeCounts = installScratchOpcodeCounter(previewVM)
       send('progress', '正在載入作品與角色素材。')
       await renderSb3Preview(message.archive as Blob, previewVM, canvas, (stage) => send('progress', stage))
       previewHardwareExtensions = new Set(

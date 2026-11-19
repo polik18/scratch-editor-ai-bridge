@@ -108,6 +108,7 @@ interface ScratchRuntimeInternal {
   getTargetById(id: string): ScratchTargetInternal | null
   _step(): void
   handleProjectLoaded(): void
+  _primitives?: Record<string, (this: unknown, ...args: unknown[]) => unknown>
 }
 
 interface ScratchVMInternal extends ScratchVMHandle {
@@ -1184,6 +1185,78 @@ export interface ScratchClonePosition {
   readonly name: string
   readonly x: number
   readonly y: number
+}
+
+/**
+ * Core opcodes whose execution counts as observable runtime evidence for grading (sound, clones, visibility,
+ * costumes/backdrops, speech, broadcasts, variables, collisions and questions).
+ */
+export const RUNTIME_EVIDENCE_OPCODES: readonly string[] = [
+  'sound_play',
+  'sound_playuntildone',
+  'control_create_clone_of',
+  'control_delete_this_clone',
+  'looks_hide',
+  'looks_show',
+  'looks_switchcostumeto',
+  'looks_nextcostume',
+  'looks_switchbackdropto',
+  'looks_switchbackdroptoandwait',
+  'looks_nextbackdrop',
+  'looks_say',
+  'looks_sayforsecs',
+  'looks_think',
+  'looks_thinkforsecs',
+  'event_broadcast',
+  'event_broadcastandwait',
+  'data_setvariableto',
+  'data_changevariableby',
+  'sensing_touchingobject',
+  'sensing_touchingcolor',
+  'sensing_coloristouchingcolor',
+  'sensing_askandwait',
+  'motion_movesteps',
+  'motion_gotoxy',
+  'motion_goto',
+  'motion_glidesecstoxy',
+  'motion_glideto',
+  'motion_changexby',
+  'motion_changeyby',
+  'motion_setx',
+  'motion_sety',
+  'motion_turnright',
+  'motion_turnleft',
+  'motion_pointindirection',
+  'motion_ifonedgebounce',
+]
+
+/**
+ * Wrap core block primitives so the preview can report which opcodes actually ran. Boolean collision reporters also
+ * count how often they returned true (`<opcode>:true`). Must be installed before the project starts running.
+ * @param vm Freshly created Scratch VM.
+ * @param opcodes Opcodes to count.
+ * @returns A reader that copies the current counts.
+ */
+export const installScratchOpcodeCounter = (
+  vm: ScratchVMHandle,
+  opcodes: readonly string[] = RUNTIME_EVIDENCE_OPCODES,
+): (() => Record<string, number>) => {
+  const counts: Record<string, number> = {}
+  const primitives = asInternalVM(vm).runtime._primitives
+  if (primitives) {
+    for (const opcode of opcodes) {
+      const original = primitives[opcode]
+      if (typeof original !== 'function') continue
+      primitives[opcode] = function (this: unknown, ...args: unknown[]): unknown {
+        counts[opcode] = (counts[opcode] ?? 0) + 1
+        const result = original.apply(this, args)
+        if (result === true && opcode.startsWith('sensing_'))
+          counts[`${opcode}:true`] = (counts[`${opcode}:true`] ?? 0) + 1
+        return result
+      }
+    }
+  }
+  return () => ({ ...counts })
 }
 
 /**

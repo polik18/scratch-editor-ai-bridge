@@ -8,6 +8,7 @@
   "scripts": {
     "audit:reachability": "node scripts/tools/check-audit-reachability.mjs",
     "bench": "node -e \"require('node:fs').mkdirSync('test-results',{recursive:true})\" && vitest bench --run tests/performance --outputJson=test-results/performance.json && node scripts/bench/check-performance-budget.mjs test-results/performance.json",
+    "benchmark:creative": "tsx scripts/bench/creative-benchmark.ts",
     "benchmark:games": "tsx scripts/bench/game-benchmark.ts",
     "benchmark:scratchblocks": "tsx scripts/bench/scratchblocks-benchmark.ts",
     "build": "tsc --noEmit && vite build && node scripts/build/copy-renderer-sandbox-assets.mjs && node scripts/build/generate-service-worker.mjs && node scripts/build/check-bundle-budget.mjs",
@@ -18,6 +19,7 @@
     "feedback:review": "node scripts/bench/evaluate-feedback-reviews.mjs",
     "generate:asset-library": "node scripts/build/generate-asset-library-index.mjs",
     "generate:validator": "node scripts/build/generate-validator.mjs",
+    "grading-api": "tsx src/grading-api/main.ts",
     "lint": "eslint . && prettier --check .",
     "mcp": "tsx src/mcp/main.ts",
     "mcp:http": "tsx src/mcp/http-main.ts",

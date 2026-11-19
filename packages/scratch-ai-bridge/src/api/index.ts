@@ -16,3 +16,7 @@ export async function createSession(path?: string) {
   }
   return session
 }
+
+// Formal grading core (browser-safe): the same rubric, evidence, evaluation and calibration code the CLI `grade`
+// command, the MCP grading tools and the local grading HTTP API (`npm run grading-api`) use.
+export * from '../core/grading/index.js'

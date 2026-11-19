@@ -11,6 +11,8 @@ const USAGE = `Scratch AI Bridge CLI ${VERSION}
 AI agents: run "start" first — it lists every command, the rules and what counts as done, generated from this version.
 
 Which command?
+  Make any Scratch work in two stages (the model first designs freely, then the Bridge translates slice by slice):
+    scratch-ai-bridge create "做一個大魚吃小魚的動畫" --playtest
   Make a new game from one sentence (a local model writes the spec):
     scratch-ai-bridge make "做一個接蘋果遊戲，左右鍵移動，接到加分" --playtest
   You are the AI and will write the Game Spec yourself:
@@ -21,9 +23,13 @@ Which command?
   Make an animation (60–180 s, scenes and backdrops):
     scratch-ai-bridge guide story                 print the Story Spec format
     scratch-ai-bridge story output/games/<name>/<name>.spec.json --playtest
-  Analyse existing .sb3 files:
+  Analyse existing .sb3 files (static diagnostic, not a grade):
     scratch-ai-bridge inspect work.sb3 --format student-markdown
     scratch-ai-bridge batch ./class
+  Grade a class with the teacher's rubric (formal grades need --playtest and an approved rubric):
+    scratch-ai-bridge rubric draft 規準.txt --id fish-v1 --title "大魚吃小魚" --project-type animation --out rubric.json
+    scratch-ai-bridge rubric approve rubric.json --by T1
+    scratch-ai-bridge grade ./class --rubric rubric.json --manifest class.csv --playtest
   Never hand-write project.json or .sb3 files.
 
 Where things go (the output/ folder at the top of the repository, never committed; from there run
@@ -35,12 +41,22 @@ Where things go (the output/ folder at the top of the repository, never committe
 Usage:
   scratch-ai-bridge make <request> [--story] [--out <new-file.sb3>] [--spec-out <spec.json>] [--rounds <0-3>] [--playtest] [--force]
                          [--model <id>] [--base-url <url>] [--thinking]
+  scratch-ai-bridge create <request> [--mode a-b|a-b-c] [--playtest] [--name <name>] [--replies <directory>] [--offline]
+                           [--model <id>] [--base-url <url>]
   scratch-ai-bridge guide [game|story]
   scratch-ai-bridge story <story.json> [--out <file.sb3>] [--request <file-or-text>] [--playtest] [--force] [--offline]
   scratch-ai-bridge spec <game-spec.json> [--out <file.sb3>] [--ir <canonical-ir.json>] [--report <report.json>] [--request <file-or-text>] [--playtest] [--force] [--offline]
   scratch-ai-bridge inspect <file.sb3> [--format json|markdown|student-markdown|ai-reader]
   scratch-ai-bridge fetch <Scratch URL or project ID> [--out <directory>]
   scratch-ai-bridge batch <directory> [--out <new-directory>] [--recursive] [--manifest <file.csv|json>] [--jobs 1|2]
+  scratch-ai-bridge grade <directory|file.sb3> [--rubric <rubric.json>] [--project-type <type>] [--playtest] [--out <new-directory>]
+                         [--manifest <file.csv|json>] [--policy <policy.json>] [--judgments <file.json>] [--overrides <file.csv|json>]
+                         [--grade-level <g>] [--class <id>] [--assignment <id>] [--trial]
+  scratch-ai-bridge calibrate prepare <sb3-directory> --rubric <rubric.json> --out <new-directory> [--teachers T1,T2] [--playtest]
+  scratch-ai-bridge calibrate <grade-report-directory> --teachers <sheet.csv[,sheet.csv…]>
+  scratch-ai-bridge rubric validate <rubric.json>
+  scratch-ai-bridge rubric draft <criteria.txt> --id <id> --title <title> --project-type <type> [--out <rubric.json>]
+  scratch-ai-bridge rubric approve <rubric.json> --by <reviewer> [--out <rubric.json>]
   scratch-ai-bridge generate <design.json> --out <new-file.sb3> [--report <report.json>] [--preview <stage.png>] [--force]
   scratch-ai-bridge clean [--all]               remove _過程 folders and output/tmp/; --all removes output/ entirely
   scratch-ai-bridge --help
@@ -413,6 +429,29 @@ ${createGameSpecGuide()}
           : 3
     }
   }
+} else if (command === 'create') {
+  const { runCreate } = await import('./creative-command')
+  const { output, exitCode } = await withStdoutOnStderr(() => runCreate(args))
+  writeJson(output)
+  process.exitCode = exitCode
+} else if (command === 'grade') {
+  const { runGrade } = await import('./grade-command')
+  process.exitCode = await withStdoutOnStderr(() => runGrade(args, defaultReportDirectory)).then(
+    ({ output, exitCode }) => {
+      writeJson(output)
+      return exitCode
+    },
+  )
+} else if (command === 'calibrate') {
+  const { runCalibrate } = await import('./grade-command')
+  const { output, exitCode } = await runCalibrate(args)
+  writeJson(output)
+  process.exitCode = exitCode
+} else if (command === 'rubric') {
+  const { runRubric } = await import('./grade-command')
+  const { output, exitCode } = await runRubric(args)
+  writeJson(output)
+  process.exitCode = exitCode
 } else if (command === 'spec') {
   const positionals: string[] = []
   const values: Record<string, string> = {}

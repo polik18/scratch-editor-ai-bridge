@@ -1963,3 +1963,17 @@ pre {
     grid-template-columns: 1fr;
   }
 }
+
+.teacher-rubric textarea {
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+}
+
+.teacher-rubric fieldset input:not([type='number']) {
+  min-width: min(100%, 28rem);
+}
+
+.teacher-rubric h1 {
+  color: #174f3c;
+}

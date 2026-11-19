@@ -43,6 +43,14 @@ export interface PlaytestResult {
   readonly changedVariables: readonly string[]
   /** State capture failed (for example duplicate sprite names); motion checks then rely on pixels only. */
   readonly stateUnavailable?: string
+  /** How often each evidence opcode actually ran during the whole session (see RUNTIME_EVIDENCE_OPCODES). */
+  readonly executedOpcodes?: Readonly<Record<string, number>>
+  /** Most visible clones seen at once. */
+  readonly maxClones?: number
+  /** Original sprites whose visibility, costume or position changed at some point between captures. */
+  readonly changedSprites?: readonly string[]
+  /** How long the session ran, in milliseconds. */
+  readonly durationMs?: number
 }
 
 export interface PreviewMessage {
@@ -54,6 +62,8 @@ export interface PreviewMessage {
   readonly snapshot?: PlaytestSnapshot['variables']
   readonly targets?: (PlaytestSnapshot['sprites'][number] & { isStage: boolean })[]
   readonly clones?: { readonly name: string; readonly x: number; readonly y: number }[]
+  readonly cloneCount?: number
+  readonly opcodes?: Record<string, number>
 }
 
 type Snapshot = PlaytestSnapshot
@@ -213,7 +223,53 @@ export class PlaytestRunner {
     const canvas = frame.locator('#stage')
 
     let stateUnavailable: string | undefined
+    const startedAt = Date.now()
+    const changedSprites = new Set<string>()
+    let previousSnapshot: Snapshot | undefined
+    const noteChanges = (snapshot: Snapshot | undefined): void => {
+      if (!snapshot) return
+      if (previousSnapshot) {
+        for (const sprite of snapshot.sprites) {
+          const before = previousSnapshot.sprites.find(({ name }) => name === sprite.name)
+          if (
+            before &&
+            (before.visible !== sprite.visible ||
+              before.currentCostume !== sprite.currentCostume ||
+              Math.abs(before.x - sprite.x) + Math.abs(before.y - sprite.y) >= MOVE_THRESHOLD)
+          )
+            changedSprites.add(sprite.name)
+        }
+      }
+      previousSnapshot = snapshot
+    }
+    let maxClones = 0
+    const events = async (): Promise<PreviewMessage | undefined> => {
+      const requestId = randomUUID()
+      try {
+        await page.evaluate(
+          ({ token, requestId }) =>
+            document
+              .querySelector('iframe')
+              ?.contentWindow?.postMessage({ type: 'playtest-events', token, requestId }, '*'),
+          { token, requestId },
+        )
+        const result = await waitFor(
+          (message) => message.type === 'playtest-events-result' && message.requestId === requestId,
+          5_000,
+        )
+        if (typeof result.cloneCount === 'number') maxClones = Math.max(maxClones, result.cloneCount)
+        return result
+      } catch {
+        return undefined
+      }
+    }
     const capture = async (): Promise<Snapshot | undefined> => {
+      const snapshot = await captureRaw()
+      noteChanges(snapshot)
+      await events()
+      return snapshot
+    }
+    const captureRaw = async (): Promise<Snapshot | undefined> => {
       const requestId = randomUUID()
       await page.evaluate(
         ({ token, requestId }) =>
@@ -267,6 +323,7 @@ export class PlaytestRunner {
     await this.freePlay(page, plan, playMs, key, capture)
     const end = await capture()
     const changedVariables = changedVariableNames(start, end)
+    const finalEvents = await events()
 
     if (screenshotPath) await writeFile(screenshotPath, await canvas.screenshot())
 
@@ -277,6 +334,10 @@ export class PlaytestRunner {
       controls,
       changedVariables,
       ...(stateUnavailable ? { stateUnavailable } : {}),
+      executedOpcodes: finalEvents?.opcodes ?? {},
+      maxClones,
+      changedSprites: [...changedSprites].sort(),
+      durationMs: Date.now() - startedAt,
     }
   }
 

@@ -50,6 +50,7 @@ export default defineConfig(({ mode }) => {
           app: fileURLToPath(new URL('./index.html', import.meta.url)),
           preview: fileURLToPath(new URL('./preview.html', import.meta.url)),
           studentHelp: fileURLToPath(new URL('./student-help.html', import.meta.url)),
+          teacherRubric: fileURLToPath(new URL('./src/ui/teacher-rubric.html', import.meta.url)),
           uiPreview: fileURLToPath(new URL('./src/ui/preview.html', import.meta.url)),
         },
       },

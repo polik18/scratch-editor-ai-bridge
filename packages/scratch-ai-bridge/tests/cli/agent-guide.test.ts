@@ -23,9 +23,12 @@ describe('agent start page', () => {
 })
 
 describe('completion', () => {
-  it('is done only when built, playtest did not fail and every requirement passed', () => {
+  it('is done only when built, actually played without failing and every requirement passed', () => {
     expect(completion({ status: 'success', playtestStatus: 'pass' })).toEqual({ done: true, notDone: [] })
-    expect(completion({ status: 'success', playtestStatus: 'not-run' }).done).toBe(true)
+    expect(completion({ status: 'success', playtestStatus: 'not-run' })).toEqual({
+      done: false,
+      notDone: ['尚未實際試玩：加 --playtest 再執行一次（沒有執行過的作品不算完成）'],
+    })
     expect(completion({ status: 'failed', playtestStatus: 'not-run' }).notDone).toHaveLength(1)
     expect(completion({ status: 'success', playtestStatus: 'fail' }).done).toBe(false)
     const failed = { label: '關卡數', expected: '2 關', actual: '1 關', pass: false, fix: '' }

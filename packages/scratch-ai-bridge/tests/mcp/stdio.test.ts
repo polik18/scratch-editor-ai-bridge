@@ -50,6 +50,8 @@ describe('MCP stdio entry', () => {
       expect(JSON.stringify(tools)).toContain('ask_student')
       expect(JSON.stringify(tools)).toContain('make_game')
       expect(JSON.stringify(tools)).toContain('make_story')
+      for (const name of ['validate_rubric', 'draft_rubric', 'grade_sb3', 'grade_sb3_batch', 'get_grade_report'])
+        expect(JSON.stringify(tools)).toContain(name)
       expect(JSON.stringify(tools)).toContain('平台移動')
       expect(JSON.stringify(tools)).toContain('blockId')
       expect(JSON.stringify(tools)).toContain('opcode')

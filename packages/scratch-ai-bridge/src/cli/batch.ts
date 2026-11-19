@@ -17,7 +17,12 @@ interface BatchRecord {
 const MAX_BATCH_FILES = 500
 const isWithin = (parent: string, child: string): boolean => child === parent || child.startsWith(`${parent}${sep}`)
 
-const parseCsv = (text: string): string[][] => {
+/**
+ * Parse CSV text (RFC 4180 quoting) into rows of cells, skipping blank lines.
+ * @param text CSV text without BOM.
+ * @returns Rows including the header row.
+ */
+export const parseCsvTable = (text: string): string[][] => {
   const rows: string[][] = []
   let row: string[] = []
   let cell = ''
@@ -47,6 +52,11 @@ const parseCsv = (text: string): string[][] => {
     row.push(cell)
     rows.push(row)
   }
+  return rows
+}
+
+const parseCsv = (text: string): string[][] => {
+  const rows = parseCsvTable(text)
   if (rows.length === 0) throw new Error('manifest-invalid')
   const headerRow = rows.at(0)
   if (!headerRow) throw new Error('manifest-invalid')

@@ -32,6 +32,11 @@ export const COMMANDS: readonly CommandEntry[] = [
     usage: 'story output/games/<名稱>/<名稱>.spec.json --playtest [--request <題目檔或文字>] [--force]',
   },
   {
+    name: 'create',
+    goal: '任何類型的 Scratch 作品：模型先自由構想，再由 Bridge 分段轉成積木、建置並試玩',
+    usage: 'create "<需求>" --playtest [--mode a-b|a-b-c] [--replies <回覆資料夾>]',
+  },
+  {
     name: 'make',
     goal: '交給本機模型寫描述，工具建置、試玩、修正',
     usage: 'make "<需求>" [--story] --playtest [--rounds 0-3]',
@@ -46,7 +51,25 @@ export const COMMANDS: readonly CommandEntry[] = [
     goal: '下載公開 Scratch 作品並輸出讀本',
     usage: 'fetch <Scratch 網址或作品編號> [--out <資料夾>]',
   },
-  { name: 'batch', goal: '分析整個資料夾的 .sb3', usage: 'batch <資料夾>' },
+  { name: 'batch', goal: '診斷整個資料夾的 .sb3（靜態結構診斷，不是成績）', usage: 'batch <資料夾>' },
+  {
+    name: 'grade',
+    goal: '依教師 rubric 實際試玩並評量 .sb3，輸出正式成績表（grades.csv、review-queue.csv）',
+    usage:
+      'grade <資料夾或檔案.sb3> --rubric <rubric.json> --playtest [--manifest <班級.csv>] [--policy <grading-policy.json>] [--judgments <判定.json>] [--overrides <教師調整.csv>]',
+  },
+  {
+    name: 'calibrate',
+    goal: '用教師盲評校準自動評分（排名相關、各項誤差、教師一致性、複核召回）；通過前只能稱為試行正式評量',
+    usage:
+      'calibrate prepare <作品資料夾> --rubric <rubric.json> --out <新資料夾> --playtest | calibrate <自動評分報告> --teachers <老師1.csv,老師2.csv>',
+  },
+  {
+    name: 'rubric',
+    goal: '把老師的文字規準轉成 rubric 草案、檢查並核准（核准後才會產生正式成績）',
+    usage:
+      'rubric draft <規準.txt> --id <id> --title <標題> --project-type <類型> | rubric validate <rubric.json> | rubric approve <rubric.json> --by <核准者>',
+  },
   { name: 'generate', goal: '從 Canonical IR 建置（進階，一般不用）', usage: 'generate <ir.json> --out <檔案.sb3>' },
   { name: 'clean', goal: '刪掉做作品的過程檔', usage: 'clean [--all]' },
 ]
@@ -80,6 +103,10 @@ export const createAgentStartPage = (): string => {
 ## 想做什麼 → 用什麼
 ${commands}
 - 修改使用者在 Bridge 網頁中開著的作品：MCP 工具 inspect_project → propose_live_patch（由使用者在網頁確認）
+- 評量學生作品：MCP 工具 validate_rubric、draft_rubric、grade_sb3、grade_sb3_batch（同一個評量核心）
+
+評量：\`batch\` 和 \`inspect\` 的分數只是靜態結構診斷，不能當成績。正式成績用 \`grade --playtest\`；沒有實際執行、
+rubric 未核准或有待判定項目時，報告會標成 pending／trial，並列在 review-queue.csv，不要自行補分。
 
 做遊戲：先 \`guide\`，再寫描述、\`spec\`。做動畫：先 \`guide story\`，再寫描述、\`story\`。
 有題目時加 \`--request <題目檔或文字>\`，工具會對照題目要求的關數、長度和名稱。
@@ -93,7 +120,7 @@ ${commands}
 
 ## 什麼時候算完成
 看報告的 \`done\`：true 才算完成；false 時 \`notDone\` 會列出還差什麼。
-- 建置成功、試玩沒有失敗、每一關都走得到終點。
+- 建置成功、實際試玩（--playtest）通過、每一關都走得到終點；沒有試玩過的作品 done 一定是 false。
 - 有 --request 或用 make 時：題目要求的關數、動畫長度、指定名稱（例如河流名稱）都做到了。
 - 題目要的功能做不到時，寫進描述的「做不到」，並告訴使用者。
 

@@ -189,7 +189,7 @@ export interface Completion {
  * One verdict an agent can rely on instead of judging the report itself.
  * @param report - Build report.
  * @param report.status - Build status.
- * @param report.playtestStatus - `fail` means the work is not done.
+ * @param report.playtestStatus - Only `pass` counts: `fail` and `not-run` (never played) mean the work is not done.
  * @param report.diagnostics - Spec diagnostics; a goal the player can never reach means the work is not done.
  * @param checks - Requirement checks, if a request was given.
  * @returns Whether the work is done and what is missing.
@@ -208,6 +208,9 @@ export const completion = (
       .filter((item) => item.code === 'GOAL_BLOCKED')
       .map((item) => `無法過關：${item.where ? `${item.where}：` : ''}${item.message}`),
     ...(report.playtestStatus === 'fail' ? ['試玩未通過：看 feedback 的原因'] : []),
+    ...(report.status === 'success' && report.playtestStatus === 'not-run'
+      ? ['尚未實際試玩：加 --playtest 再執行一次（沒有執行過的作品不算完成）']
+      : []),
     ...checks
       .filter((check) => !check.pass)
       .map((check) => `${check.label}：需求是${check.expected}，目前是 ${check.actual}`),

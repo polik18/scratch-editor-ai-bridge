@@ -9,10 +9,10 @@ Public beta: [https://polik18.github.io/scratch-editor-ai-bridge/](https://polik
 ## 文件入口
 
 - **AI 使用入口**：[`AGENTS.md`](AGENTS.md)。要用 Bridge 做遊戲、寫 Game Spec、修改網頁作品或分析 `.sb3`，從這裡挑路線。
-- **使用說明**：[`docs/guide/`](docs/guide/)（CLI、Game Spec、MCP、部署、發布）。
+- **使用說明**：[`docs/guide/`](docs/guide/)（CLI、Game Spec、MCP、部署、發布）。教師評分見 [`grading.md`](docs/guide/grading.md)，兩階段生成見 [`creative-pipeline.md`](docs/guide/creative-pipeline.md)。
 - **設計規格**：[`docs/design/`](docs/design/)（generator 合約、行為規格、VM 寫入路徑、安全審查）。
 - **開發紀錄**：[`docs/history/`](docs/history/)。過去的計畫、狀態報告與交接，保留原文供背景查閱，不代表現行進度。
-  最近一份作品品質主線紀錄是 [`docs/history/game-quality-plan.md`](docs/history/game-quality-plan.md)。
+  Scratch 專案生成與評量的**唯一交接入口與現行主線**是 [`docs/history/game-quality-plan.md`](docs/history/game-quality-plan.md)；檔名雖沿用早期遊戲基準，現行範圍包含所有 Scratch 專案，其他計畫不得另行取代它。
 
 ## Package layout
 

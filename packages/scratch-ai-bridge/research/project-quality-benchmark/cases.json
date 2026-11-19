@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "description": "Cross-type Scratch requests for the two-stage generation benchmark (V2-0). Games are only one project type; every case is judged by the anchors its own request implies, never by game-only features.",
+  "cases": [
+    { "id": "big-fish", "projectType": "game", "request": "做一個大魚吃小魚的遊戲，用方向鍵控制大魚，小魚不斷出現，吃到加分並播放音效，30秒結束" },
+    { "id": "catch-apples", "projectType": "game", "request": "做一個貓咪接蘋果的遊戲，用左右鍵移動貓咪，蘋果從天上掉下來，接到加分，漏接扣生命" },
+    { "id": "seasons-animation", "projectType": "animation", "request": "做一段四季變化的動畫，每個季節換一個背景，角色做不同的動作，配上音樂" },
+    { "id": "rabbit-story", "projectType": "story", "request": "做一個龜兔賽跑的故事，有旁白和角色對白，至少兩個場景，最後烏龜贏了" },
+    { "id": "kaleidoscope-art", "projectType": "interactive-art", "request": "做一個互動藝術作品，點擊畫面會出現會變色、慢慢變透明的圖形" },
+    { "id": "drum-music", "projectType": "music", "request": "做一個打擊樂器作品，按不同的鍵播放不同的鼓聲，按下時樂器會動一下" },
+    { "id": "math-quiz", "projectType": "quiz", "request": "做一個加法問答測驗，問五題，答對加分並說答對了，答錯告訴正確答案" },
+    { "id": "recycle-tutorial", "projectType": "tutorial", "request": "做一個教小朋友垃圾分類的教學作品，角色一步一步說明，最後請學生回答一題" },
+    { "id": "plant-simulation", "projectType": "simulation", "request": "做一個植物生長模擬，點擊太陽或水會讓植物長大，數值太多或太少植物會枯萎" },
+    { "id": "space-drag", "projectType": "game", "request": "做一個太空遊戲，玩家用滑鼠拖曳太空船躲隕石，還要可以線上對戰" }
+  ]
+}

@@ -229,7 +229,9 @@ describe('spec without --out', () => {
     })
     expect(report.status).toBe('success')
     expect(report.done).toBe(false)
-    expect(report.notDone).toHaveLength(2)
+    // Two unmet requirements plus "never played" (built without --playtest).
+    expect(report.notDone).toHaveLength(3)
+    expect(report.notDone?.some((line) => line.includes('尚未實際試玩'))).toBe(true)
     expect(report.feedback).toContain('[需求未達成] 出現「淡水河」')
     const plain = await runSpecBuild({
       specPath,
@@ -237,7 +239,10 @@ describe('spec without --out', () => {
       playtest: false,
       force: false,
     })
-    expect(plain).toMatchObject({ done: true, notDone: [] })
+    expect(plain).toMatchObject({
+      done: false,
+      notDone: ['尚未實際試玩：加 --playtest 再執行一次（沒有執行過的作品不算完成）'],
+    })
   }, 60_000)
 })
 

@@ -107,7 +107,7 @@ export const modelConfigFromEnvironment = (environment: NodeJS.ProcessEnv): Mode
 const authorization = (config: ModelConfig): Record<string, string> =>
   config.apiKey ? { authorization: `Bearer ${config.apiKey}` } : {}
 
-const resolveModel = async (config: ModelConfig): Promise<string> => {
+export const resolveModel = async (config: ModelConfig): Promise<string> => {
   if (config.model) return config.model
   const response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/models`, {
     headers: authorization(config),
@@ -122,7 +122,7 @@ const resolveModel = async (config: ModelConfig): Promise<string> => {
   return id
 }
 
-const chat = async (config: ModelConfig, model: string, prompt: string): Promise<string> => {
+export const chat = async (config: ModelConfig, model: string, prompt: string): Promise<string> => {
   const response = await fetch(`${config.baseUrl.replace(/\/$/, '')}/chat/completions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', ...authorization(config) },
