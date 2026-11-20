@@ -2088,9 +2088,6 @@ select:focus {
 select option {
   background: #0b1220;
 }
-html:has(.pk-dock) [data-polik-category-return] {
-  display: none;
-}
 @media (prefers-reduced-motion: reduce) {
   .topbar::before {
     animation: none;
