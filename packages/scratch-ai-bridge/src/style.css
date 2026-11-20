@@ -2115,7 +2115,7 @@ select option {
 }
 .tab.active {
   color: #04120c;
-  background: linear-gradient(115deg, #34d399, #22d3ee);
+  background: #34d399 linear-gradient(115deg, #34d399, #22d3ee);
   box-shadow: 0 10px 26px -10px rgb(52 211 153 / 80%);
 }
 a {
