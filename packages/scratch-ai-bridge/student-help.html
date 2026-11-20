@@ -11,13 +11,83 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-elem 'self' 'unsafe-inline'; style-src-attr 'self'; img-src 'self' data: blob:; media-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; frame-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'"
     />
-    <meta name="description" content="上傳 Scratch 作品、查看程式分析，再帶著作品線索向 AI 提問。" />
+    <meta
+      name="description"
+      content="Scratch 學習小幫手：上傳自己的 Scratch 作品，查看角色、積木與變數的程式分析，再帶著作品線索向 AI 提問，一步步找到除錯與改進方法，適合國小與國中學生。"
+    />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="zh_TW" />
     <meta property="og:title" content="Scratch 學習小幫手" />
     <meta property="og:description" content="帶著 Scratch 作品線索向 AI 提問，逐步找到解題方法。" />
     <meta property="og:url" content="https://polik18.github.io/scratch-editor-ai-bridge/student-help.html" />
     <title>Scratch 學習小幫手</title>
+    <meta property="og:image" content="https://polik18.github.io/assets/og/scratch-student-help.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Scratch 學習小幫手" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Scratch 學習小幫手" />
+    <meta
+      name="twitter:description"
+      content="Scratch 學習小幫手：上傳自己的 Scratch 作品，查看角色、積木與變數的程式分析，再帶著作品線索向 AI 提問，一步步找到除錯與改進方法，適合國小與國中學生。"
+    />
+    <meta name="twitter:image" content="https://polik18.github.io/assets/og/scratch-student-help.jpg" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "name": "Scratch 學習小幫手",
+            "url": "https://polik18.github.io/scratch-editor-ai-bridge/student-help.html",
+            "description": "Scratch 學習小幫手：上傳自己的 Scratch 作品，查看角色、積木與變數的程式分析，再帶著作品線索向 AI 提問，一步步找到除錯與改進方法，適合國小與國中學生。",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Any（需現代瀏覽器）",
+            "inLanguage": "zh-TW",
+            "isAccessibleForFree": true,
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "TWD"
+            },
+            "author": {
+              "@type": "Person",
+              "name": "小黃老師",
+              "url": "https://polik18.github.io/"
+            }
+          },
+          {
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+              {
+                "@type": "ListItem",
+                "position": 1,
+                "name": "Polik 專案展示",
+                "item": "https://polik18.github.io/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 2,
+                "name": "教學現場與班級經營",
+                "item": "https://polik18.github.io/education.html"
+              },
+              {
+                "@type": "ListItem",
+                "position": 3,
+                "name": "AI × Scratch 作品轉換器",
+                "item": "https://polik18.github.io/scratch-editor-ai-bridge/"
+              },
+              {
+                "@type": "ListItem",
+                "position": 4,
+                "name": "Scratch 學習小幫手",
+                "item": "https://polik18.github.io/scratch-editor-ai-bridge/student-help.html"
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <main id="student-help-app"></main>

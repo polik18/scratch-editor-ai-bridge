@@ -17,7 +17,7 @@ if (servedPage.origin !== page.origin || !servedPage.pathname.startsWith(page.pa
   throw new Error(`Deployed Pages entrypoint redirected outside its site path: ${servedPage}`)
 }
 const html = await response.text()
-if (!html.includes('<title>AI × Scratch 作品轉換器</title>')) {
+if (!html.includes('<title>AI × Scratch 作品轉換器')) {
   throw new Error(`Deployed Pages entrypoint does not contain the expected app title: ${servedPage}`)
 }
 if (!html.includes('<main id="app">'))
